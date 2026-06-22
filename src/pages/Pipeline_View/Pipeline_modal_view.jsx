@@ -1,0 +1,1470 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import {
+  ArrowLeft, Calendar, FileText, Mail, Paperclip, Tag, Clock,
+  User, Building, Building2, DollarSign, CheckCircle, XCircle, AlertCircle,
+  Download, Eye, ChevronRight, Phone, MapPin, Globe, Briefcase,
+  BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive
+} from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+// ─────────────────────────────────────────────
+// File helper utilities
+// ─────────────────────────────────────────────
+const getFileExtension = (filename = "") =>
+  filename.split(".").pop()?.toLowerCase() || "";
+
+const getFileCategory = (name = "", mimeType = "") => {
+  const ext = getFileExtension(name);
+  const mime = mimeType.toLowerCase();
+  if (mime.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+  if (mime === "application/pdf" || ext === "pdf") return "pdf";
+  if (mime === "text/plain" || mime === "text/csv" || ["txt", "csv"].includes(ext)) return "text";
+  return "other";
+};
+
+const canPreview = (name, mimeType) =>
+  ["image", "pdf", "text"].includes(getFileCategory(name, mimeType));
+
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const FILE_STYLES = {
+  image: { bg: "bg-green-100", icon: "text-green-600" },
+  pdf: { bg: "bg-red-100", icon: "text-red-600" },
+  text: { bg: "bg-yellow-100", icon: "text-yellow-600" },
+  other: { bg: "bg-blue-100", icon: "text-blue-600" },
+};
+
+// ─────────────────────────────────────────────
+// TextPreview — loads and shows text file content
+// ─────────────────────────────────────────────
+const TextPreview = ({ url }) => {
+  const [content, setContent] = useState("Loading…");
+  useEffect(() => {
+    fetch(url)
+      .then((r) => r.text())
+      .then(setContent)
+      .catch(() => setContent("Could not load file contents."));
+  }, [url]);
+  return (
+    <pre className="whitespace-pre-wrap text-sm text-slate-700 bg-white p-4 rounded-lg border border-slate-200 max-h-[60vh] overflow-auto font-mono leading-relaxed">
+      {content}
+    </pre>
+  );
+};
+
+// ─────────────────────────────────────────────
+// PreviewModal — shows image / PDF / text inline
+// ─────────────────────────────────────────────
+const PreviewModal = ({ file, onClose }) => {
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "92vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <FileText size={20} className="text-slate-500 flex-shrink-0" />
+            <span className="font-medium text-slate-900 truncate text-sm">
+              {file.name}
+            </span>
+            {file.size > 0 && (
+              <span className="text-xs text-slate-400 flex-shrink-0">
+                {formatFileSize(file.size)}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-4 p-2 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0"
+            title="Close (Esc)"
+          >
+            <X size={20} className="text-slate-600" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="flex-1 overflow-auto bg-slate-50 p-3">
+          {file.category === "image" && (
+            <div className="flex items-center justify-center min-h-64 p-4">
+              <img
+                src={file.url}
+                alt={file.name}
+                className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-md"
+              />
+            </div>
+          )}
+          {file.category === "pdf" && (
+            <iframe
+              src={file.url}
+              title={file.name}
+              className="w-full rounded-lg border-0"
+              style={{ height: "75vh" }}
+            />
+          )}
+          {file.category === "text" && (
+            <div className="p-2">
+              <TextPreview url={file.url} />
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex justify-end px-5 py-3 border-t border-slate-100 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────
+function Pipeline_modal_view() {
+  const API_URL = import.meta.env.VITE_API_URL;
+  const { dealId } = useParams();
+  const navigate = useNavigate();
+
+  const [deal, setDeal] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("details");
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [followUpData, setFollowUpData] = useState({
+    followUpDate: null,
+    followUpComment: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Preview state
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(null); // index of loading file
+
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem("token");
+  };
+
+  // Handle authentication errors
+  const handleAuthError = (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      toast.error("Session expired. Please login again.");
+      localStorage.removeItem("token");
+      navigate("/login");
+      return true;
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (dealId) fetchDealDetails();
+  }, [dealId]);
+
+  const fetchDealDetails = async () => {
+    try {
+      setIsLoading(true);
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+
+     const response = await axios.get(`${API_URL}/deals/${dealId}`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+      setDeal(response.data);
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Failed to fetch deal details:", err);
+        toast.error(err.response?.data?.message || "Failed to load deal details");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle schedule follow-up
+  const handleScheduleFollowUp = async () => {
+    if (!followUpData.followUpDate) {
+      toast.error("Please select a follow-up date");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+
+      const payload = {
+        dealId: deal._id,
+        followUpDate:
+          followUpData.followUpDate instanceof Date
+            ? followUpData.followUpDate.toISOString()
+            : followUpData.followUpDate,
+        followUpComment: followUpData.followUpComment,
+        // Include the previous follow-up date if rescheduling
+        previousFollowUpDate: deal.followUpDate || null
+      };
+
+      const response = await axios.post(
+  `${API_URL}/deals/schedule-followup/${dealId}`, 
+  payload,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
+      toast.success(response.data.message || "Follow-up scheduled successfully");
+      setIsFollowUpModalOpen(false);
+      setFollowUpData({ followUpDate: null, followUpComment: "" });
+      
+      // Refresh deal details to show updated follow-up
+      fetchDealDetails();
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Failed to schedule follow-up:", err);
+        toast.error(err.response?.data?.message || "Failed to schedule follow-up");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── Download handler ────────────────────────────────────────
+  const downloadFile = useCallback(async (filePath, fileName) => {
+    if (!filePath) return toast.error("File path is missing");
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+
+      const params = new URLSearchParams({ filePath });
+      const res = await axios.get(`${API_URL}/files/download?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName || filePath.split("/").pop() || "file");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("File downloaded successfully");
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Download failed:", err);
+        toast.error(err.response?.data?.message || "Failed to download file");
+      }
+    }
+  }, [API_URL, navigate]);
+
+  // ── Preview handler ─────────────────────────────────────────
+  const openPreview = useCallback(async (file, idx) => {
+    if (!file.path) return toast.error("File path is missing");
+    setPreviewLoading(idx);
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+
+      const params = new URLSearchParams({ filePath: file.path });
+      const res = await axios.get(`${API_URL}/files/preview?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+
+      const contentType = res.headers["content-type"] || "application/octet-stream";
+      const blobUrl = window.URL.createObjectURL(
+        new Blob([res.data], { type: contentType })
+      );
+
+      setPreviewFile({
+        url: blobUrl,
+        name: file.name || file.path?.split("/").pop() || "file",
+        size: file.size || 0,
+        category: getFileCategory(file.name, file.type),
+      });
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Preview failed:", err);
+        toast.error(err.response?.data?.message || "Failed to load preview");
+      }
+    } finally {
+      setPreviewLoading(null);
+    }
+  }, [API_URL, navigate]);
+
+  const closePreview = useCallback(() => {
+    if (previewFile?.url) window.URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
+  }, [previewFile]);
+
+  // ── Format helpers ──────────────────────────────────────────
+  const formatCurrencyValue = (val) => {
+    if (!val) return "-";
+    const match = val.match(/^([\d,]+)\s*([A-Za-z]+)$/);
+    if (!match) return val;
+    const number = match[1].replace(/,/g, "");
+    const currency = match[2].toUpperCase();
+    const formattedNumber = Number(number).toLocaleString("en-IN");
+    return `${formattedNumber} ${currency}`;
+  };
+
+  const getStageBadgeClass = (stage) => {
+    switch (stage) {
+      case "Closed Won":
+        return {
+          icon: CheckCircle,
+          color: "text-emerald-700",
+          bgColor: "bg-emerald-50",
+          borderColor: "border-emerald-200",
+          label: "Closed Won",
+        };
+      case "Closed Lost":
+        return {
+          icon: XCircle,
+          color: "text-rose-700",
+          bgColor: "bg-rose-50",
+          borderColor: "border-rose-200",
+          label: "Closed Lost",
+        };
+      case "Qualification":
+        return {
+          icon: AlertCircle,
+          color: "text-blue-700",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-200",
+          label: "Qualification",
+        };
+      case "Proposal Sent-Negotiation":
+        return {
+          icon: Clock,
+          color: "text-amber-700",
+          bgColor: "bg-amber-50",
+          borderColor: "border-amber-200",
+          label: "Proposal Sent-Negotiation",
+        };
+      case "Invoice Sent":
+        return {
+          icon: Mail,
+          color: "text-purple-700",
+          bgColor: "bg-purple-50",
+          borderColor: "border-purple-200",
+          label: "Invoice Sent",
+        };
+      default:
+        return {
+          icon: AlertCircle,
+          color: "text-slate-700",
+          bgColor: "bg-slate-100",
+          borderColor: "border-slate-200",
+          label: stage || "Unknown",
+        };
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4" />
+          <p className="text-slate-600">Loading deal details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!deal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+        <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md w-full">
+          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="text-rose-600" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">
+            Deal Not Found
+          </h2>
+          <p className="text-slate-600 mb-6">
+            The deal you're looking for doesn't exist or may have been removed.
+          </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            <ArrowLeft size={18} className="mr-2" />
+            Back to Pipeline
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const stageConfig = getStageBadgeClass(deal.stage);
+  const StageIcon = stageConfig.icon;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+      <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Preview Modal */}
+      {previewFile && (
+        <PreviewModal file={previewFile} onClose={closePreview} />
+      )}
+
+      {/* Follow-up Modal */}
+      {isFollowUpModalOpen && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              setIsFollowUpModalOpen(false);
+              setFollowUpData({ followUpDate: null, followUpComment: "" });
+            }}
+          />
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-lg">
+                <div className="bg-white px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="text-purple-600" size={20} />
+                      {deal.followUpDate ? "Reschedule Follow-up" : "Schedule First Follow-up"}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsFollowUpModalOpen(false);
+                        setFollowUpData({ followUpDate: null, followUpComment: "" });
+                      }}
+                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white px-6 py-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Follow-up Date & Time <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          selected={followUpData.followUpDate}
+                          onChange={(date) => {
+                            setFollowUpData(prev => ({ ...prev, followUpDate: date }));
+                          }}
+                          showTimeSelect
+                          timeFormat="HH:mm"
+                          timeIntervals={15}
+                          timeCaption="Time"
+                          dateFormat="MMMM d, yyyy h:mm aa"
+                          placeholderText="Select date and time"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition pl-10"
+                          minDate={new Date()}
+                          isClearable
+                          calendarClassName="font-sans"
+                          popperClassName="z-[10000]"
+                        />
+                        <Calendar className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select a date and time for the follow-up reminder
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Follow-up Notes
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={followUpData.followUpComment}
+                        onChange={(e) => {
+                          setFollowUpData(prev => ({ ...prev, followUpComment: e.target.value }));
+                        }}
+                        placeholder="Enter meeting agenda, discussion points, or specific items to cover..."
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFollowUpModalOpen(false);
+                      setFollowUpData({ followUpDate: null, followUpComment: "" });
+                    }}
+                    className="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleScheduleFollowUp}
+                    disabled={isSubmitting || !followUpData.followUpDate}
+                    className="px-5 py-2.5 bg-purple-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[160px] justify-center"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Scheduling...
+                      </>
+                    ) : (
+                      <>
+                        <Calendar size={16} />
+                        {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-6xl mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+          <div>
+            <div className="flex items-center text-slate-600 mb-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <ArrowLeft size={16} className="mr-1" />
+                Back to Pipeline
+              </button>
+              <ChevronRight size={16} className="mx-2" />
+              <span className="text-slate-500">View Deal</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+                {deal.dealName}
+              </h1>
+              <div
+                className={`inline-flex items-center px-4 py-2 rounded-full ${stageConfig.bgColor} ${stageConfig.color} border ${stageConfig.borderColor}`}
+              >
+                <StageIcon size={16} className="mr-2" />
+                <span className="capitalize font-medium text-sm">
+                  {stageConfig.label}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "details"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("details")}
+          >
+            Details
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "attachments"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("attachments")}
+          >
+            Attachments{" "}
+            {deal.attachments &&
+              deal.attachments.length > 0 &&
+              `(${deal.attachments.length})`}
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "activity"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("activity")}
+          >
+            Activity
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "followup"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("followup")}
+          >
+            Follow-up History
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content Column */}
+          <div className="lg:col-span-2">
+            {/* Details Card */}
+            {activeTab === "details" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Deal Details
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Comprehensive information about this deal
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Deal Information */}
+                    <div className="space-y-5">
+                      <div>
+                        <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                          Deal Information
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center text-slate-700">
+                            <Tag size={18} className="mr-3 text-slate-500" />
+                            <div>
+                              <p className="text-sm font-medium">Deal Name</p>
+                              <p className="text-slate-900">{deal.dealName}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center text-slate-700">
+                            <DollarSign
+                              size={18}
+                              className="mr-3 text-slate-500"
+                            />
+                            <div>
+                              <p className="text-sm font-medium">Value</p>
+                              <p className="text-slate-900">
+                                {formatCurrencyValue(deal.value)}
+                              </p>
+                            </div>
+                          </div>
+                          {deal.notes && (
+                            <div className="flex items-center text-slate-700">
+                              <BookOpen
+                                size={18}
+                                className="mr-3 text-slate-500"
+                              />
+                              <div>
+                                <p className="text-sm font-medium">Notes</p>
+                                <p className="text-slate-900">{deal.notes}</p>
+                              </div>
+                            </div>
+                          )}
+                          {deal.followUpDate && (
+                            <div className="flex items-center text-slate-700">
+                              <Clock
+                                size={18}
+                                className="mr-3 text-slate-500"
+                              />
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Follow-up Date
+                                </p>
+                                <p className="text-slate-900">
+                                  {deal.followUpDate ? (
+                                    <>
+                                      {new Date(
+                                        deal.followUpDate
+                                      ).toLocaleDateString("en-US", {
+                                        weekday: "short",
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
+                                      <span className="text-slate-500 ml-2">
+                                        •{" "}
+                                        {new Date(
+                                          deal.followUpDate
+                                        ).toLocaleTimeString("en-US", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          hour12: true,
+                                        })}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-slate-400">
+                                      Not set
+                                    </span>
+                                  )}
+                                </p>
+                                {deal.followUpComment && (
+                                  <p className="text-sm text-slate-600 mt-2">
+                                    <span className="font-medium">Notes:</span>{" "}
+                                    {deal.followUpComment}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Company Information */}
+                    <div className="space-y-5">
+                      <div>
+                        <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                          Company Information
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center text-slate-700">
+                            <Building
+                              size={18}
+                              className="mr-3 text-slate-500"
+                            />
+                            <div>
+                              <p className="text-sm font-medium">
+                                Company Name
+                              </p>
+                              <p className="text-slate-900">
+                                {deal.companyName || "Not specified"}
+                              </p>
+                            </div>
+                          </div>
+                          {deal.email && (
+                            <div className="flex items-center text-slate-700">
+                              <Mail size={18} className="mr-3 text-slate-500" />
+                              <div>
+                                <p className="text-sm font-medium">Email</p>
+                                <a
+                                  href={`mailto:${deal.email}`}
+                                  className="text-blue-600 hover:underline text-slate-900"
+                                >
+                                  {deal.email}
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                          {deal.phoneNumber && (
+                            <div className="flex items-center text-slate-700">
+                              <Phone
+                                size={18}
+                                className="mr-3 text-slate-500"
+                              />
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Phone Number
+                                </p>
+                                <p className="text-slate-900">
+                                  {deal.phoneNumber}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex items-center text-slate-700">
+                            <Building2 size={18} className="mr-3 text-slate-500" />
+                            <div>
+                              <p className="text-sm font-medium">Client Type</p>
+                              <p className="text-slate-900">{deal.clientType || "Not specified"}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Attachments Card */}
+            {activeTab === "attachments" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Attachments
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Files and documents related to this deal
+                  </p>
+                </div>
+                <div className="p-6">
+                  {deal.attachments && deal.attachments.length > 0 ? (
+                    <ul className="space-y-3">
+                      {deal.attachments.map((file, idx) => {
+                        const fileName = file.name || file.path?.split("/").pop() || `File ${idx + 1}`;
+                        const filePath = file.path || "";
+                        const mimeType = file.type || "";
+                        const cat = getFileCategory(fileName, mimeType);
+                        const style = FILE_STYLES[cat];
+                        const showPreviewBtn = canPreview(fileName, mimeType);
+                        const isLoadingThis = previewLoading === idx;
+
+                        return (
+                          <li
+                            key={idx}
+                            className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
+                          >
+                            {/* File info */}
+                            <div className="flex items-center min-w-0 flex-1">
+                              <div className={`p-3 rounded-lg mr-4 flex-shrink-0 ${style.bg}`}>
+                                <FileText size={20} className={style.icon} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-900 truncate">
+                                  {fileName}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  {cat.toUpperCase()}
+                                  {file.size > 0 && <span> • {formatFileSize(file.size)}</span>}
+                                  {file.source && (
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      file.source === "lead"
+                                        ? "bg-purple-100 text-purple-700"
+                                        : "bg-blue-100 text-blue-700"
+                                    }`}>
+                                      {file.source}
+                                    </span>
+                                  )}
+                                  {file.uploadedAt && (
+                                    <span> • {new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+                              {/* Preview button — only for image/pdf/text */}
+                              {showPreviewBtn && (
+                                <button
+                                  onClick={() => openPreview(file, idx)}
+                                  disabled={isLoadingThis}
+                                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-60"
+                                  title="Preview file"
+                                >
+                                  {isLoadingThis ? (
+                                    <span className="inline-block w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Eye size={15} />
+                                  )}
+                                  <span className="hidden sm:inline">
+                                    {isLoadingThis ? "Loading…" : "Preview"}
+                                  </span>
+                                </button>
+                              )}
+
+                              {/* Download button — always shown */}
+                              <button
+                                onClick={() => downloadFile(filePath, fileName)}
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Download file"
+                              >
+                                <Download size={15} />
+                                <span className="hidden sm:inline">Download</span>
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Paperclip size={24} className="text-slate-400" />
+                      </div>
+                      <p className="text-slate-500 font-medium">No attachments found</p>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Files uploaded with this deal will appear here
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Activity Card */}
+            {activeTab === "activity" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Activity Timeline
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Recent activities and updates for this deal
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="relative">
+                    {/* Follow-up Activity */}
+                    {deal.followUpDate && (
+                      <div className="flex items-start mb-8">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                            <Calendar size={16} className="text-purple-600" />
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-sm font-medium text-slate-900">
+                            Follow-up scheduled
+                          </h3>
+                          <div className="mt-1">
+                            <p className="text-sm text-slate-700">
+                              {" "}
+                              {new Date(deal.followUpDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  weekday: "long",
+                                  month: "long",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}
+                            </p>
+                            <p className="text-sm text-slate-700">
+                              {" "}
+                              {new Date(deal.followUpDate).toLocaleTimeString(
+                                "en-US",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                }
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Creation Activity */}
+                    <div className="flex items-start mb-8">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <FileText size={16} className="text-blue-600" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-slate-900">
+                          Deal created
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                          {" "}
+                          {new Date(deal.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Last Update Activity */}
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Clock size={16} className="text-slate-600" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-slate-900">
+                          Deal updated
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                          {" "}
+                          {new Date(deal.updatedAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Follow-up History Tab */}
+            {activeTab === "followup" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">
+                        Follow-up History
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Track all follow-ups for this deal (Most recent first)
+                      </p>
+                    </div>
+                    {!deal.followUpDate && (
+                      <button
+                        onClick={() => setIsFollowUpModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+                      >
+                        <Plus size={16} />
+                        Schedule First Follow-up
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {/* Current Follow-up */}
+                  {deal.followUpDate ? (
+                    <div className="mb-8">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                          <Clock size={16} className="text-purple-600" />
+                          Upcoming Follow-up
+                        </h3>
+                        <button
+                          onClick={() => {
+                            setFollowUpData({
+                              followUpDate: new Date(deal.followUpDate),
+                              followUpComment: deal.followUpComment || ""
+                            });
+                            setIsFollowUpModalOpen(true);
+                          }}
+                          className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                        >
+                          <Edit size={14} />
+                          Reschedule
+                        </button>
+                      </div>
+                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-slate-700">
+                              Date & Time
+                            </p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <Calendar size={18} className="text-purple-500" />
+                              <span className="text-lg font-semibold text-slate-900">
+                                {new Date(deal.followUpDate).toLocaleDateString("en-US", {
+                                  weekday: "long",
+                                  month: "long",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <Clock size={18} className="text-purple-500" />
+                              <span className="text-lg font-semibold text-slate-900">
+                                {new Date(deal.followUpDate).toLocaleTimeString("en-US", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-700">
+                              Status
+                            </p>
+                            <div className="mt-2">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                                <Clock size={14} className="mr-1" />
+                                Scheduled
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {deal.followUpComment && (
+                          <div className="mt-4 pt-4 border-t border-purple-200">
+                            <p className="text-sm font-medium text-slate-700 mb-2">
+                              Notes
+                            </p>
+                            <div className="bg-white rounded-lg p-4 border border-purple-100">
+                              <p className="text-slate-700">
+                                {deal.followUpComment}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Calendar size={32} className="text-purple-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">
+                        No upcoming follow-ups
+                      </h3>
+                      <p className="text-slate-600 mb-6 max-w-sm mx-auto">
+                        Schedule a follow-up to stay on track with this deal and never miss an important conversation.
+                      </p>
+                      <button
+                        onClick={() => setIsFollowUpModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition shadow-sm hover:shadow"
+                      >
+                        <Plus size={18} />
+                        Schedule First Follow-up
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Past Follow-ups - Sorted Most Recent First */}
+                  {deal.followUpHistory && deal.followUpHistory.length > 0 && (
+                    <div className="mt-8">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <Archive size={16} className="text-slate-600" />
+                        Past Follow-ups ({deal.followUpHistory.length})
+                      </h3>
+
+                      <div className="space-y-4">
+                        {/* Sort the history array by date in descending order (most recent first) */}
+                        {[...deal.followUpHistory]
+                          .sort((a, b) => {
+                            const dateA = a.date ? new Date(a.date).getTime() : 0;
+                            const dateB = b.date ? new Date(b.date).getTime() : 0;
+                            return dateB - dateA;
+                          })
+                          .map((followUp, index) => {
+                            const actionDate = followUp.date
+                              ? new Date(followUp.date)
+                              : null;
+                            const scheduledDate = followUp.followUpDate
+                              ? new Date(followUp.followUpDate)
+                              : null;
+
+                            const outcome = followUp.outcome || "Completed";
+
+                            return (
+                              <div
+                                key={index}
+                                className="border border-slate-200 rounded-xl p-5 hover:bg-slate-50 transition"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                          outcome === "Successful" ||
+                                          outcome === "Completed"
+                                            ? "bg-green-100"
+                                            : outcome === "Rescheduled"
+                                              ? "bg-yellow-100"
+                                              : outcome === "Cancelled"
+                                                ? "bg-red-100"
+                                                : outcome === "Created" ||
+                                                  outcome === "Updated"
+                                                  ? "bg-blue-100"
+                                                  : "bg-gray-100"
+                                        }`}
+                                      >
+                                        {outcome === "Successful" ||
+                                        outcome === "Completed" ? (
+                                          <CheckCircle
+                                            size={20}
+                                            className="text-green-600"
+                                          />
+                                        ) : outcome === "Rescheduled" ? (
+                                          <RefreshCw
+                                            size={20}
+                                            className="text-yellow-600"
+                                          />
+                                        ) : outcome === "Cancelled" ? (
+                                          <XCircle
+                                            size={20}
+                                            className="text-red-600"
+                                          />
+                                        ) : outcome === "Created" ? (
+                                          <Plus
+                                            size={20}
+                                            className="text-blue-600"
+                                          />
+                                        ) : outcome === "Updated" ? (
+                                          <Edit
+                                            size={20}
+                                            className="text-blue-600"
+                                          />
+                                        ) : (
+                                          <CheckCircle
+                                            size={20}
+                                            className="text-gray-600"
+                                          />
+                                        )}
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium text-slate-900">
+                                          Follow-up {outcome}
+                                        </h4>
+                                        <div className="flex items-center gap-4 mt-1">
+                                          {actionDate ? (
+                                            <>
+                                              <div className="flex items-center gap-1 text-sm text-slate-600">
+                                                <Calendar size={14} />
+                                                <span>
+                                                  {actionDate.toLocaleDateString(
+                                                    "en-US",
+                                                    {
+                                                      month: "short",
+                                                      day: "numeric",
+                                                      year: "numeric",
+                                                    }
+                                                  )}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-1 text-sm text-slate-600">
+                                                <Clock size={14} />
+                                                <span>
+                                                  {actionDate.toLocaleTimeString(
+                                                    "en-US",
+                                                    {
+                                                      hour: "2-digit",
+                                                      minute: "2-digit",
+                                                      hour12: true,
+                                                    }
+                                                  )}
+                                                </span>
+                                              </div>
+                                            </>
+                                          ) : (
+                                            <span className="text-sm text-slate-500">
+                                              Date not available
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* Show when it was scheduled for (if different from action date) */}
+                                        {scheduledDate && actionDate &&
+                                          Math.abs(scheduledDate - actionDate) > 1000 && (
+                                            <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                                              <span>Scheduled for: </span>
+                                              <span className="font-medium">
+                                                {scheduledDate.toLocaleDateString(
+                                                  "en-US",
+                                                  {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                  }
+                                                )}
+                                              </span>
+                                              <span className="mx-1">at</span>
+                                              <span className="font-medium">
+                                                {scheduledDate.toLocaleTimeString(
+                                                  "en-US",
+                                                  {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                  }
+                                                )}
+                                              </span>
+                                            </div>
+                                          )}
+                                      </div>
+                                    </div>
+
+                                    {followUp.followUpComment && (
+                                      <div className="mt-4">
+                                        <p className="text-sm font-medium text-slate-700 mb-2">
+                                          Notes
+                                        </p>
+                                        <div className="bg-slate-50 rounded-lg p-4">
+                                          <p className="text-slate-700">
+                                            {followUp.followUpComment}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {followUp.changedBy && (followUp.changedBy.firstName || followUp.changedBy.lastName) && (
+                                      <div className="mt-4">
+                                        <p className="text-sm font-medium text-slate-700">
+                                          Updated by
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                                            <User
+                                              size={14}
+                                              className="text-slate-600"
+                                            />
+                                          </div>
+                                          <span className="text-sm text-slate-700">
+                                            {followUp.changedBy.firstName || "User"}{" "}
+                                            {followUp.changedBy.lastName || ""}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="text-right">
+                                    <span
+                                      className={`text-xs px-3 py-1 rounded-full font-medium ${
+                                        outcome === "Successful" ||
+                                        outcome === "Completed"
+                                          ? "bg-green-100 text-green-800"
+                                          : outcome === "Rescheduled"
+                                            ? "bg-yellow-100 text-yellow-800"
+                                            : outcome === "Cancelled"
+                                              ? "bg-red-100 text-red-800"
+                                              : outcome === "Created" ||
+                                                outcome === "Updated"
+                                                ? "bg-blue-100 text-blue-800"
+                                                : "bg-gray-100 text-gray-800"
+                                      }`}
+                                    >
+                                      {outcome}
+                                    </span>
+                                    {actionDate && (
+                                      <p className="text-xs text-slate-500 mt-2">
+                                        {actionDate.toLocaleDateString(
+                                          "en-US",
+                                          {
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          }
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar Column */}
+          <div className="space-y-6">
+            {/* Status Card */}
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
+              <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                Deal Status
+              </h3>
+              <div
+                className={`inline-flex items-center px-4 py-2 rounded-full ${stageConfig.bgColor} ${stageConfig.color} border ${stageConfig.borderColor} mb-4`}
+              >
+                <StageIcon size={16} className="mr-2" />
+                <span className="capitalize font-medium text-sm">
+                  {stageConfig.label}
+                </span>
+              </div>
+              <p className="text-sm text-slate-600 mt-2">
+                Last updated {new Date(deal.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
+
+            {/* Company Card */}
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
+              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+                Company
+              </h3>
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mr-3">
+                  <Building size={20} className="text-slate-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-slate-900">
+                    {deal.companyName || "Unknown Company"}
+                  </h4>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {deal.email && (
+                  <a
+                    href={`mailto:${deal.email}`}
+                    className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <Mail size={14} className="mr-2" />
+                    {deal.email}
+                  </a>
+                )}
+                {deal.phoneNumber && (
+                  <div className="flex items-center text-sm text-slate-600">
+                    <Phone size={14} className="mr-2" />
+                    {deal.phoneNumber}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions Card */}
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
+              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+                Quick Actions
+              </h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    if (deal.followUpDate) {
+                      setFollowUpData({
+                        followUpDate: new Date(deal.followUpDate),
+                        followUpComment: deal.followUpComment || ""
+                      });
+                    }
+                    setIsFollowUpModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-slate-700 hover:bg-purple-50 rounded-lg transition-colors"
+                >
+                  <Calendar size={16} className="text-purple-600" />
+                  {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Pipeline_modal_view;
