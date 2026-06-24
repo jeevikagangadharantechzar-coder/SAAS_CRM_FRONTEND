@@ -105,6 +105,7 @@ function App() {
               <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
               <Route path="/contact" element={<WebsiteContactForm />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
               <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
               <Route path="/integrations/linkedin/callback" element={<LinkedInCallback />} />
 
