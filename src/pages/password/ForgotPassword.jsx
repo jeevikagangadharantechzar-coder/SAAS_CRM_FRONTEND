@@ -1,17 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { Loader2, Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, CheckCircle2, AlertCircle, Building2 } from "lucide-react";
 
 /* ── Forgot Password Component ─────────────────────── */
 
 const ForgotPassword = ({ isOpen, onClose }) => {
-  const API_URL = import.meta.env.VITE_API_URL;
+  const { tenantSlug } = useParams();
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+
   const [email, setEmail] = useState("");
+  const [tenantInputSlug, setTenantInputSlug] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    if (tenantSlug) {
+      setTenantInputSlug(tenantSlug);
+    } else {
+      setTenantInputSlug("");
+    }
+  }, [tenantSlug, isOpen]);
 
 /* ── Handle Forgot Password Function ─────────────────────── */
   const handleForgot = async (e) => {
@@ -20,7 +33,12 @@ const ForgotPassword = ({ isOpen, onClose }) => {
     setIsError(false);
     
     try {
-      const res = await axios.post(`${API_URL}/users/forgot-password`, { email });
+      const targetSlug = tenantInputSlug.trim();
+      const requestUrl = targetSlug
+        ? `${SI_URI}/${targetSlug}/api/users/forgot-password`
+        : `${API_URL}/users/forgot-password`;
+
+      const res = await axios.post(requestUrl, { email });
       setMessage(res.data.message);
       setIsError(false);
       setIsSuccess(true);
@@ -81,6 +99,31 @@ const ForgotPassword = ({ isOpen, onClose }) => {
                     </div>
                   )}
                   
+                  {/* Tenant Slug Input */}
+                  <div className="space-y-2">
+                    <label htmlFor="tenantSlug" className="text-sm font-medium text-gray-700">
+                      Tenant Portal / Company Identifier
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="tenantSlug"
+                        type="text"
+                        placeholder="e.g. my-company"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
+                        value={tenantInputSlug}
+                        onChange={(e) => setTenantInputSlug(e.target.value)}
+                        required
+                        disabled={!!tenantSlug}
+                      />
+                      <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    </div>
+                    {tenantSlug && (
+                      <p className="text-xs text-blue-600 font-medium">
+                        Locked to your current tenant portal: {tenantSlug}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <label htmlFor="email" className="text-sm font-medium text-gray-700">
                       Email address
