@@ -66,6 +66,7 @@ import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
+import MessagesPage from "./pages/Messages/MessagesPage";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -210,6 +211,9 @@ function App() {
                   <Route element={<PrivateRoute permission="settings" />}>
                     <Route path="settings" element={<Settings />} />
                   </Route>
+
+                  {/* MESSAGES */}
+                  <Route path="messages" element={<MessagesPage />} />
 
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
