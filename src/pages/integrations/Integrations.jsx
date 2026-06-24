@@ -3,6 +3,8 @@ import { toast } from "react-toastify";
 import { Link2, Trash2, RefreshCw, CheckCircle, AlertCircle } from "react-feather";
 import { api } from "../../services/api";
 import LinkedInIntegrationCard from "../../components/integrations/LinkedInIntegrationCard.jsx";
+import JustdialIntegrationCard from "../../components/integrations/JustdialIntegrationCard.jsx";
+import IndiaMartIntegrationCard from "../../components/integrations/IndiaMartIntegrationCard.jsx";
 
 export default function Integrations() {
   const [integrations, setIntegrations] = useState([]);
@@ -224,6 +226,11 @@ export default function Integrations() {
 
       {/* LinkedIn Campaigns Card */}
       <LinkedInIntegrationCard />
+
+      {/* Justdial Webhook Card */}
+      <JustdialIntegrationCard />
+      {/* IndiaMART Integration Card */}
+      <IndiaMartIntegrationCard />
 
       {/* How it works */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
