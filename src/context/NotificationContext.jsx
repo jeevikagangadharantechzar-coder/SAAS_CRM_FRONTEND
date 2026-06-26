@@ -8,13 +8,41 @@ const NotificationContext = createContext();
 /* ── Notification Provider ─────────────────────── */
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
-  const user = JSON.parse(localStorage.getItem("user"));
+
+  // Read user reactively — re-check on every render so login updates are picked up
+  const getUser = () => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
+  };
+  const [userId, setUserId] = useState(() => getUser()?._id || null);
+
+  // Listen for login: when localStorage "user" is set, pick up the userId immediately
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "user" || e.key === null) {
+        const id = getUser()?._id;
+        if (id && id !== userId) setUserId(id);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    // Also poll every 1s until userId is found (covers same-tab login)
+    if (!userId) {
+      const interval = setInterval(() => {
+        const id = getUser()?._id;
+        if (id) { setUserId(id); clearInterval(interval); }
+      }, 1000);
+      return () => { clearInterval(interval); window.removeEventListener("storage", onStorage); };
+    }
+
+    return () => window.removeEventListener("storage", onStorage);
+  }, [userId]);
 
   // Fetch notifications from DB on mount
   const fetchNotifications = async () => {
-    if (!user?._id) return;
+    const id = getUser()?._id;
+    if (!id) return;
     try {
-      const response = await axios.get(`${API_URL}/notifications/${user._id}`);
+      const response = await axios.get(`${API_URL}/notifications/${id}`);
       setNotifications(response.data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -22,13 +50,13 @@ export const NotificationProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (!user?._id) return;
+    if (!userId) return;
 
-    // Fetch existing notifications
+    // Fetch existing notifications immediately
     fetchNotifications();
 
     // Initialize socket
-    const socket = initSocket(user._id);
+    const socket = initSocket(userId);
     if (!socket) return;
 
     const handleNewNotification = (data) => {
@@ -101,7 +129,7 @@ export const NotificationProvider = ({ children }) => {
       socket.off("admin_reminder", handleNewNotification);
       socket.off("notification_deleted", handleNotificationDeleted);
     };
-  }, [user?._id]);
+  }, [userId]);
 
   return (
     <NotificationContext.Provider value={{ notifications, setNotifications, fetchNotifications }}>
