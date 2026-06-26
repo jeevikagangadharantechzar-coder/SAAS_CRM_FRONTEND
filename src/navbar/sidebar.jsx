@@ -18,6 +18,7 @@ import {
   MessageCircle,
   CheckSquare,
   Target,
+  Calendar,
 } from "lucide-react";
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -221,6 +222,27 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const isAssignedActive   = p.includes("/assigned-tasks");
   const isMyTargetsActive  = p.includes("/my-targets");
   const isAnyTaskActive    = isTaskMgmtActive || isTargetMgmtActive || isAssignedActive || isMyTargetsActive;
+    if (user.role && user.role.name === "Admin") {
+      setIsAdmin(true);
+      setUserPermissions({
+        dashboard: true,
+        leads: true,
+        deals_all: true,
+        deals_pipeline: true,
+        invoices: true,
+        proposal: true,
+        activities_calendar: true,
+        activities_list: true,
+        users_roles: true,
+        email_chat: true,
+        whatsapp_chat: true,
+        reports: true,
+        Meetings: true,
+      });
+    } else if (user.role && user.role.permissions) {
+      setUserPermissions(user.role.permissions);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchLogo = async () => {
@@ -265,6 +287,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </NavLink>
 
+        {/* Mobile close button - positioned absolutely */}
         <div className="relative group lg:hidden absolute top-4 right-4">
           <button onClick={toggleSidebar} className="p-2 hover:bg-gray-100 rounded-full">
             <X size={22} className="text-gray-600" />
@@ -438,6 +461,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="DealAnalysis"
           icon={<ClipboardList />}
           label="Deal Analysis"
+
+        />
+
+        <SidebarItem
+          to="/LossAnalysis"
+          icon={<ClipboardList />}
+          label="Loss Analysis"
+
         />
 
         <SidebarItem
@@ -470,6 +501,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Internal Messages */}
         <MessagesItem to="messages" />
+        <SidebarItem
+          to="/meetings"
+          icon={<Calendar />}
+          label="Meetings"
+        />
 
         {/* Email Chat */}
         <SidebarItem

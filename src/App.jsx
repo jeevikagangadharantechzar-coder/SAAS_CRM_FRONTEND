@@ -61,6 +61,9 @@ import CLVDashboard from "./pages/Clv/CLVDashboard";
 import ClientCLVDetails from "./pages/Clv/ClientCLVDetails";
 import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 
+import { Meetings } from "./pages/meetings/Meetings";
+import GoogleIntegration from "./pages/settings/GoogleIntegration";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import WebsiteContactForm from "./pages/website/WebsiteContactForm";
 import TaskManagement from "./pages/tasks/TaskManagement";
 import AssignedTasks from "./pages/tasks/AssignedTasks";
@@ -109,6 +112,7 @@ function App() {
               <Route path="/:tenantSlug/upgrade" element={<UpgradePlan />} />
               <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
               <Route path="/contact" element={<WebsiteContactForm />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
               <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
@@ -224,6 +228,11 @@ function App() {
                   <Route path="assigned-tasks" element={<AssignedTasks />} />
                   <Route path="target-management" element={<TargetManagement />} />
                   <Route path="my-targets" element={<MyTargets />} />
+                  {/* MEETINGS */}
+                  <Route path="meetings" element={<Meetings />} />
+
+                  {/* GOOGLE INTEGRATION SETTINGS */}
+                  <Route path="settings/google-integration" element={<GoogleIntegration />} />
 
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
@@ -270,6 +279,7 @@ function App() {
                 <Route path="/create-email/:id" element={<div />} />
                 <Route path="/scheduled-emails" element={<div />} />
                 <Route path="/email-history" element={<div />} />
+                <Route path="/meetings" element={<div />} />
               </Route>
             </Routes>
             <ToastContainer />
