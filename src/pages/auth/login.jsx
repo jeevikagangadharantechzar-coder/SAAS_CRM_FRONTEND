@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -36,12 +36,47 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [showUpgradeButton, setShowUpgradeButton] = useState(false);
+  const [activeSessionSlug, setActiveSessionSlug] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
   const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+
+  useEffect(() => {
+    const channelName = "crm_global_session_guard";
+    const channel = new BroadcastChannel(channelName);
+
+    const handleMessage = (event) => {
+      const { type, tenantSlug: activeSlug } = event.data;
+      if (type === "ACTIVE_SESSION_REPORT" && activeSlug) {
+        setActiveSessionSlug(activeSlug);
+        setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
+        setIsError(true);
+      }
+    };
+
+    channel.addEventListener("message", handleMessage);
+
+    // Query for any active session across other tabs
+    channel.postMessage({
+      type: "QUERY_ACTIVE_SESSION",
+    });
+
+    // Periodically query to detect new active sessions immediately
+    const interval = setInterval(() => {
+      channel.postMessage({
+        type: "QUERY_ACTIVE_SESSION",
+      });
+    }, 2000);
+
+    return () => {
+      clearInterval(interval);
+      channel.removeEventListener("message", handleMessage);
+      channel.close();
+    };
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -54,6 +89,13 @@ const Login = () => {
     const activeSlug = localStorage.getItem("tenantSlug");
     if (activeToken && activeSlug && activeSlug !== tenantSlug) {
       setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
+      setIsError(true);
+      setIsLoading(false);
+      return;
+    }
+
+    if (activeSessionSlug) {
+      setMessage(`Another tenant session (${activeSessionSlug}) is already active. Please log out of that session first.`);
       setIsError(true);
       setIsLoading(false);
       return;

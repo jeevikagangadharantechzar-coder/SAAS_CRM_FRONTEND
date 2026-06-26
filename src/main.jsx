@@ -1,3 +1,16 @@
+// Session/Tab Isolation: Overwrite localStorage with sessionStorage globally
+// This isolates the sessions per tab/window, allowing multiple tenants to be logged in
+// simultaneously in different tabs/windows, and ensures logging out from an impersonated
+// tenant does not log out the superadmin in the parent tab.
+try {
+  Object.defineProperty(window, "localStorage", {
+    value: window.sessionStorage,
+    writable: false,
+  });
+} catch (e) {
+  console.warn("Failed to isolate localStorage:", e);
+}
+
 import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";

@@ -133,6 +133,24 @@ export default function AddUserModal({ onUserCreated, disabled }) {
   // ── Field handlers ────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Prevent typing spaces in password fields
+    if ((name === "password" || name === "confirmPassword") && /\s/.test(value)) {
+      return;
+    }
+
+    // Restrict manual year entry to 4 digits in Date of Birth
+    if (name === "dateOfBirth" && value) {
+      const parts = value.split("-");
+      if (parts[0] && parts[0].length > 4) {
+        parts[0] = parts[0].substring(0, 4);
+        const newValue = parts.join("-");
+        setFormData((prev) => ({ ...prev, [name]: newValue }));
+        if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+        return;
+      }
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
 
@@ -198,17 +216,41 @@ export default function AddUserModal({ onUserCreated, disabled }) {
       newErrors.mobileNumber = `Please enter a valid phone number (${getPhoneNumberLengthMessage(phoneCountryCode)})`;
     }
     
-    if (!formData.password)
-      newErrors.password = "Password is required";
-    else if (formData.password.length < 8)
-      newErrors.password = "Password must be at least 8 characters";
-    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password))
-      newErrors.password = "Password must contain uppercase, lowercase and numbers";
+    // Date of Birth validation
+    if (formData.dateOfBirth) {
+      const parts = formData.dateOfBirth.split("-");
+      if (parts[0]) {
+        if (parts[0].length > 4) {
+          newErrors.dateOfBirth = "Year cannot exceed 4 digits";
+        } else {
+          const birthYear = parseInt(parts[0], 10);
+          const currentYear = new Date().getFullYear();
+          if (birthYear > currentYear) {
+            newErrors.dateOfBirth = "Year cannot be in the future";
+          } else if (birthYear < 1900) {
+            newErrors.dateOfBirth = "Year cannot be before 1900";
+          }
+        }
+      }
+    }
     
-    if (!formData.confirmPassword)
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    } else if (/\s/.test(formData.password)) {
+      newErrors.password = "Password cannot contain spaces";
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = "Password must contain uppercase, lowercase and numbers";
+    }
+    
+    if (!formData.confirmPassword) {
       newErrors.confirmPassword = "Confirm password is required";
-    else if (formData.password !== formData.confirmPassword)
+    } else if (/\s/.test(formData.confirmPassword)) {
+      newErrors.confirmPassword = "Confirm password cannot contain spaces";
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
+    }
     
     if (!formData.role)   newErrors.role   = "Role is required";
     if (!formData.gender) newErrors.gender = "Gender is required";
@@ -487,8 +529,15 @@ export default function AddUserModal({ onUserCreated, disabled }) {
               <label className="text-sm font-medium text-gray-700 mb-1 block">Date of Birth</label>
               <input
                 type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange}
-                className="p-2.5 border border-gray-300 rounded-lg w-full transition-all duration-200 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`p-2.5 border rounded-lg w-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.dateOfBirth ? "border-red-500 bg-red-50" : "border-gray-300 hover:border-gray-400"
+                }`}
               />
+              {errors.dateOfBirth && (
+                <p className="text-red-500 text-sm mt-1.5 flex items-center gap-1">
+                  <ErrorIcon />{errors.dateOfBirth}
+                </p>
+              )}
             </div>
 
             {/* Mobile Number - FIXED */}

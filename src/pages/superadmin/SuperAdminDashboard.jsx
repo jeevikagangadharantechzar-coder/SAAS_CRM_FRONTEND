@@ -35,7 +35,13 @@ const SuperAdminDashboard = () => {
 
       // Parse stats
       if (statsRes.data && statsRes.data.success) {
-        setStats(statsRes.data.data || statsRes.data);
+        const data = statsRes.data.data || statsRes.data;
+        setStats({
+          tenantsCount: data.totalTenants ?? data.tenantsCount ?? 0,
+          activeTenantsCount: data.activeTenants ?? data.activeTenantsCount ?? 0,
+          totalUsers: data.totalUsers ?? 0,
+          totalRevenue: data.totalRevenue ?? 0,
+        });
       } else if (statsRes.data) {
         setStats({
           tenantsCount: statsRes.data.totalTenants || 0,

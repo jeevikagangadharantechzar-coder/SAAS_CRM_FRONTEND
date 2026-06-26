@@ -285,7 +285,7 @@ const ClientReviewTable = () => {
         if (response.data.success && response.data.data.reviews?.length > 0) {
           const latestReview = response.data.data.reviews[0];
           setReviewForm({
-            supportTickets: latestReview.supportTickets || 0,
+            supportTickets: latestReview.supportTickets || "",
             progress: latestReview.progress || "Average",
             reviewNotes: latestReview.reviewNotes || "",
             clientHealthScore: latestReview.clientHealthScore || 50,
@@ -293,7 +293,7 @@ const ClientReviewTable = () => {
           });
         } else {
           setReviewForm({
-            supportTickets: deal.supportTicketCount || 0,
+            supportTickets: deal.supportTicketCount || "",
             progress: deal.reviewProgress || "Average",
             reviewNotes: "",
             clientHealthScore: deal.clientHealthScore || 50,
@@ -303,7 +303,7 @@ const ClientReviewTable = () => {
       } catch (error) {
         console.error("Error fetching review data:", error);
         setReviewForm({
-          supportTickets: deal.supportTicketCount || 0,
+          supportTickets: deal.supportTicketCount || "",
           progress: deal.reviewProgress || "Average",
           reviewNotes: "",
           clientHealthScore: deal.clientHealthScore || 50,
@@ -312,7 +312,7 @@ const ClientReviewTable = () => {
       }
     } else {
       setReviewForm({
-        supportTickets: deal.supportTicketCount || 0,
+        supportTickets: deal.supportTicketCount || "",
         progress: deal.reviewProgress || "Average",
         reviewNotes: "",
         clientHealthScore: deal.clientHealthScore || 50,
@@ -929,24 +929,43 @@ const ClientReviewTable = () => {
                       Support Tickets
                     </label>
                     <input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={reviewForm.supportTickets}
-                      onChange={(e) => setReviewForm({ ...reviewForm, supportTickets: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setReviewForm({ ...reviewForm, supportTickets: val === "" ? "" : parseInt(val, 10) });
+                      }}
                       className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Health Score (0-100)
+                      Health Score (1-100)
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={reviewForm.clientHealthScore}
-                      onChange={(e) => setReviewForm({ ...reviewForm, clientHealthScore: parseInt(e.target.value) || 50 })}
+                      onChange={(e) => {
+                        // Strip out all non-digit characters (including +, -, ., e)
+                        const cleanVal = e.target.value.replace(/\D/g, "");
+                        if (cleanVal === "") {
+                          setReviewForm({ ...reviewForm, clientHealthScore: "" });
+                          return;
+                        }
+                        let val = parseInt(cleanVal, 10);
+                        if (isNaN(val)) {
+                          val = "";
+                        } else {
+                          if (val > 100) val = 100;
+                          if (val < 1) val = 1;
+                        }
+                        setReviewForm({ ...reviewForm, clientHealthScore: val });
+                      }}
                       className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

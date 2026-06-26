@@ -16,6 +16,7 @@ import {
   User,
   ExternalLink,
   X,
+  Edit,
 } from "lucide-react";
 import { superApi } from "../../services/api";
 
@@ -31,6 +32,12 @@ const SuperAdminTenants = () => {
   // Delete Confirmation modal
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  // Edit Tenant modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState(null);
+  const [editForm, setEditForm] = useState({ name: "", adminName: "", adminEmail: "" });
+  const [isEditing, setIsEditing] = useState(false);
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -52,6 +59,41 @@ const SuperAdminTenants = () => {
       setTenants([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditClick = (tenant) => {
+    setEditingTenant(tenant);
+    setEditForm({
+      name: tenant.name || "",
+      adminName: tenant.adminName || "",
+      adminEmail: tenant.adminEmail || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editForm.name.trim() || !editForm.adminName.trim() || !editForm.adminEmail.trim()) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    setIsEditing(true);
+    try {
+      const res = await superApi.put(`/tenants/${editingTenant._id}`, editForm);
+      if (res.data?.success) {
+        setIsEditModalOpen(false);
+        setEditingTenant(null);
+        fetchTenants();
+      } else {
+        alert(res.data?.error || "Failed to update tenant details.");
+      }
+    } catch (err) {
+      console.error("Failed to update tenant:", err);
+      alert(err.response?.data?.error || "Failed to update tenant details.");
+    } finally {
+      setIsEditing(false);
     }
   };
 
@@ -257,6 +299,14 @@ const SuperAdminTenants = () => {
                         >
                           <ExternalLink size={15} />
                         </button>
+                        {/* Edit button */}
+                        <button
+                          onClick={() => handleEditClick(t)}
+                          className="p-1.5 border border-slate-200 rounded-lg hover:border-[#008ecc]/40 hover:text-[#008ecc] transition-all cursor-pointer flex items-center justify-center"
+                          title="Edit Tenant Details"
+                        >
+                          <Edit size={15} />
+                        </button>
                         {/* Delete button */}
                         <button
                           onClick={() => setDeleteTarget(t)}
@@ -339,6 +389,92 @@ const SuperAdminTenants = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT TENANT DETAILS MODAL */}
+      {isEditModalOpen && editingTenant && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-slate-800">
+                <Building2 size={20} className="text-[#008ecc]" />
+                <h3 className="text-lg font-bold">Edit Tenant Details</h3>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Company Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner text-slate-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Administrator Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={editForm.adminName}
+                  onChange={(e) => setEditForm({ ...editForm, adminName: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner text-slate-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Administrator Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  required
+                  type="email"
+                  value={editForm.adminEmail}
+                  onChange={(e) => setEditForm({ ...editForm, adminEmail: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner text-slate-800"
+                />
+              </div>
+
+              <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed">
+                Updating the company and administrator information here will automatically update the master record and synchronize it with the tenant's primary database user.
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={isEditing}
+                  className="flex-1 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isEditing}
+                  className="flex-1 py-2.5 bg-[#008ecc] text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 cursor-pointer text-sm shadow-md"
+                >
+                  {isEditing ? "Saving Changes..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
