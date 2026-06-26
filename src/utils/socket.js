@@ -13,8 +13,11 @@ export const initSocket = (userId) => {
 
   if (socket) return socket;
 
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const name = storedUser.name || "";
+
   socket = io(API_URL, {
-    auth: { userId },
+    auth: { userId, name },
     transports: ["websocket"],
     reconnectionAttempts: 5,
   });

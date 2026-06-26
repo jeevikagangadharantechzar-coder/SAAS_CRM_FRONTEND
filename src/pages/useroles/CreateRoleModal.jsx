@@ -43,6 +43,8 @@ export default function CreateRoleModal({ onRoleCreated }) {
       users_roles: false,
       email_chat: false,
       reports: false,
+      assigned_tasks: true,
+      my_targets: true,
     }
   });
 
@@ -86,6 +88,8 @@ export default function CreateRoleModal({ onRoleCreated }) {
         users_roles: false,
         email_chat: false,
         reports: false,
+        assigned_tasks: true,
+        my_targets: true,
       }
     });
     setIsDialogOpen(false);
@@ -140,6 +144,13 @@ export default function CreateRoleModal({ onRoleCreated }) {
       title: "Administration",
       permissions: [
         { key: "users_roles", label: "Users & Roles", icon: Shield },
+      ]
+    },
+    {
+      title: "Tasks & Targets",
+      permissions: [
+        { key: "assigned_tasks", label: "My Assigned Tasks", icon: List },
+        { key: "my_targets", label: "My Targets", icon: BarChart },
       ]
     }
   ];

@@ -159,9 +159,9 @@ const handleReset = async (e) => {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                ) : (
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                ) : (
+                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
             </div>
@@ -212,9 +212,9 @@ const handleReset = async (e) => {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 {showConfirmPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                ) : (
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                ) : (
+                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
             </div>

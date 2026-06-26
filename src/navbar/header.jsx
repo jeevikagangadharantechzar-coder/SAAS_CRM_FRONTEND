@@ -3,7 +3,7 @@ import { Menu, Power, ChevronDown, Bell } from "react-feather";
 import { Link, useNavigate } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext";
 import { disconnectSocket } from "../utils/socket";
-import { ShieldCheck, Maximize, Minimize } from "lucide-react";
+import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2 } from "lucide-react";
 
 import { Settings, Plug } from "lucide-react";
 
@@ -42,7 +42,7 @@ const Navbar = ({ toggleSidebar }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { notifications } = useNotifications();
+  const { notifications, setNotifications } = useNotifications();
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
@@ -158,6 +158,77 @@ const handleLogout = async () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Handle notification click — mark as read in state + DB and navigate
+  const handleNotificationClick = (n) => {
+    setNotifications((prev) =>
+      prev.map((notif) =>
+        notif._id === n._id ? { ...notif, read: true, isRead: true } : notif
+      )
+    );
+    setShowNotifications(false);
+    // Persist read status to DB
+    if (n._id && !n._id.toString().includes("-")) {
+      axios.patch(`${API_URL}/notifications/read/${n._id}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }).catch(() => {});
+    }
+    // Navigate based on notification type
+    const tenantSlug = localStorage.getItem("tenantSlug");
+    if (n.type === "task") {
+      if (isAdmin) {
+        navigate(`/${tenantSlug}/task-management`);
+      } else {
+        const filter = n.meta?.taskApproved ? "Task Approved" : "All";
+        navigate(`/${tenantSlug}/assigned-tasks`, { state: { filter } });
+      }
+    } else if (n.type === "target") {
+      if (isAdmin) {
+        navigate(`/${tenantSlug}/target-management`);
+      } else {
+        const targetId = n.meta?.targetId;
+        navigate(`/${tenantSlug}/my-targets`, { state: { expandTargetId: targetId } });
+      }
+    }
+  };
+
+  // Delete a single notification
+  const handleDeleteNotification = async (e, n) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((notif) => notif._id !== n._id));
+    if (n._id && !n._id.toString().includes("-")) {
+      axios.delete(`${API_URL}/notifications/${n._id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }).catch(() => {});
+    }
+  };
+
+  // Mark all as read
+  const handleMarkAllRead = () => {
+    const unreadIds = notifications.filter((n) => !n.read && !n.isRead && !n._id?.toString().includes("-")).map((n) => n._id);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true, isRead: true })));
+    if (unreadIds.length > 0) {
+      Promise.all(
+        unreadIds.map((id) =>
+          axios.patch(`${API_URL}/notifications/read/${id}`, {}, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }).catch(() => {})
+        )
+      );
+    }
+  };
+
+  // Clear all notifications
+  const handleClearAll = async () => {
+    const ids = notifications.filter((n) => n._id && !n._id.toString().includes("-")).map((n) => n._id);
+    setNotifications([]);
+    if (ids.length > 0) {
+      axios.delete(`${API_URL}/notifications/bulk`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        data: { ids },
+      }).catch(() => {});
+    }
+  };
+
   // Fullscreen toggle
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -253,53 +324,105 @@ const handleLogout = async () => {
             </div>
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-semibold text-gray-800 dark:text-gray-100 bg-gray-50 dark:bg-gray-900">
-                  Notifications
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
+                  <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Notifications</span>
+                  {notifications.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleMarkAllRead}
+                        title="Mark all as read"
+                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <CheckCheck size={13} /> Read all
+                      </button>
+                      <span className="text-gray-300 text-xs">|</span>
+                      <button
+                        onClick={handleClearAll}
+                        title="Clear all notifications"
+                        className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                      >
+                        <Trash2 size={13} /> Clear all
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.length > 0 ? (
-                    notifications.map((n) => (
+                    notifications.slice(0, 8).map((n) => (
                       <div
                         key={n._id}
-                        className="flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-0"
+                        onClick={() => handleNotificationClick(n)}
+                        className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-0 group ${
+                          !n.read && !n.isRead ? "bg-blue-50/40 dark:bg-blue-900/20" : ""
+                        }`}
                       >
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 relative">
                           <img
                             src={getProfileImageUrl(n.profileImage)}
                             alt="avatar"
                             className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                           />
+                          {!n.read && !n.isRead && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
+                          )}
                         </div>
-                        <div className="ml-3 flex-1">
+                        <div className="ml-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                            {n.meta?.taskApproved && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
+                                ✓ Task Approved
+                              </span>
+                            )}
+                            {n.meta?.taskAssigned && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
+                                📋 New Task
+                              </span>
+                            )}
+                            {n.meta?.taskCompleted && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
+                                ✔ Task Completed
+                              </span>
+                            )}
+                          </div>
                           <p className="text-gray-700 dark:text-gray-200 text-sm font-medium">
                             {n.title || "Notification"}
                           </p>
-                          <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                          <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 line-clamp-2">
                             {n.text}
                           </p>
-                          <p className="text-gray-400 dark:text-gray-500 text-xs mt-2">
-                            {formatDistanceToNow(new Date(n.createdAt), {
-                              addSuffix: true,
-                            })}
+                          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                            {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                           </p>
                         </div>
+                        <button
+                          onClick={(e) => handleDeleteNotification(e, n)}
+                          className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-all shrink-0"
+                          title="Delete notification"
+                        >
+                          <XIcon size={13} />
+                        </button>
                       </div>
                     ))
                   ) : (
-                    <div className="p-4 text-gray-500 text-sm text-center">
-                      No new notifications
+                    <div className="p-6 text-gray-400 text-sm text-center">
+                      No notifications
                     </div>
                   )}
                 </div>
-                {notifications.length > 0 && (
-                  <Link
-                    to="/dashboard/notifications"
-                    onClick={() => setShowNotifications(false)}
-                    className="block text-center px-4 py-3 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium border-t border-gray-200 dark:border-gray-700"
+                {/* View all footer */}
+                <div className="border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      setShowNotifications(false);
+                      const tenantSlug = localStorage.getItem("tenantSlug");
+                      navigate(tenantSlug ? `/${tenantSlug}/dashboard/notifications` : "/dashboard/notifications");
+                    }}
+                    className="w-full text-center px-4 py-2.5 text-xs font-semibold text-[#008ecc] hover:bg-blue-50 transition-colors"
                   >
-                    View All Notifications
-                  </Link>
-                )}
+                    View all notifications →
+                  </button>
+                </div>
               </div>
             )}
           </div>

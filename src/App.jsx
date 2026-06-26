@@ -61,11 +61,19 @@ import CLVDashboard from "./pages/Clv/CLVDashboard";
 import ClientCLVDetails from "./pages/Clv/ClientCLVDetails";
 import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 
+import { Meetings } from "./pages/meetings/Meetings";
+import GoogleIntegration from "./pages/settings/GoogleIntegration";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import WebsiteContactForm from "./pages/website/WebsiteContactForm";
+import TaskManagement from "./pages/tasks/TaskManagement";
+import AssignedTasks from "./pages/tasks/AssignedTasks";
+import TargetManagement from "./pages/targets/TargetManagement";
+import MyTargets from "./pages/targets/MyTargets";
 import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
+import MessagesPage from "./pages/Messages/MessagesPage";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -104,6 +112,7 @@ function App() {
               <Route path="/:tenantSlug/upgrade" element={<UpgradePlan />} />
               <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
               <Route path="/contact" element={<WebsiteContactForm />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
               <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
@@ -212,6 +221,19 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                   </Route>
 
+                  {/* MESSAGES */}
+                  <Route path="messages" element={<MessagesPage />} />
+                  {/* TASKS & TARGETS */}
+                  <Route path="task-management" element={<TaskManagement />} />
+                  <Route path="assigned-tasks" element={<AssignedTasks />} />
+                  <Route path="target-management" element={<TargetManagement />} />
+                  <Route path="my-targets" element={<MyTargets />} />
+                  {/* MEETINGS */}
+                  <Route path="meetings" element={<Meetings />} />
+
+                  {/* GOOGLE INTEGRATION SETTINGS */}
+                  <Route path="settings/google-integration" element={<GoogleIntegration />} />
+
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
                   <Route path="integrations/facebook/callback" element={<FacebookCallback />} />
@@ -248,11 +270,16 @@ function App() {
                 <Route path="/cltv/client/:companyName" element={<div />} />
                 <Route path="/leaderboard" element={<div />} />
                 <Route path="/dashboard/notifications" element={<div />} />
+                <Route path="/task-management" element={<div />} />
+                <Route path="/assigned-tasks" element={<div />} />
+                <Route path="/target-management" element={<div />} />
+                <Route path="/my-targets" element={<div />} />
                 <Route path="/mass-email" element={<div />} />
                 <Route path="/create-email" element={<div />} />
                 <Route path="/create-email/:id" element={<div />} />
                 <Route path="/scheduled-emails" element={<div />} />
                 <Route path="/email-history" element={<div />} />
+                <Route path="/meetings" element={<div />} />
               </Route>
             </Routes>
             <ToastContainer />

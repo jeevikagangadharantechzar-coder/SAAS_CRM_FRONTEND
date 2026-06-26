@@ -476,7 +476,7 @@ const InvoiceHead = () => {
             onClick={() => { setEditingInvoice(null); openModal(); }}
             className="bg-[#4466f2] p-2 px-4 text-white rounded-sm hover:bg-[#3355e0] transition-colors"
           >
-            Create invoices
+            + Create invoices
           </button>
         )}
       </div>

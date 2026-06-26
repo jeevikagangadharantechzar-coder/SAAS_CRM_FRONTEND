@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNotifications } from "../context/NotificationContext";
 import {
   Home,
   ChevronRight,
   X,
   Shield,
-  Calendar,
-  List,
   TrendingUp,
   TrendingDown,
   FileText,
@@ -251,6 +250,70 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
   );
 };
 
+/* ── Messages Sidebar Item with unread badge ─ */
+const MessagesItem = ({ to }) => {
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const API_URL    = import.meta.env.VITE_API_URL;
+    const tenantSlug = localStorage.getItem("tenantSlug");
+    const token      = localStorage.getItem("token");
+    if (!tenantSlug || !token) return;
+
+    const fetchUnread = async () => {
+      try {
+        const { data } = await axios.get(
+          `${API_URL.replace("/api", "")}/${tenantSlug}/api/chat/unread-count`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setUnread(data.unreadCount || 0);
+      } catch {}
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center justify-between w-full p-3 rounded-full transition-all duration-300
+        ${isActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <div className="flex items-center space-x-3">
+            <IconCircle isActive={isActive}>
+              <MessageSquare />
+            </IconCircle>
+            <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+              Messages
+            </span>
+          </div>
+          {unread > 0 && (
+            <span className="bg-[#008ecc] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+};
+
+/* ── Badge ─────────────────────── */
+const Badge = ({ count }) => {
+  if (!count) return null;
+  return (
+    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+};
+
 /* ── Sidebar Component ─────────────────────── */
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -263,9 +326,19 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const location = useLocation();
+  const tenantSlug = location.pathname.split("/")[1];
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const _user = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
+  const isAdmin = _user?.role?.name === "Admin";
+  const userPermissions = isAdmin
+    ? {
+        dashboard: true, leads: true, deals_all: true, deals_pipeline: true,
+        invoices: true, proposal: true, activities_calendar: true,
+        activities_list: true, users_roles: true, email_chat: true,
+        whatsapp_chat: true, reports: true, task_management: true,
+        target_management: true, assigned_tasks: true, Meetings: true,
+      }
+    : (_user?.role?.permissions || {});
 
     if (user.role && user.role.name === "Admin") {
       setIsAdmin(true);
@@ -303,7 +376,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         console.error("Failed to load company logo:", err);
       }
     };
-
     fetchLogo();
   }, []);
 
@@ -368,7 +440,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       <nav className={`flex flex-col gap-2.5 ${isOpen ? "px-1.5" : "px-0.5 items-center"}`}>
         {/* Dashboard */}
         <SidebarItem
-          to="/dashboard"
+          to="dashboard"
           icon={<Home />}
           label="Dashboard"
           hasPermission={isAdmin || userPermissions.dashboard}
@@ -377,7 +449,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Leads */}
         <SidebarItem
-          to="/leads"
+          to="leads"
           icon={<Users />}
           label="Leads"
           hasPermission={isAdmin || userPermissions.leads}
@@ -396,7 +468,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           }
         >
           <SmallLink
-            to="/Pipelineview"
+            to="Pipelineview"
             icon={<GitBranch />}
             label="Pipeline View"
             hasPermission={isAdmin || userPermissions.deals_pipeline}
@@ -420,7 +492,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Invoice */}
         <SidebarItem
-          to="/invoices"
+          to="invoices"
           exact
           icon={<Receipt />}
           label="Invoices"
@@ -458,7 +530,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Streak Leaderboard */}
         <SidebarItem
-          to="/leaderboard"
+          to="leaderboard"
           icon={<Trophy />}
           label="Leaderboard"
           hasPermission={isAdmin || userPermissions.streak_leaderboard}
@@ -490,7 +562,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </Collapsible>
 
-        {/* Reports */}
+        {/* Team Analytics */}
         <SidebarItem
           to="/team-analytics"
           icon={<PieChart />}
@@ -508,7 +580,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           sidebarOpen={isOpen}
         />
 
-        {/* Upgrade Plan (Directs to the Pricing Plans Catalog) */}
+        {/* Upgrade Plan */}
         {isAdmin && (
           <SidebarItem
             to={`/${location.pathname.split("/")[1]}/plans`}
