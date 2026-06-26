@@ -15,15 +15,15 @@ import {
   BarChart3,
   Trophy,
   Mail,
-  MessageCircle,
+  MessageSquare,
+  CheckSquare,
+  Target,
+  Calendar,
   Briefcase,
   DollarSign,
-  Activity,
-  Send,
-  PieChart,
-  ArrowUpCircle,
   Receipt,
-  FileCheck,
+  Send,
+  ArrowUpCircle,
 } from "lucide-react";
 
 import { NavLink, useLocation, useParams } from "react-router-dom";
@@ -33,7 +33,7 @@ const IconCircle = ({ children, isActive, sidebarOpen = true }) => (
     className={`flex items-center justify-center rounded-full transition-all duration-300 ${
       sidebarOpen
         ? `w-10 h-10 shadow-sm ${isActive ? "bg-[#f2fbff]" : "bg-white"}`
-        : "w-full h-full bg-transparent shadow-none"
+        : "w-10 h-10 bg-transparent shadow-none"
     }`}
   >
     {React.cloneElement(children, {
@@ -59,9 +59,10 @@ const SidebarItem = ({
   if (!hasPermission) return null;
 
   // Dynamically resolve tenant-scoped path
-  const resolvedTo = tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
-    ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
-    : to;
+  const resolvedTo =
+    tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
+      ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
+      : to;
 
   const isActive = exact
     ? location.pathname === resolvedTo
@@ -72,7 +73,7 @@ const SidebarItem = ({
       to={resolvedTo}
       end={exact}
       onClick={onClick}
-      className={({ isActive }) =>
+      className={
         `flex items-center justify-center transition-all duration-300 ${
           sidebarOpen
             ? `w-full p-2.5 rounded-full justify-between ${
@@ -92,7 +93,7 @@ const SidebarItem = ({
           </IconCircle>
           <span
             className={`text-base font-medium transition-opacity duration-200 ${
-              isActive ? "text-[#008ecc]" : "text-slate-700"
+              isActive ? "text-[#008ecc]" : "text-slate-750"
             }`}
           >
             {label}
@@ -117,6 +118,7 @@ const Collapsible = ({
   children,
   hasPermission = true,
   sidebarOpen = true,
+  activePaths = [],
 }) => {
   const { tenantSlug } = useParams();
   const location = useLocation();
@@ -127,11 +129,14 @@ const Collapsible = ({
   const hasActiveChild = React.Children.toArray(children).some((child) => {
     if (!child) return false;
     const childTo = child.props.to;
-    const resolvedChildTo = tenantSlug && !childTo.startsWith(`/${tenantSlug}`) && !childTo.startsWith("http")
-      ? `/${tenantSlug}${childTo.startsWith("/") ? childTo : "/" + childTo}`
-      : childTo;
+    const resolvedChildTo =
+      tenantSlug && !childTo.startsWith(`/${tenantSlug}`) && !childTo.startsWith("http")
+        ? `/${tenantSlug}${childTo.startsWith("/") ? childTo : "/" + childTo}`
+        : childTo;
     return location.pathname.startsWith(resolvedChildTo);
   });
+
+  const isChildActive = activePaths.some((p) => location.pathname.includes(p)) || hasActiveChild;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -140,10 +145,10 @@ const Collapsible = ({
         className={`flex items-center justify-center transition-all duration-300 cursor-pointer ${
           sidebarOpen
             ? `w-full p-2.5 rounded-full justify-between ${
-                open || hasActiveChild ? "bg-[#f2fbff]/50" : "hover:bg-[#f8f9fb]"
+                open || isChildActive ? "bg-[#f2fbff]/50" : "hover:bg-[#f8f9fb]"
               }`
             : `w-10 h-10 rounded-full ${
-                open || hasActiveChild ? "bg-[#f2fbff] shadow-sm border border-blue-100" : "hover:bg-[#f8f9fb]"
+                open || isChildActive ? "bg-[#f2fbff] shadow-sm border border-blue-100" : "hover:bg-[#f8f9fb]"
               }`
         }`}
         title={!sidebarOpen ? label : ""}
@@ -151,12 +156,12 @@ const Collapsible = ({
         {sidebarOpen ? (
           <>
             <div className="flex items-center space-x-3 w-full justify-start">
-              <IconCircle isActive={open || hasActiveChild} sidebarOpen={sidebarOpen}>
+              <IconCircle isActive={open || isChildActive} sidebarOpen={sidebarOpen}>
                 {icon}
               </IconCircle>
               <span
                 className={`text-base font-medium ${
-                  hasActiveChild ? "text-[#008ecc]" : "text-slate-700"
+                  isChildActive ? "text-[#008ecc]" : "text-slate-750"
                 }`}
               >
                 {label}
@@ -171,7 +176,7 @@ const Collapsible = ({
           </>
         ) : (
           React.cloneElement(icon, {
-            color: open || hasActiveChild ? "#008ecc" : "#475569",
+            color: open || isChildActive ? "#008ecc" : "#475569",
             size: 18,
           })
         )}
@@ -202,16 +207,18 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
 
   if (!hasPermission) return null;
 
-  const resolvedTo = tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
-    ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
-    : to;
+  const resolvedTo =
+    tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
+      ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
+      : to;
 
   const isResolvedActive = location.pathname.startsWith(resolvedTo);
 
   return (
     <NavLink
       to={resolvedTo}
-      className={({ isActive }) =>
+      end={exact => false}
+      className={
         `flex items-center justify-center transition-all duration-300 w-full ${
           sidebarOpen
             ? `p-2 rounded-full justify-start gap-2.5 ${
@@ -251,19 +258,21 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
 };
 
 /* ── Messages Sidebar Item with unread badge ─ */
-const MessagesItem = ({ to }) => {
+const MessagesItem = ({ to, sidebarOpen = true }) => {
   const [unread, setUnread] = useState(0);
+  const { tenantSlug } = useParams();
+  const location = useLocation();
 
   useEffect(() => {
-    const API_URL    = import.meta.env.VITE_API_URL;
-    const tenantSlug = localStorage.getItem("tenantSlug");
-    const token      = localStorage.getItem("token");
-    if (!tenantSlug || !token) return;
+    const API_URL = import.meta.env.VITE_API_URL;
+    const activeSlug = localStorage.getItem("tenantSlug") || tenantSlug;
+    const token = localStorage.getItem("token");
+    if (!activeSlug || !token) return;
 
     const fetchUnread = async () => {
       try {
         const { data } = await axios.get(
-          `${API_URL.replace("/api", "")}/${tenantSlug}/api/chat/unread-count`,
+          `${API_URL.replace("/api", "")}/${activeSlug}/api/chat/unread-count`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setUnread(data.unreadCount || 0);
@@ -273,23 +282,42 @@ const MessagesItem = ({ to }) => {
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [tenantSlug]);
+
+  const resolvedTo =
+    tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
+      ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
+      : to;
+
+  const isActive = location.pathname.startsWith(resolvedTo);
 
   return (
     <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex items-center justify-between w-full p-3 rounded-full transition-all duration-300
-        ${isActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"}`
+      to={resolvedTo}
+      className={
+        `flex items-center justify-center transition-all duration-300 ${
+          sidebarOpen
+            ? `w-full p-2.5 rounded-full justify-between ${
+                isActive ? "bg-[#f2fbff]/80 shadow-sm border border-blue-50" : "hover:bg-[#f8f9fb]"
+              }`
+            : `w-10 h-10 rounded-full ${
+                isActive ? "bg-[#f2fbff] shadow-sm border border-blue-100" : "hover:bg-[#f8f9fb]"
+              }`
+        }`
       }
+      title={!sidebarOpen ? "Messages" : ""}
     >
-      {({ isActive }) => (
+      {sidebarOpen ? (
         <>
-          <div className="flex items-center space-x-3">
-            <IconCircle isActive={isActive}>
+          <div className="flex items-center space-x-3 w-full justify-start">
+            <IconCircle isActive={isActive} sidebarOpen={sidebarOpen}>
               <MessageSquare />
             </IconCircle>
-            <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+            <span
+              className={`text-base font-medium ${
+                isActive ? "text-[#008ecc]" : "text-slate-750"
+              }`}
+            >
               Messages
             </span>
           </div>
@@ -299,6 +327,15 @@ const MessagesItem = ({ to }) => {
             </span>
           )}
         </>
+      ) : (
+        <div className="relative">
+          <MessageSquare color={isActive ? "#008ecc" : "#475569"} size={18} />
+          {unread > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-[#008ecc] text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+              !
+            </span>
+          )}
+        </div>
       )}
     </NavLink>
   );
@@ -321,27 +358,28 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const [showDeals, setShowDeals] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+
+  const { notifications } = useNotifications();
+  const location = useLocation();
+  const { tenantSlug } = useParams();
 
   const [userPermissions, setUserPermissions] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const location = useLocation();
-  const tenantSlug = location.pathname.split("/")[1];
-
-  const _user = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
-  const isAdmin = _user?.role?.name === "Admin";
-  const userPermissions = isAdmin
-    ? {
-        dashboard: true, leads: true, deals_all: true, deals_pipeline: true,
-        invoices: true, proposal: true, activities_calendar: true,
-        activities_list: true, users_roles: true, email_chat: true,
-        whatsapp_chat: true, reports: true, task_management: true,
-        target_management: true, assigned_tasks: true, Meetings: true,
+  useEffect(() => {
+    const _user = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "{}");
+      } catch {
+        return {};
       }
-    : (_user?.role?.permissions || {});
+    })();
 
-    if (user.role && user.role.name === "Admin") {
-      setIsAdmin(true);
+    const adminStatus = _user?.role?.name === "Admin";
+    setIsAdmin(adminStatus);
+
+    if (adminStatus) {
       setUserPermissions({
         dashboard: true,
         leads: true,
@@ -355,13 +393,55 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         email_chat: true,
         whatsapp_chat: true,
         reports: true,
+        task_management: true,
+        target_management: true,
+        assigned_tasks: true,
+        Meetings: true,
         streak_leaderboard: true,
         email_campaigns: true,
       });
-    } else if (user.role && user.role.permissions) {
-      setUserPermissions(user.role.permissions);
+    } else if (_user?.role?.permissions) {
+      setUserPermissions(_user.role.permissions);
     }
   }, []);
+
+  const adminTaskBadge = isAdmin
+    ? notifications.filter(
+        (n) =>
+          n.type === "task" &&
+          (n.meta?.taskCompleted || n.meta?.taskNoteAdded) &&
+          !n.read &&
+          !n.isRead
+      ).length
+    : 0;
+
+  const salesTaskBadge = !isAdmin
+    ? notifications.filter(
+        (n) =>
+          n.type === "task" &&
+          (n.meta?.taskAssigned || n.meta?.taskApproved) &&
+          !n.read &&
+          !n.isRead
+      ).length
+    : 0;
+
+  const salesTargetBadge = !isAdmin
+    ? notifications.filter(
+        (n) =>
+          n.type === "target" &&
+          (n.meta?.targetAssigned || n.meta?.targetUpdated) &&
+          !n.read &&
+          !n.isRead
+      ).length
+    : 0;
+
+  const p = location.pathname;
+  const isTaskMgmtActive = p.includes("/task-management");
+  const isTargetMgmtActive = p.includes("/target-management");
+  const isAssignedActive = p.includes("/assigned-tasks");
+  const isMyTargetsActive = p.includes("/my-targets");
+  const isAnyTaskActive =
+    isTaskMgmtActive || isTargetMgmtActive || isAssignedActive || isMyTargetsActive;
 
   useEffect(() => {
     const fetchLogo = async () => {
@@ -379,28 +459,25 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     fetchLogo();
   }, []);
 
-  // Auto-open Deals and Analysis menus if user is on those pages
+  // Auto-open Deals, Analysis, and Email menus if user is on those pages
   useEffect(() => {
-    if (
-      location.pathname.includes("/deals") ||
-      location.pathname.includes("/Pipelineview")
-    ) {
+    if (p.includes("/deals") || p.includes("/Pipelineview")) {
       setShowDeals(true);
     }
     if (
-      location.pathname.includes("/DealAnalysis") ||
-      location.pathname.includes("/LossAnalysis") ||
-      location.pathname.includes("/cltv")
+      p.includes("/DealAnalysis") ||
+      p.includes("/LossAnalysis") ||
+      p.includes("/cltv")
     ) {
       setShowAnalysis(true);
     }
-    if (
-      location.pathname.includes("/emailchat") ||
-      location.pathname.includes("/mass-email")
-    ) {
+    if (p.includes("/emailchat") || p.includes("/mass-email")) {
       setShowEmail(true);
     }
-  }, [location.pathname]);
+    if (isAnyTaskActive) {
+      setShowTasks(true);
+    }
+  }, [p, isAnyTaskActive]);
 
   return (
     <aside
@@ -411,7 +488,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     >
       {/* Header - Logo */}
       <div className="mb-8 flex flex-col items-center justify-center relative">
-        <NavLink to="/dashboard" className="cursor-pointer block">
+        <NavLink to="dashboard" className="cursor-pointer block">
           <img
             src={logo || "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png"}
             alt="Company Logo"
@@ -424,7 +501,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </NavLink>
 
-        {/* Mobile close button - positioned absolutely */}
+        {/* Mobile close button */}
         {isOpen && (
           <div className="relative group lg:hidden absolute top-0 right-0">
             <button
@@ -463,6 +540,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           open={showDeals}
           onToggle={() => setShowDeals((s) => !s)}
           sidebarOpen={isOpen}
+          activePaths={["/deals", "/Pipelineview"]}
           hasPermission={
             isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline
           }
@@ -474,17 +552,70 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             hasPermission={isAdmin || userPermissions.deals_pipeline}
           />
           <SmallLink
-            to="/deals"
-            icon={<DollarSign />}
+            to="deals"
+            icon={<TrendingUp />}
             label="All Deals"
             hasPermission={isAdmin || userPermissions.deals_all}
           />
         </Collapsible>
 
+        {/* Tasks (Collapsible) */}
+        {(isAdmin ||
+          userPermissions.task_management ||
+          userPermissions.target_management ||
+          userPermissions.assigned_tasks ||
+          (!isAdmin && userPermissions.my_targets !== false)) && (
+          <Collapsible
+            label="Tasks"
+            icon={<CheckSquare />}
+            open={showTasks}
+            onToggle={() => setShowTasks((s) => !s)}
+            sidebarOpen={isOpen}
+            activePaths={[
+              "/task-management",
+              "/target-management",
+              "/assigned-tasks",
+              "/my-targets",
+            ]}
+          >
+            {(isAdmin || userPermissions.task_management) && (
+              <SmallLink
+                to="task-management"
+                icon={<ClipboardList />}
+                label="Task Management"
+              />
+            )}
+
+            {(isAdmin || userPermissions.target_management) && (
+              <SmallLink
+                to="target-management"
+                icon={<Target />}
+                label="Target Management"
+              />
+            )}
+
+            {!isAdmin && userPermissions.assigned_tasks && (
+              <SmallLink
+                to="assigned-tasks"
+                icon={<CheckSquare />}
+                label="My Tasks"
+              />
+            )}
+
+            {!isAdmin && userPermissions.my_targets !== false && (
+              <SmallLink
+                to="my-targets"
+                icon={<Target />}
+                label="My Targets"
+              />
+            )}
+          </Collapsible>
+        )}
+
         {/* Proposal */}
         <SidebarItem
-          to="/proposal"
-          icon={<FileCheck />}
+          to="proposal"
+          icon={<ClipboardList />}
           label="Proposal"
           hasPermission={isAdmin || userPermissions.proposal}
           sidebarOpen={isOpen}
@@ -507,22 +638,20 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           open={showAnalysis}
           onToggle={() => setShowAnalysis((s) => !s)}
           sidebarOpen={isOpen}
+          activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
         >
           <SmallLink
-            to="/DealAnalysis"
-            icon={<Activity />}
+            to="DealAnalysis"
+            icon={<BarChart3 />}
             label="Deal Analysis"
           />
-          
           <SmallLink
-            to="/cltv/dashboard"
+            to="cltv/dashboard"
             icon={<TrendingUp />}
             label="Won Analysis"
           />
-
-
           <SmallLink
-            to="/LossAnalysis"
+            to="LossAnalysis"
             icon={<TrendingDown />}
             label="Loss Analysis"
           />
@@ -549,23 +678,35 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           }
         >
           <SmallLink
-            to="/emailchat"
+            to="emailchat"
             icon={<Mail />}
             label="Email Chat"
             hasPermission={isAdmin || userPermissions.email_chat}
           />
           <SmallLink
-            to="/mass-email"
+            to="mass-email"
             icon={<Send />}
             label="Email Campaign"
             hasPermission={isAdmin || userPermissions.email_campaigns}
           />
         </Collapsible>
 
+        {/* Internal Messages */}
+        <MessagesItem to="messages" sidebarOpen={isOpen} />
+
+        {/* Meetings */}
+        <SidebarItem
+          to="meetings"
+          icon={<Calendar />}
+          label="Meetings"
+          hasPermission={isAdmin || userPermissions.Meetings}
+          sidebarOpen={isOpen}
+        />
+
         {/* Team Analytics */}
         <SidebarItem
-          to="/team-analytics"
-          icon={<PieChart />}
+          to="team-analytics"
+          icon={<BarChart3 />}
           label="Team Analytics"
           hasPermission={isAdmin || userPermissions.reports}
           sidebarOpen={isOpen}
@@ -573,7 +714,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Users & Roles */}
         <SidebarItem
-          to="/user&roles"
+          to="user&roles"
           icon={<Shield />}
           label="Users & Roles"
           hasPermission={isAdmin || userPermissions.users_roles}
@@ -583,7 +724,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* Upgrade Plan */}
         {isAdmin && (
           <SidebarItem
-            to={`/${location.pathname.split("/")[1]}/plans`}
+            to={`/${tenantSlug}/plans`}
             icon={<ArrowUpCircle />}
             label="Upgrade Plan"
             sidebarOpen={isOpen}
