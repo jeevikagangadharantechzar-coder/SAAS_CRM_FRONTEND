@@ -12,9 +12,9 @@ import {
   ClipboardList,
   Users,
   GitBranch,
-  BarChart3,Trophy,
+  BarChart3, Trophy,
   Mail,
-    MessageCircle
+  MessageCircle
 } from "lucide-react";
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -161,6 +161,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         email_chat: true,
         whatsapp_chat: true,
         reports: true,
+        Meetings: true,
       });
     } else if (user.role && user.role.permissions) {
       setUserPermissions(user.role.permissions);
@@ -212,7 +213,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             }}
           />
         </NavLink>
-        
+
         {/* Mobile close button - positioned absolutely */}
         <div className="relative group lg:hidden absolute top-4 right-4">
           <button onClick={toggleSidebar} className="p-2 hover:bg-gray-100 rounded-full">
@@ -234,7 +235,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           hasPermission={isAdmin || userPermissions.dashboard}
         />
 
-        
+
         {/* Leads */}
         <SidebarItem
           to="/leads"
@@ -294,28 +295,28 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           label="Invoices"
           hasPermission={isAdmin || userPermissions.invoices}
         />
-        
-  
-        
+
+
+
         <SidebarItem
           to="/DealAnalysis"
           icon={<ClipboardList />}
           label="Deal Analysis"
-         
+
         />
-        
+
         <SidebarItem
           to="/LossAnalysis"
           icon={<ClipboardList />}
           label="Loss Analysis"
-         
+
         />
 
         <SidebarItem
           to="/cltv/dashboard"
           icon={<ClipboardList />}
           label="Won Analysis"
-        
+
         />
 
         {/* Streak Leaderboard */}
@@ -334,7 +335,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           label="Users & Roles"
           hasPermission={isAdmin || userPermissions.users_roles}
         />
-
+        <SidebarItem
+          to="/meetings"
+          icon={<Calendar />}
+          label="Meetings"
+        />
 
         {/* Email Chat */}
         <SidebarItem

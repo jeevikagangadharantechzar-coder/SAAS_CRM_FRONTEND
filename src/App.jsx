@@ -61,6 +61,9 @@ import CLVDashboard from "./pages/Clv/CLVDashboard";
 import ClientCLVDetails from "./pages/Clv/ClientCLVDetails";
 import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 
+import { Meetings } from "./pages/meetings/Meetings";
+import GoogleIntegration from "./pages/settings/GoogleIntegration";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import WebsiteContactForm from "./pages/website/WebsiteContactForm";
 import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
@@ -104,6 +107,7 @@ function App() {
               <Route path="/:tenantSlug/upgrade" element={<UpgradePlan />} />
               <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
               <Route path="/contact" element={<WebsiteContactForm />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
               <Route path="/integrations/linkedin/callback" element={<LinkedInCallback />} />
@@ -211,6 +215,12 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                   </Route>
 
+                  {/* MEETINGS */}
+                  <Route path="meetings" element={<Meetings />} />
+
+                  {/* GOOGLE INTEGRATION SETTINGS */}
+                  <Route path="settings/google-integration" element={<GoogleIntegration />} />
+
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
                   <Route path="integrations/facebook/callback" element={<FacebookCallback />} />
@@ -252,6 +262,7 @@ function App() {
                 <Route path="/create-email/:id" element={<div />} />
                 <Route path="/scheduled-emails" element={<div />} />
                 <Route path="/email-history" element={<div />} />
+                <Route path="/meetings" element={<div />} />
               </Route>
             </Routes>
             <ToastContainer />
