@@ -11,18 +11,14 @@ import {
   ClipboardList,
   Users,
   GitBranch,
-<<<<<<< HEAD
   BarChart3,
   Trophy,
   Mail,
+  MessageSquare,
   MessageCircle,
   CheckSquare,
   Target,
-=======
-  BarChart3, Trophy,
-  Mail,
-  MessageSquare
->>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
+  Calendar,
 } from "lucide-react";
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -191,24 +187,13 @@ const Badge = ({ count }) => {
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const [logo, setLogo] = useState(null);
-<<<<<<< HEAD
-  const [showActivities, setShowActivities] = useState(false);
-  const { notifications } = useNotifications();
-
-  //  Deals collapsible state
   const [showDeals, setShowDeals] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
-=======
-  const [showDeals, setShowDeals] = useState(false);
-  const [userPermissions, setUserPermissions] = useState({});
-  const [isAdmin, setIsAdmin] = useState(false);
->>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
+  const { notifications } = useNotifications();
 
   const location = useLocation();
   const tenantSlug = location.pathname.split("/")[1];
 
-  // ── Compute role/permissions SYNCHRONOUSLY on every render ──────────────
-  // This ensures badge counts are correct on the very first render (no delay)
   const _user = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
   const isAdmin = _user?.role?.name === "Admin";
   const userPermissions = isAdmin
@@ -217,11 +202,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         invoices: true, proposal: true, activities_calendar: true,
         activities_list: true, users_roles: true, email_chat: true,
         whatsapp_chat: true, reports: true, task_management: true,
-        target_management: true, assigned_tasks: true,
+        target_management: true, assigned_tasks: true, Meetings: true,
       }
     : (_user?.role?.permissions || {});
 
-  // Admin: completed tasks awaiting approval; Sales: newly assigned tasks + approvals + targets
   const adminTaskBadge = isAdmin
     ? notifications.filter((n) => n.type === "task" && (n.meta?.taskCompleted || n.meta?.taskNoteAdded) && !n.read && !n.isRead).length
     : 0;
@@ -232,13 +216,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     ? notifications.filter((n) => n.type === "target" && (n.meta?.targetAssigned || n.meta?.targetUpdated) && !n.read && !n.isRead).length
     : 0;
 
-  // ── Active path helpers (reliable across tenant-slug routes) ────────────
   const p = location.pathname;
-  const isTaskMgmtActive    = p.includes("/task-management");
-  const isTargetMgmtActive  = p.includes("/target-management");
-  const isAssignedActive    = p.includes("/assigned-tasks");
-  const isMyTargetsActive   = p.includes("/my-targets");
-  const isAnyTaskActive     = isTaskMgmtActive || isTargetMgmtActive || isAssignedActive || isMyTargetsActive;
+  const isTaskMgmtActive   = p.includes("/task-management");
+  const isTargetMgmtActive = p.includes("/target-management");
+  const isAssignedActive   = p.includes("/assigned-tasks");
+  const isMyTargetsActive  = p.includes("/my-targets");
+  const isAnyTaskActive    = isTaskMgmtActive || isTargetMgmtActive || isAssignedActive || isMyTargetsActive;
 
   useEffect(() => {
     const fetchLogo = async () => {
@@ -253,12 +236,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         console.error("Failed to load company logo:", err);
       }
     };
-
     fetchLogo();
   }, []);
 
-<<<<<<< HEAD
-  // Auto-open menus based on active route
   useEffect(() => {
     if (p.includes("/deals") || p.includes("/Pipelineview")) setShowDeals(true);
   }, [p]);
@@ -266,16 +246,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   useEffect(() => {
     if (isAnyTaskActive) setShowTasks(true);
   }, [p]);
-=======
-  useEffect(() => {
-    if (
-      location.pathname.includes("/deals") ||
-      location.pathname.includes("/Pipelineview")
-    ) {
-      setShowDeals(true);
-    }
-  }, [location.pathname]);
->>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
 
   return (
     <aside
@@ -296,6 +266,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </NavLink>
 
+        {/* Mobile close button - positioned absolutely */}
         <div className="relative group lg:hidden absolute top-4 right-4">
           <button onClick={toggleSidebar} className="p-2 hover:bg-gray-100 rounded-full">
             <X size={22} className="text-gray-600" />
@@ -350,8 +321,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </Collapsible>
 
-<<<<<<< HEAD
-
         {/* Tasks (Collapsible) */}
         {(isAdmin || userPermissions.task_management || userPermissions.target_management || userPermissions.assigned_tasks || (!isAdmin && userPermissions.my_targets !== false)) && (
           <div>
@@ -379,10 +348,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
             {showTasks && (
               <div className="pl-12 mt-2 flex flex-col gap-2">
-                {/* Task Management - admin only */}
                 {(isAdmin || userPermissions.task_management) && (
                   <NavLink
-                    to="/task-management"
+                    to="task-management"
                     className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
                       isTaskMgmtActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
                     }`}
@@ -397,10 +365,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   </NavLink>
                 )}
 
-                {/* Target Management - admin only */}
                 {(isAdmin || userPermissions.target_management) && (
                   <NavLink
-                    to="/target-management"
+                    to="target-management"
                     className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
                       isTargetMgmtActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
                     }`}
@@ -414,10 +381,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   </NavLink>
                 )}
 
-                {/* My Tasks - sales person only */}
                 {(!isAdmin && userPermissions.assigned_tasks) && (
                   <NavLink
-                    to="/assigned-tasks"
+                    to="assigned-tasks"
                     className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
                       isAssignedActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
                     }`}
@@ -432,10 +398,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   </NavLink>
                 )}
 
-                {/* My Targets - sales person only (show unless explicitly disabled) */}
                 {(!isAdmin && userPermissions.my_targets !== false) && (
                   <NavLink
-                    to="/my-targets"
+                    to="my-targets"
                     className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
                       isMyTargetsActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
                     }`}
@@ -454,16 +419,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           </div>
         )}
 
-        {/* WhatsApp Chat */}
-        {/* <SidebarItem
-          to="/whatsapp"
-          icon={<MessageCircle />}
-          label="WhatsApp Chat"
-          hasPermission={isAdmin || userPermissions.whatsapp_chat}
-        /> */}
-
-=======
->>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
         {/* Proposal */}
         <SidebarItem
           to="proposal"
@@ -485,6 +440,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="DealAnalysis"
           icon={<ClipboardList />}
           label="Deal Analysis"
+
         />
 
         <SidebarItem
@@ -517,6 +473,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Internal Messages */}
         <MessagesItem to="messages" />
+        <SidebarItem
+          to="meetings"
+          icon={<Calendar />}
+          label="Meetings"
+          hasPermission={isAdmin || userPermissions.Meetings}
+        />
 
         {/* Email Chat */}
         <SidebarItem
