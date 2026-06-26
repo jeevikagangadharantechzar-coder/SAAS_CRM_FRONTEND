@@ -202,7 +202,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         invoices: true, proposal: true, activities_calendar: true,
         activities_list: true, users_roles: true, email_chat: true,
         whatsapp_chat: true, reports: true, task_management: true,
-        target_management: true, assigned_tasks: true,
+        target_management: true, assigned_tasks: true, Meetings: true,
       }
     : (_user?.role?.permissions || {});
 
@@ -222,27 +222,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const isAssignedActive   = p.includes("/assigned-tasks");
   const isMyTargetsActive  = p.includes("/my-targets");
   const isAnyTaskActive    = isTaskMgmtActive || isTargetMgmtActive || isAssignedActive || isMyTargetsActive;
-    if (user.role && user.role.name === "Admin") {
-      setIsAdmin(true);
-      setUserPermissions({
-        dashboard: true,
-        leads: true,
-        deals_all: true,
-        deals_pipeline: true,
-        invoices: true,
-        proposal: true,
-        activities_calendar: true,
-        activities_list: true,
-        users_roles: true,
-        email_chat: true,
-        whatsapp_chat: true,
-        reports: true,
-        Meetings: true,
-      });
-    } else if (user.role && user.role.permissions) {
-      setUserPermissions(user.role.permissions);
-    }
-  }, []);
 
   useEffect(() => {
     const fetchLogo = async () => {
@@ -465,13 +444,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         />
 
         <SidebarItem
-          to="/LossAnalysis"
-          icon={<ClipboardList />}
-          label="Loss Analysis"
-
-        />
-
-        <SidebarItem
           to="LossAnalysis"
           icon={<ClipboardList />}
           label="Loss Analysis"
@@ -502,9 +474,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* Internal Messages */}
         <MessagesItem to="messages" />
         <SidebarItem
-          to="/meetings"
+          to="meetings"
           icon={<Calendar />}
           label="Meetings"
+          hasPermission={isAdmin || userPermissions.Meetings}
         />
 
         {/* Email Chat */}
