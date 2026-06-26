@@ -144,9 +144,9 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
               >
                 {showCurrentPassword ? (
-                  <EyeOff size={18} className="text-gray-500" />
-                ) : (
                   <Eye size={18} className="text-gray-500" />
+                ) : (
+                  <EyeOff size={18} className="text-gray-500" />
                 )}
               </button>
             </div>
@@ -172,9 +172,9 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
                 onClick={() => setShowNewPassword(!showNewPassword)}
               >
                 {showNewPassword ? (
-                  <EyeOff size={18} className="text-gray-500" />
-                ) : (
                   <Eye size={18} className="text-gray-500" />
+                ) : (
+                  <EyeOff size={18} className="text-gray-500" />
                 )}
               </button>
             </div>
@@ -202,9 +202,9 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
                 }
               >
                 {showConfirmPassword ? (
-                  <EyeOff size={18} className="text-gray-500" />
-                ) : (
                   <Eye size={18} className="text-gray-500" />
+                ) : (
+                  <EyeOff size={18} className="text-gray-500" />
                 )}
               </button>
             </div>

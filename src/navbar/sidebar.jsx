@@ -6,19 +6,23 @@ import {
   ChevronRight,
   X,
   Shield,
-  Calendar,
-  List,
   TrendingUp,
   FileText,
   ClipboardList,
   Users,
   GitBranch,
+<<<<<<< HEAD
   BarChart3,
   Trophy,
   Mail,
   MessageCircle,
   CheckSquare,
   Target,
+=======
+  BarChart3, Trophy,
+  Mail,
+  MessageSquare
+>>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
 } from "lucide-react";
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -33,19 +37,7 @@ const IconCircle = ({ children, isActive }) => (
 );
 
 /* ── Sidebar Item ─────────────────────── */
-const SidebarItem = ({
-  to,
-  icon,
-  label,
-  exact = false,
-  onClick,
-  hasPermission = true,
-}) => {
-  const location = useLocation();
-  const isActive = exact
-    ? location.pathname === to
-    : location.pathname.startsWith(to);
-
+const SidebarItem = ({ to, icon, label, exact = false, onClick, hasPermission = true }) => {
   if (!hasPermission) return null;
 
   return (
@@ -58,28 +50,23 @@ const SidebarItem = ({
         ${isActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"}`
       }
     >
-      <div className="flex items-center space-x-3">
-        <IconCircle isActive={isActive}>{icon}</IconCircle>
-        <span
-          className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"
-            }`}
-        >
-          {label}
-        </span>
-      </div>
+      {({ isActive }) => (
+        <div className="flex items-center space-x-3">
+          <IconCircle isActive={isActive}>{icon}</IconCircle>
+          <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+            {label}
+          </span>
+        </div>
+      )}
     </NavLink>
   );
 };
 
 /* ── Collapsible Section ─────────────────────── */
-const Collapsible = ({
-  label,
-  icon,
-  open,
-  onToggle,
-  children,
-  hasPermission = true,
-}) => {
+const Collapsible = ({ label, icon, open, onToggle, children, hasPermission = true, activePaths = [] }) => {
+  const location = useLocation();
+  const isChildActive = activePaths.some((p) => location.pathname.includes(p));
+
   if (!hasPermission) return null;
 
   return (
@@ -87,16 +74,17 @@ const Collapsible = ({
       <button
         onClick={onToggle}
         className={`flex items-center justify-between w-full p-3 rounded-full transition-all duration-300
-          ${open ? "bg-[#f0fbff]" : "hover:bg-[#f8f9fb]"}`}
+          ${open || isChildActive ? "bg-[#f0fbff]" : "hover:bg-[#f8f9fb]"}`}
       >
         <div className="flex items-center space-x-3">
-          <IconCircle isActive={open}>{icon}</IconCircle>
-          <span className="text-base font-medium">{label}</span>
+          <IconCircle isActive={open || isChildActive}>{icon}</IconCircle>
+          <span className={`text-base font-medium ${isChildActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+            {label}
+          </span>
         </div>
         <ChevronRight
           size={18}
-          className={`ml-2 transition-transform duration-200 ${open ? "rotate-90" : ""
-            }`}
+          className={`ml-2 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
         />
       </button>
 
@@ -107,28 +95,84 @@ const Collapsible = ({
 
 /* ── Small Link ─────────────────────── */
 const SmallLink = ({ to, icon, label, hasPermission = true }) => {
-  const location = useLocation();
-  const isActive = location.pathname === to;
-
   if (!hasPermission) return null;
 
   return (
     <NavLink
       to={to}
+      end
       className={({ isActive }) =>
         `flex items-center gap-3 p-2 rounded-full transition-all duration-300
         ${isActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"}`
       }
     >
-      <div className="w-7 h-7 flex items-center justify-center rounded-full shadow-sm bg-white">
-        {React.cloneElement(icon, {
-          color: isActive ? "#008ecc" : "#1f1f1f",
-          size: 16,
-        })}
-      </div>
-      <span className={`${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
-        {label}
-      </span>
+      {({ isActive }) => (
+        <>
+          <div className="w-7 h-7 flex items-center justify-center rounded-full shadow-sm bg-white">
+            {React.cloneElement(icon, {
+              color: isActive ? "#008ecc" : "#1f1f1f",
+              size: 16,
+            })}
+          </div>
+          <span className={`${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+            {label}
+          </span>
+        </>
+      )}
+    </NavLink>
+  );
+};
+
+/* ── Messages Sidebar Item with unread badge ─ */
+const MessagesItem = ({ to }) => {
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const API_URL    = import.meta.env.VITE_API_URL;
+    const tenantSlug = localStorage.getItem("tenantSlug");
+    const token      = localStorage.getItem("token");
+    if (!tenantSlug || !token) return;
+
+    const fetchUnread = async () => {
+      try {
+        const { data } = await axios.get(
+          `${API_URL.replace("/api", "")}/${tenantSlug}/api/chat/unread-count`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setUnread(data.unreadCount || 0);
+      } catch {}
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center justify-between w-full p-3 rounded-full transition-all duration-300
+        ${isActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <div className="flex items-center space-x-3">
+            <IconCircle isActive={isActive}>
+              <MessageSquare />
+            </IconCircle>
+            <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+              Messages
+            </span>
+          </div>
+          {unread > 0 && (
+            <span className="bg-[#008ecc] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </>
+      )}
     </NavLink>
   );
 };
@@ -147,14 +191,21 @@ const Badge = ({ count }) => {
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const [logo, setLogo] = useState(null);
+<<<<<<< HEAD
   const [showActivities, setShowActivities] = useState(false);
   const { notifications } = useNotifications();
 
   //  Deals collapsible state
   const [showDeals, setShowDeals] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
+=======
+  const [showDeals, setShowDeals] = useState(false);
+  const [userPermissions, setUserPermissions] = useState({});
+  const [isAdmin, setIsAdmin] = useState(false);
+>>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
 
   const location = useLocation();
+  const tenantSlug = location.pathname.split("/")[1];
 
   // ── Compute role/permissions SYNCHRONOUSLY on every render ──────────────
   // This ensures badge counts are correct on the very first render (no delay)
@@ -206,6 +257,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     fetchLogo();
   }, []);
 
+<<<<<<< HEAD
   // Auto-open menus based on active route
   useEffect(() => {
     if (p.includes("/deals") || p.includes("/Pipelineview")) setShowDeals(true);
@@ -214,6 +266,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   useEffect(() => {
     if (isAnyTaskActive) setShowTasks(true);
   }, [p]);
+=======
+  useEffect(() => {
+    if (
+      location.pathname.includes("/deals") ||
+      location.pathname.includes("/Pipelineview")
+    ) {
+      setShowDeals(true);
+    }
+  }, [location.pathname]);
+>>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
 
   return (
     <aside
@@ -221,9 +283,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       id="main-sidebar"
     >
-      {/* Header - CENTERED AND BIGGER LOGO */}
+      {/* Header */}
       <div className="mb-8 flex flex-col items-center justify-center">
-        <NavLink to="/dashboard" className="cursor-pointer block">
+        <NavLink to="dashboard" className="cursor-pointer block">
           <img
             src={logo || "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png"}
             alt="Company Logo"
@@ -233,13 +295,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             }}
           />
         </NavLink>
-        
-        {/* Mobile close button - positioned absolutely */}
+
         <div className="relative group lg:hidden absolute top-4 right-4">
           <button onClick={toggleSidebar} className="p-2 hover:bg-gray-100 rounded-full">
             <X size={22} className="text-gray-600" />
           </button>
-          {/* Tooltip */}
           <div className="absolute top-full mt-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs px-3 py-1 rounded-md whitespace-nowrap pointer-events-none z-50">
             Close
           </div>
@@ -249,16 +309,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       <nav className="flex flex-col gap-3 px-2">
         {/* Dashboard */}
         <SidebarItem
-          to="/dashboard"
+          to="dashboard"
           icon={<Home />}
           label="Dashboard"
           hasPermission={isAdmin || userPermissions.dashboard}
         />
 
-        
         {/* Leads */}
         <SidebarItem
-          to="/leads"
+          to="leads"
           icon={<Users />}
           label="Leads"
           hasPermission={isAdmin || userPermissions.leads}
@@ -270,6 +329,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           icon={<TrendingUp />}
           open={showDeals}
           onToggle={() => setShowDeals((s) => !s)}
+          activePaths={["/deals", "/Pipelineview"]}
           hasPermission={
             isAdmin ||
             userPermissions.deals_all ||
@@ -277,19 +337,20 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           }
         >
           <SmallLink
-            to="/Pipelineview"
+            to="Pipelineview"
             icon={<GitBranch />}
             label="Deal Stages PipelineView"
             hasPermission={isAdmin || userPermissions.deals_pipeline}
           />
           <SmallLink
-            to="/deals"
+            to="deals"
             icon={<TrendingUp />}
             label="All Deals"
             hasPermission={isAdmin || userPermissions.deals_all}
           />
         </Collapsible>
 
+<<<<<<< HEAD
 
         {/* Tasks (Collapsible) */}
         {(isAdmin || userPermissions.task_management || userPermissions.target_management || userPermissions.assigned_tasks || (!isAdmin && userPermissions.my_targets !== false)) && (
@@ -401,9 +462,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           hasPermission={isAdmin || userPermissions.whatsapp_chat}
         /> */}
 
+=======
+>>>>>>> 8e9d26f7782666b41d38d40c09c78e721872dfdc
         {/* Proposal */}
         <SidebarItem
-          to="/proposal"
+          to="proposal"
           icon={<ClipboardList />}
           label="Proposal"
           hasPermission={isAdmin || userPermissions.proposal}
@@ -411,44 +474,38 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Invoice */}
         <SidebarItem
-          to="/invoices"
+          to="invoices"
           exact
           icon={<FileText />}
           label="Invoices"
           hasPermission={isAdmin || userPermissions.invoices}
         />
-        
-  
-        
+
         <SidebarItem
-          to="/DealAnalysis"
+          to="DealAnalysis"
           icon={<ClipboardList />}
           label="Deal Analysis"
-         
-        />
-        
-        <SidebarItem
-          to="/LossAnalysis"
-          icon={<ClipboardList />}
-          label="Loss Analysis"
-         
         />
 
         <SidebarItem
-          to="/cltv/dashboard"
+          to="LossAnalysis"
+          icon={<ClipboardList />}
+          label="Loss Analysis"
+        />
+
+        <SidebarItem
+          to="cltv/dashboard"
           icon={<ClipboardList />}
           label="Won Analysis"
-        
         />
 
         {/* Streak Leaderboard */}
         <SidebarItem
-          to="/leaderboard"
+          to="leaderboard"
           icon={<Trophy />}
           label="Leaderboard"
           hasPermission={isAdmin || userPermissions.streak_leaderboard}
         />
-
 
         {/* Users & Roles */}
         <SidebarItem
@@ -458,36 +515,37 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           hasPermission={isAdmin || userPermissions.users_roles}
         />
 
+        {/* Internal Messages */}
+        <MessagesItem to="messages" />
 
         {/* Email Chat */}
         <SidebarItem
-          to="/emailchat"
+          to="emailchat"
           icon={<Mail />}
           label="Email Chat"
           hasPermission={isAdmin || userPermissions.email_chat}
         />
 
-
         {/* Mass Email Campaigns */}
         <SidebarItem
-          to="/mass-email"
+          to="mass-email"
           icon={<Mail />}
           label="Email Campaign"
           hasPermission={isAdmin || userPermissions.email_campaigns}
         />
 
-        {/* Reports */}
+        {/* Team Analytics */}
         <SidebarItem
-          to="/team-analytics       "
+          to="team-analytics"
           icon={<BarChart3 />}
           label="Team Analytics"
           hasPermission={isAdmin || userPermissions.reports}
         />
 
-        {/* Upgrade Plan (Directs to the Pricing Plans Catalog) */}
+        {/* Upgrade Plan */}
         {isAdmin && (
           <SidebarItem
-            to={`/${location.pathname.split("/")[1]}/plans`}
+            to={`/${tenantSlug}/plans`}
             icon={<TrendingUp />}
             label="Upgrade Plan"
           />

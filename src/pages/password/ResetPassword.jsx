@@ -4,8 +4,9 @@ import axios from "axios";
 import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
 
 const ResetPassword = () => {
-  const API_URL = import.meta.env.VITE_API_URL;
-  const { token } = useParams();
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+  const { token, tenantSlug } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -46,9 +47,12 @@ const handleReset = async (e) => {
   setIsLoading(true);
 
   try {
+    const requestUrl = tenantSlug
+      ? `${SI_URI}/${tenantSlug}/api/users/reset-password/${token}`
+      : `${API_URL}/users/reset-password/${token}`;
 
     const res = await axios.post(
-      `${API_URL}/users/reset-password/${token}`,
+      requestUrl,
       { password }
     );
 
@@ -57,7 +61,11 @@ const handleReset = async (e) => {
 
     // redirect after 2 seconds
     setTimeout(() => {
-      navigate("/", { replace: true });
+      if (tenantSlug) {
+        navigate(`/${tenantSlug}/login`, { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
     }, 2000);
 
   } catch (error) {
@@ -99,7 +107,13 @@ const handleReset = async (e) => {
         </div>
         
         <button 
-          onClick={() => navigate("/login")}
+          onClick={() => {
+            if (tenantSlug) {
+              navigate(`/${tenantSlug}/login`);
+            } else {
+              navigate("/login");
+            }
+          }}
           className="flex items-center text-sm text-gray-600 hover:text-gray-800 mb-2 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -145,9 +159,9 @@ const handleReset = async (e) => {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                ) : (
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                ) : (
+                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
             </div>
@@ -198,9 +212,9 @@ const handleReset = async (e) => {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 {showConfirmPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                ) : (
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                ) : (
+                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
             </div>

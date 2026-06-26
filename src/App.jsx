@@ -70,6 +70,7 @@ import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
+import MessagesPage from "./pages/Messages/MessagesPage";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -109,6 +110,7 @@ function App() {
               <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
               <Route path="/contact" element={<WebsiteContactForm />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
               <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
               <Route path="/integrations/linkedin/callback" element={<LinkedInCallback />} />
 
@@ -220,6 +222,8 @@ function App() {
                   <Route path="assigned-tasks" element={<AssignedTasks />} />
                   <Route path="target-management" element={<TargetManagement />} />
                   <Route path="my-targets" element={<MyTargets />} />
+                  {/* MESSAGES */}
+                  <Route path="messages" element={<MessagesPage />} />
 
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
