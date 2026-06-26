@@ -1,511 +1,547 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNotifications } from "../../context/NotificationContext";
-import { formatDistanceToNow, differenceInHours } from "date-fns";
-import { Bell, Trash2, Clock, CheckCircle, ArrowLeft, RefreshCw } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { formatDistanceToNow, format, isToday, isThisWeek, isThisMonth, parseISO, startOfDay, endOfDay } from "date-fns";
+import {
+  Bell, Trash2, Clock, CheckCircle, ArrowLeft, RefreshCw,
+  Search, ChevronLeft, ChevronRight, Filter, CheckCheck, X,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { buildProfileImageUrl } from "../useroles/UserManagement";
+
+const API_URL = import.meta.env.VITE_API_URL;
+const API_SI  = import.meta.env.VITE_SI_URI;
 
 const DEFAULT_AVATAR =
   "https://static.vecteezy.com/system/resources/previews/020/429/953/non_2x/admin-icon-vector.jpg";
 
-const NotificationsPage = () => {
+const PAGE_SIZE = 10;
+
+const buildProfileImageUrl = (profileImage) => {
+  if (!profileImage) return null;
+  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) return profileImage;
+  const base = (API_SI || "").replace(/\/+$/, "");
+  const name = profileImage.replace(/^\/+/, "").replace(/^uploads\/users\//, "").replace(/^uploads\//, "");
+  return `${base}/uploads/users/${name}`;
+};
+
+const TYPE_LABELS = {
+  all: "All",
+  task: "Tasks",
+  followup: "Follow-ups",
+  activity: "Activities",
+  contact_form: "Website Contacts",
+  unread: "Unread",
+};
+
+const DATE_FILTERS = [
+  { key: "all", label: "All Time" },
+  { key: "today", label: "Today" },
+  { key: "week", label: "This Week" },
+  { key: "month", label: "This Month" },
+  { key: "custom", label: "Custom" },
+];
+
+const matchesDate = (notif, dateFilter, customFrom, customTo) => {
+  const d = new Date(notif.createdAt);
+  if (isNaN(d)) return false;
+  switch (dateFilter) {
+    case "today":   return isToday(d);
+    case "week":    return isThisWeek(d, { weekStartsOn: 1 });
+    case "month":   return isThisMonth(d);
+    case "custom":
+      if (!customFrom && !customTo) return true;
+      if (customFrom && d < startOfDay(new Date(customFrom))) return false;
+      if (customTo   && d > endOfDay(new Date(customTo)))   return false;
+      return true;
+    default: return true;
+  }
+};
+
+export default function NotificationsPage() {
   const { notifications, setNotifications, fetchNotifications } = useNotifications();
-  const [deletingId, setDeletingId] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
-  const initialFilter = location.state?.filter || "all";
-  const [filter, setFilter] = useState(initialFilter);
 
-  const API_URL = import.meta.env.VITE_API_URL;
-  const API_SI = import.meta.env.VITE_SI_URI;
+  const [search,       setSearch]       = useState("");
+  const [typeFilter,   setTypeFilter]   = useState("all");
+  const [dateFilter,   setDateFilter]   = useState("all");
+  const [customFrom,   setCustomFrom]   = useState("");
+  const [customTo,     setCustomTo]     = useState("");
+  const [page,         setPage]         = useState(1);
+  const [selectedIds,  setSelectedIds]  = useState([]);
+  const [deletingId,   setDeletingId]   = useState(null);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const token = localStorage.getItem("token");
+  const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
 
-  useEffect(() => {
-    if (!location.state?.filter) setFilter("all");
-  }, [location.state]);
+  // Reset page on filter change
+  useEffect(() => { setPage(1); setSelectedIds([]); }, [search, typeFilter, dateFilter, customFrom, customTo]);
 
-  // ✅ SINGLE cleanup effect - REMOVED the duplicate interval
-  useEffect(() => {
-    const cleanupExpired = () => {
-      const now = new Date();
+  // Fetch on mount
+  useEffect(() => { fetchNotifications(); }, []);
 
-      setNotifications((prev) =>
-        prev.filter((n) => {
-          // Safely calculate expiry
-          let expiresAt;
-          if (n.expiresAt) {
-            expiresAt = new Date(n.expiresAt);
-          } else {
-            expiresAt = new Date(new Date(n.createdAt).getTime() + 24 * 60 * 60 * 1000);
-          }
+  // ── Filtered + sorted list ──────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    let list = [...notifications];
 
-          // Prevent NaN bug
-          if (isNaN(expiresAt.getTime())) return false;
+    // Type filter
+    if (typeFilter === "unread") {
+      list = list.filter((n) => !n.read && !n.isRead);
+    } else if (typeFilter !== "all") {
+      list = list.filter((n) => n.type === typeFilter);
+    }
 
-          // Keep only non-expired notifications
-          return expiresAt > now;
-        })
+    // Date filter
+    list = list.filter((n) => matchesDate(n, dateFilter, customFrom, customTo));
+
+    // Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (n) =>
+          (n.title || "").toLowerCase().includes(q) ||
+          (n.text  || "").toLowerCase().includes(q) ||
+          (n.message || "").toLowerCase().includes(q)
       );
-    };
+    }
 
-    // Run cleanup every minute
-    const interval = setInterval(cleanupExpired, 60000);
-    
-    // Run immediately on mount
-    cleanupExpired();
+    // Sort: unread first, then newest
+    list.sort((a, b) => {
+      const aRead = a.read || a.isRead;
+      const bRead = b.read || b.isRead;
+      if (aRead !== bRead) return aRead ? 1 : -1;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
 
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
-  }, [setNotifications]); // ✅ Added proper dependency
+    return list;
+  }, [notifications, typeFilter, dateFilter, customFrom, customTo, search]);
 
-  // Refresh notifications
+  // ── Pagination ─────────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const unreadCount = notifications.filter((n) => !n.read && !n.isRead).length;
+
+  // ── Selection helpers ──────────────────────────────────────────────────
+  const pageIds    = paginated.map((n) => n._id);
+  const allOnPage  = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+
+  const toggleOne = (id) =>
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+  const togglePage = () =>
+    setSelectedIds((prev) =>
+      allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])]
+    );
+
+  // ── Actions ────────────────────────────────────────────────────────────
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      const response = await axios.get(`${API_URL}/notification/${user?._id}`);
-      setNotifications(response.data);
+      await fetchNotifications();
       setSelectedIds([]);
-      setSelectAll(false);
-      toast.success("Notifications refreshed");
-    } catch (error) {
-      console.error("Refresh error:", error);
+      toast.success("Refreshed");
+    } catch {
       toast.error("Failed to refresh");
     } finally {
       setRefreshing(false);
     }
   };
 
-  const handleToggleSelect = (id) => {
-    setSelectedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
-      setSelectAll(next.length === filteredNotifications.length && filteredNotifications.length > 0);
-      return next;
-    });
-  };
-
-  const handleToggleSelectAll = () => {
-    if (selectAll) {
-      setSelectedIds([]);
-      setSelectAll(false);
-      return;
-    }
-    const allIds = filteredNotifications.map((n) => n._id);
-    setSelectedIds(allIds);
-    setSelectAll(true);
-  };
-
-  const handleBulkDelete = async () => {
-    if (!selectedIds.length) {
-      toast.info("Select notifications to delete");
-      return;
-    }
-
-    try {
-      await axios.delete(`${API_URL}/notification/bulk`, { data: { ids: selectedIds } });
-      setNotifications((prev) => prev.filter((n) => !selectedIds.includes(n._id)));
-      setSelectedIds([]);
-      setSelectAll(false);
-      toast.success(`Deleted ${selectedIds.length} notification(s)`);
-    } catch (err) {
-      console.error("Bulk delete error:", err);
-      toast.error("Failed to delete selected notifications");
-    }
-  };
-
-  // Delete single notification
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
-      await axios.delete(`${API_URL}/notification/${id}`);
+      await axios.delete(`${API_URL}/notifications/${id}`, authHeaders);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
-      setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
-      setSelectAll(false);
-      toast.success("Notification deleted successfully");
-    } catch (err) {
-      console.error("Delete error:", err);
-      toast.error("Failed to delete notification");
+      setSelectedIds((prev) => prev.filter((x) => x !== id));
+      toast.success("Notification deleted");
+    } catch {
+      toast.error("Failed to delete");
     } finally {
-      setTimeout(() => setDeletingId(null), 300);
+      setDeletingId(null);
     }
   };
 
-  // Mark as read
-  const markAsRead = async (id) => {
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) { toast.info("Select notifications to delete"); return; }
     try {
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `${API_URL}/notification/read/${id}`,
-        { read: true },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-      );
-      toast.success("Marked as read");
-    } catch (err) {
-      console.error("Mark read error:", err?.response?.data || err.message);
-      toast.error("Failed to mark as read");
+      await axios.delete(`${API_URL}/notifications/bulk`, { ...authHeaders, data: { ids: selectedIds } });
+      setNotifications((prev) => prev.filter((n) => !selectedIds.includes(n._id)));
+      setSelectedIds([]);
+      toast.success(`Deleted ${selectedIds.length} notification(s)`);
+    } catch {
+      toast.error("Bulk delete failed");
     }
   };
 
-  // Contact form notification click function
-  const handleNotificationClick = async (notification) => {
-    if (notification.type !== "contact_form") return;
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!notification.read) {
-        await axios.patch(
-          `${API_URL}/notification/read/${notification._id}`,
-          { read: true },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n._id === notification._id ? { ...n, read: true } : n
-          )
-        );
-      }
-
-      navigate("/createleads", {
-        state: {
-          fromNotification: true,
-          contactFormData: notification.meta,
-        },
-      });
-    } catch (err) {
-      toast.error("Failed to open contact form");
-    }
-  };
-
-  // ✅ Filter notifications (remove expired ones first)
-  const now = new Date();
-  let filteredNotifications = notifications.filter((n) => {
-    // Safely calculate expiry
-    let expiresAt;
-    if (n.expiresAt) {
-      expiresAt = new Date(n.expiresAt);
-    } else {
-      expiresAt = new Date(new Date(n.createdAt).getTime() + 24 * 60 * 60 * 1000);
-    }
-
-    // Skip if date is invalid
-    if (isNaN(expiresAt.getTime())) return false;
-
-    // Remove expired notifications
-    if (expiresAt <= now) return false;
-
-    // Then filter by type
-    if (filter === "all") return true;
-    if (filter === "followup") return n.type === "followup";
-    if (filter === "activity") return n.type === "activity" || n.type === "admin";
-    if (filter === "contact_form") return n.type === "contact_form";
-    if (filter === "unread") return !n.read;
-    if (filter === "read") return n.read;
-    return true;
-  });
-
-  // Sort unread first, then by date (newest first)
-  filteredNotifications = filteredNotifications.sort((a, b) => {
-    if (a.read !== b.read) return a.read ? 1 : -1;
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
-
-  // Update selection state when filtered list changes
-  useEffect(() => {
-    const visibleIds = filteredNotifications.map((n) => n._id);
-    setSelectedIds((current) => current.filter((id) => visibleIds.includes(id)));
-    setSelectAll(
-      filteredNotifications.length > 0 && 
-      selectedIds.length === filteredNotifications.length &&
-      selectedIds.length > 0
+  const handleMarkAllRead = async () => {
+    const unreadIds = notifications
+      .filter((n) => !n.read && !n.isRead && n._id && !String(n._id).includes("-"))
+      .map((n) => n._id);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true, isRead: true })));
+    await Promise.all(
+      unreadIds.map((id) => axios.patch(`${API_URL}/notifications/read/${id}`, {}, authHeaders).catch(() => {}))
     );
-  }, [filteredNotifications.length, notifications.length, filter]);
+    toast.success("All marked as read");
+  };
 
+  const handleMarkRead = async (id) => {
+    setNotifications((prev) => prev.map((n) => n._id === id ? { ...n, read: true, isRead: true } : n));
+    axios.patch(`${API_URL}/notifications/read/${id}`, {}, authHeaders).catch(() => {});
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="w-full mx-auto p-4 md:p-6">
-      {/* Back button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
-      >
-        <ArrowLeft size={20} className="mr-2" />
-        Back
-      </button>
-
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-            <Bell className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">
-              Notifications
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Stay updated with your alerts
-            </p>
-          </div>
-        </div>
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-gray-500 hover:text-gray-800 text-sm mb-4 transition-colors"
+        >
+          <ArrowLeft size={16} className="mr-1" /> Back
+        </button>
 
-        {/* Filter buttons */}
-        <div className="flex items-center space-x-3 mt-4 md:mt-0">
-          {notifications.length > 0 && (
-            <>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#008ecc] rounded-xl">
+              <Bell className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">All Notifications</h1>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {unreadCount > 0 && (
               <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                title="Refresh notifications"
+                onClick={handleMarkAllRead}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
               >
-                <RefreshCw size={18} className={`${refreshing ? "animate-spin" : ""} text-gray-600 dark:text-gray-400`} />
+                <CheckCheck size={14} /> Mark all read
               </button>
-              {selectedIds.length > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
-                >
-                  Delete {selectedIds.length} selected
-                </button>
-              )}
-              
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                  {notifications.filter((n) => !n.read).length}
-                </span>{" "}
-                unread
-              </div>
-
-              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-inner">
-                {["all", "unread", "read"].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setFilter(t)}
-                    className={`px-4 py-2 text-sm rounded-lg transition-all duration-200 ${
-                      filter === t
-                        ? t === "unread"
-                          ? "bg-blue-100 dark:bg-blue-900/40 shadow-sm font-medium text-blue-700 dark:text-blue-300"
-                          : t === "read"
-                          ? "bg-green-100 dark:bg-green-900/40 shadow-sm font-medium text-green-700 dark:text-green-300"
-                          : "bg-white dark:bg-gray-700 shadow-sm font-medium text-gray-800 dark:text-gray-200"
-                        : "text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
-                    }`}
-                  >
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+            )}
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                <Trash2 size={14} /> Delete {selectedIds.length} selected
+              </button>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw size={16} className={`${refreshing ? "animate-spin" : ""} text-gray-500`} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Tabs for type */}
-      <div className="flex gap-2 mb-4">
-        {["all", "followup", "activity", "contact_form"].map((t) => (
+      {/* Search + Date Filter */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-col md:flex-row gap-3">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search notifications..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Date filter pills */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Filter size={14} className="text-gray-400 shrink-0" />
+          {DATE_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setDateFilter(f.key)}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
+                dateFilter === f.key
+                  ? "bg-[#008ecc] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom date range */}
+      {dateFilter === "custom" && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-col sm:flex-row gap-3 items-center">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>From</span>
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>To</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30"
+            />
+          </div>
+          {(customFrom || customTo) && (
+            <button onClick={() => { setCustomFrom(""); setCustomTo(""); }} className="text-xs text-red-500 hover:text-red-700">
+              Clear dates
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Type tabs */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {Object.entries(TYPE_LABELS).map(([key, label]) => (
           <button
-            key={t}
-            onClick={() => setFilter(t)}
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              filter === t
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+            key={key}
+            onClick={() => setTypeFilter(key)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              typeFilter === key
+                ? "bg-[#008ecc] text-white shadow-sm"
+                : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
             }`}
           >
-            {t === "contact_form" ? "Website Contacts" :
-             t === "followup" ? "Lead follow-ups" : 
-             t === "activity" ? "Activity updates" : "All"}
+            {label}
+            {key === "unread" && unreadCount > 0 && (
+              <span className="ml-1.5 bg-red-500 text-white text-[10px] rounded-full px-1 py-0.5">
+                {unreadCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={selectAll}
-            onChange={handleToggleSelectAll}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm text-gray-600 dark:text-gray-300">Select all</span>
-        </div>
-        {selectedIds.length > 0 && (
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {selectedIds.length} selected
+      {/* List header */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Select all row */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={allOnPage}
+              onChange={togglePage}
+              className="h-4 w-4 rounded border-gray-300 text-[#008ecc] focus:ring-[#008ecc]"
+            />
+            <span className="text-xs text-gray-500 font-medium">
+              {allOnPage ? "Deselect page" : "Select page"}
+              {selectedIds.length > 0 && ` (${selectedIds.length} selected)`}
+            </span>
           </div>
-        )}
-      </div>
+          <span className="text-xs text-gray-400">
+            {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+          </span>
+        </div>
 
-      {/* Notifications List */}
-      <div className="space-y-4">
-        {filteredNotifications.length > 0 ? (
-          filteredNotifications.map((n) => {
-            const createdAt = new Date(n.createdAt);
-            
-            // ✅ SAFE hours calculation - FIX for NaN bug
-            let hoursLeft = 0;
-            let expiresAt = null;
-            
-            if (n.expiresAt) {
-              expiresAt = new Date(n.expiresAt);
-            } else {
-              expiresAt = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
-            }
-            
-            // Only calculate if date is valid
-            if (expiresAt && !isNaN(expiresAt.getTime())) {
-              hoursLeft = differenceInHours(expiresAt, new Date());
-            }
-            
-            const isExpired = hoursLeft <= 0;
-
-            return (
-              <div
-                key={n._id}
-                onClick={() => n.type === "contact_form" && handleNotificationClick(n)}
-                className={`relative group p-5 rounded-2xl transition-all duration-300 border
-                  ${n.type === "contact_form" ? "cursor-pointer hover:ring-2 hover:ring-blue-400" : ""}
-                  ${
-                    n.read
-                      ? "bg-white dark:bg-gray-800/70 border-gray-200 dark:border-gray-700/50 shadow-sm"
-                      : "bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800/30 shadow-md"
-                  }
-                `}
+        {/* Notifications */}
+        {paginated.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <Bell size={40} className="mb-3 opacity-20" />
+            <p className="text-sm font-medium">No notifications found</p>
+            {(search || typeFilter !== "all" || dateFilter !== "all") && (
+              <button
+                onClick={() => { setSearch(""); setTypeFilter("all"); setDateFilter("all"); }}
+                className="mt-2 text-xs text-[#008ecc] hover:underline"
               >
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 relative mr-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(n._id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleToggleSelect(n._id);
-                      }}
-                      className="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {paginated.map((n) => {
+              const isUnread = !n.read && !n.isRead;
+              const avatar   = n.profileImage ? buildProfileImageUrl(n.profileImage) : DEFAULT_AVATAR;
+              const time     = n.createdAt ? formatDistanceToNow(new Date(n.createdAt), { addSuffix: true }) : "";
+              const dateStr  = n.createdAt ? format(new Date(n.createdAt), "dd MMM yyyy, hh:mm a") : "";
+
+              return (
+                <div
+                  key={n._id}
+                  className={`flex items-start gap-3 px-4 py-4 group transition-colors ${
+                    isUnread ? "bg-blue-50/40" : "bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(n._id)}
+                    onChange={() => toggleOne(n._id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-[#008ecc] focus:ring-[#008ecc] shrink-0"
+                  />
+
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
                     <img
-                      src={
-                        n.profileImage
-                          ? buildProfileImageUrl(n.profileImage, API_SI)
-                          : DEFAULT_AVATAR
-                      }
-                      alt="User"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm bg-gray-100 mt-2"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = DEFAULT_AVATAR;
-                      }}
+                      src={avatar}
+                      alt="avatar"
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                      onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_AVATAR; }}
                     />
-                    {!n.read && (
-                      <div className="absolute -top-1 -right-1">
-                        <div className="bg-blue-500 rounded-full w-5 h-5 flex items-center justify-center shadow-md">
-                          <div className="bg-blue-500 rounded-full w-2 h-2 animate-ping absolute"></div>
-                          <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                        </div>
-                      </div>
+                    {isUnread && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p
-                          className={`text-base font-semibold ${
-                            n.read
-                              ? "text-gray-700 dark:text-gray-200"
-                              : "text-gray-900 dark:text-gray-100"
-                          }`}
-                        >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          {n.meta?.taskApproved && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                              ✓ Task Approved
+                            </span>
+                          )}
+                          {n.meta?.taskAssigned && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                              📋 New Task
+                            </span>
+                          )}
+                          {n.meta?.taskCompleted && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                              ✔ Task Completed
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-sm font-semibold truncate ${isUnread ? "text-gray-900" : "text-gray-700"}`}>
                           {n.title || "Notification"}
                         </p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm mt-2 leading-relaxed">
-                          {n.text}
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">
+                          {n.text || n.message}
                         </p>
-                        {n.followUpDate && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            Follow-up date: {new Date(n.followUpDate).toLocaleString()}
-                          </p>
-                        )}
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(n._id);
-                        }}
-                        disabled={deletingId === n._id}
-                        className="ml-4 flex items-center justify-center p-2 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 rounded-xl transition-all duration-200 transform hover:scale-110"
-                      >
-                        {deletingId === n._id ? (
-                          <div className="w-5 h-5 border-2 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
-                        ) : (
-                          <Trash2 size={18} />
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {isUnread && (
+                          <button
+                            onClick={() => handleMarkRead(n._id)}
+                            title="Mark as read"
+                            className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-50 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <CheckCircle size={14} />
+                          </button>
                         )}
-                      </button>
+                        <button
+                          onClick={() => handleDelete(n._id)}
+                          disabled={deletingId === n._id}
+                          title="Delete"
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          {deletingId === n._id ? (
+                            <div className="w-3.5 h-3.5 border border-t-transparent border-red-400 rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/50">
-                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <Clock size={14} className="mr-1.5" />
-                        {n.createdAt
-                          ? formatDistanceToNow(createdAt, { addSuffix: true })
-                          : "Just now"}
+                    {/* Meta row */}
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <Clock size={11} />
+                        <span title={dateStr}>{time}</span>
                       </div>
-
-                      {!n.read && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsRead(n._id);
-                          }}
-                          className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
-                        >
-                          <CheckCircle size={14} className="mr-1.5" />
-                          Mark as read
-                        </button>
+                      {n.type && (
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                          n.type === "task" ? "bg-indigo-100 text-indigo-700" :
+                          n.type === "followup" ? "bg-amber-100 text-amber-700" :
+                          n.type === "activity" ? "bg-green-100 text-green-700" :
+                          n.type === "contact_form" ? "bg-purple-100 text-purple-700" :
+                          "bg-gray-100 text-gray-600"
+                        }`}>
+                          {TYPE_LABELS[n.type] || n.type}
+                        </span>
                       )}
-
-                      {/* ✅ Safe expiry display - no NaN */}
-                      {!isNaN(hoursLeft) && (
-                        <div
-                          className={`flex items-center text-xs font-medium ${
-                            isExpired ? "text-red-500" : "text-amber-500"
-                          }`}
-                        >
-                          <Clock size={14} className="mr-1.5" />
-                          {isExpired
-                            ? "Expired"
-                            : `Expires in ${hoursLeft} hour${hoursLeft > 1 ? "s" : ""}`}
-                        </div>
+                      {isUnread && (
+                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                          Unread
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="text-center py-16">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mb-4">
-              <Bell size={30} className="text-gray-400 dark:text-gray-300" />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination footer */}
+        {filtered.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <span className="text-xs text-gray-500">
+              Page {safePage} of {totalPages} &nbsp;·&nbsp; {filtered.length} total
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={15} />
+              </button>
+
+              {/* Page number pills */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && arr[idx - 1] !== p - 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, i) =>
+                  item === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-1 text-gray-400 text-xs">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => setPage(item)}
+                      className={`min-w-[28px] h-7 rounded-lg text-xs font-medium transition-all ${
+                        safePage === item
+                          ? "bg-[#008ecc] text-white"
+                          : "border border-gray-200 text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={15} />
+              </button>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 font-medium">
-              No notifications
-            </p>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default NotificationsPage;
+}

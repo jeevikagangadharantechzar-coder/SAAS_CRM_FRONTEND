@@ -53,6 +53,7 @@ function AllDealsComponent() {
   const [hoveredDeal, setHoveredDeal] = useState(null);
   const [tooltipCoords, setTooltipCoords] = useState(null);
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
+  const [targetLinkedDealIds, setTargetLinkedDealIds] = useState(new Map());
 
   const itemsPerPage = 10;
 
@@ -69,11 +70,6 @@ function AllDealsComponent() {
       }
     }
     setUserRole(role);
-    const hasTakenTour = localStorage.getItem("dealsTourCompleted");
-    if (!hasTakenTour && role === "Sales") {
-      setSteps(dealTourSteps);
-      setTimeout(() => setIsOpen(true), 1000);
-    }
   }, [setIsOpen, setSteps]);
 
   const startTour = () => {
@@ -244,6 +240,23 @@ function AllDealsComponent() {
   useEffect(() => {
     fetchDeals();
     fetchUsers();
+    // Fetch target-linked deal IDs for sales users (to show target bell icon)
+    const userData = localStorage.getItem("user");
+    const role = userData ? (JSON.parse(userData)?.role?.name || "") : "";
+    if (role !== "Admin") {
+      const token = localStorage.getItem("token");
+      const tenantSlugVal = window.location.pathname.split("/")[1];
+      const si = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+      axios.get(`${si}/${tenantSlugVal}/api/targets/my`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => {
+          const map = new Map();
+          (r.data || []).forEach(t => (t.linkedDeals || []).forEach(d => {
+            map.set(String(d._id || d), { startDate: t.startDate, endDate: t.endDate, assignedAt: t.createdAt });
+          }));
+          setTargetLinkedDealIds(map);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // Auto-refresh deals every 30 seconds
@@ -586,19 +599,45 @@ function AllDealsComponent() {
                         >
                           {deal.dealName || "-"}
                         </button>
-                        {/* Small bell icon that triggers hover tooltip */}
-                        {hasFollowUp && (
+                        {/* Follow-up bell (only when not target-linked to avoid double bell) */}
+                        {hasFollowUp && !targetLinkedDealIds.has(String(deal._id)) && (
                           <div
                             className="relative inline-flex cursor-pointer"
                             onMouseEnter={(e) => handleBellHover(deal, e)}
                             onMouseLeave={handleTooltipLeave}
                           >
-                            <Bell 
-                              size={12} 
+                            <Bell
+                              size={16}
                               className={`${isToday ? "text-orange-500 animate-pulse" : isOverdue ? "text-red-400" : "text-purple-400"} hover:scale-110 transition-transform`}
                             />
                           </div>
                         )}
+                        {/* Target bell — shown when deal is linked to a target */}
+                        {targetLinkedDealIds.has(String(deal._id)) && (() => {
+                          const tInfo = targetLinkedDealIds.get(String(deal._id));
+                          const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+                          const fmtT = (d) => d ? new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+                          return (
+                            <div className="group relative inline-flex cursor-default">
+                              <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
+                              <div className="absolute top-full left-0 mt-1.5 hidden group-hover:flex flex-col min-w-[200px] shadow-xl z-50 pointer-events-none" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
+                                <div style={{background:"#f97316"}} className="px-3 py-2">
+                                  <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
+                                </div>
+                                <div className="bg-white px-3 py-2 space-y-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
+                                    <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
+                                    <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4">{deal.clientType || "-"}</td>

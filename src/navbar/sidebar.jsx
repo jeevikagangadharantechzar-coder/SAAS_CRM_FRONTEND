@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNotifications } from "../context/NotificationContext";
 import {
   Home,
   ChevronRight,
@@ -10,9 +11,13 @@ import {
   ClipboardList,
   Users,
   GitBranch,
-  BarChart3, Trophy,
+  BarChart3,
+  Trophy,
   Mail,
-  MessageSquare
+  MessageSquare,
+  MessageCircle,
+  CheckSquare,
+  Target,
 } from "lucide-react";
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -167,40 +172,55 @@ const MessagesItem = ({ to }) => {
   );
 };
 
+/* ── Badge ─────────────────────── */
+const Badge = ({ count }) => {
+  if (!count) return null;
+  return (
+    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+};
+
 /* ── Sidebar Component ─────────────────────── */
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const [logo, setLogo] = useState(null);
   const [showDeals, setShowDeals] = useState(false);
-  const [userPermissions, setUserPermissions] = useState({});
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+  const { notifications } = useNotifications();
 
   const location = useLocation();
   const tenantSlug = location.pathname.split("/")[1];
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const _user = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
+  const isAdmin = _user?.role?.name === "Admin";
+  const userPermissions = isAdmin
+    ? {
+        dashboard: true, leads: true, deals_all: true, deals_pipeline: true,
+        invoices: true, proposal: true, activities_calendar: true,
+        activities_list: true, users_roles: true, email_chat: true,
+        whatsapp_chat: true, reports: true, task_management: true,
+        target_management: true, assigned_tasks: true,
+      }
+    : (_user?.role?.permissions || {});
 
-    if (user.role && user.role.name === "Admin") {
-      setIsAdmin(true);
-      setUserPermissions({
-        dashboard: true,
-        leads: true,
-        deals_all: true,
-        deals_pipeline: true,
-        invoices: true,
-        proposal: true,
-        activities_calendar: true,
-        activities_list: true,
-        users_roles: true,
-        email_chat: true,
-        whatsapp_chat: true,
-        reports: true,
-      });
-    } else if (user.role && user.role.permissions) {
-      setUserPermissions(user.role.permissions);
-    }
-  }, []);
+  const adminTaskBadge = isAdmin
+    ? notifications.filter((n) => n.type === "task" && (n.meta?.taskCompleted || n.meta?.taskNoteAdded) && !n.read && !n.isRead).length
+    : 0;
+  const salesTaskBadge = !isAdmin
+    ? notifications.filter((n) => n.type === "task" && (n.meta?.taskAssigned || n.meta?.taskApproved) && !n.read && !n.isRead).length
+    : 0;
+  const salesTargetBadge = !isAdmin
+    ? notifications.filter((n) => n.type === "target" && (n.meta?.targetAssigned || n.meta?.targetUpdated) && !n.read && !n.isRead).length
+    : 0;
+
+  const p = location.pathname;
+  const isTaskMgmtActive   = p.includes("/task-management");
+  const isTargetMgmtActive = p.includes("/target-management");
+  const isAssignedActive   = p.includes("/assigned-tasks");
+  const isMyTargetsActive  = p.includes("/my-targets");
+  const isAnyTaskActive    = isTaskMgmtActive || isTargetMgmtActive || isAssignedActive || isMyTargetsActive;
 
   useEffect(() => {
     const fetchLogo = async () => {
@@ -215,18 +235,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         console.error("Failed to load company logo:", err);
       }
     };
-
     fetchLogo();
   }, []);
 
   useEffect(() => {
-    if (
-      location.pathname.includes("/deals") ||
-      location.pathname.includes("/Pipelineview")
-    ) {
-      setShowDeals(true);
-    }
-  }, [location.pathname]);
+    if (p.includes("/deals") || p.includes("/Pipelineview")) setShowDeals(true);
+  }, [p]);
+
+  useEffect(() => {
+    if (isAnyTaskActive) setShowTasks(true);
+  }, [p]);
 
   return (
     <aside
@@ -300,6 +318,104 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             hasPermission={isAdmin || userPermissions.deals_all}
           />
         </Collapsible>
+
+        {/* Tasks (Collapsible) */}
+        {(isAdmin || userPermissions.task_management || userPermissions.target_management || userPermissions.assigned_tasks || (!isAdmin && userPermissions.my_targets !== false)) && (
+          <div>
+            <button
+              onClick={() => setShowTasks((s) => !s)}
+              className={`flex items-center justify-between w-full p-3 rounded-full transition-all duration-300 ${
+                isAnyTaskActive || showTasks ? "bg-[#f0fbff]" : "hover:bg-[#f8f9fb]"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 flex items-center justify-center rounded-full shadow-sm bg-white">
+                  <CheckSquare color={isAnyTaskActive || showTasks ? "#008ecc" : "#1f1f1f"} size={18} />
+                </div>
+                <span className={`text-base font-medium ${isAnyTaskActive || showTasks ? "text-[#008ecc]" : ""}`}>
+                  Tasks
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 mr-0.5">
+                {(adminTaskBadge > 0 || salesTaskBadge > 0 || salesTargetBadge > 0) && (
+                  <Badge count={isAdmin ? adminTaskBadge : salesTaskBadge + salesTargetBadge} />
+                )}
+                <ChevronRight size={18} className={`transition-transform duration-200 ${showTasks ? "rotate-90" : ""}`} />
+              </div>
+            </button>
+
+            {showTasks && (
+              <div className="pl-12 mt-2 flex flex-col gap-2">
+                {(isAdmin || userPermissions.task_management) && (
+                  <NavLink
+                    to="task-management"
+                    className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
+                      isTaskMgmtActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
+                    }`}
+                  >
+                    <div className="w-7 h-7 flex items-center justify-center rounded-full shadow-sm bg-white">
+                      <ClipboardList color={isTaskMgmtActive ? "#008ecc" : "#1f1f1f"} size={16} />
+                    </div>
+                    <span className={`flex-1 text-sm ${isTaskMgmtActive ? "text-[#008ecc] font-semibold" : "text-gray-700"}`}>
+                      Task Management
+                    </span>
+                    {adminTaskBadge > 0 && <Badge count={adminTaskBadge} />}
+                  </NavLink>
+                )}
+
+                {(isAdmin || userPermissions.target_management) && (
+                  <NavLink
+                    to="target-management"
+                    className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
+                      isTargetMgmtActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
+                    }`}
+                  >
+                    <div className="w-7 h-7 flex items-center justify-center rounded-full shadow-sm bg-white">
+                      <Target color={isTargetMgmtActive ? "#008ecc" : "#1f1f1f"} size={16} />
+                    </div>
+                    <span className={`text-sm ${isTargetMgmtActive ? "text-[#008ecc] font-semibold" : "text-gray-700"}`}>
+                      Target Management
+                    </span>
+                  </NavLink>
+                )}
+
+                {(!isAdmin && userPermissions.assigned_tasks) && (
+                  <NavLink
+                    to="assigned-tasks"
+                    className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
+                      isAssignedActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
+                    }`}
+                  >
+                    <div className="w-7 h-7 flex items-center justify-center rounded-full shadow-sm bg-white">
+                      <CheckSquare color={isAssignedActive ? "#008ecc" : "#1f1f1f"} size={16} />
+                    </div>
+                    <span className={`flex-1 text-sm ${isAssignedActive ? "text-[#008ecc] font-semibold" : "text-gray-700"}`}>
+                      My Tasks
+                    </span>
+                    {salesTaskBadge > 0 && <Badge count={salesTaskBadge} />}
+                  </NavLink>
+                )}
+
+                {(!isAdmin && userPermissions.my_targets !== false) && (
+                  <NavLink
+                    to="my-targets"
+                    className={`flex items-center gap-3 p-2 rounded-full transition-all duration-300 ${
+                      isMyTargetsActive ? "bg-[#f2fbff]" : "hover:bg-[#f8f9fb]"
+                    }`}
+                  >
+                    <div className="w-7 h-7 flex items-center justify-center rounded-full shadow-sm bg-white">
+                      <Target color={isMyTargetsActive ? "#008ecc" : "#1f1f1f"} size={16} />
+                    </div>
+                    <span className={`flex-1 text-sm ${isMyTargetsActive ? "text-[#008ecc] font-semibold" : "text-gray-700"}`}>
+                      My Targets
+                    </span>
+                    {salesTargetBadge > 0 && <Badge count={salesTargetBadge} />}
+                  </NavLink>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Proposal */}
         <SidebarItem

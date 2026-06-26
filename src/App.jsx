@@ -62,6 +62,10 @@ import ClientCLVDetails from "./pages/Clv/ClientCLVDetails";
 import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 
 import WebsiteContactForm from "./pages/website/WebsiteContactForm";
+import TaskManagement from "./pages/tasks/TaskManagement";
+import AssignedTasks from "./pages/tasks/AssignedTasks";
+import TargetManagement from "./pages/targets/TargetManagement";
+import MyTargets from "./pages/targets/MyTargets";
 import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
@@ -215,6 +219,11 @@ function App() {
 
                   {/* MESSAGES */}
                   <Route path="messages" element={<MessagesPage />} />
+                  {/* TASKS & TARGETS */}
+                  <Route path="task-management" element={<TaskManagement />} />
+                  <Route path="assigned-tasks" element={<AssignedTasks />} />
+                  <Route path="target-management" element={<TargetManagement />} />
+                  <Route path="my-targets" element={<MyTargets />} />
 
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
@@ -252,6 +261,10 @@ function App() {
                 <Route path="/cltv/client/:companyName" element={<div />} />
                 <Route path="/leaderboard" element={<div />} />
                 <Route path="/dashboard/notifications" element={<div />} />
+                <Route path="/task-management" element={<div />} />
+                <Route path="/assigned-tasks" element={<div />} />
+                <Route path="/target-management" element={<div />} />
+                <Route path="/my-targets" element={<div />} />
                 <Route path="/mass-email" element={<div />} />
                 <Route path="/create-email" element={<div />} />
                 <Route path="/create-email/:id" element={<div />} />
