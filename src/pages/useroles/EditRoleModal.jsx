@@ -129,6 +129,13 @@ export default function EditRoleModal({ role, onClose, onRoleUpdated }) {
       permissions: [
         { key: "users_roles", label: "Users & Roles", icon: Shield },
       ]
+    },
+    {
+      title: "Tasks & Targets",
+      permissions: [
+        { key: "assigned_tasks", label: "My Assigned Tasks", icon: List },
+        { key: "my_targets", label: "My Targets", icon: BarChart },
+      ]
     }
   ];
 

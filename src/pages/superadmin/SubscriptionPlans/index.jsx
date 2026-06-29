@@ -110,9 +110,9 @@ const SubscriptionPlans = () => {
             className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white"
           >
             <option value="">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Archived">Archived</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
 
@@ -124,10 +124,10 @@ const SubscriptionPlans = () => {
             className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white"
           >
             <option value="">All Plan Types</option>
-            <option value="Free">Free</option>
-            <option value="Paid">Paid</option>
-            <option value="Trial">Trial</option>
-            <option value="Enterprise">Enterprise</option>
+            <option value="free">Free</option>
+            <option value="paid">Paid</option>
+            <option value="trial">Trial</option>
+            <option value="enterprise">Enterprise</option>
           </select>
         </div>
       </div>

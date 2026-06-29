@@ -23,19 +23,42 @@ const CreateTenant = () => {
 
   const handleNameChange = (val) => {
     setName(val);
-    const generatedSlug = val
+  };
+
+  const handleSlugChange = (val) => {
+    const formatted = val
       .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "") // Remove non-word chars
-      .replace(/[\s_]+/g, "-") // Replace spaces/underscores with hyphens
-      .replace(/-+/g, "-"); // Collapse consecutive hyphens
-    setSlug(generatedSlug);
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-");
+    setSlug(formatted);
   };
 
   const handleCreateTenant = async (e) => {
     e.preventDefault();
-    if (!name || !slug || !adminName || !adminEmail) {
+    if (!name.trim() || !slug.trim() || !adminName.trim() || !adminEmail.trim()) {
       setError("All fields are required.");
+      return;
+    }
+
+    if (name.trim().length < 3) {
+      setError("Organization Name must be at least 3 characters long.");
+      return;
+    }
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      setError("Tenant Slug must only contain lowercase letters, numbers, and hyphens.");
+      return;
+    }
+
+    if (adminName.trim().length < 2) {
+      setError("Administrator Name must be at least 2 characters long.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(adminEmail)) {
+      setError("Please enter a valid Administrator Email address.");
       return;
     }
 
@@ -149,9 +172,12 @@ const CreateTenant = () => {
                     required
                     placeholder="e.g. stark-ind"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all font-mono text-xs shadow-inner bg-slate-50 text-[#008ecc] font-semibold"
+                    onChange={(e) => handleSlugChange(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all font-mono text-xs shadow-inner bg-white text-slate-800 font-semibold"
                   />
+                  <p className="text-[11px] text-slate-400 mt-1.5 font-medium leading-relaxed">
+                    Only lowercase letters, numbers, and hyphens are allowed. Spaces are automatically converted to hyphens.
+                  </p>
                 </div>
               </div>
             </div>
@@ -205,6 +231,9 @@ const CreateTenant = () => {
                       className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5 font-medium leading-relaxed">
+                    Must be a valid email address. The generated credentials and workspace login link will be dispatched here.
+                  </p>
                 </div>
 
                 {/* Auto-email notice */}

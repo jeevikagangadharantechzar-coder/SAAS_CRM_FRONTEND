@@ -14,6 +14,7 @@ import {
   Plus,
   Eye,
   Calendar,
+  Bell,
 } from "lucide-react";
 
 import { initSocket } from "../../utils/socket";
@@ -93,6 +94,7 @@ function LeadTableComponent() {
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 1 });
 
   const [userRole, setUserRole] = useState("");
+  const [targetLinkedLeadIds, setTargetLinkedLeadIds] = useState(new Map());
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -248,6 +250,25 @@ const fetchLeads = useCallback(async () => {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  // Fetch target-linked lead IDs for sales users
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    const role = userData ? (JSON.parse(userData)?.role?.name || "") : "";
+    if (role === "Admin") return;
+    const token = localStorage.getItem("token");
+    const tenantSlugVal = window.location.pathname.split("/")[1];
+    const si = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+    axios.get(`${si}/${tenantSlugVal}/api/targets/my`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => {
+        const map = new Map();
+        (r.data || []).forEach(t => (t.linkedLeads || []).forEach(l => {
+          map.set(String(l._id || l), { startDate: t.startDate, endDate: t.endDate, assignedAt: t.createdAt });
+        }));
+        setTargetLinkedLeadIds(map);
+      })
+      .catch(() => {});
+  }, []);
 
   // Pagination helpers
   const goToPage = (page) => {
@@ -748,12 +769,39 @@ const fetchLeads = useCallback(async () => {
                         {lead.leadName?.charAt(0) || "L"}
                       </div>
                       <div className="flex flex-col">
-                        <span
-                          onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}`)}
-                          className="font-medium text-blue-600 text-sm cursor-pointer hover:underline"
-                        >
-                          {lead.leadName || "Unnamed Lead"}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}`)}
+                            className="font-medium text-blue-600 text-sm cursor-pointer hover:underline"
+                          >
+                            {lead.leadName || "Unnamed Lead"}
+                          </span>
+                          {targetLinkedLeadIds.has(String(lead._id)) && (() => {
+                            const tInfo = targetLinkedLeadIds.get(String(lead._id));
+                            const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+                            const fmtT = (d) => d ? new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+                            return (
+                              <div className="group relative inline-flex cursor-default">
+                                <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
+                                <div className="absolute top-full left-0 mt-1.5 hidden group-hover:flex flex-col min-w-[200px] shadow-xl z-50 pointer-events-none" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
+                                  <div style={{background:"#f97316"}} className="px-3 py-2">
+                                    <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
+                                  </div>
+                                  <div className="bg-white px-3 py-2 space-y-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
+                                      <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
+                                      <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <span className="text-gray-400 text-xs">
                           {lead.email || "-"}
                         </span>
