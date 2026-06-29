@@ -320,7 +320,7 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
     >
       {sidebarOpen ? (
         <>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-1 justify-start">
             <div className="relative">
               <IconCircle isActive={isActive} sidebarOpen={sidebarOpen}>
                 <MessageSquare />
