@@ -118,9 +118,9 @@ const MessagesItem = ({ to }) => {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    const API_URL    = import.meta.env.VITE_API_URL;
+    const API_URL = import.meta.env.VITE_API_URL;
     const tenantSlug = localStorage.getItem("tenantSlug");
-    const token      = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
     if (!tenantSlug || !token) return;
 
     const fetchUnread = async () => {
@@ -130,7 +130,7 @@ const MessagesItem = ({ to }) => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setUnread(data.unreadCount || 0);
-      } catch {}
+      } catch { }
     };
 
     fetchUnread();
