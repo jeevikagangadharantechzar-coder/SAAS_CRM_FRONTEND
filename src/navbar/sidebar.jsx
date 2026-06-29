@@ -129,19 +129,35 @@ const MessagesItem = ({ to }) => {
     const token      = localStorage.getItem("token");
     if (!tenantSlug || !token) return;
 
+    const BASE    = `${API_URL.replace("/api", "")}/${tenantSlug}/api`;
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // REST fallback: fetch DM + group unread (for when ChatContext isn't mounted yet)
     const fetchUnread = async () => {
       try {
-        const { data } = await axios.get(
-          `${API_URL.replace("/api", "")}/${tenantSlug}/api/chat/unread-count`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setUnread(data.unreadCount || 0);
+        const [dmRes, grpRes] = await Promise.allSettled([
+          axios.get(`${BASE}/chat/unread-count`,  { headers }),
+          axios.get(`${BASE}/groups`,             { headers }),
+        ]);
+        const dmUnread    = dmRes.status  === "fulfilled" ? (dmRes.value.data.unreadCount  || 0) : 0;
+        const grpUnread   = grpRes.status === "fulfilled"
+          ? (grpRes.value.data.groups || []).reduce((s, g) => s + (g.unreadCount || 0), 0)
+          : 0;
+        setUnread(dmUnread + grpUnread);
       } catch {}
     };
 
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
+
+    // Real-time: ChatContext dispatches this event whenever unread count changes
+    const handleLive = (e) => setUnread(e.detail.count);
+    window.addEventListener("crm:chat_unread", handleLive);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("crm:chat_unread", handleLive);
+    };
   }, []);
 
   return (
@@ -155,15 +171,21 @@ const MessagesItem = ({ to }) => {
       {({ isActive }) => (
         <>
           <div className="flex items-center space-x-3">
-            <IconCircle isActive={isActive}>
-              <MessageSquare />
-            </IconCircle>
+            <div className="relative">
+              <IconCircle isActive={isActive}>
+                <MessageSquare />
+              </IconCircle>
+              {/* Red dot on the icon itself when there are unread messages */}
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </div>
             <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
               Messages
             </span>
           </div>
           {unread > 0 && (
-            <span className="bg-[#008ecc] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
               {unread > 99 ? "99+" : unread}
             </span>
           )}
