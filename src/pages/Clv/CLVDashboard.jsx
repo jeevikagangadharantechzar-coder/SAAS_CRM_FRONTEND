@@ -311,11 +311,19 @@ const CLVDashboard = () => {
     );
   }, [dashboardData?.dormantClients, dormantSearch]);
 
-  // SIMPLE FIX: Create monthly trend data directly
-  const getMonthlyTrendData = () => {
+  // Stable, data-driven monthly revenue trend using useMemo
+  const monthlyData = useMemo(() => {
+    if (dashboardData?.revenueTrends && dashboardData.revenueTrends.length > 0) {
+      const months = dashboardData.revenueTrends.map((t) => t.month);
+      const values = dashboardData.revenueTrends.map((t) => t.revenue || 0);
+      return { months, values };
+    }
+
+    // Fallback stable mock data (avoids Math.random on every render)
     const currentDate = new Date();
     const months = [];
     const values = [];
+    const mockRevenues = [350000, 420000, 380000, 490000, 520000, 600000];
     
     for (let i = 5; i >= 0; i--) {
       const date = new Date(currentDate);
@@ -327,13 +335,21 @@ const CLVDashboard = () => {
       const year = date.getFullYear();
       
       months.push(`${monthName} ${year}`);
-      
-      const revenue = 300000 + Math.random() * 500000;
-      values.push(Math.round(revenue));
+      values.push(mockRevenues[5 - i]);
     }
     
     return { months, values };
-  };
+  }, [dashboardData]);
+
+  // Safe growth percentage calculation to prevent division by zero (NaN/Infinity)
+  const growthPercent = useMemo(() => {
+    const startVal = monthlyData.values[0] || 0;
+    const endVal = monthlyData.values[5] || 0;
+    if (startVal === 0) {
+      return endVal > 0 ? 100 : 0;
+    }
+    return Math.round(((endVal - startVal) / startVal) * 100);
+  }, [monthlyData]);
 
   // Handle loading state
   if (loading && !dashboardData) {
@@ -359,7 +375,7 @@ const CLVDashboard = () => {
       </div>
     );
   }
-  
+
   // Define data AFTER loading checks
   const data = dashboardData || {
     summary: {
@@ -386,9 +402,6 @@ const CLVDashboard = () => {
     recentReviews: [],
     revenueTrends: [],
   };
-
-  // Get monthly trend data
-  const monthlyData = getMonthlyTrendData();
 
   const classificationData = {
     labels: Object.keys(data.classificationDistribution).length > 0 
@@ -934,9 +947,9 @@ const CLVDashboard = () => {
             </div>
             <div>
               <p className="text-[10px] sm:text-xs text-gray-500">Growth</p>
-              <p className={`text-xs sm:text-sm font-semibold ${monthlyData.values[5] > monthlyData.values[0] ? 'text-green-600' : 'text-red-600'}`}>
-                {monthlyData.values[5] > monthlyData.values[0] ? '↑' : '↓'} 
-                {Math.abs(((monthlyData.values[5] - monthlyData.values[0]) / monthlyData.values[0] * 100)).toFixed(0)}%
+              <p className={`text-xs sm:text-sm font-semibold ${monthlyData.values[5] >= monthlyData.values[0] ? 'text-green-600' : 'text-red-600'}`}>
+                {monthlyData.values[5] >= monthlyData.values[0] ? '↑' : '↓'} 
+                {Math.abs(growthPercent)}%
               </p>
             </div>
           </div>
