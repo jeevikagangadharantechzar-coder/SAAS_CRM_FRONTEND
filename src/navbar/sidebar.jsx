@@ -8,7 +8,6 @@ import {
   Shield,
   TrendingUp,
   TrendingDown,
-  FileText,
   ClipboardList,
   Users,
   GitBranch,
@@ -20,7 +19,6 @@ import {
   Target,
   Calendar,
   Briefcase,
-  DollarSign,
   Receipt,
   Send,
   ArrowUpCircle,
@@ -58,7 +56,6 @@ const SidebarItem = ({
 
   if (!hasPermission) return null;
 
-  // Dynamically resolve tenant-scoped path
   const resolvedTo =
     tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
       ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
@@ -125,7 +122,6 @@ const Collapsible = ({
 
   if (!hasPermission) return null;
 
-  // Check if any child is active under the resolved tenant path
   const hasActiveChild = React.Children.toArray(children).some((child) => {
     if (!child) return false;
     const childTo = child.props.to;
@@ -217,7 +213,7 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
   return (
     <NavLink
       to={resolvedTo}
-      end={exact => false}
+      end={false}
       className={
         `flex items-center justify-center transition-all duration-300 w-full ${
           sidebarOpen
@@ -269,25 +265,40 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
     const token = localStorage.getItem("token");
     if (!activeSlug || !token) return;
 
+    const BASE = `${API_URL.replace("/api", "")}/${tenantSlug}/api`;
+    const headers = { Authorization: `Bearer ${token}` };
+
     const fetchUnread = async () => {
       try {
-        const { data } = await axios.get(
-          `${API_URL.replace("/api", "")}/${activeSlug}/api/chat/unread-count`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setUnread(data.unreadCount || 0);
-      } catch {}
+        const [dmRes, grpRes] = await Promise.allSettled([
+          axios.get(`${BASE}/chat/unread-count`, { headers }),
+          axios.get(`${BASE}/groups`, { headers }),
+        ]);
+        const dmUnread = dmRes.status === "fulfilled" ? (dmRes.value.data.unreadCount || 0) : 0;
+        const grpUnread =
+          grpRes.status === "fulfilled"
+            ? (grpRes.value.data.groups || []).reduce((s, g) => s + (g.unreadCount || 0), 0)
+            : 0;
+        setUnread(dmUnread + grpUnread);
+      } catch (_e) {}
     };
 
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
+
+    const handleLive = (e) => setUnread(e.detail.count);
+    window.addEventListener("crm:chat_unread", handleLive);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("crm:chat_unread", handleLive);
+    };
   }, [tenantSlug]);
 
   const resolvedTo =
     tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
       ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
-      : to;
+      : to.startsWith("/") ? to : `/${to}`;
 
   const isActive = location.pathname.startsWith(resolvedTo);
 
@@ -309,20 +320,21 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
     >
       {sidebarOpen ? (
         <>
-          <div className="flex items-center space-x-3 w-full justify-start">
-            <IconCircle isActive={isActive} sidebarOpen={sidebarOpen}>
-              <MessageSquare />
-            </IconCircle>
-            <span
-              className={`text-base font-medium ${
-                isActive ? "text-[#008ecc]" : "text-slate-750"
-              }`}
-            >
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <IconCircle isActive={isActive} sidebarOpen={sidebarOpen}>
+                <MessageSquare />
+              </IconCircle>
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </div>
+            <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
               Messages
             </span>
           </div>
           {unread > 0 && (
-            <span className="bg-[#008ecc] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
               {unread > 99 ? "99+" : unread}
             </span>
           )}
@@ -338,16 +350,6 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
         </div>
       )}
     </NavLink>
-  );
-};
-
-/* ── Badge ─────────────────────── */
-const Badge = ({ count }) => {
-  if (!count) return null;
-  return (
-    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
-      {count > 99 ? "99+" : count}
-    </span>
   );
 };
 
@@ -459,7 +461,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     fetchLogo();
   }, []);
 
-  // Auto-open Deals, Analysis, and Email menus if user is on those pages
   useEffect(() => {
     if (p.includes("/deals") || p.includes("/Pipelineview")) {
       setShowDeals(true);
@@ -482,7 +483,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   return (
     <aside
       className={`fixed lg:relative top-0 left-0 h-full bg-white transition-all duration-300 overflow-y-auto sidebar-scroll z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] border-r border-slate-100
-        ${isOpen ? "w-64 p-4" : "w-20 p-2"} 
+        ${isOpen ? "w-64 p-4" : "w-20 p-2"}
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} lg:translate-x-0`}
       id="main-sidebar"
     >
@@ -501,7 +502,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </NavLink>
 
-        {/* Mobile close button */}
         {isOpen && (
           <div className="relative group lg:hidden absolute top-0 right-0">
             <button

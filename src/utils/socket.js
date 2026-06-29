@@ -14,10 +14,15 @@ export const initSocket = (userId) => {
   if (socket) return socket;
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const name = storedUser.name || "";
+  const name   = storedUser.name || "";
+  let   dbName = null;
+  try {
+    const token = localStorage.getItem("token");
+    if (token) dbName = JSON.parse(atob(token.split(".")[1])).dbName || null;
+  } catch {}
 
   socket = io(API_URL, {
-    auth: { userId, name },
+    auth: { userId, name, dbName },
     transports: ["websocket"],
     reconnectionAttempts: 5,
   });
