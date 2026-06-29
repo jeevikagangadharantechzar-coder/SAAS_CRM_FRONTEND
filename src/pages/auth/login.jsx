@@ -36,7 +36,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [showUpgradeButton, setShowUpgradeButton] = useState(false);
-  const [activeSessionSlug, setActiveSessionSlug] = useState("");
+
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -45,38 +45,40 @@ const Login = () => {
   const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 
   useEffect(() => {
-    const channelName = "crm_global_session_guard";
-    const channel = new BroadcastChannel(channelName);
+    const activeToken = localStorage.getItem("token");
+    const activeSlug = localStorage.getItem("tenantSlug");
 
-    const handleMessage = (event) => {
-      const { type, tenantSlug: activeSlug } = event.data;
-      if (type === "ACTIVE_SESSION_REPORT" && activeSlug) {
-        setActiveSessionSlug(activeSlug);
+    if (activeToken && activeSlug) {
+      if (!tenantSlug || activeSlug === tenantSlug) {
+        navigate(`/${activeSlug}/dashboard`, { replace: true });
+      } else {
         setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
         setIsError(true);
       }
+    } else {
+      setMessage("");
+      setIsError(false);
+    }
+
+    const handleStorageChange = () => {
+      const currentToken = localStorage.getItem("token");
+      const currentSlug = localStorage.getItem("tenantSlug");
+      if (currentToken && currentSlug) {
+        if (!tenantSlug || currentSlug === tenantSlug) {
+          navigate(`/${currentSlug}/dashboard`, { replace: true });
+        } else {
+          setMessage(`Another tenant session (${currentSlug}) is already active. Please log out of that session first.`);
+          setIsError(true);
+        }
+      } else {
+        setMessage("");
+        setIsError(false);
+      }
     };
 
-    channel.addEventListener("message", handleMessage);
-
-    // Query for any active session across other tabs
-    channel.postMessage({
-      type: "QUERY_ACTIVE_SESSION",
-    });
-
-    // Periodically query to detect new active sessions immediately
-    const interval = setInterval(() => {
-      channel.postMessage({
-        type: "QUERY_ACTIVE_SESSION",
-      });
-    }, 2000);
-
-    return () => {
-      clearInterval(interval);
-      channel.removeEventListener("message", handleMessage);
-      channel.close();
-    };
-  }, []);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [tenantSlug, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -87,15 +89,8 @@ const Login = () => {
     // 1. Check if another tenant is already logged in
     const activeToken = localStorage.getItem("token");
     const activeSlug = localStorage.getItem("tenantSlug");
-    if (activeToken && activeSlug && activeSlug !== tenantSlug) {
+    if (activeToken && activeSlug && tenantSlug && activeSlug !== tenantSlug) {
       setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
-      setIsError(true);
-      setIsLoading(false);
-      return;
-    }
-
-    if (activeSessionSlug) {
-      setMessage(`Another tenant session (${activeSessionSlug}) is already active. Please log out of that session first.`);
       setIsError(true);
       setIsLoading(false);
       return;
