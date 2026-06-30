@@ -5,7 +5,7 @@ import {
   Bell, Trash2, Clock, CheckCircle, ArrowLeft, RefreshCw,
   Search, ChevronLeft, ChevronRight, Filter, CheckCheck, X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -61,6 +61,7 @@ const matchesDate = (notif, dateFilter, customFrom, customTo) => {
 export default function NotificationsPage() {
   const { notifications, setNotifications, fetchNotifications } = useNotifications();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
 
   const [search,       setSearch]       = useState("");
   const [typeFilter,   setTypeFilter]   = useState("all");
@@ -379,7 +380,14 @@ export default function NotificationsPage() {
               return (
                 <div
                   key={n._id}
-                  className={`flex items-start gap-3 px-4 py-4 group transition-colors ${
+                  onClick={() => {
+                    if (n.type === "contact_form") {
+                      handleMarkRead(n._id);
+                      const path = tenantSlug ? `/${tenantSlug}/createleads` : "/createleads";
+                      navigate(path, { state: { contactFormData: n.meta } });
+                    }
+                  }}
+                  className={`flex items-start gap-3 px-4 py-4 group transition-colors cursor-pointer ${
                     isUnread ? "bg-blue-50/40" : "bg-white hover:bg-gray-50"
                   }`}
                 >
