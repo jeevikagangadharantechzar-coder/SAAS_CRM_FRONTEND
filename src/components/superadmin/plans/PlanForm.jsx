@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, Loader2, ShieldAlert, AlertTriangle, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ export const PlanForm = ({
   hasRecommendedPlan = false,
 }) => {
   const navigate = useNavigate();
+  const isFirstRender = useRef(true);
 
   const {
     register,
@@ -32,7 +33,7 @@ export const PlanForm = ({
       billing_cycle: "monthly",
       trial_days: 0,
       max_users_per_tenant: 0,
-      visible_on_pricing: true,
+      is_visible: true,
       is_recommended: false,
       sort_order: 1,
       ...initialData,
@@ -57,12 +58,19 @@ export const PlanForm = ({
     }
   }, [planName, dirtyFields.plan_code, setValue, isEditMode]);
 
-  // Auto-calculate yearly price (Monthly * 12) for Paid plan
+  // Auto-calculate yearly price (Monthly * 12) for Paid plan.
+  // Skip the initial render so a saved yearly price is never overwritten on load.
+  // shouldDirty: false keeps price_yearly clean so the sync runs on every subsequent
+  // monthly change, until the user manually edits the yearly field.
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (planType === "paid" && priceMonthly !== undefined && priceMonthly !== "") {
       const pm = parseFloat(priceMonthly);
       if (!isNaN(pm) && !dirtyFields.price_yearly) {
-        setValue("price_yearly", pm * 12, { shouldValidate: true });
+        setValue("price_yearly", pm * 12, { shouldValidate: true, shouldDirty: false });
       }
     }
   }, [priceMonthly, planType, setValue, dirtyFields.price_yearly]);
@@ -221,6 +229,7 @@ export const PlanForm = ({
                   </label>
                   <input
                     type="number"
+                    min={0}
                     step="0.01"
                     placeholder="0.00"
                     {...register("price_monthly", {
@@ -243,6 +252,7 @@ export const PlanForm = ({
                   </label>
                   <input
                     type="number"
+                    min={0}
                     step="0.01"
                     placeholder="0.00"
                     {...register("price_yearly", {
@@ -400,12 +410,12 @@ export const PlanForm = ({
               <div className="flex items-start space-x-3">
                 <input
                   type="checkbox"
-                  id="visible_on_pricing"
-                  {...register("visible_on_pricing")}
+                  id="is_visible"
+                  {...register("is_visible")}
                   className="w-4 h-4 text-[#008ecc] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
                 />
                 <div>
-                  <label htmlFor="visible_on_pricing" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
+                  <label htmlFor="is_visible" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
                     Visible on pricing page
                   </label>
                   <p className="text-[10px] text-slate-400 mt-0.5">Show this plan on public landing pages.</p>

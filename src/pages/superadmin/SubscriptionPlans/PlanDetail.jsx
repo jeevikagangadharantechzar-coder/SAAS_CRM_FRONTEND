@@ -111,7 +111,7 @@ const PlanDetail = () => {
     billing_cycle,
     trial_days,
     max_users_per_tenant,
-    visible_on_pricing,
+    is_visible,
     is_recommended,
     sort_order,
   } = plan;
@@ -368,7 +368,7 @@ const PlanDetail = () => {
               <div className="flex items-center justify-between">
                 <span>Pricing Page Visibility</span>
                 <span className="font-semibold flex items-center space-x-1">
-                  {visible_on_pricing ? (
+                  {is_visible ? (
                     <span className="text-green-600 flex items-center">
                       <CheckCircle size={14} className="mr-1" /> Yes
                     </span>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import {
   Dialog,
@@ -9,9 +10,9 @@ import {
 
 const PasswordUpdate = ({ isOpen, onClose }) => {
   const API_URL = import.meta.env.VITE_API_URL;
+  const { token } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
-    email: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -50,7 +51,6 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/users/update-password`,
         {
@@ -59,7 +59,10 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            currentPassword: formData.currentPassword,
+            newPassword: formData.newPassword,
+          }),
         }
       );
 
@@ -70,7 +73,6 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
         setTimeout(() => {
           onClose();
           setFormData({
-            email: "",
             currentPassword: "",
             newPassword: "",
             confirmPassword: "",
@@ -109,21 +111,6 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              required
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-
           <div>
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
               Current Password

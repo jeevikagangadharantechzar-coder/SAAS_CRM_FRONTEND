@@ -278,7 +278,7 @@ const ClientReviewTable = () => {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `${API_URL}/cltv/client/${encodeURIComponent(deal.companyName)}`,
+          `${API_URL}/cltv/client/${encodeURIComponent(deal.companyName)}?dealId=${deal._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
