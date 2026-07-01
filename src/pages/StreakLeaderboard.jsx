@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Zap, Crown, Flame } from "lucide-react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 
 // ── Won deal helper ───────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
   const [topPerformer, setTopPerformer] = useState(null);
   const [loading, setLoading]           = useState(true);
   const [isAdmin, setIsAdmin]           = useState(false);
+  const { t } = useTranslation();
 
   const API_URL = import.meta.env.VITE_API_URL;
   const token   = localStorage.getItem("token");
@@ -208,7 +210,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
                 <Crown className="w-4 h-4 text-white" />
               </div>
               <span className="text-sm font-semibold text-gray-800">
-                {isAdmin ? "Top Performer" : "📊 My Performance"}
+                {isAdmin ? t("leaderboard.topPerformer") : `📊 ${t("leaderboard.myPerformance")}`}
               </span>
             </CardTitle>
           </div>
@@ -257,7 +259,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
               {/* Stats grid */}
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-2 border border-orange-100">
-                  <p className="text-xs text-gray-600 mb-1">Conversion</p>
+                  <p className="text-xs text-gray-600 mb-1">{t("leaderboard.conversion")}</p>
                   <p className="text-lg font-bold text-orange-600">
                     {topPerformer.conversionDisplay ?? `${topPerformer.conversionRate?.toFixed(1)}%`}
                   </p>
@@ -266,7 +268,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
                   </p> */}
                 </div>
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 border border-blue-100">
-                  <p className="text-xs text-gray-600 mb-1">Active Days</p>
+                  <p className="text-xs text-gray-600 mb-1">{t("leaderboard.activeDays")}</p>
                   <p className="text-lg font-bold text-blue-600">
                     {topPerformer.productiveDays ?? 0}
                   </p>
@@ -281,7 +283,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
               {/* Performance bar */}
               <div>
                 <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Performance</span>
+                  <span>{t("leaderboard.performance")}</span>
                   <span className="font-bold text-orange-600">
                     {topPerformer.conversionRate?.toFixed(1)}%
                   </span>
@@ -300,12 +302,12 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
               <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Crown className="w-7 h-7 text-gray-400" />
               </div>
-              <p className="text-sm font-medium text-gray-600 mb-2">No Top Performer</p>
+              <p className="text-sm font-medium text-gray-600 mb-2">{t("leaderboard.noTopPerformer")}</p>
               <button
                 onClick={e => { e.stopPropagation(); fetchTopPerformer(); }}
                 className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
               >
-                Refresh
+                {t("leaderboard.refresh")}
               </button>
             </div>
           )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 import { useNotifications } from "../context/NotificationContext";
 import {
   Home,
@@ -256,6 +257,7 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
 /* ── Messages Sidebar Item with unread badge ─ */
 const MessagesItem = ({ to, sidebarOpen = true }) => {
   const [unread, setUnread] = useState(0);
+  const { t } = useTranslation();
   const { tenantSlug } = useParams();
   const location = useLocation();
 
@@ -284,13 +286,11 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
     };
 
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
 
     const handleLive = (e) => setUnread(e.detail.count);
     window.addEventListener("crm:chat_unread", handleLive);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener("crm:chat_unread", handleLive);
     };
   }, [tenantSlug]);
@@ -316,7 +316,7 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
               }`
         }`
       }
-      title={!sidebarOpen ? "Messages" : ""}
+      title={!sidebarOpen ? t("sidebar.messages") : ""}
     >
       {sidebarOpen ? (
         <>
@@ -330,7 +330,7 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
               )}
             </div>
             <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
-              Messages
+              {t("sidebar.messages")}
             </span>
           </div>
           {unread > 0 && (
@@ -355,6 +355,7 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
 
 /* ── Sidebar Component ─────────────────────── */
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const { t } = useTranslation();
   const API_URL = import.meta.env.VITE_API_URL;
   const [logo, setLogo] = useState(null);
   const [showDeals, setShowDeals] = useState(false);
@@ -519,7 +520,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="dashboard"
           icon={<Home />}
-          label="Dashboard"
+          label={t("sidebar.dashboard")}
           hasPermission={isAdmin || userPermissions.dashboard}
           sidebarOpen={isOpen}
         />
@@ -528,14 +529,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="leads"
           icon={<Users />}
-          label="Leads"
+          label={t("sidebar.leads")}
           hasPermission={isAdmin || userPermissions.leads}
           sidebarOpen={isOpen}
         />
 
         {/* Deals (Collapsible) */}
         <Collapsible
-          label="Deals"
+          label={t("sidebar.deals")}
           icon={<Briefcase />}
           open={showDeals}
           onToggle={() => setShowDeals((s) => !s)}
@@ -548,13 +549,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <SmallLink
             to="Pipelineview"
             icon={<GitBranch />}
-            label="Pipeline View"
+            label={t("sidebar.pipelineView")}
             hasPermission={isAdmin || userPermissions.deals_pipeline}
           />
           <SmallLink
             to="deals"
             icon={<TrendingUp />}
-            label="All Deals"
+            label={t("sidebar.allDeals")}
             hasPermission={isAdmin || userPermissions.deals_all}
           />
         </Collapsible>
@@ -566,7 +567,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           userPermissions.assigned_tasks ||
           (!isAdmin && userPermissions.my_targets !== false)) && (
           <Collapsible
-            label="Tasks"
+            label={t("sidebar.tasks")}
             icon={<CheckSquare />}
             open={showTasks}
             onToggle={() => setShowTasks((s) => !s)}
@@ -582,7 +583,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <SmallLink
                 to="task-management"
                 icon={<ClipboardList />}
-                label="Task Management"
+                label={t("sidebar.taskManagement")}
               />
             )}
 
@@ -590,7 +591,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <SmallLink
                 to="target-management"
                 icon={<Target />}
-                label="Target Management"
+                label={t("sidebar.targetManagement")}
               />
             )}
 
@@ -598,7 +599,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <SmallLink
                 to="assigned-tasks"
                 icon={<CheckSquare />}
-                label="My Tasks"
+                label={t("sidebar.myTasks")}
               />
             )}
 
@@ -606,7 +607,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <SmallLink
                 to="my-targets"
                 icon={<Target />}
-                label="My Targets"
+                label={t("sidebar.myTargets")}
               />
             )}
           </Collapsible>
@@ -616,7 +617,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="proposal"
           icon={<ClipboardList />}
-          label="Proposal"
+          label={t("sidebar.proposal")}
           hasPermission={isAdmin || userPermissions.proposal}
           sidebarOpen={isOpen}
         />
@@ -626,14 +627,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="invoices"
           exact
           icon={<Receipt />}
-          label="Invoices"
+          label={t("sidebar.invoices")}
           hasPermission={isAdmin || userPermissions.invoices}
           sidebarOpen={isOpen}
         />
 
         {/* Analysis (Collapsible Group) */}
         <Collapsible
-          label="Analysis"
+          label={t("sidebar.analysis")}
           icon={<BarChart3 />}
           open={showAnalysis}
           onToggle={() => setShowAnalysis((s) => !s)}
@@ -643,17 +644,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <SmallLink
             to="DealAnalysis"
             icon={<BarChart3 />}
-            label="Deal Analysis"
+            label={t("sidebar.dealAnalysis")}
           />
           <SmallLink
             to="cltv/dashboard"
             icon={<TrendingUp />}
-            label="Won Analysis"
+            label={t("sidebar.wonAnalysis")}
           />
           <SmallLink
             to="LossAnalysis"
             icon={<TrendingDown />}
-            label="Loss Analysis"
+            label={t("sidebar.lossAnalysis")}
           />
         </Collapsible>
 
@@ -661,14 +662,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="leaderboard"
           icon={<Trophy />}
-          label="Leaderboard"
+          label={t("sidebar.leaderboard")}
           hasPermission={isAdmin || userPermissions.streak_leaderboard}
           sidebarOpen={isOpen}
         />
 
         {/* Email (Collapsible Group) */}
         <Collapsible
-          label="Email"
+          label={t("sidebar.email")}
           icon={<Mail />}
           open={showEmail}
           onToggle={() => setShowEmail((s) => !s)}
@@ -680,13 +681,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <SmallLink
             to="emailchat"
             icon={<Mail />}
-            label="Email Chat"
+            label={t("sidebar.emailChat")}
             hasPermission={isAdmin || userPermissions.email_chat}
           />
           <SmallLink
             to="mass-email"
             icon={<Send />}
-            label="Email Campaign"
+            label={t("sidebar.emailCampaign")}
             hasPermission={isAdmin || userPermissions.email_campaigns}
           />
         </Collapsible>
@@ -698,7 +699,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="meetings"
           icon={<Calendar />}
-          label="Meetings"
+          label={t("sidebar.meetings")}
           hasPermission={isAdmin || userPermissions.Meetings}
           sidebarOpen={isOpen}
         />
@@ -707,7 +708,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="team-analytics"
           icon={<BarChart3 />}
-          label="Team Analytics"
+          label={t("sidebar.teamAnalytics")}
           hasPermission={isAdmin || userPermissions.reports}
           sidebarOpen={isOpen}
         />
@@ -716,7 +717,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <SidebarItem
           to="user&roles"
           icon={<Shield />}
-          label="Users & Roles"
+          label={t("sidebar.usersRoles")}
           hasPermission={isAdmin || userPermissions.users_roles}
           sidebarOpen={isOpen}
         />
@@ -726,7 +727,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <SidebarItem
             to={`/${tenantSlug}/plans`}
             icon={<ArrowUpCircle />}
-            label="Upgrade Plan"
+            label={t("sidebar.upgradePlan")}
             sidebarOpen={isOpen}
           />
         )}

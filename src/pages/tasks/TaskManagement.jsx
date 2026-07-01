@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { useNotifications } from "../../context/NotificationContext";
 import {
   Plus, Trash2, CheckCircle, Clock, AlertCircle, User,
@@ -60,34 +62,94 @@ function TaskModal({ open, onClose, onSaved, salesUsers, leads, deals, editTask,
     dueDate: "", assignedTo: "", leadRef: "", dealRef: "",
   });
   const [saving, setSaving] = useState(false);
+  const [dueDateObj, setDueDateObj] = useState(null);
+  const [dueDateError, setDueDateError] = useState("");
+  const dueDateRef = useRef(null);
+
+  const validateDueDate = (value) => {
+    if (!value) return "Due date is required";
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      return "Enter date in mm/dd/yyyy format (e.g., 07/01/2026)";
+    }
+    const [mm, dd, yyyy] = value.split("/").map(Number);
+    if (mm < 1 || mm > 12) return "Invalid month. Must be between 01 and 12";
+    const dateObj = new Date(yyyy, mm - 1, dd);
+    if (
+      dateObj.getFullYear() !== yyyy ||
+      dateObj.getMonth() !== mm - 1 ||
+      dateObj.getDate() !== dd
+    ) {
+      return "Invalid date. Please enter a real date in mm/dd/yyyy format";
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) return "Due date must be today or a future date";
+    return null;
+  };
+
+  const handleDueDateChange = (date) => {
+    setDueDateObj(date);
+    if (date) {
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const formatted = `${mm}/${dd}/${date.getFullYear()}`;
+      setForm((f) => ({ ...f, dueDate: formatted }));
+      if (dueDateError) {
+        setDueDateError(validateDueDate(formatted) || "");
+      }
+    } else {
+      setForm((f) => ({ ...f, dueDate: "" }));
+      if (dueDateError) setDueDateError("Due date is required");
+    }
+  };
 
   useEffect(() => {
     if (open) {
       if (editTask) {
+        let dueDateFormatted = "";
+        let dueDateParsed = null;
+        if (editTask.dueDate) {
+          const d = new Date(editTask.dueDate);
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          dueDateFormatted = `${mm}/${dd}/${d.getFullYear()}`;
+          dueDateParsed = d;
+        }
         setForm({
           title: editTask.title || "",
           description: editTask.description || "",
           priority: editTask.priority || "Medium",
-          dueDate: editTask.dueDate ? editTask.dueDate.split("T")[0] : "",
+          dueDate: dueDateFormatted,
           assignedTo: editTask.assignedTo?._id || "",
           leadRef: editTask.leadRef?._id || editTask.leadRef || "",
           dealRef: editTask.dealRef?._id || editTask.dealRef || "",
         });
+        setDueDateObj(dueDateParsed);
       } else {
         setForm({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "", leadRef: "", dealRef: "" });
+        setDueDateObj(null);
       }
+      setDueDateError("");
     }
   }, [editTask, open]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const dateErr = validateDueDate(form.dueDate);
+    if (dateErr) {
+      setDueDateError(dateErr);
+      setTimeout(() => dueDateRef.current?.setFocus(), 50);
+      return;
+    }
     setSaving(true);
     try {
+      const [mm, dd, yyyy] = form.dueDate.split("/");
+      const payload = { ...form, dueDate: `${yyyy}-${mm}-${dd}` };
       if (editTask) {
-        await axios.put(`${baseUrl}/tasks/${editTask._id}`, form, { headers });
+        await axios.put(`${baseUrl}/tasks/${editTask._id}`, payload, { headers });
         toast.success("Task updated");
       } else {
-        await axios.post(`${baseUrl}/tasks`, form, { headers });
+        await axios.post(`${baseUrl}/tasks`, payload, { headers });
         toast.success("Task created and assigned");
       }
       onSaved();
@@ -154,13 +216,25 @@ function TaskModal({ open, onClose, onSaved, salesUsers, leads, deals, editTask,
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
-              <input
-                required
-                type="date"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                value={form.dueDate}
-                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+              <DatePicker
+                ref={dueDateRef}
+                selected={dueDateObj}
+                onChange={handleDueDateChange}
+                minDate={new Date()}
+                dateFormat="MM/dd/yyyy"
+                placeholderText="mm/dd/yyyy"
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                isClearable
+                wrapperClassName="w-full"
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc] ${
+                  dueDateError ? "border-red-500" : "border-gray-200"
+                }`}
               />
+              {dueDateError && (
+                <p className="text-xs text-red-500 mt-1">{dueDateError}</p>
+              )}
             </div>
           </div>
 
@@ -333,7 +407,7 @@ function TaskCard({ task, onEdit, onDelete, onStatusChange, onApprove }) {
       </div>
       <div className={`flex items-center gap-1.5 text-xs mb-4 ${isOverdue ? "text-red-400 font-medium" : "text-gray-400"}`}>
         <Calendar size={10} />
-        <span>Due {task.dueDate ? new Date(task.dueDate).toLocaleDateString("en-IN") : "—"}</span>
+        <span>Due {task.dueDate ? new Date(task.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—"}</span>
       </div>
 
       {/* Actions */}

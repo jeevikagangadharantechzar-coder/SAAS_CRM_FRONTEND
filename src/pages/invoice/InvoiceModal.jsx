@@ -5,11 +5,13 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { useModal } from "../../context/ModalContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -35,18 +37,28 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const [note, setNote] = useState("");
   const [isNoteVisible, setIsNoteVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [issueDateObj, setIssueDateObj] = useState(null);
+  const [dueDateObj, setDueDateObj] = useState(null);
+  const issueDateRef = useRef(null);
+  const dueDateRef = useRef(null);
+
+  const toMMDDYYYY = (isoOrDate) => {
+    if (!isoOrDate) return { formatted: "", obj: null };
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return { formatted: `${mm}/${dd}/${d.getFullYear()}`, obj: d };
+  };
 
   // Load editing invoice if any
   useEffect(() => {
     if (editingInvoice) {
+      const issue = toMMDDYYYY(editingInvoice.issueDate);
+      const due = toMMDDYYYY(editingInvoice.dueDate);
       setInvoiceData({
         assignTo: editingInvoice.assignTo?._id || "",
-        issueDate: editingInvoice.issueDate
-          ? new Date(editingInvoice.issueDate).toISOString().split("T")[0]
-          : "",
-        dueDate: editingInvoice.dueDate
-          ? new Date(editingInvoice.dueDate).toISOString().split("T")[0]
-          : "",
+        issueDate: issue.formatted,
+        dueDate: due.formatted,
         status: editingInvoice.status || "unpaid",
         deal: editingInvoice.items?.[0]?.deal?._id || "",
         price: editingInvoice.items?.[0]?.price || 0,
@@ -57,6 +69,8 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         note: editingInvoice.note || "",
         currency: editingInvoice.currency || "INR",
       });
+      setIssueDateObj(issue.obj);
+      setDueDateObj(due.obj);
       setNote(editingInvoice.note || "");
       setIsNoteVisible(!!editingInvoice.note);
 
@@ -79,6 +93,8 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         note: "",
         currency: "INR",
       });
+      setIssueDateObj(null);
+      setDueDateObj(null);
       setNote("");
       setIsNoteVisible(false);
       setSelectedDealRequirement(null);
@@ -143,6 +159,49 @@ setSalesUsers(response.data.users);
     }
   };
 
+  const handleIssueDateChange = (date) => {
+    setIssueDateObj(date);
+    if (date) {
+      const { formatted } = toMMDDYYYY(date);
+      setInvoiceData((prev) => ({ ...prev, issueDate: formatted }));
+      setValidationErrors((prev) => ({ ...prev, issueDate: "" }));
+      // Re-validate due date if it's now before the new issue date
+      if (dueDateObj) {
+        if (dueDateObj < date) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            dueDate: "Due date must be on or after the issue date.",
+          }));
+        } else if (validationErrors.dueDate) {
+          setValidationErrors((prev) => ({ ...prev, dueDate: "" }));
+        }
+      }
+    } else {
+      setInvoiceData((prev) => ({ ...prev, issueDate: "" }));
+      setValidationErrors((prev) => ({ ...prev, issueDate: "Issue Date is required." }));
+    }
+  };
+
+  const handleDueDateChange = (date) => {
+    setDueDateObj(date);
+    if (date) {
+      const { formatted } = toMMDDYYYY(date);
+      setInvoiceData((prev) => ({ ...prev, dueDate: formatted }));
+      if (validationErrors.dueDate) {
+        const err =
+          issueDateObj && date < issueDateObj
+            ? "Due date must be on or after the issue date."
+            : "";
+        setValidationErrors((prev) => ({ ...prev, dueDate: err }));
+      }
+    } else {
+      setInvoiceData((prev) => ({ ...prev, dueDate: "" }));
+      if (validationErrors.dueDate) {
+        setValidationErrors((prev) => ({ ...prev, dueDate: "Due Date is required." }));
+      }
+    }
+  };
+
   // Notes
   const handleAddNoteClick = () => setIsNoteVisible(true);
   const handleNoteChange = (e) => {
@@ -166,13 +225,18 @@ setSalesUsers(response.data.users);
     if (!deal) errors.deal = "Deal is required.";
     if (price <= 0) errors.price = "Price must be greater than 0.";
 
-    if (issueDate && dueDate) {
-      const issue = new Date(issueDate);
-      const due = new Date(dueDate);
-      if (due <= issue) errors.dueDate = "Due Date must be after Issue Date.";
+    if (issueDateObj && dueDateObj && dueDateObj < issueDateObj) {
+      errors.dueDate = "Due date must be on or after the issue date.";
     }
 
     setValidationErrors(errors);
+
+    if (errors.issueDate) {
+      setTimeout(() => issueDateRef.current?.setFocus(), 50);
+    } else if (errors.dueDate) {
+      setTimeout(() => dueDateRef.current?.setFocus(), 50);
+    }
+
     return Object.keys(errors).length === 0;
   };
 
@@ -232,8 +296,16 @@ setSalesUsers(response.data.users);
 
     const breakdown = calculateTotalBreakdown();
 
+    const toISO = (mmddyyyy) => {
+      if (!mmddyyyy) return "";
+      const [mm, dd, yyyy] = mmddyyyy.split("/");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
     const invoiceToSave = {
       ...invoiceData,
+      issueDate: toISO(invoiceData.issueDate),
+      dueDate: toISO(invoiceData.dueDate),
       items: [
         {
           deal: invoiceData.deal,
@@ -366,11 +438,18 @@ setSalesUsers(response.data.users);
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Issue Date *
                       </label>
-                      <input
-                        type="date"
-                        name="issueDate"
-                        value={invoiceData.issueDate}
-                        onChange={handleChange}
+                      <DatePicker
+                        ref={issueDateRef}
+                        selected={issueDateObj}
+                        onChange={handleIssueDateChange}
+                        minDate={new Date()}
+                        dateFormat="MM/dd/yyyy"
+                        placeholderText="mm/dd/yyyy"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        isClearable
+                        wrapperClassName="w-full"
                         className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
                           validationErrors.issueDate
                             ? "border-red-500"
@@ -388,11 +467,18 @@ setSalesUsers(response.data.users);
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Due Date *
                       </label>
-                      <input
-                        type="date"
-                        name="dueDate"
-                        value={invoiceData.dueDate}
-                        onChange={handleChange}
+                      <DatePicker
+                        ref={dueDateRef}
+                        selected={dueDateObj}
+                        onChange={handleDueDateChange}
+                        minDate={issueDateObj || new Date()}
+                        dateFormat="MM/dd/yyyy"
+                        placeholderText="mm/dd/yyyy"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        isClearable
+                        wrapperClassName="w-full"
                         className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
                           validationErrors.dueDate
                             ? "border-red-500"
