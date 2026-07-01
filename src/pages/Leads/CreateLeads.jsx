@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
@@ -18,10 +18,13 @@ import {
   ArrowLeft,
   Upload,
   X,
+  Users,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function CreateLeads() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -74,6 +77,8 @@ export default function CreateLeads() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [phoneCountryCode, setPhoneCountryCode] = useState("in");
+  const [followUpDateObj, setFollowUpDateObj] = useState(null);
+  const followUpDateRef = useRef(null);
 
   //  Load user role and ID - Only auto-assign for new leads and if not already assigned
   useEffect(() => {
@@ -165,7 +170,13 @@ export default function CreateLeads() {
             address: leadData.address || "",
             country: leadData.country || "",
             followUpDate: leadData.followUpDate
-              ? new Date(leadData.followUpDate).toISOString().split("T")[0]
+              ? (() => {
+                  const d = new Date(leadData.followUpDate);
+                  setFollowUpDateObj(d);
+                  const mm = String(d.getMonth() + 1).padStart(2, "0");
+                  const dd = String(d.getDate()).padStart(2, "0");
+                  return `${mm}/${dd}/${d.getFullYear()}`;
+                })()
               : "",
             notes: leadData.notes || "",
             attachments: [],
@@ -238,6 +249,31 @@ export default function CreateLeads() {
     return lengths[countryCode] || "8-15 digits with country code";
   };
 
+  const validateFollowUpDate = (value) => {
+    if (!value) return null;
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      return "Enter date in mm/dd/yyyy format (e.g., 07/01/2026)";
+    }
+    const [mm, dd, yyyy] = value.split("/").map(Number);
+    if (mm < 1 || mm > 12) {
+      return "Invalid month. Must be between 01 and 12";
+    }
+    const dateObj = new Date(yyyy, mm - 1, dd);
+    if (
+      dateObj.getFullYear() !== yyyy ||
+      dateObj.getMonth() !== mm - 1 ||
+      dateObj.getDate() !== dd
+    ) {
+      return "Invalid date. Please enter a real date in mm/dd/yyyy format";
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      return "Follow-up date must be today or a future date";
+    }
+    return null;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
@@ -246,11 +282,37 @@ export default function CreateLeads() {
       setIsAutoAssigned(true);
     }
 
-    if (errors[name]) {
-      setErrors((p) => ({ ...p, [name]: false }));
+    if (name === "followUpDate" && fieldErrors.followUpDate) {
+      const err = validateFollowUpDate(value);
+      setFieldErrors((p) => ({ ...p, followUpDate: err || "" }));
+      setErrors((p) => ({ ...p, followUpDate: !!err }));
+    } else {
+      if (errors[name]) {
+        setErrors((p) => ({ ...p, [name]: false }));
+      }
+      if (fieldErrors[name]) {
+        setFieldErrors((p) => ({ ...p, [name]: "" }));
+      }
     }
-    if (fieldErrors[name]) {
-      setFieldErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const handleFollowUpDateChange = (date) => {
+    setFollowUpDateObj(date);
+    if (date) {
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const yyyy = date.getFullYear();
+      const formatted = `${mm}/${dd}/${yyyy}`;
+      setFormData((p) => ({ ...p, followUpDate: formatted }));
+      if (fieldErrors.followUpDate) {
+        const err = validateFollowUpDate(formatted);
+        setFieldErrors((p) => ({ ...p, followUpDate: err || "" }));
+        setErrors((p) => ({ ...p, followUpDate: !!err }));
+      }
+    } else {
+      setFormData((p) => ({ ...p, followUpDate: "" }));
+      setFieldErrors((p) => ({ ...p, followUpDate: "" }));
+      setErrors((p) => ({ ...p, followUpDate: false }));
     }
   };
 
@@ -374,8 +436,20 @@ export default function CreateLeads() {
         "Please enter a valid email address with a proper domain (e.g., name@company.com)";
     }
 
+    if (formData.followUpDate) {
+      const dateErr = validateFollowUpDate(formData.followUpDate);
+      if (dateErr) {
+        newErrors.followUpDate = true;
+        newFieldErrors.followUpDate = dateErr;
+      }
+    }
+
     setErrors(newErrors);
     setFieldErrors(newFieldErrors);
+
+    if (newFieldErrors.followUpDate) {
+      setTimeout(() => followUpDateRef.current?.setFocus(), 50);
+    }
 
     return Object.keys(newErrors).length === 0;
   };
@@ -402,6 +476,9 @@ export default function CreateLeads() {
           formData.attachments.forEach((file) =>
             dataToSend.append("attachments", file)
           );
+        } else if (key === "followUpDate" && formData.followUpDate) {
+          const [mm, dd, yyyy] = formData.followUpDate.split("/");
+          dataToSend.append(key, `${yyyy}-${mm}-${dd}`);
         } else {
           dataToSend.append(key, formData[key]);
         }
@@ -566,6 +643,11 @@ export default function CreateLeads() {
           label: "Requirement",
           icon: <FileText size={16} />,
         },
+         {
+          name: "Number of Employees",
+          label: "Number of Employees",
+          icon: <Users size={16} />,
+        },
       ],
     },
     {
@@ -590,7 +672,6 @@ export default function CreateLeads() {
           name: "followUpDate",
           label: "Follow-up Date",
           icon: <Calendar size={16} />,
-          type: "date",
         },
       ],
     },
@@ -775,6 +856,32 @@ export default function CreateLeads() {
                             </p>
                           )}
                         </div>
+                      ) : field.name === "followUpDate" ? (
+                        <div>
+                          <DatePicker
+                            ref={followUpDateRef}
+                            selected={followUpDateObj}
+                            onChange={handleFollowUpDateChange}
+                            minDate={new Date()}
+                            dateFormat="MM/dd/yyyy"
+                            placeholderText="mm/dd/yyyy"
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                            isClearable
+                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                              errors.followUpDate
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
+                            wrapperClassName="w-full"
+                          />
+                          {fieldErrors.followUpDate && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {fieldErrors.followUpDate}
+                            </p>
+                          )}
+                        </div>
                       ) : (
                         <div>
                           <input
@@ -782,7 +889,8 @@ export default function CreateLeads() {
                             name={field.name}
                             value={formData[field.name] || ""}
                             onChange={handleChange}
-                            placeholder={`Enter ${field.label}`}
+                            placeholder={field.placeholder || `Enter ${field.label}`}
+                            maxLength={field.maxLength || undefined}
                             className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
                               errors[field.name]
                                 ? "border-red-500"

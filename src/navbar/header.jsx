@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Menu, Power, ChevronDown, Bell } from "react-feather";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useNotifications } from "../context/NotificationContext";
 import { disconnectSocket } from "../utils/socket";
 import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2 } from "lucide-react";
@@ -46,9 +47,13 @@ const Navbar = ({ toggleSidebar }) => {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const currentLang = i18n.language?.startsWith("ar") ? "ar" : "en";
 
   const notificationRef = useRef(null);
   const dropdownRef = useRef(null);
+  const langRef = useRef(null);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const API_SI = import.meta.env.VITE_SI_URI;
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -152,6 +157,12 @@ const handleLogout = async () => {
         !dropdownRef.current.contains(event.target)
       ) {
         setShowDropdown(false);
+      }
+      if (
+        langRef.current &&
+        !langRef.current.contains(event.target)
+      ) {
+        setShowLangDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -276,6 +287,38 @@ const handleLogout = async () => {
 
         {/* Right Section */}
         <div className="flex items-center space-x-4 relative">
+          {/* Language Dropdown */}
+          <div className="relative" ref={langRef}>
+            {/* <button
+              onClick={() => setShowLangDropdown((p) => !p)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+            >
+              <span>{currentLang === "ar" ? "AR" : "EN"}</span>
+              <ChevronDown size={14} className={`transition-transform duration-200 ${showLangDropdown ? "rotate-180" : ""}`} />
+            </button> */}
+            {showLangDropdown && (
+              <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 z-50">
+                {[{ code: "en", label: "English" }, { code: "ar", label: "العربية" }].map(({ code, label }) => (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      i18n.changeLanguage(code);
+                      localStorage.setItem("language", code);
+                      document.documentElement.dir = code === "ar" ? "rtl" : "ltr";
+                      document.documentElement.lang = code;
+                      setShowLangDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-blue-50 dark:hover:bg-gray-700 ${
+                      currentLang === code ? "font-semibold text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Fullscreen Toggle */}
           <div className="relative group">
           <button

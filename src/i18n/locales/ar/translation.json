@@ -1,0 +1,204 @@
+{
+  "leads": {
+    "title": "العملاء المحتملون",
+    "subtitle": "إدارة وتتبع عملائك المحتملين",
+    "tour": {
+      "welcome": "مرحبًا بك في صفحة إدارة العملاء المحتملين! يمكنك هنا عرض وإدارة وتحويل عملائك المحتملين.",
+      "createLead": "انقر هنا لإنشاء عميل محتمل جديد. ستتمكن من إضافة جميع التفاصيل اللازمة حول عميل محتمل.",
+      "search": "استخدم شريط البحث للعثور بسرعة على العملاء المحتملين بالاسم أو البريد أو الهاتف أو الشركة أو المصدر.",
+      "filters": "قم بتصفية العملاء المحتملين حسب الحالة أو المسؤول أو المصدر للتركيز على شرائح محددة.",
+      "table": "هذا هو جدول العملاء المحتملين. يعرض جميع عملائك المحتملين مع معلوماتهم الرئيسية وحالتهم.",
+      "checkbox": "حدد عملاء محتملين فرديًا أو استخدم مربع الاختيار في العنوان لتحديد الكل.",
+      "actions": "انقر على قائمة النقاط الثلاث لتعديل أو تحويل أو حذف عميل محتمل.",
+      "finish": "لقد أكملت الجولة! انقر هنا في أي وقت لمراجعة الميزات مرة أخرى."
+    },
+    "buttons": {
+      "takeTour": "جولة تعريفية",
+      "deleteSelected": "حذف المحدد ({{count}})",
+      "createLead": "إنشاء عميل محتمل"
+    },
+    "filters": {
+      "searchPlaceholder": "ابحث بالاسم أو البريد أو الهاتف أو الشركة...",
+      "allAssignees": "جميع المسؤولين",
+      "allStatus": "جميع الحالات",
+      "allSources": "جميع المصادر",
+      "allClientTypes": "جميع أنواع العملاء"
+    },
+    "status": {
+      "hot": "ساخن",
+      "warm": "دافئ",
+      "cold": "بارد",
+      "junk": "غير مجدٍ",
+      "converted": "محوَّل"
+    },
+    "source": {
+      "website": "الموقع الإلكتروني",
+      "referral": "إحالة",
+      "socialMedia": "وسائل التواصل الاجتماعي",
+      "email": "البريد الإلكتروني",
+      "coldCall": "اتصال بارد",
+      "other": "أخرى"
+    },
+    "table": {
+      "lead": "العميل المحتمل",
+      "contact": "التواصل",
+      "company": "الشركة",
+      "clientType": "نوع العميل",
+      "country": "الدولة",
+      "source": "المصدر",
+      "status": "الحالة",
+      "assignee": "المسؤول",
+      "created": "تاريخ الإنشاء",
+      "followUp": "المتابعة",
+      "actions": "الإجراءات",
+      "unnamedLead": "عميل محتمل بلا اسم",
+      "assignedUser": "مستخدم مسؤول",
+      "saving": "جارٍ الحفظ...",
+      "noLeads": "لا يوجد عملاء محتملون."
+    },
+    "pagination": {
+      "showing": "عرض",
+      "of": "من",
+      "prev": "‹ السابق",
+      "next": "التالي ›"
+    },
+    "deleteModal": {
+      "title": "تأكيد الحذف",
+      "messageSingle": "هل أنت متأكد أنك تريد حذف هذا العميل المحتمل؟ لا يمكن التراجع عن هذا الإجراء.",
+      "messageBulk": "هل أنت متأكد أنك تريد حذف {{count}} عميل محتمل؟ لا يمكن التراجع عن هذا الإجراء.",
+      "cancel": "إلغاء",
+      "delete": "حذف"
+    },
+    "convertModal": {
+      "title": "تحويل العميل المحتمل إلى صفقة",
+      "convertingPrefix": "تحويل:",
+      "fromLabel": "من",
+      "dealValue": "قيمة الصفقة",
+      "valuePlaceholder": "أدخل القيمة",
+      "stage": "المرحلة",
+      "notes": "الملاحظات",
+      "notesPlaceholder": "أضف أي ملاحظات...",
+      "cancel": "إلغاء",
+      "convert": "تحويل",
+      "convertingBtn": "جارٍ التحويل..."
+    },
+    "actions": {
+      "edit": "تعديل",
+      "convert": "تحويل",
+      "delete": "حذف"
+    },
+    "toast": {
+      "fetchFailed": "فشل في جلب العملاء المحتملين",
+      "deleteSuccess": "تم حذف العميل المحتمل بنجاح",
+      "deleteFailed": "فشل في حذف العميل المحتمل",
+      "deleteError": "خطأ في حذف العميل المحتمل",
+      "bulkDeleteSuccess": "تم حذف {{count}} عميل محتمل بنجاح",
+      "bulkDeletePartialFail": "فشل في حذف بعض العملاء المحتملين",
+      "bulkDeleteError": "خطأ في حذف العملاء المحتملين",
+      "convertingLoad": "جارٍ تحويل العميل المحتمل إلى صفقة...",
+      "convertFailed": "فشل التحويل. يرجى المحاولة مرة أخرى.",
+      "followUpSuccess": "تم تحديث تاريخ المتابعة",
+      "followUpFailed": "فشل في تحديث تاريخ المتابعة",
+      "statusSuccess": "تم تحديث الحالة بنجاح",
+      "statusFailed": "فشل في تحديث الحالة"
+    }
+  },
+  "sidebar": {
+    "dashboard": "لوحة التحكم",
+    "leads": "العملاء المحتملون",
+    "deals": "الصفقات",
+    "pipelineView": "عرض خط المبيعات",
+    "allDeals": "جميع الصفقات",
+    "tasks": "المهام",
+    "taskManagement": "إدارة المهام",
+    "targetManagement": "إدارة الأهداف",
+    "myTasks": "مهامي",
+    "myTargets": "أهدافي",
+    "proposal": "العروض",
+    "invoices": "الفواتير",
+    "analysis": "التحليل",
+    "dealAnalysis": "تحليل الصفقات",
+    "wonAnalysis": "تحليل المكسب",
+    "lossAnalysis": "تحليل الخسارة",
+    "leaderboard": "لوحة المتصدرين",
+    "email": "البريد الإلكتروني",
+    "emailChat": "محادثة البريد",
+    "emailCampaign": "حملة البريد",
+    "messages": "الرسائل",
+    "meetings": "الاجتماعات",
+    "teamAnalytics": "تحليلات الفريق",
+    "usersRoles": "المستخدمون والأدوار",
+    "upgradePlan": "ترقية الخطة"
+  },
+  "leaderboard": {
+    "topPerformer": "أفضل موظف",
+    "myPerformance": "أدائي",
+    "noTopPerformer": "لا يوجد أفضل موظف",
+    "refresh": "تحديث",
+    "conversion": "معدل التحويل",
+    "activeDays": "الأيام النشطة",
+    "performance": "الأداء"
+  },
+  "dashboard": {
+    "title": "لوحة تحكم الأعمال",
+    "subtitle": "رؤى فورية ومقاييس الأداء",
+    "error": {
+      "fetchFailed": "فشل تحميل بيانات لوحة التحكم. تحقق من اتصالك بالشبكة."
+    },
+    "period": {
+      "label": "الفترة",
+      "today": "اليوم",
+      "last7days": "آخر 7 أيام",
+      "thisMonth": "هذا الشهر",
+      "thisYear": "هذا العام",
+      "month": "الشهر",
+      "year": "السنة"
+    },
+    "cards": {
+      "totalLeads": "إجمالي العملاء المحتملين",
+      "dealsWon": "الصفقات المكسبة",
+      "totalRevenue": "إجمالي الإيرادات",
+      "pendingInvoices": "الفواتير المعلقة",
+      "vsPrevious": "مقارنة بالسابق"
+    },
+    "revenueCurrency": {
+      "title": "الإيرادات حسب العملة",
+      "currenciesBadge": "{{count}} عملات",
+      "totalRevenueINR": "إجمالي الإيرادات (روبية)",
+      "noData": "لا توجد بيانات إيرادات لهذه الفترة",
+      "invoices": "فواتير"
+    },
+    "pendingInvoices": {
+      "title": "الفواتير المعلقة",
+      "invoicesBadge": "{{count}} فواتير",
+      "totalPendingINR": "إجمالي المعلق (روبية)",
+      "noData": "لا توجد فواتير معلقة",
+      "pending": "معلق"
+    },
+    "revenueTrend": {
+      "title": "اتجاه الإيرادات",
+      "totalRevenueINR": "إجمالي الإيرادات (روبية)",
+      "revenueLabel": "الإيرادات"
+    },
+    "salesPipeline": {
+      "title": "تحليلات خط المبيعات",
+      "totalDealsBadge": "{{count}} إجمالي الصفقات",
+      "description": "التوزيع الشهري للفرص المفتوحة مقابل الصفقات المكسبة مع مقاييس الأداء",
+      "openOpportunities": "الفرص المفتوحة",
+      "wonDeals": "الصفقات المكسبة",
+      "winRate": "معدل الفوز",
+      "activePipeline": "خط المبيعات النشط",
+      "deals": "صفقات",
+      "total": "الإجمالي"
+    },
+    "dealDistribution": {
+      "title": "توزيع الصفقات",
+      "totalBadge": "{{count}} إجمالي",
+      "noDeals": "لا توجد صفقات لهذه الفترة",
+      "totalLabel": "الإجمالي",
+      "open": "مفتوح",
+      "won": "مكسب",
+      "lost": "خاسر"
+    }
+  }
+}

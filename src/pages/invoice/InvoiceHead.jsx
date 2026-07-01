@@ -165,13 +165,15 @@ const InvoiceHead = () => {
       setEmailStatus("loading");
       setEmailMessage("📨 Sending invoice email...");
 
-      await axios.post(`${API_URL}/invoices/sendEmail/${invoiceId}`);
+      const token = localStorage.getItem("token");
+      await axios.post(`${API_URL}/invoices/sendEmail/${invoiceId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const invoice = invoices.find((inv) => inv._id === invoiceId);
       const dealId = invoice?.items?.[0]?.deal?._id;
 
       if (dealId) {
-        const token = localStorage.getItem("token");
         await axios.patch(
           `${API_URL}/deals/update-deal/${dealId}`,
           { stage: "Invoice Sent" },

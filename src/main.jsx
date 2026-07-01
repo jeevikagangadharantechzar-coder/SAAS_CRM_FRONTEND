@@ -7,6 +7,7 @@ import "./index.css";
 import App from "./App.jsx";
 import { store } from "./store/store";
 import "./services/api"; // Import API config to trigger global interceptors
+import "./i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Context Providers
