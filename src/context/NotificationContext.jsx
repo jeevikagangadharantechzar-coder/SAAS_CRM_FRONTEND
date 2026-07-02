@@ -3,6 +3,7 @@ import { initSocket } from "../utils/socket";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL;
+const SI_URI  = import.meta.env.VITE_SI_URI;
 const NotificationContext = createContext();
 
 /* ── Notification Provider ─────────────────────── */
@@ -42,7 +43,11 @@ export const NotificationProvider = ({ children }) => {
     const id = getUser()?._id;
     if (!id) return;
     try {
-      const response = await axios.get(`${API_URL}/notifications/${id}`);
+      const tenantSlug = localStorage.getItem("tenantSlug");
+      const url = tenantSlug
+        ? `${SI_URI}/${tenantSlug}/api/notifications/${id}`
+        : `${API_URL}/notifications/${id}`;
+      const response = await axios.get(url);
       setNotifications(response.data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
