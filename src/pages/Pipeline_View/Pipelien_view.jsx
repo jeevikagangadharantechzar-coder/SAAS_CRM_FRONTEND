@@ -103,6 +103,12 @@
     },
   ];
 
+  const CURRENCY_SYMBOLS = {
+    USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+    AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+    SGD: "S$", ZAR: "R", SAR: "﷼",
+  };
+
 /* ── Format Currency Value Function ─────────────────────── */
   const formatCurrencyValue = (val) => {
     if (!val) return "-";
@@ -962,6 +968,10 @@
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     });
 
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const userCurrency = storedUser?.currency || "USD";
+    const userCurrencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
+
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
 
@@ -1159,6 +1169,11 @@
                       "-"
                     )}
                   </div>
+                  {deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null && (
+                    <div className="text-xs text-gray-500">
+                      ({userCurrencySymbol} {Number(deal.preferredCurrencyValue).toLocaleString()})
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

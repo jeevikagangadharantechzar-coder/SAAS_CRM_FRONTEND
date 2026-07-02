@@ -14,6 +14,12 @@ import { TourProvider, useTour } from "@reactour/tour";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+const CURRENCY_SYMBOLS = {
+  USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+  AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+  SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
 const dealTourSteps = [
   { selector: ".tour-deals-header", content: "Welcome to the Deals Management page! Here you can view, edit, and manage all your deals." },
   { selector: ".tour-create-deal", content: "Click here to create a new deal and add important details like value, stage, and assigned user." },
@@ -26,6 +32,9 @@ const dealTourSteps = [
 
 /* ── Fetch Deals Function ─────────────────────── */
 function AllDealsComponent() {
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userCurrencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
@@ -566,6 +575,7 @@ function AllDealsComponent() {
               <th className="px-6 py-3 text-left">Assigned To</th>
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
+              <th className="px-6 py-3 text-left">Value ({userCurrency})</th>
               <th className="px-6 py-3 text-left">Created At</th>
               <th className="px-6 py-3 text-left tour-deal-actions">Actions</th>
             </tr>
@@ -649,6 +659,11 @@ function AllDealsComponent() {
                     <td className="px-6 py-4">{deal.stage || "-"}</td>
                     <td className="px-6 py-4">
                       {formatCurrencyValue(deal.value)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null
+                        ? `${userCurrencySymbol} ${Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}`
+                        : "-"}
                     </td>
                     <td className="px-6 py-4">{formatDate(deal.createdAt)}</td>
                     <td className="px-6 py-4">

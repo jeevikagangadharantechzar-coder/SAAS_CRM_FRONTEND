@@ -165,6 +165,7 @@
       "title": "Revenue by Currency",
       "currenciesBadge": "{{count}} Currencies",
       "totalRevenueINR": "Total Revenue (INR)",
+      "totalRevenuePreferred": "Total Revenue ({{currency}})",
       "noData": "No revenue data for this period",
       "invoices": "invoices"
     },
@@ -172,12 +173,14 @@
       "title": "Pending Invoices",
       "invoicesBadge": "{{count}} Invoices",
       "totalPendingINR": "Total Pending (INR)",
+      "totalPendingPreferred": "Total Pending ({{currency}})",
       "noData": "No pending invoices",
       "pending": "pending"
     },
     "revenueTrend": {
       "title": "Revenue Trend",
       "totalRevenueINR": "Total Revenue (INR)",
+      "totalRevenuePreferred": "Total Revenue ({{currency}})",
       "revenueLabel": "Revenue"
     },
     "salesPipeline": {

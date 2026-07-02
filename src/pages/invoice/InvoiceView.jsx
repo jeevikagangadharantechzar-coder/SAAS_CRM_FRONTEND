@@ -13,6 +13,8 @@ import {
   Percent,
   IndianRupee,
   Receipt,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -58,6 +60,11 @@ const InvoiceView = () => {
       </div>
     );
   }
+
+  // Total never changes — amountPaid is the cumulative figure tracked separately
+  const isPaidFamily = ["paid", "partially_paid"].includes(invoice.status);
+  const amountPaid = isPaidFamily ? Number(invoice.amountPaid) || 0 : 0;
+  const balanceDue = Math.max((Number(invoice.total) || 0) - amountPaid, 0);
 
 /* ── Get Status Classes Function ─────────────────────── */
   const getStatusClasses = (status) => {
@@ -208,6 +215,24 @@ const InvoiceView = () => {
                           <p className="text-sm font-medium">Total</p>
                           <p className="text-slate-900 font-semibold">
                             {invoice.currency} {invoice.total}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-slate-700">
+                        <CheckCircle size={18} className="mr-3 text-green-500" />
+                        <div>
+                          <p className="text-sm font-medium">Amount Paid</p>
+                          <p className="text-green-700 font-semibold">
+                            {invoice.currency} {amountPaid.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-slate-700">
+                        <AlertCircle size={18} className="mr-3 text-red-500" />
+                        <div>
+                          <p className="text-sm font-medium">Balance Due</p>
+                          <p className="text-red-700 font-semibold">
+                            {invoice.currency} {balanceDue.toFixed(2)}
                           </p>
                         </div>
                       </div>

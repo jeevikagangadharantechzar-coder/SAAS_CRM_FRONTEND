@@ -14,8 +14,25 @@ const CreateTenant = () => {
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const currencyOptions = [
+    { code: "USD", symbol: "$", label: "🇺🇸 USD - US Dollar" },
+    { code: "EUR", symbol: "€", label: "🇪🇺 EUR - Euro" },
+    { code: "INR", symbol: "₹", label: "🇮🇳 INR - Indian Rupee" },
+    { code: "GBP", symbol: "£", label: "🇬🇧 GBP - British Pound" },
+    { code: "JPY", symbol: "¥", label: "🇯🇵 JPY - Japanese Yen" },
+    { code: "AUD", symbol: "A$", label: "🇦🇺 AUD - Australian Dollar" },
+    { code: "CAD", symbol: "C$", label: "🇨🇦 CAD - Canadian Dollar" },
+    { code: "CHF", symbol: "CHF", label: "🇨🇭 CHF - Swiss Franc" },
+    { code: "MYR", symbol: "RM", label: "🇲🇾 MYR - Malaysian Ringgit" },
+    { code: "AED", symbol: "د.إ", label: "🇦🇪 AED - UAE Dirham" },
+    { code: "SGD", symbol: "S$", label: "🇸🇬 SGD - Singapore Dollar" },
+    { code: "ZAR", symbol: "R", label: "🇿🇦 ZAR - South African Rand" },
+    { code: "SAR", symbol: "﷼", label: "🇸🇦 SAR - Saudi Riyal" },
+  ];
 
   // Fetch active plans to display in the dropdown
   const { data: plansData, isLoading: loadingPlans } = useGetAllPlans({ status: "active" });
@@ -71,6 +88,7 @@ const CreateTenant = () => {
         slug,
         adminEmail,
         adminName,
+        currency,
       });
 
       const newTenant = res.data?.tenant || res.data?.data || res.data;
@@ -98,6 +116,7 @@ const CreateTenant = () => {
       setAdminName("");
       setAdminEmail("");
       setSelectedPlanId("");
+      setCurrency("USD");
       navigate("/superadmin/tenants");
     } catch (err) {
       console.error("Failed to create tenant:", err);
@@ -179,6 +198,27 @@ const CreateTenant = () => {
                     Only lowercase letters, numbers, and hyphens are allowed. Spaces are automatically converted to hyphens.
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Preferred Currency
+                </label>
+                <select
+                  required
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                >
+                  {currencyOptions.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-400 mt-1.5 font-medium leading-relaxed">
+                  This currency will be used as the default for all deals and leads under this tenant.
+                </p>
               </div>
             </div>
           </div>

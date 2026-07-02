@@ -14,7 +14,7 @@ import {
 import { Skeleton } from "../components/ui/skeleton";
 import { Badge } from "../components/ui/badge";
 import {
-  Users, Trophy, DollarSign, FileText, TrendingUp, Globe,
+  Users, Trophy, FileText, TrendingUp, Globe,
   Receipt, BarChart3, Target, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import axios from "axios";
@@ -96,7 +96,7 @@ const CurrencyDisplay = ({ value, currency = "USD", className }) => {
 };
 
 /* ── Summary card ─────────────────────────────────────────────────────────── */
-const SummaryCard = ({ title, value, change, color, icon, loading, onClick }) => {
+const SummaryCard = ({ title, value, prefix, change, color, icon, loading, onClick }) => {
   const { t } = useTranslation();
 
   if (loading) return (
@@ -125,7 +125,7 @@ const SummaryCard = ({ title, value, change, color, icon, loading, onClick }) =>
           <div className="flex justify-between items-start mb-3">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
-              <div className="text-2xl font-bold text-gray-900">{value?.toLocaleString() ?? 0}</div>
+              <div className="text-2xl font-bold text-gray-900">{prefix ? `${prefix} ` : ""}{value?.toLocaleString() ?? 0}</div>
             </div>
             <div className={cn("p-2 rounded-xl",
               color === "blue" && "bg-blue-100 text-blue-600",
@@ -155,17 +155,21 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
 
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userSymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
+
   const currencies = Object.entries(revenueData || {})
     .filter(([, d]) => d.amount > 0)
     .map(([currency, d]) => ({
       currency,
       amount: Number(d.amount),
-      inr: Number(d.inr || 0),
+      preferred: Number(d.preferredCurrencyValue || 0),
       count: d.count
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  const totalRevenueINR = currencies.reduce((s, c) => s + (c.inr || 0), 0);
+  const totalRevenuePreferred = currencies.reduce((s, c) => s + (c.preferred || 0), 0);
 
   return (
     <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm flex flex-col">
@@ -178,14 +182,14 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
           <Badge variant="secondary">{t("dashboard.revenueCurrency.currenciesBadge", { count: currencies.length })}</Badge>
         </div>
         <div className="mt-4 p-4 bg-white/60 rounded-lg border">
-          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.revenueCurrency.totalRevenueINR")}</div>
-          <div className="text-2xl font-bold text-gray-900">₹ {totalRevenueINR.toLocaleString()}</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.revenueCurrency.totalRevenuePreferred", { currency: userCurrency })}</div>
+          <div className="text-2xl font-bold text-gray-900">{userSymbol} {totalRevenuePreferred.toLocaleString()}</div>
         </div>
       </CardHeader>
 
 
       <CardContent className="space-y-3 max-h-56 overflow-y-auto pr-2 flex-1">
-        {currencies.length > 0 ? currencies.map(({ currency, amount, count, inr }, idx) => {
+        {currencies.length > 0 ? currencies.map(({ currency, amount, count, preferred }, idx) => {
           const info = allowedCurrencies.find((c) => c.code === currency);
           return (
             <div key={currency} className="flex items-center justify-between p-3 bg-white/60 rounded-lg border">
@@ -201,7 +205,7 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
                   {info?.symbol ?? ""}{amount.toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">
-                  ₹ {Number(inr || 0).toLocaleString()}
+                  {userSymbol} {Number(preferred || 0).toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">{count} {t("dashboard.revenueCurrency.invoices")}</div>
               </div>
@@ -216,11 +220,14 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
 /* ── Pending Invoices (FIX: scrollable CardContent) ───────────────────────── */
 const PendingInvoicesCard = ({ invoices, loading }) => {
   const { t } = useTranslation();
-  const [currenciesWithINR, setCurrenciesWithINR] = useState([]);
-  const [totalPendingINR, setTotalPendingINR] = useState(0);
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userSymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
+  const [currenciesWithPreferred, setCurrenciesWithPreferred] = useState([]);
+  const [totalPendingPreferred, setTotalPendingPreferred] = useState(0);
 
   useEffect(() => {
-    const calculateINRValues = async () => {
+    const calculatePreferredValues = async () => {
       const pending = (invoices ?? []).filter((inv) => ["pending", "unpaid", "Pending", "Unpaid"].includes(inv.status));
       const byCurrency = {};
 
@@ -239,39 +246,39 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
         .map(([currency, d]) => ({ currency, amount: d.amount, count: d.count }));
 
       if (currencies.length === 0) {
-        setCurrenciesWithINR([]);
-        setTotalPendingINR(0);
+        setCurrenciesWithPreferred([]);
+        setTotalPendingPreferred(0);
         return;
       }
 
       const updatedCurrencies = await Promise.all(
         currencies.map(async ({ currency, amount, count }) => {
-          let inrValue = amount;
-          if (currency !== "INR") {
+          let preferredValue = amount;
+          if (currency !== userCurrency) {
             try {
               const response = await axios.get(`https://open.er-api.com/v6/latest/${currency}`);
-              const rate = response.data?.rates?.INR || 1;
-              inrValue = amount * rate;
+              const rate = response.data?.rates?.[userCurrency] || 1;
+              preferredValue = amount * rate;
             } catch (err) {
               console.error(`Error fetching rate for ${currency}:`, err);
-              inrValue = amount;
+              preferredValue = amount;
             }
           }
-          return { currency, amount, count, inr: inrValue };
+          return { currency, amount, count, preferred: preferredValue };
         })
       );
 
       updatedCurrencies.sort((a, b) => b.amount - a.amount);
-      setCurrenciesWithINR(updatedCurrencies);
-      setTotalPendingINR(updatedCurrencies.reduce((sum, c) => sum + c.inr, 0));
+      setCurrenciesWithPreferred(updatedCurrencies);
+      setTotalPendingPreferred(updatedCurrencies.reduce((sum, c) => sum + c.preferred, 0));
     };
 
-    calculateINRValues();
-  }, [invoices]);
+    calculatePreferredValues();
+  }, [invoices, userCurrency]);
 
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
-  const totalInvoices = currenciesWithINR.reduce((s, c) => s + c.count, 0);
+  const totalInvoices = currenciesWithPreferred.reduce((s, c) => s + c.count, 0);
 
   return (
     <Card className="shadow-lg border-0 bg-blue-50/50 backdrop-blur-sm flex flex-col">
@@ -284,14 +291,14 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
           <Badge variant="secondary">{t("dashboard.pendingInvoices.invoicesBadge", { count: totalInvoices })}</Badge>
         </div>
         <div className="mt-4 p-4 bg-white/50 rounded-lg border border-blue-200">
-          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.pendingInvoices.totalPendingINR")}</div>
-          <div className="text-2xl font-bold text-gray-900">₹ {totalPendingINR.toLocaleString()}</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.pendingInvoices.totalPendingPreferred", { currency: userCurrency })}</div>
+          <div className="text-2xl font-bold text-gray-900">{userSymbol} {totalPendingPreferred.toLocaleString()}</div>
         </div>
       </CardHeader>
 
 
       <CardContent className="space-y-3 max-h-56 overflow-y-auto pr-2 flex-1">
-        {currenciesWithINR.length > 0 ? currenciesWithINR.map(({ currency, amount, count, inr }) => {
+        {currenciesWithPreferred.length > 0 ? currenciesWithPreferred.map(({ currency, amount, count, preferred }) => {
           const info = allowedCurrencies.find((c) => c.code === currency);
           return (
             <div key={currency} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-blue-200">
@@ -307,7 +314,7 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
                   {info?.symbol ?? ""}{amount.toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">
-                  ₹ {Number(inr || 0).toLocaleString()}
+                  {userSymbol} {Number(preferred || 0).toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">{count} {t("dashboard.pendingInvoices.pending")}</div>
               </div>
@@ -322,24 +329,29 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
 /* ── Revenue Trend ────────────────────────────────────────────────────────── */
 const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
   const { t } = useTranslation();
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userSymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
 
   const chartData = months.map((month, monthIndex) => {
     const entry = { month };
 
     const monthInvoices = (invoices ?? []).filter(inv => {
-      if (!["paid", "Paid"].includes(inv.status)) return false;
+      if (!["paid", "Paid", "partially_paid"].includes(inv.status)) return false;
       const date = new Date(inv.paidAt || inv.createdAt);
       return !isNaN(date) && date.getMonth() === monthIndex;
     });
 
-    let totalINR = 0;
+    let total = 0;
     monthInvoices.forEach(inv => {
-      const inrValue = inv.inrAmount || Number(inv.total);
-      totalINR += inrValue;
+      // Partially paid invoices only count the amount actually collected so far
+      const value = inv.preferredCurrency === userCurrency && inv.preferredCurrencyValue != null
+        ? inv.preferredCurrencyValue
+        : Number(inv.amountPaid) || Number(inv.total);
+      total += value;
     });
 
-    entry.total = totalINR;
-    entry.INR = totalINR;
+    entry.total = total;
 
     return entry;
   });
@@ -355,7 +367,7 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
               <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
               {p.name}
             </span>
-            <strong>₹ {p.value?.toLocaleString()}</strong>
+            <strong>{userSymbol} {p.value?.toLocaleString()}</strong>
           </div>
         ))}
       </div>
@@ -373,9 +385,9 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
         </div>
         <div className="mt-2">
           <p className="text-2xl font-semibold">
-            ₹ {chartData.reduce((sum, d) => sum + d.total, 0).toLocaleString()}
+            {userSymbol} {chartData.reduce((sum, d) => sum + d.total, 0).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-500">{t("dashboard.revenueTrend.totalRevenueINR")}</p>
+          <p className="text-xs text-gray-500">{t("dashboard.revenueTrend.totalRevenuePreferred", { currency: userCurrency })}</p>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
@@ -387,7 +399,7 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
                 <XAxis dataKey="month" tick={{ fill: "#6B7280", fontSize: 12 }} />
                 <YAxis
                   tick={{ fill: "#6B7280", fontSize: 12 }}
-                  tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
+                  tickFormatter={(v) => `${userSymbol}${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
@@ -617,6 +629,9 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
 ══════════════════════════════════════════════════════════════════════════ */
 const AdminDashboard = () => {
   const { t } = useTranslation();
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userCurrencySymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activePreset, setActivePreset] = useState("7days");
@@ -748,7 +763,7 @@ const AdminDashboard = () => {
         return wonDate >= startDate && wonDate <= endDate;
       }).length;
 
-      const totalRevenue = Object.values(summary.revenueByCurrency || {}).reduce((s, d) => s + (d.inr || 0), 0);
+      const totalRevenue = Object.values(summary.revenueByCurrency || {}).reduce((s, d) => s + (d.preferredCurrencyValue || 0), 0);
       const pendingCount = current.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length;
 
       const prevRevenue = {};
@@ -765,7 +780,7 @@ const AdminDashboard = () => {
       setSummaryCards([
         { id: "totalLeads", value: totalLeads, change: computeChange(totalLeads, previous.leads.length), color: "blue", icon: <Users className="h-5 w-5" /> },
         { id: "dealsWon", value: dealsWon, change: computeChange(dealsWon, previous.deals.filter((d) => isWonDeal(d.stage)).length), color: "green", icon: <Trophy className="h-5 w-5" /> },
-        { id: "totalRevenue", value: totalRevenue, change: computeChange(totalRevenue, prevTotalRevenue), color: "purple", icon: <DollarSign className="h-5 w-5" /> },
+        { id: "totalRevenue", value: totalRevenue, prefix: userCurrencySymbol, change: computeChange(totalRevenue, prevTotalRevenue), color: "purple", icon: <span className="h-5 w-5 flex items-center justify-center font-bold text-base leading-none">{userCurrencySymbol}</span> },
         { id: "pendingInvoices", value: pendingCount, change: computeChange(pendingCount, previous.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length), color: "orange", icon: <FileText className="h-5 w-5" /> },
       ]);
 
@@ -803,7 +818,7 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDateRange, getPreviousRange, fetchAll, t]);
+  }, [getDateRange, getPreviousRange, fetchAll, t, userCurrencySymbol]);
 
   useEffect(() => {
     fetchDashboardData();

@@ -165,6 +165,7 @@
       "title": "الإيرادات حسب العملة",
       "currenciesBadge": "{{count}} عملات",
       "totalRevenueINR": "إجمالي الإيرادات (روبية)",
+      "totalRevenuePreferred": "إجمالي الإيرادات ({{currency}})",
       "noData": "لا توجد بيانات إيرادات لهذه الفترة",
       "invoices": "فواتير"
     },
@@ -172,12 +173,14 @@
       "title": "الفواتير المعلقة",
       "invoicesBadge": "{{count}} فواتير",
       "totalPendingINR": "إجمالي المعلق (روبية)",
+      "totalPendingPreferred": "إجمالي المعلق ({{currency}})",
       "noData": "لا توجد فواتير معلقة",
       "pending": "معلق"
     },
     "revenueTrend": {
       "title": "اتجاه الإيرادات",
       "totalRevenueINR": "إجمالي الإيرادات (روبية)",
+      "totalRevenuePreferred": "إجمالي الإيرادات ({{currency}})",
       "revenueLabel": "الإيرادات"
     },
     "salesPipeline": {

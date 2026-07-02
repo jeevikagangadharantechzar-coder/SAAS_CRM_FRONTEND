@@ -34,6 +34,8 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
     note: "",
     currency: "INR",
   });
+  // Amount typed in "Amount Received Now" — only used for paid/partially_paid statuses
+  const [paymentReceivedNow, setPaymentReceivedNow] = useState("");
   const [note, setNote] = useState("");
   const [isNoteVisible, setIsNoteVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
@@ -73,6 +75,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
       setDueDateObj(due.obj);
       setNote(editingInvoice.note || "");
       setIsNoteVisible(!!editingInvoice.note);
+      setPaymentReceivedNow("");
 
       const selectedDeal = deals.find(
         (d) => d._id === editingInvoice.items?.[0]?.deal?._id
@@ -98,6 +101,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
       setNote("");
       setIsNoteVisible(false);
       setSelectedDealRequirement(null);
+      setPaymentReceivedNow("");
     }
     setValidationErrors({});
   }, [editingInvoice, isOpen, deals]);
@@ -323,6 +327,63 @@ setSalesUsers(response.data.users);
       total: Number(breakdown.total),
     };
 
+    // For paid/partially_paid, validate the payment entered and freeze the preferred-currency
+    // conversion of the CUMULATIVE amount collected so far (previous + this payment)
+    if (isPaidFamily) {
+      const total = Number(breakdown.total);
+      const payment = Number(paymentReceivedNow) || 0;
+      const maxAllowed = Math.max(total - previousAmountPaid, 0);
+
+      if (payment > maxAllowed) {
+        toast.error(`Payment exceeds invoice total. Maximum you can enter now: ${maxAllowed.toFixed(2)}`);
+        return;
+      }
+
+      const newAmountPaid = previousAmountPaid + payment;
+      invoiceToSave.paymentReceivedNow = payment;
+
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const userCurrency = storedUser?.currency || "USD";
+      try {
+        let preferredValue;
+        if (invoiceData.currency === userCurrency) {
+          preferredValue = newAmountPaid;
+        } else {
+          const rateRes = await axios.get(
+            `https://open.er-api.com/v6/latest/${invoiceData.currency}`
+          );
+          const rate = rateRes.data?.rates?.[userCurrency];
+          preferredValue = rate ? parseFloat((newAmountPaid * rate).toFixed(2)) : null;
+        }
+        invoiceToSave.preferredCurrency = userCurrency;
+        invoiceToSave.preferredCurrencyValue = preferredValue;
+      } catch {
+        // proceed without frozen rate — backend will leave it null
+      }
+    } else if (invoiceData.status === "in_progress") {
+      // Payment In Progress has no collected amount yet — freeze the conversion
+      // of the invoice TOTAL so its displayed value doesn't drift with live rates
+      const total = Number(breakdown.total);
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const userCurrency = storedUser?.currency || "USD";
+      try {
+        let preferredValue;
+        if (invoiceData.currency === userCurrency) {
+          preferredValue = total;
+        } else {
+          const rateRes = await axios.get(
+            `https://open.er-api.com/v6/latest/${invoiceData.currency}`
+          );
+          const rate = rateRes.data?.rates?.[userCurrency];
+          preferredValue = rate ? parseFloat((total * rate).toFixed(2)) : null;
+        }
+        invoiceToSave.preferredCurrency = userCurrency;
+        invoiceToSave.preferredCurrencyValue = preferredValue;
+      } catch {
+        // proceed without frozen rate — backend will leave it null
+      }
+    }
+
     try {
       const token = localStorage.getItem("token");
       let response;
@@ -364,10 +425,18 @@ setSalesUsers(response.data.users);
       } else {
         toast.error("Failed to save invoice.");
       }
-    } catch {
-      toast.error("Failed to save invoice.");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to save invoice.");
     }
   };
+
+  const PAID_FAMILY = ["paid", "partially_paid"];
+  const isPaidFamily = PAID_FAMILY.includes(invoiceData.status);
+  // Amount already collected before this save — carries over only between paid/partially_paid
+  const previousAmountPaid =
+    editingInvoice && PAID_FAMILY.includes(editingInvoice.status)
+      ? Number(editingInvoice.amountPaid) || 0
+      : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={closeModal}>
@@ -506,8 +575,49 @@ setSalesUsers(response.data.users);
                       <option value="unpaid">Unpaid</option>
                       <option value="paid">Paid</option>
                       <option value="send">Send</option>
+                      <option value="partially_paid">Partially Paid</option>
+                      <option value="in_progress">Payment In Progress</option>
                     </select>
                   </div>
+
+                  {isPaidFamily && (() => {
+                    const total = Number(calculateTotalBreakdown().total);
+                    const maxAllowed = Math.max(total - previousAmountPaid, 0);
+                    const entered = Number(paymentReceivedNow) || 0;
+                    const exceeds = entered > maxAllowed;
+
+                    return (
+                      <div>
+                        {previousAmountPaid > 0 && (
+                          <p className="text-sm text-gray-600 mb-1">
+                            Already Received:{" "}
+                            <span className="font-semibold text-green-700">
+                              {invoiceData.currency} {previousAmountPaid.toFixed(2)}
+                            </span>
+                          </p>
+                        )}
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Amount Received Now
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={paymentReceivedNow}
+                          onChange={(e) => setPaymentReceivedNow(e.target.value)}
+                          placeholder={`Max ${maxAllowed.toFixed(2)}`}
+                          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                            exceeds ? "border-red-500" : "border-gray-300"
+                          }`}
+                        />
+                        {exceeds && (
+                          <p className="mt-1 text-sm text-red-600">
+                            Payment exceeds invoice total. Maximum you can enter now: {maxAllowed.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
