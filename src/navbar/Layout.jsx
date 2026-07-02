@@ -4,6 +4,7 @@ import Navbar from "./header";
 import { Outlet, NavLink } from "react-router-dom";
 import { Home, Users, GitBranch, BarChart3, Trophy } from "lucide-react";
 import ChatWidget from "../components/chatwidget";
+import MissedFollowUpModal from "../components/MissedFollowUpModal";
 
 const BottomNavItem = ({ to, icon, label }) => {
   return (
@@ -72,6 +73,7 @@ const Layout = ({ isModalOpen }) => {
       </div>
 
       <ChatWidget />
+      <MissedFollowUpModal />
     </>
   );
 };

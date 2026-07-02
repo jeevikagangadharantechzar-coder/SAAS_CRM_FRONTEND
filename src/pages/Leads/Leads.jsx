@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
@@ -15,6 +15,7 @@ import {
   Eye,
   Calendar,
   Bell,
+  MessageSquarePlus,
 } from "lucide-react";
 
 import { initSocket } from "../../utils/socket";
@@ -75,6 +76,7 @@ const tourSteps = [
 function LeadTableComponent() {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
+  const location = useLocation();
   const { setIsOpen } = useTour();
 
   const [leads, setLeads] = useState([]);
@@ -103,6 +105,9 @@ function LeadTableComponent() {
   const [statusFilter, setStatusFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [clientTypeFilter, setClientTypeFilter] = useState("");
+  const [followUpFilter, setFollowUpFilter] = useState(
+    location.state?.followUpFilter === "missed" ? "missed" : "all"
+  );
   
   // Store users with their IDs for assignee filter
   const [usersList, setUsersList] = useState([]);
@@ -123,6 +128,16 @@ function LeadTableComponent() {
   const dateInputRefs = useRef({});
   const [editingFollowUpId, setEditingFollowUpId] = useState(null);
   const [followUpSavingId, setFollowUpSavingId] = useState(null);
+
+  // Add Follow-up Note modal
+  const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
+  const [noteLead, setNoteLead] = useState(null);
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+
+  // Follow-up History modal
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyLead, setHistoryLead] = useState(null);
 
   const startTour = () => setIsOpen(true);
 
@@ -162,7 +177,7 @@ function LeadTableComponent() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, sourceFilter, assigneeFilter]);
+  }, [debouncedSearch, statusFilter, sourceFilter, assigneeFilter, followUpFilter]);
 
   // currencies
   const allowedCurrencies = [
@@ -222,6 +237,11 @@ const fetchLeads = useCallback(async () => {
       params.append("assignee", assigneeFilter);
     }
 
+    // Follow-up filter
+    if (followUpFilter === "missed" || followUpFilter === "completed") {
+      params.append("followUpStatus", followUpFilter);
+    }
+
     console.log("Fetching leads with params:", Object.fromEntries(params)); // Debug log
 
     const { data } = await axios.get(
@@ -245,7 +265,7 @@ const fetchLeads = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, itemsPerPage]);
+}, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, followUpFilter, itemsPerPage]);
 
   useEffect(() => {
     fetchLeads();
@@ -440,6 +460,16 @@ const fetchLeads = useCallback(async () => {
     }
   };
 
+  // A follow-up is "missed" if its date has passed, the lead is still open,
+  // and no follow-up note has been logged for it yet.
+  const isFollowUpMissed = (lead) => {
+    if (!lead.followUpDate) return false;
+    if (lead.status === "Converted" || lead.status === "Junk") return false;
+    const isPastDue = new Date(lead.followUpDate) < new Date();
+    const hasNotes  = Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0;
+    return isPastDue && !hasNotes;
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -501,6 +531,48 @@ const fetchLeads = useCallback(async () => {
         el.showPicker();
       }
     }, 0);
+  };
+
+  const openAddNoteModal = (lead) => {
+    setNoteLead(lead);
+    setNoteText("");
+    setAddNoteModalOpen(true);
+    setMenuOpen(null);
+  };
+
+  const handleAddFollowUpNote = async () => {
+    if (!noteText.trim() || !noteLead) return;
+
+    try {
+      setSavingNote(true);
+      const token = localStorage.getItem("token");
+
+      const res = await axios.post(
+        `${API_URL}/leads/${noteLead._id}/followup-notes`,
+        { note: noteText.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setLeads((prev) =>
+        prev.map((l) =>
+          l._id === noteLead._id ? { ...l, followUpNotes: res.data.lead.followUpNotes } : l
+        )
+      );
+
+      toast.success("Follow-up note added");
+      setAddNoteModalOpen(false);
+      setNoteLead(null);
+      setNoteText("");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add follow-up note");
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const openHistoryModal = (lead) => {
+    setHistoryLead(lead);
+    setHistoryModalOpen(true);
   };
 
   const handleStatusChange = async (leadId, newStatus) => {
@@ -691,6 +763,18 @@ const fetchLeads = useCallback(async () => {
               <option value="B2C">B2C</option>
             </select>
           </div>
+
+          <div>
+            <select
+              value={followUpFilter}
+              onChange={(e) => setFollowUpFilter(e.target.value)}
+              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="all">All Follow-ups</option>
+              <option value="completed">Completed Follow-ups</option>
+              <option value="missed">Missed Follow-ups</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -738,6 +822,9 @@ const fetchLeads = useCallback(async () => {
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Follow-Up
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                History
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tour-lead-actions">
                 Actions
@@ -869,6 +956,12 @@ const fetchLeads = useCallback(async () => {
                         </span>
                       </button>
 
+                      {isFollowUpMissed(lead) && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
+                          Missed
+                        </span>
+                      )}
+
                       {editingFollowUpId === lead._id && (
                         <input
                           ref={(el) => (dateInputRefs.current[lead._id] = el)}
@@ -882,6 +975,19 @@ const fetchLeads = useCallback(async () => {
                         />
                       )}
                     </div>
+                  </td>
+
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => openHistoryModal(lead)}
+                      className={`inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        isFollowUpMissed(lead) ? "text-red-500 hover:text-red-600" : "text-gray-500 hover:text-blue-600"
+                      }`}
+                      title={isFollowUpMissed(lead) ? "Missed follow-up — view history" : "View follow-up history"}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                   </td>
 
                   <td className="px-4 py-3 text-right relative">
@@ -910,6 +1016,16 @@ const fetchLeads = useCallback(async () => {
                           className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
                           <Edit className="w-4 h-4 mr-2" /> Edit
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAddNoteModal(lead);
+                          }}
+                          className="flex items-center w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                        >
+                          <MessageSquarePlus className="w-4 h-4 mr-2" /> Add Follow-up Note
                         </button>
 
                         {lead.status !== "Converted" && (
@@ -941,7 +1057,7 @@ const fetchLeads = useCallback(async () => {
             ) : (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={12}
                   className="px-4 py-12 text-center text-gray-500 text-sm"
                 >
                   No leads found.
@@ -1127,6 +1243,104 @@ const fetchLeads = useCallback(async () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Follow-up Note Modal */}
+      <Dialog open={addNoteModalOpen} onOpenChange={setAddNoteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <MessageSquarePlus className="w-5 h-5" />
+              Add Follow-up Note
+            </DialogTitle>
+          </DialogHeader>
+
+          {noteLead && (
+            <p className="text-sm text-gray-500 mb-3">
+              {noteLead.leadName}
+              {noteLead.companyName && ` · ${noteLead.companyName}`}
+            </p>
+          )}
+
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={4}
+            placeholder="What happened during this follow-up?"
+            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+          />
+
+          <div className="flex justify-end gap-3 mt-4">
+            <button
+              onClick={() => setAddNoteModalOpen(false)}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
+              disabled={savingNote}
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleAddFollowUpNote}
+              disabled={!noteText.trim() || savingNote}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {savingNote ? "Saving..." : "Save Note"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Follow-up History Modal */}
+      <Dialog open={historyModalOpen} onOpenChange={setHistoryModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <Eye className="w-5 h-5" />
+              Follow-up History{historyLead ? ` — ${historyLead.leadName}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto space-y-3 mt-2">
+            {!historyLead?.followUpNotes?.length ? (
+              <p className={`text-sm text-center py-8 ${
+                historyLead && isFollowUpMissed(historyLead) ? "text-red-500 font-medium" : "text-gray-500"
+              }`}>
+                {historyLead && isFollowUpMissed(historyLead)
+                  ? "No follow-up notes logged — this follow-up was missed."
+                  : "No follow-up notes yet."}
+              </p>
+            ) : (
+              [...historyLead.followUpNotes]
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .map((n, i) => (
+                  <div key={n._id || i} className="border border-gray-200 rounded-lg p-3">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.note}</p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {new Date(n.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      {" at "}
+                      {new Date(n.createdAt).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                ))
+            )}
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() => setHistoryModalOpen(false)}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
+            >
+              Close
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
