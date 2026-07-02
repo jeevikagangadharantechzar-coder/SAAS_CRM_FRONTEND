@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { setSuperAdminCredentials } from "../../store/authSlice";
 
 const BASE_URL = import.meta.env.VITE_SI_URI || "http://localhost:5000";
@@ -14,9 +14,17 @@ const SuperAdminLogin = () => {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [platformLogo, setPlatformLogo] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    axios
+      .get(`${BASE_URL}/superadmin/api/public/branding`)
+      .then(({ data }) => { if (data.platformLogo) setPlatformLogo(data.platformLogo); })
+      .catch(() => {});
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -58,7 +66,7 @@ const SuperAdminLogin = () => {
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 items-center justify-center p-8">
           <div className="text-center">
             <img
-              src="/images/TZI_Logo-04_-_Copy-removebg-preview.png"
+              src={platformLogo ? `${BASE_URL}/${platformLogo}` : "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
               alt="TZI Logo"
               className="w-full max-w-xs mx-auto mb-6"
               onError={(e) => {
@@ -76,7 +84,7 @@ const SuperAdminLogin = () => {
         <div className="flex flex-col justify-center w-full lg:w-1/2 p-8 lg:p-12 bg-white">
           <div className="mb-6 lg:hidden flex justify-center">
             <img
-              src="/images/TZI_Logo-04_-_Copy-removebg-preview.png"
+              src={platformLogo ? `${BASE_URL}/${platformLogo}` : "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
               alt="TZI Logo"
               className="w-32 h-auto"
               onError={(e) => {

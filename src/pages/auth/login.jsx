@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Eye, EyeOff, Building2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { setCredentials, clearCredentials } from "../../store/authSlice";
 import { initSocket } from "../../utils/socket";
 import ForgotPassword from "../password/ForgotPassword";
@@ -36,13 +36,24 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [showUpgradeButton, setShowUpgradeButton] = useState(false);
-
+  const [platformLogo, setPlatformLogo] = useState("");
+  const [platformName, setPlatformName] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
   const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+
+  useEffect(() => {
+    axios
+      .get(`${SI_URI}/superadmin/api/public/branding`)
+      .then(({ data }) => {
+        if (data.platformLogo) setPlatformLogo(`${SI_URI}/${data.platformLogo}`);
+        if (data.platformName) setPlatformName(data.platformName);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const activeToken = localStorage.getItem("token");
@@ -187,11 +198,11 @@ const Login = () => {
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 items-center justify-center p-8">
           <div className="text-center">
             <img
-              src="/images/TZI_Logo-04_-_Copy-removebg-preview.png"
-              alt="TZI Logo"
+              src={platformLogo || "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
+              alt={platformName || "Platform Logo"}
               className="w-full max-w-xs mx-auto mb-6"
               onError={(e) => {
-                e.target.src = "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png";
+                e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png";
               }}
             />
             <h2 className="text-2xl font-bold text-gray-800 mt-6">Welcome Back</h2>
@@ -204,11 +215,11 @@ const Login = () => {
           {/* Mobile Logo */}
           <div className="mb-8 lg:hidden flex justify-center">
             <img
-              src="/images/TZI_Logo-04_-_Copy-removebg-preview.png"
-              alt="TZI Logo"
+              src={platformLogo || "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
+              alt={platformName || "Platform Logo"}
               className="w-32 h-auto"
               onError={(e) => {
-                e.target.src = "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png";
+                e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png";
               }}
             />
           </div>
@@ -330,7 +341,11 @@ const Login = () => {
           </form>
 
           {/* Footer */}
-          <p className="mt-8 text-gray-500 text-sm text-center">© 2025 TZI. All rights reserved.</p>
+          {platformName && (
+            <p className="mt-8 text-gray-400 text-xs text-center">
+              Powered by <span className="font-semibold text-gray-500">{platformName}</span>
+            </p>
+          )}
         </div>
       </div>
 

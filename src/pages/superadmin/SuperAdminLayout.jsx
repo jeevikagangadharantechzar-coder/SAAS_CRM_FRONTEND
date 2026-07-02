@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import axios from "axios";
+import { initSuperAdminSocket, disconnectSuperAdminSocket } from "../../utils/superAdminSocket";
 import {
   LayoutDashboard,
   Building2,
@@ -25,8 +27,54 @@ const IconCircle = ({ children, isActive }) => (
 
 const SuperAdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [pendingUpgrades, setPendingUpgrades] = useState(0);
+  const [platformLogo, setPlatformLogo] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Initial count from API
+    const BASE_URL = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+    const token = localStorage.getItem("superAdminToken");
+
+    const fetchPendingCount = async () => {
+      try {
+        const { data } = await axios.get(`${BASE_URL}/superadmin/api/tenants/upgrade-requests`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPendingUpgrades(data.requests?.length || 0);
+      } catch (_) {}
+    };
+
+    const fetchBranding = async () => {
+      try {
+        const { data } = await axios.get(`${BASE_URL}/superadmin/api/public/branding`);
+        if (data.platformLogo) setPlatformLogo(`${BASE_URL}/${data.platformLogo}`);
+      } catch (_) {}
+    };
+
+    fetchPendingCount();
+    fetchBranding();
+
+    // Real-time updates via dedicated super admin socket namespace
+    const socket = initSuperAdminSocket();
+    if (socket) {
+      socket.on("new_upgrade_request", () => {
+        setPendingUpgrades((prev) => prev + 1);
+      });
+      socket.on("upgrade_request_resolved", () => {
+        setPendingUpgrades((prev) => Math.max(0, prev - 1));
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("new_upgrade_request");
+        socket.off("upgrade_request_resolved");
+      }
+      disconnectSuperAdminSocket();
+    };
+  }, []);
 
   const handleLogout = () => {
     dispatch(clearSuperAdminCredentials());
@@ -54,11 +102,11 @@ const SuperAdminLayout = () => {
         <div className="flex flex-col items-center justify-center px-6 py-6 border-b border-slate-100 relative">
           <Link to="/superadmin/dashboard" className="cursor-pointer block text-center">
             <img
-              src="/images/TZI_Logo-04_-_Copy-removebg-preview.png"
-              alt="TZI Logo"
+              src={platformLogo || "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
+              alt="Platform Logo"
               className="h-16 w-auto object-contain mx-auto hover:opacity-80 transition-opacity"
               onError={(e) => {
-                e.target.src = "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png";
+                e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png";
               }}
             />
             <span className="text-sm font-bold tracking-wider text-[#008ecc] mt-2 block">SuperAdmin Portal</span>
@@ -88,7 +136,12 @@ const SuperAdminLayout = () => {
               {({ isActive }) => (
                 <>
                   <IconCircle isActive={isActive}>{item.icon}</IconCircle>
-                  <span className="text-base font-medium">{item.label}</span>
+                  <span className="text-base font-medium flex-1">{item.label}</span>
+                  {item.label === "Upgrade Requests" && pendingUpgrades > 0 && (
+                    <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">
+                      {pendingUpgrades > 99 ? "99+" : pendingUpgrades}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>

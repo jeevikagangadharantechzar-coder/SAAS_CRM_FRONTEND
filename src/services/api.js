@@ -69,7 +69,6 @@ superApi.interceptors.response.use(
 axios.interceptors.request.use((config) => {
   const { token, slug } = store.getState().auth;
   const isInternal = !config.url.startsWith("http") || config.url.includes(BASE_URL);
-  
   if (isInternal) {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

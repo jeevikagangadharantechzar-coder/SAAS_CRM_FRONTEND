@@ -3,6 +3,7 @@ import { ArrowUpCircle, History, Clock, CheckCircle2, XCircle } from "lucide-rea
 import { superApi } from "../../services/api";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
+import { getSuperAdminSocket } from "../../utils/superAdminSocket";
 
 const UpgradeRequests = () => {
   const [activeTab, setActiveTab] = useState("pending");
@@ -60,6 +61,28 @@ const UpgradeRequests = () => {
     }
   }, [activeTab]);
 
+  // Socket — real-time list updates
+  useEffect(() => {
+    const socket = getSuperAdminSocket();
+    if (!socket) return;
+
+    const onNewRequest = (newReq) => {
+      setUpgradeRequests((prev) => [newReq, ...prev]);
+    };
+
+    const onResolved = ({ id }) => {
+      setUpgradeRequests((prev) => prev.filter((r) => r._id !== id));
+    };
+
+    socket.on("new_upgrade_request", onNewRequest);
+    socket.on("upgrade_request_resolved", onResolved);
+
+    return () => {
+      socket.off("new_upgrade_request", onNewRequest);
+      socket.off("upgrade_request_resolved", onResolved);
+    };
+  }, []);
+
   const handleApproveUpgrade = async (id) => {
     if (!window.confirm("Are you sure you want to approve this upgrade request? The tenant's plan will be upgraded and new credentials will be sent via email.")) {
       return;
@@ -69,7 +92,6 @@ const UpgradeRequests = () => {
       const res = await superApi.post(`/tenants/upgrade-approve/${id}`);
       if (res.data?.success) {
         toast.success("Upgrade approved successfully! New credentials sent via email.");
-        await fetchUpgradeRequests();
       } else {
         toast.error(res.data?.error || "Error approving upgrade request.");
       }
@@ -106,7 +128,6 @@ const UpgradeRequests = () => {
         setRejectingId(null);
         setRejectingRequestData(null);
         setRejectReason("");
-        await fetchUpgradeRequests();
       } else {
         toast.error(res.data?.error || "Error rejecting upgrade request.");
       }
