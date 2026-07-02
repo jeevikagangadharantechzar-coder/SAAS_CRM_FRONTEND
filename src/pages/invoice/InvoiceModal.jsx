@@ -36,6 +36,10 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   });
   // Amount typed in "Amount Received Now" — only used for paid/partially_paid statuses
   const [paymentReceivedNow, setPaymentReceivedNow] = useState("");
+  // Whether the amount previously recorded on an in_progress invoice was actually received —
+  // in_progress means a stuck/uncertain payment attempt, so this must be confirmed before
+  // that prior amount can be trusted and carried forward. null = not yet answered.
+  const [previousAmountConfirmed, setPreviousAmountConfirmed] = useState(null);
   const [note, setNote] = useState("");
   const [isNoteVisible, setIsNoteVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
@@ -103,6 +107,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
       setSelectedDealRequirement(null);
       setPaymentReceivedNow("");
     }
+    setPreviousAmountConfirmed(null);
     setValidationErrors({});
   }, [editingInvoice, isOpen, deals]);
 
@@ -221,7 +226,7 @@ setSalesUsers(response.data.users);
   // Validation
   const validateInputs = () => {
     const errors = {};
-    const { assignTo, issueDate, dueDate, deal, price } = invoiceData;
+    const { assignTo, issueDate, dueDate, deal, price, status } = invoiceData;
 
     if (!assignTo) errors.assignTo = "Sales user is required.";
     if (!issueDate) errors.issueDate = "Issue Date is required.";
@@ -231,6 +236,32 @@ setSalesUsers(response.data.users);
 
     if (issueDateObj && dueDateObj && dueDateObj < issueDateObj) {
       errors.dueDate = "Due date must be on or after the issue date.";
+    }
+
+    // An in_progress invoice's recorded amount is uncertain (stuck/unconfirmed payment) —
+    // must be confirmed received or not before we can trust it in the math below
+    if (needsPreviousConfirmation && previousAmountConfirmed === null) {
+      errors.previousAmountConfirmed = "Please confirm whether the previously recorded amount was received.";
+    }
+
+    // Paid, Partially Paid, and Payment In Progress all require an entered amount
+    const requiresPaymentEntry = ["paid", "partially_paid", "in_progress"].includes(status);
+    const entered = Number(paymentReceivedNow) || 0;
+
+    if (requiresPaymentEntry && !(entered > 0)) {
+      errors.paymentReceivedNow = "Amount received is required.";
+    } else if (status === "paid" || status === "partially_paid" || status === "in_progress") {
+      const total = Number(calculateTotalBreakdown().total);
+      const remaining = Math.max(total - effectivePreviousAmountPaid, 0);
+      const EPS = 0.01;
+
+      if (entered - remaining > EPS) {
+        errors.paymentReceivedNow = `Payment exceeds the remaining balance. Maximum allowed: ${remaining.toFixed(2)}.`;
+      } else if (status === "paid" && remaining - entered > EPS) {
+        errors.paymentReceivedNow = `To mark as Paid, the full remaining amount (${remaining.toFixed(2)}) must be entered.`;
+      } else if ((status === "partially_paid" || status === "in_progress") && remaining - entered <= EPS) {
+        errors.paymentReceivedNow = `This covers the full remaining amount. Please select "Paid" instead.`;
+      }
     }
 
     setValidationErrors(errors);
@@ -327,20 +358,26 @@ setSalesUsers(response.data.users);
       total: Number(breakdown.total),
     };
 
-    // For paid/partially_paid, validate the payment entered and freeze the preferred-currency
-    // conversion of the CUMULATIVE amount collected so far (previous + this payment)
-    if (isPaidFamily) {
+    // Paid, Partially Paid, and Payment In Progress (a stuck/partial attempt) all track
+    // the CUMULATIVE amount actually collected so far (previous + this payment), and
+    // freeze the preferred-currency conversion against that real amount — not the total.
+    if (isPaidFamily || invoiceData.status === "in_progress") {
       const total = Number(breakdown.total);
       const payment = Number(paymentReceivedNow) || 0;
-      const maxAllowed = Math.max(total - previousAmountPaid, 0);
+      const maxAllowed = Math.max(total - effectivePreviousAmountPaid, 0);
 
       if (payment > maxAllowed) {
         toast.error(`Payment exceeds invoice total. Maximum you can enter now: ${maxAllowed.toFixed(2)}`);
         return;
       }
 
-      const newAmountPaid = previousAmountPaid + payment;
+      const newAmountPaid = effectivePreviousAmountPaid + payment;
       invoiceToSave.paymentReceivedNow = payment;
+      // Tell the backend whether the prior in_progress amount should be trusted and
+      // carried forward, or discarded because it was never actually received
+      if (needsPreviousConfirmation) {
+        invoiceToSave.previousAmountConfirmed = previousAmountConfirmed;
+      }
 
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
       const userCurrency = storedUser?.currency || "USD";
@@ -354,28 +391,6 @@ setSalesUsers(response.data.users);
           );
           const rate = rateRes.data?.rates?.[userCurrency];
           preferredValue = rate ? parseFloat((newAmountPaid * rate).toFixed(2)) : null;
-        }
-        invoiceToSave.preferredCurrency = userCurrency;
-        invoiceToSave.preferredCurrencyValue = preferredValue;
-      } catch {
-        // proceed without frozen rate — backend will leave it null
-      }
-    } else if (invoiceData.status === "in_progress") {
-      // Payment In Progress has no collected amount yet — freeze the conversion
-      // of the invoice TOTAL so its displayed value doesn't drift with live rates
-      const total = Number(breakdown.total);
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const userCurrency = storedUser?.currency || "USD";
-      try {
-        let preferredValue;
-        if (invoiceData.currency === userCurrency) {
-          preferredValue = total;
-        } else {
-          const rateRes = await axios.get(
-            `https://open.er-api.com/v6/latest/${invoiceData.currency}`
-          );
-          const rate = rateRes.data?.rates?.[userCurrency];
-          preferredValue = rate ? parseFloat((total * rate).toFixed(2)) : null;
         }
         invoiceToSave.preferredCurrency = userCurrency;
         invoiceToSave.preferredCurrencyValue = preferredValue;
@@ -432,11 +447,23 @@ setSalesUsers(response.data.users);
 
   const PAID_FAMILY = ["paid", "partially_paid"];
   const isPaidFamily = PAID_FAMILY.includes(invoiceData.status);
-  // Amount already collected before this save — carries over only between paid/partially_paid
+  // Statuses that track a real collected amount — in_progress represents a stuck/partial
+  // attempt (e.g. network failure mid-payment), so it carries the same amount tracking
+  const TRACKED_FAMILY = [...PAID_FAMILY, "in_progress"];
+  // Amount already collected before this save — carries over between any tracked status
   const previousAmountPaid =
-    editingInvoice && PAID_FAMILY.includes(editingInvoice.status)
+    editingInvoice && TRACKED_FAMILY.includes(editingInvoice.status)
       ? Number(editingInvoice.amountPaid) || 0
       : 0;
+
+  // in_progress is an uncertain/stuck attempt — we can't trust its recorded amount was
+  // actually received until the admin confirms it, one way or the other
+  const needsPreviousConfirmation =
+    editingInvoice?.status === "in_progress" && previousAmountPaid > 0;
+  // If the admin says the prior in_progress amount was NOT received, discard it from
+  // the remaining/cumulative math — the full amount must be collected again
+  const effectivePreviousAmountPaid =
+    needsPreviousConfirmation && previousAmountConfirmed === false ? 0 : previousAmountPaid;
 
   return (
     <Dialog open={isOpen} onOpenChange={closeModal}>
@@ -580,24 +607,66 @@ setSalesUsers(response.data.users);
                     </select>
                   </div>
 
-                  {isPaidFamily && (() => {
+                  {(isPaidFamily || invoiceData.status === "in_progress") && (() => {
                     const total = Number(calculateTotalBreakdown().total);
-                    const maxAllowed = Math.max(total - previousAmountPaid, 0);
+                    const maxAllowed = Math.max(total - effectivePreviousAmountPaid, 0);
                     const entered = Number(paymentReceivedNow) || 0;
                     const exceeds = entered > maxAllowed;
 
                     return (
                       <div>
-                        {previousAmountPaid > 0 && (
+                        {needsPreviousConfirmation && (
+                          <div className={`mb-3 p-3 rounded-lg border ${
+                            validationErrors.previousAmountConfirmed ? "border-red-500 bg-red-50" : "border-amber-300 bg-amber-50"
+                          }`}>
+                            <p className="text-sm text-gray-700 mb-2">
+                              This invoice previously recorded{" "}
+                              <span className="font-semibold">
+                                {invoiceData.currency} {previousAmountPaid.toFixed(2)}
+                              </span>{" "}
+                              as Payment In Progress. Was this amount actually received?
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPreviousAmountConfirmed(true)}
+                                className={`px-3 py-1.5 text-sm rounded-md border transition ${
+                                  previousAmountConfirmed === true
+                                    ? "bg-green-600 text-white border-green-600"
+                                    : "bg-white text-gray-700 border-gray-300"
+                                }`}
+                              >
+                                Yes, received
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPreviousAmountConfirmed(false)}
+                                className={`px-3 py-1.5 text-sm rounded-md border transition ${
+                                  previousAmountConfirmed === false
+                                    ? "bg-rose-600 text-white border-rose-600"
+                                    : "bg-white text-gray-700 border-gray-300"
+                                }`}
+                              >
+                                No, not received
+                              </button>
+                            </div>
+                            {validationErrors.previousAmountConfirmed && (
+                              <p className="mt-2 text-sm text-red-600">
+                                {validationErrors.previousAmountConfirmed}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {effectivePreviousAmountPaid > 0 && (
                           <p className="text-sm text-gray-600 mb-1">
                             Already Received:{" "}
                             <span className="font-semibold text-green-700">
-                              {invoiceData.currency} {previousAmountPaid.toFixed(2)}
+                              {invoiceData.currency} {effectivePreviousAmountPaid.toFixed(2)}
                             </span>
                           </p>
                         )}
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Amount Received Now
+                          Amount Received Now *
                         </label>
                         <input
                           type="number"
@@ -607,12 +676,17 @@ setSalesUsers(response.data.users);
                           onChange={(e) => setPaymentReceivedNow(e.target.value)}
                           placeholder={`Max ${maxAllowed.toFixed(2)}`}
                           className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
-                            exceeds ? "border-red-500" : "border-gray-300"
+                            exceeds || validationErrors.paymentReceivedNow ? "border-red-500" : "border-gray-300"
                           }`}
                         />
                         {exceeds && (
                           <p className="mt-1 text-sm text-red-600">
                             Payment exceeds invoice total. Maximum you can enter now: {maxAllowed.toFixed(2)}
+                          </p>
+                        )}
+                        {!exceeds && validationErrors.paymentReceivedNow && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {validationErrors.paymentReceivedNow}
                           </p>
                         )}
                       </div>
