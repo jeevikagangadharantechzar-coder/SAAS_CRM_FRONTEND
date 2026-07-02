@@ -272,6 +272,8 @@ export default function LostDealAnalytics() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [stagePage, setStagePage] = useState(1);
+  const [stagesPerPage] = useState(5);
   const [selectedReasonModal, setSelectedReasonModal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dealSortBy, setDealSortBy] = useState("date");
@@ -462,6 +464,12 @@ export default function LostDealAnalytics() {
             : 0,
       }));
   }, [parsedRecentDeals]);
+
+  const totalStagePages = Math.ceil(stageCounts.length / stagesPerPage);
+  const paginatedStageCounts = useMemo(() => {
+    const startIndex = (stagePage - 1) * stagesPerPage;
+    return stageCounts.slice(startIndex, startIndex + stagesPerPage);
+  }, [stageCounts, stagePage, stagesPerPage]);
 
   const highValueDeals = useMemo(() => {
     return parsedRecentDeals
@@ -667,6 +675,7 @@ export default function LostDealAnalytics() {
     setFilters(clearedFilters);
     setSearchQuery("");
     setCurrentPage(1);
+    setStagePage(1);
     setShowDateRange(false);
     fetchAnalytics(timeFrame, clearedFilters);
   };
@@ -1520,52 +1529,130 @@ export default function LostDealAnalytics() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {stageCounts.map((stage) => (
-                  <div
-                    key={stage.stage}
-                    className="border border-gray-100 rounded-lg p-4 hover:shadow-sm transition-all"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="font-semibold text-gray-800 text-base">
-                          {stage.stage}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {stage.count} deal{stage.count !== 1 ? "s" : ""} |{" "}
-                          {formatCurrency(stage.totalValue)}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-indigo-600">
-                          {stage.percentage}%
-                        </div>
-                        <div className="text-xs text-gray-500">of total</div>
-                      </div>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 border-y border-gray-100">
+                      <tr>
+                        <th className="py-3 px-4 font-medium text-gray-600">Stage</th>
+                        <th className="py-3 px-4 font-medium text-gray-600">Deals Count</th>
+                        <th className="py-3 px-4 font-medium text-gray-600">Total Value</th>
+                        <th className="py-3 px-4 font-medium text-gray-600">Percentage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedStageCounts.length > 0 ? (
+                        paginatedStageCounts.map((stage) => (
+                          <tr
+                            key={stage.stage}
+                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-3.5 px-4 font-medium text-gray-800">
+                              <div>
+                                <span className="text-sm font-semibold">{stage.stage}</span>
+                                {stage.stage === "Invoice Sent" && (
+                                  <div className="mt-1 text-xs text-amber-600 font-medium flex items-center gap-1">
+                                    <AlertCircle size={12} className="text-amber-500" />
+                                    <span>High recovery potential - Focus on negotiation before invoicing</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-600">
+                              <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full text-xs font-semibold">
+                                {stage.count} deal{stage.count !== 1 ? "s" : ""}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 font-medium text-gray-800">
+                              {formatCurrency(stage.totalValue)}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-3">
+                                <span className="font-bold text-indigo-600 w-10 text-right">
+                                  {stage.percentage}%
+                                </span>
+                                <div className="w-24 bg-gray-100 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${stage.percentage}%`,
+                                      backgroundColor:
+                                        stage.stage === "Invoice Sent"
+                                          ? "#f59e0b"
+                                          : stage.stage === "Closed Lost"
+                                          ? "#ef4444"
+                                          : "#6366f1",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            className="py-8 text-center text-gray-500"
+                          >
+                            No stages found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Stage Pagination */}
+                {totalStagePages > 1 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-4">
+                    <div className="text-sm text-gray-500">
+                      Page {stagePage} of {totalStagePages}
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2">
-                      <div
-                        className="h-2.5 rounded-full transition-all"
-                        style={{
-                          width: `${stage.percentage}%`,
-                          backgroundColor:
-                            stage.stage === "Invoice Sent"
-                              ? "#f59e0b"
-                              : stage.stage === "Closed Lost"
-                              ? "#ef4444"
-                              : "#6366f1",
-                        }}
-                      />
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      <button
+                        onClick={() => setStagePage(stagePage - 1)}
+                        disabled={stagePage === 1}
+                        className="px-3 py-1 border border-gray-200 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      >
+                        Previous
+                      </button>
+                      {Array.from(
+                        { length: Math.min(5, totalStagePages) },
+                        (_, i) => {
+                          let pageNum;
+                          if (totalStagePages <= 5) pageNum = i + 1;
+                          else if (stagePage <= 3) pageNum = i + 1;
+                          else if (stagePage >= totalStagePages - 2)
+                            pageNum = totalStagePages - 4 + i;
+                          else pageNum = stagePage - 2 + i;
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setStagePage(pageNum)}
+                              className={`px-3 py-1 border rounded-md text-sm transition-colors ${
+                                stagePage === pageNum
+                                  ? "bg-indigo-600 text-white border-indigo-600"
+                                  : "border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                      )}
+                      <button
+                        onClick={() => setStagePage(stagePage + 1)}
+                        disabled={stagePage === totalStagePages}
+                        className="px-3 py-1 border border-gray-200 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      >
+                        Next
+                      </button>
                     </div>
-                    {stage.stage === "Invoice Sent" && (
-                      <div className="mt-2 text-xs text-amber-600 font-medium flex items-center gap-1">
-                        <AlertCircle size={12} />
-                        High recovery potential - Focus on negotiation before invoicing
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
 

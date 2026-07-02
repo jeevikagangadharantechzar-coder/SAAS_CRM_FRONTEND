@@ -45,19 +45,25 @@ const Login = () => {
   const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 
   useEffect(() => {
-    const activeToken = localStorage.getItem("token");
-    const activeSlug = localStorage.getItem("tenantSlug");
-
-    if (activeToken && activeSlug) {
-      if (!tenantSlug || activeSlug === tenantSlug) {
-        navigate(`/${activeSlug}/dashboard`, { replace: true });
-      } else {
-        setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
-        setIsError(true);
-      }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("inactive") === "true") {
+      setMessage("Your session has expired due to 30 minutes of inactivity. Please sign in again.");
+      setIsError(true);
     } else {
-      setMessage("");
-      setIsError(false);
+      const activeToken = localStorage.getItem("token");
+      const activeSlug = localStorage.getItem("tenantSlug");
+
+      if (activeToken && activeSlug) {
+        if (!tenantSlug || activeSlug === tenantSlug) {
+          navigate(`/${activeSlug}/dashboard`, { replace: true });
+        } else {
+          setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
+          setIsError(true);
+        }
+      } else {
+        setMessage("");
+        setIsError(false);
+      }
     }
 
     const handleStorageChange = () => {
@@ -144,6 +150,10 @@ const Login = () => {
         } catch (streakErr) {
           console.error("Streak tracker failed:", streakErr);
         }
+
+        // Initialize Activity Timer and mark tab session active immediately
+        localStorage.setItem("lastActivity", Date.now().toString());
+        sessionStorage.setItem("sessionActive", "true");
 
         // 5. Store session to Redux and LocalStorage
         dispatch(
@@ -236,6 +246,8 @@ const Login = () => {
                   Upgrade Plan Now
                 </button>
               )}
+
+
             </div>
           )}
 

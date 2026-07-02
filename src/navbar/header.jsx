@@ -125,9 +125,12 @@ const handleLogout = async () => {
   } catch (err) {
     console.error("Logout error:", err);
   } finally {
-    //  Clear everything
-    localStorage.clear();
-    sessionStorage.clear();
+    //  Clear only session-specific keys, keeping tab tracking intact
+    localStorage.removeItem("token");
+    localStorage.removeItem("tenantSlug");
+    localStorage.removeItem("user");
+    localStorage.removeItem("lastActivity");
+    sessionStorage.removeItem("sessionActive");
 
     //  Redirect to tenant-specific login page
     if (tenantSlug) {
