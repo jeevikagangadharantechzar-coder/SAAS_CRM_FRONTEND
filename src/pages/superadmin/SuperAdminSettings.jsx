@@ -101,6 +101,74 @@ const DEFAULTS = {
   </table>
 </body>
 </html>`,
+  planSubject: "Your {{planName}} Plan on {{platformName}}",
+  planBody: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f4f6fb;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#059669 0%,#047857 100%);padding:36px 40px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Plan Activated</h1>
+            <p style="margin:8px 0 0;color:#a7f3d0;font-size:14px;">Your subscription is now live on {{platformName}}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px;">
+            <p style="margin:0 0 20px;color:#333;font-size:16px;">Hi <strong>{{adminName}}</strong>,</p>
+            <p style="margin:0 0 28px;color:#555;font-size:15px;line-height:1.6;">Your workspace has been set up with the plan details below. Here is a summary of your subscription.</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;margin-bottom:32px;">
+              <tr><td style="padding:24px 28px;">
+                <p style="margin:0 0 16px;font-size:13px;font-weight:600;color:#059669;text-transform:uppercase;letter-spacing:0.8px;">Subscription Details</p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;width:130px;">Plan Name</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:600;">{{planName}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">Plan Type</td>
+                    <td style="padding:7px 0;"><span style="background:#d1fae5;color:#065f46;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;">{{planType}}</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">Price</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:600;">{{priceLabel}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">Max Users</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:600;">{{maxUsers}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">Start Date</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:600;">{{startDate}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">End Date</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:600;">{{endDate}}</td>
+                  </tr>
+                </table>
+                {{description}}
+              </td></tr>
+            </table>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center" style="padding-bottom:28px;">
+                <a href="{{loginUrl}}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#059669 0%,#047857 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 44px;border-radius:8px;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(5,150,105,0.35);">Go to Dashboard →</a>
+              </td></tr>
+            </table>
+            <p style="margin:0;color:#888;font-size:13px;line-height:1.6;border-top:1px solid #eee;padding-top:20px;">If you have any questions about your plan, contact your platform administrator.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafc;padding:20px 40px;text-align:center;border-top:1px solid #eee;">
+            <p style="margin:0;color:#aaa;font-size:12px;">© {{year}} {{platformName}}. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
   upgradeAlertEnabled: true,
   upgradeAlertEmail: "",
 };
@@ -137,9 +205,16 @@ const SuperAdminSettings = () => {
   const [smtpSecure, setSmtpSecure] = useState(DEFAULTS.smtpSecure);
   const [smtpFromName, setSmtpFromName] = useState(DEFAULTS.smtpFromName);
 
+  // Email templates tab
+  const [emailTab, setEmailTab] = useState("welcome");
+
   // Welcome email
   const [welcomeSubject, setWelcomeSubject] = useState(DEFAULTS.welcomeSubject);
   const [welcomeBody, setWelcomeBody] = useState(DEFAULTS.welcomeBody);
+
+  // Plan email
+  const [planSubject, setPlanSubject] = useState(DEFAULTS.planSubject);
+  const [planBody, setPlanBody] = useState(DEFAULTS.planBody);
 
   // Upgrade alert
   const [upgradeAlertEnabled, setUpgradeAlertEnabled] = useState(DEFAULTS.upgradeAlertEnabled);
@@ -170,6 +245,12 @@ const SuperAdminSettings = () => {
     toast.info("Welcome email reset to default — click Save to apply");
   };
 
+  const resetPlanEmail = () => {
+    setPlanSubject(DEFAULTS.planSubject);
+    setPlanBody(DEFAULTS.planBody);
+    toast.info("Plan email reset to default — click Save to apply");
+  };
+
   const resetUpgradeAlerts = () => {
     setUpgradeAlertEnabled(DEFAULTS.upgradeAlertEnabled);
     setUpgradeAlertEmail(DEFAULTS.upgradeAlertEmail);
@@ -192,6 +273,8 @@ const SuperAdminSettings = () => {
         setSmtpFromName(data.smtpFromName || DEFAULTS.smtpFromName);
         setWelcomeSubject(data.welcomeSubject || DEFAULTS.welcomeSubject);
         setWelcomeBody(data.welcomeBody || DEFAULTS.welcomeBody);
+        setPlanSubject(data.planSubject || DEFAULTS.planSubject);
+        setPlanBody(data.planBody?.trim() ? data.planBody : DEFAULTS.planBody);
         setUpgradeAlertEnabled(data.upgradeAlertEnabled ?? DEFAULTS.upgradeAlertEnabled);
         setUpgradeAlertEmail(data.upgradeAlertEmail || DEFAULTS.upgradeAlertEmail);
         if (data.platformLogo) {
@@ -220,6 +303,8 @@ const SuperAdminSettings = () => {
         smtpFromName,
         welcomeSubject,
         welcomeBody,
+        planSubject,
+        planBody,
         upgradeAlertEnabled,
         upgradeAlertEmail,
       };
@@ -457,48 +542,106 @@ const SuperAdminSettings = () => {
             </CardContent>
           </Card>
 
-          {/* ── Welcome Email Template ── */}
+          {/* ── Email Templates (tabbed) ── */}
           <Card className="border-0 shadow-md bg-white">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg font-bold flex items-center space-x-2">
                     <FileText size={18} className="text-[#008ecc]" />
-                    <span>Welcome Email Template</span>
+                    <span>Email Templates</span>
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Sent to new tenant admins when their workspace is created.{" "}
-                    <code className="bg-slate-100 px-1 rounded text-xs">
-                      {"{{adminName}} {{email}} {{password}} {{loginUrl}} {{platformName}}"}
-                    </code>
+                    Customise the emails sent to tenant admins when their workspace is created.
                   </CardDescription>
                 </div>
-                <ResetButton onClick={resetWelcomeEmail} />
+                <ResetButton onClick={emailTab === "welcome" ? resetWelcomeEmail : resetPlanEmail} />
+              </div>
+
+              {/* Tab toggle */}
+              <div className="flex mt-4 bg-slate-100 rounded-xl p-1 w-fit gap-1">
+                <button
+                  type="button"
+                  onClick={() => setEmailTab("welcome")}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    emailTab === "welcome"
+                      ? "bg-white text-[#008ecc] shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Welcome Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailTab("plan")}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    emailTab === "plan"
+                      ? "bg-white text-[#008ecc] shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Plan Email
+                </button>
               </div>
             </CardHeader>
+
             <CardContent className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  value={welcomeSubject}
-                  onChange={(e) => setWelcomeSubject(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Body (HTML supported)
-                </label>
-                <textarea
-                  value={welcomeBody}
-                  onChange={(e) => setWelcomeBody(e.target.value)}
-                  rows={10}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
-                />
-              </div>
+              {emailTab === "welcome" ? (
+                <>
+                  <p className="text-xs text-slate-400">
+                    Variables:{" "}
+                    <code className="bg-slate-100 px-1 rounded">
+                      {"{{adminName}} {{email}} {{password}} {{loginUrl}} {{platformName}}"}
+                    </code>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <input
+                      type="text"
+                      value={welcomeSubject}
+                      onChange={(e) => setWelcomeSubject(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <textarea
+                      value={welcomeBody}
+                      onChange={(e) => setWelcomeBody(e.target.value)}
+                      rows={10}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-400">
+                    Variables:{" "}
+                    <code className="bg-slate-100 px-1 rounded">
+                      {"{{adminName}} {{planName}} {{planType}} {{priceLabel}} {{maxUsers}} {{loginUrl}} {{platformName}}"}
+                    </code>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <input
+                      type="text"
+                      value={planSubject}
+                      onChange={(e) => setPlanSubject(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <textarea
+                      value={planBody}
+                      onChange={(e) => setPlanBody(e.target.value)}
+                      rows={10}
+                      placeholder="Leave blank to use the built-in default plan email template"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                    />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

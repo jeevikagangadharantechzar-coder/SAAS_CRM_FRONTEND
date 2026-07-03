@@ -71,6 +71,7 @@ const CreateTenant = () => {
         slug,
         adminEmail,
         adminName,
+        planId: selectedPlanId,
       });
 
       const newTenant = res.data?.tenant || res.data?.data || res.data;
@@ -351,17 +352,17 @@ const CreateTenant = () => {
                 const start = new Date();
                 let endText = "Lifetime / Unlimited";
                 
-                if (selectedPlan.trial_days > 0) {
+                if (selectedPlan.billing_cycle === "monthly") {
                   const end = new Date();
-                  end.setDate(end.getDate() + selectedPlan.trial_days);
-                  endText = format(end, "MMM dd, yyyy");
-                } else if (selectedPlan.billing_cycle === "monthly") {
-                  const end = new Date();
-                  end.setDate(end.getDate() + 30);
+                  end.setMonth(end.getMonth() + 1);
                   endText = format(end, "MMM dd, yyyy");
                 } else if (selectedPlan.billing_cycle === "yearly") {
                   const end = new Date();
-                  end.setDate(end.getDate() + 365);
+                  end.setFullYear(end.getFullYear() + 1);
+                  endText = format(end, "MMM dd, yyyy");
+                } else if (selectedPlan.trial_days > 0) {
+                  const end = new Date();
+                  end.setDate(end.getDate() + selectedPlan.trial_days);
                   endText = format(end, "MMM dd, yyyy");
                 }
 
