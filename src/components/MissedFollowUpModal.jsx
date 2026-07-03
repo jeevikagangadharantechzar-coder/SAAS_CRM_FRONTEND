@@ -1,24 +1,25 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, X, Calendar, User } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { AlertTriangle, X, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const SI_URI  = import.meta.env.VITE_SI_URI;
-const ADMIN_POPUP_SESSION_KEY = "missedFollowUpPopupShown";
 
 // Sourced directly from the leads collection (same "missed" definition the
 // Leads table uses: followUpDate passed, lead still open, no follow-up notes
 // logged) rather than from the notification inbox — the inbox only holds a
 // notification while it's unread and the cron only writes one once per day,
 // so it silently under-reports leads that are still genuinely missed.
+// Admin-only, since admins see the whole team's missed follow-ups and there's
+// almost always something outstanding — the popup is scoped to salespeople.
 const MissedFollowUpModal = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { tenantSlug } = useParams();
   const [missedList, setMissedList] = useState([]);
   const [dismissed, setDismissed] = useState(false);
-  const fetchedRef = useRef(false);
 
   let isAdmin = false;
   try {
@@ -27,13 +28,7 @@ const MissedFollowUpModal = () => {
   } catch {}
 
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-
-    // Admins see the whole team's missed follow-ups, so there's almost always
-    // something outstanding — without this, the popup would reopen on every
-    // refresh. Gate it to once per browser session (cleared when the tab closes).
-    if (isAdmin && sessionStorage.getItem(ADMIN_POPUP_SESSION_KEY)) return;
+    if (isAdmin) return;
 
     const token = localStorage.getItem("token");
     const storedSlug = localStorage.getItem("tenantSlug");
@@ -44,13 +39,12 @@ const MissedFollowUpModal = () => {
     axios
       .get(url, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
-        const leads = res.data.leads || [];
-        if (isAdmin && leads.length > 0) sessionStorage.setItem(ADMIN_POPUP_SESSION_KEY, "1");
-        setMissedList(leads);
+        setMissedList(res.data.leads || []);
+        setDismissed(false);
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.pathname]);
 
   if (dismissed || missedList.length === 0) return null;
 
@@ -91,12 +85,6 @@ const MissedFollowUpModal = () => {
                   <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
                     <Calendar size={12} />
                     Follow-up date: {format(new Date(lead.followUpDate), "dd MMM yyyy")}
-                  </p>
-                )}
-                {isAdmin && lead.assignTo && (
-                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-                    <User size={12} />
-                    Salesperson: {lead.assignTo.firstName} {lead.assignTo.lastName}
                   </p>
                 )}
               </div>

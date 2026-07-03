@@ -33,13 +33,14 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
     discountValue: 0,
     note: "",
     currency: "INR",
+    billingAddress: "",
+    clientTaxId: "",
+    poNumber: "",
   });
+  // Ad-hoc fields the admin adds for invoices that need something the fixed form doesn't cover
+  const [customFields, setCustomFields] = useState([]);
   // Amount typed in "Amount Received Now" — only used for paid/partially_paid statuses
   const [paymentReceivedNow, setPaymentReceivedNow] = useState("");
-  // Whether the amount previously recorded on an in_progress invoice was actually received —
-  // in_progress means a stuck/uncertain payment attempt, so this must be confirmed before
-  // that prior amount can be trusted and carried forward. null = not yet answered.
-  const [previousAmountConfirmed, setPreviousAmountConfirmed] = useState(null);
   const [note, setNote] = useState("");
   const [isNoteVisible, setIsNoteVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
@@ -74,12 +75,18 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         discountValue: editingInvoice.discountValue || 0,
         note: editingInvoice.note || "",
         currency: editingInvoice.currency || "INR",
+        billingAddress: editingInvoice.billingAddress || "",
+        clientTaxId: editingInvoice.clientTaxId || "",
+        poNumber: editingInvoice.poNumber || "",
       });
       setIssueDateObj(issue.obj);
       setDueDateObj(due.obj);
       setNote(editingInvoice.note || "");
       setIsNoteVisible(!!editingInvoice.note);
       setPaymentReceivedNow("");
+      setCustomFields(
+        (editingInvoice.customFields || []).map((f) => ({ ...f }))
+      );
 
       const selectedDeal = deals.find(
         (d) => d._id === editingInvoice.items?.[0]?.deal?._id
@@ -99,6 +106,9 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         discountValue: 0,
         note: "",
         currency: "INR",
+        billingAddress: "",
+        clientTaxId: "",
+        poNumber: "",
       });
       setIssueDateObj(null);
       setDueDateObj(null);
@@ -106,8 +116,8 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
       setIsNoteVisible(false);
       setSelectedDealRequirement(null);
       setPaymentReceivedNow("");
+      setCustomFields([]);
     }
-    setPreviousAmountConfirmed(null);
     setValidationErrors({});
   }, [editingInvoice, isOpen, deals]);
 
@@ -165,7 +175,23 @@ setSalesUsers(response.data.users);
           currency: currency || "INR",
         }));
       }
+      if (selectedDeal?.address) {
+        setInvoiceData((prev) => ({ ...prev, billingAddress: selectedDeal.address }));
+      }
     }
+  };
+
+  // Custom fields
+  const handleAddCustomField = () => {
+    setCustomFields((prev) => [...prev, { label: "", type: "text", value: "" }]);
+  };
+  const handleCustomFieldChange = (index, key, value) => {
+    setCustomFields((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, [key]: value } : f))
+    );
+  };
+  const handleRemoveCustomField = (index) => {
+    setCustomFields((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleIssueDateChange = (date) => {
@@ -238,28 +264,28 @@ setSalesUsers(response.data.users);
       errors.dueDate = "Due date must be on or after the issue date.";
     }
 
-    // An in_progress invoice's recorded amount is uncertain (stuck/unconfirmed payment) —
-    // must be confirmed received or not before we can trust it in the math below
-    if (needsPreviousConfirmation && previousAmountConfirmed === null) {
-      errors.previousAmountConfirmed = "Please confirm whether the previously recorded amount was received.";
+    if (customFields.some((f) => !f.label.trim())) {
+      errors.customFields = "Every custom field needs a name.";
     }
 
-    // Paid, Partially Paid, and Payment In Progress all require an entered amount
-    const requiresPaymentEntry = ["paid", "partially_paid", "in_progress"].includes(status);
+    // Paid and Partially Paid both require an entered amount — unless the invoice was
+    // already saved as Paid, in which case status/payment are locked and nothing new is collected
+    const statusLocked = editingInvoice?.status === "paid";
+    const requiresPaymentEntry = !statusLocked && ["paid", "partially_paid"].includes(status);
     const entered = Number(paymentReceivedNow) || 0;
 
     if (requiresPaymentEntry && !(entered > 0)) {
       errors.paymentReceivedNow = "Amount received is required.";
-    } else if (status === "paid" || status === "partially_paid" || status === "in_progress") {
+    } else if (!statusLocked && (status === "paid" || status === "partially_paid")) {
       const total = Number(calculateTotalBreakdown().total);
-      const remaining = Math.max(total - effectivePreviousAmountPaid, 0);
+      const remaining = Math.max(total - previousAmountPaid, 0);
       const EPS = 0.01;
 
       if (entered - remaining > EPS) {
         errors.paymentReceivedNow = `Payment exceeds the remaining balance. Maximum allowed: ${remaining.toFixed(2)}.`;
       } else if (status === "paid" && remaining - entered > EPS) {
         errors.paymentReceivedNow = `To mark as Paid, the full remaining amount (${remaining.toFixed(2)}) must be entered.`;
-      } else if ((status === "partially_paid" || status === "in_progress") && remaining - entered <= EPS) {
+      } else if (status === "partially_paid" && remaining - entered <= EPS) {
         errors.paymentReceivedNow = `This covers the full remaining amount. Please select "Paid" instead.`;
       }
     }
@@ -356,28 +382,25 @@ setSalesUsers(response.data.users);
       tax: Number(invoiceData.tax),
       taxType: invoiceData.taxType === "none" ? "fixed" : invoiceData.taxType,
       total: Number(breakdown.total),
+      customFields: customFields.filter((f) => f.label.trim()),
     };
 
-    // Paid, Partially Paid, and Payment In Progress (a stuck/partial attempt) all track
-    // the CUMULATIVE amount actually collected so far (previous + this payment), and
-    // freeze the preferred-currency conversion against that real amount — not the total.
-    if (isPaidFamily || invoiceData.status === "in_progress") {
+    // Paid and Partially Paid both track the CUMULATIVE amount actually collected so far
+    // (previous + this payment), and freeze the preferred-currency conversion against
+    // that real amount — not the total. Skipped once already saved as Paid, since status
+    // and payment are locked and there's nothing new to collect.
+    if (isPaidFamily && editingInvoice?.status !== "paid") {
       const total = Number(breakdown.total);
       const payment = Number(paymentReceivedNow) || 0;
-      const maxAllowed = Math.max(total - effectivePreviousAmountPaid, 0);
+      const maxAllowed = Math.max(total - previousAmountPaid, 0);
 
       if (payment > maxAllowed) {
         toast.error(`Payment exceeds invoice total. Maximum you can enter now: ${maxAllowed.toFixed(2)}`);
         return;
       }
 
-      const newAmountPaid = effectivePreviousAmountPaid + payment;
+      const newAmountPaid = previousAmountPaid + payment;
       invoiceToSave.paymentReceivedNow = payment;
-      // Tell the backend whether the prior in_progress amount should be trusted and
-      // carried forward, or discarded because it was never actually received
-      if (needsPreviousConfirmation) {
-        invoiceToSave.previousAmountConfirmed = previousAmountConfirmed;
-      }
 
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
       const userCurrency = storedUser?.currency || "USD";
@@ -447,23 +470,11 @@ setSalesUsers(response.data.users);
 
   const PAID_FAMILY = ["paid", "partially_paid"];
   const isPaidFamily = PAID_FAMILY.includes(invoiceData.status);
-  // Statuses that track a real collected amount — in_progress represents a stuck/partial
-  // attempt (e.g. network failure mid-payment), so it carries the same amount tracking
-  const TRACKED_FAMILY = [...PAID_FAMILY, "in_progress"];
-  // Amount already collected before this save — carries over between any tracked status
+  // Amount already collected before this save — carries over between paid/partially_paid
   const previousAmountPaid =
-    editingInvoice && TRACKED_FAMILY.includes(editingInvoice.status)
+    editingInvoice && PAID_FAMILY.includes(editingInvoice.status)
       ? Number(editingInvoice.amountPaid) || 0
       : 0;
-
-  // in_progress is an uncertain/stuck attempt — we can't trust its recorded amount was
-  // actually received until the admin confirms it, one way or the other
-  const needsPreviousConfirmation =
-    editingInvoice?.status === "in_progress" && previousAmountPaid > 0;
-  // If the admin says the prior in_progress amount was NOT received, discard it from
-  // the remaining/cumulative math — the full amount must be collected again
-  const effectivePreviousAmountPaid =
-    needsPreviousConfirmation && previousAmountConfirmed === false ? 0 : previousAmountPaid;
 
   return (
     <Dialog open={isOpen} onOpenChange={closeModal}>
@@ -597,71 +608,33 @@ setSalesUsers(response.data.users);
                       name="status"
                       value={invoiceData.status}
                       onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      disabled={editingInvoice?.status === "paid"}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="unpaid">Unpaid</option>
                       <option value="paid">Paid</option>
-                      <option value="send">Send</option>
                       <option value="partially_paid">Partially Paid</option>
-                      <option value="in_progress">Payment In Progress</option>
                     </select>
+                    {editingInvoice?.status === "paid" && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        This invoice is marked Paid and its status can no longer be changed.
+                      </p>
+                    )}
                   </div>
 
-                  {(isPaidFamily || invoiceData.status === "in_progress") && (() => {
+                  {isPaidFamily && editingInvoice?.status !== "paid" && (() => {
                     const total = Number(calculateTotalBreakdown().total);
-                    const maxAllowed = Math.max(total - effectivePreviousAmountPaid, 0);
+                    const maxAllowed = Math.max(total - previousAmountPaid, 0);
                     const entered = Number(paymentReceivedNow) || 0;
                     const exceeds = entered > maxAllowed;
 
                     return (
                       <div>
-                        {needsPreviousConfirmation && (
-                          <div className={`mb-3 p-3 rounded-lg border ${
-                            validationErrors.previousAmountConfirmed ? "border-red-500 bg-red-50" : "border-amber-300 bg-amber-50"
-                          }`}>
-                            <p className="text-sm text-gray-700 mb-2">
-                              This invoice previously recorded{" "}
-                              <span className="font-semibold">
-                                {invoiceData.currency} {previousAmountPaid.toFixed(2)}
-                              </span>{" "}
-                              as Payment In Progress. Was this amount actually received?
-                            </p>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setPreviousAmountConfirmed(true)}
-                                className={`px-3 py-1.5 text-sm rounded-md border transition ${
-                                  previousAmountConfirmed === true
-                                    ? "bg-green-600 text-white border-green-600"
-                                    : "bg-white text-gray-700 border-gray-300"
-                                }`}
-                              >
-                                Yes, received
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPreviousAmountConfirmed(false)}
-                                className={`px-3 py-1.5 text-sm rounded-md border transition ${
-                                  previousAmountConfirmed === false
-                                    ? "bg-rose-600 text-white border-rose-600"
-                                    : "bg-white text-gray-700 border-gray-300"
-                                }`}
-                              >
-                                No, not received
-                              </button>
-                            </div>
-                            {validationErrors.previousAmountConfirmed && (
-                              <p className="mt-2 text-sm text-red-600">
-                                {validationErrors.previousAmountConfirmed}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        {effectivePreviousAmountPaid > 0 && (
+                        {previousAmountPaid > 0 && (
                           <p className="text-sm text-gray-600 mb-1">
                             Already Received:{" "}
                             <span className="font-semibold text-green-700">
-                              {invoiceData.currency} {effectivePreviousAmountPaid.toFixed(2)}
+                              {invoiceData.currency} {previousAmountPaid.toFixed(2)}
                             </span>
                           </p>
                         )}
@@ -807,6 +780,53 @@ setSalesUsers(response.data.users);
                       <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg font-medium">
                         {invoiceData.currency}: {calculateAmount()}
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Billing Details — varies by country/client, so kept optional */}
+              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">Billing Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Billing Address
+                    </label>
+                    <textarea
+                      name="billingAddress"
+                      rows="2"
+                      value={invoiceData.billingAddress}
+                      onChange={handleChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      placeholder="Defaults to the deal's address"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Client Tax ID
+                      </label>
+                      <input
+                        type="text"
+                        name="clientTaxId"
+                        value={invoiceData.clientTaxId}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        placeholder="e.g. GSTIN, VAT No."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        PO Number
+                      </label>
+                      <input
+                        type="text"
+                        name="poNumber"
+                        value={invoiceData.poNumber}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      />
                     </div>
                   </div>
                 </div>
@@ -965,6 +985,69 @@ setSalesUsers(response.data.users);
                 );
               })()}
             </div>
+          </div>
+
+          {/* Custom Fields — for anything the fixed form doesn't cover (varies by country/client) */}
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-800">Custom Fields</h3>
+              <button
+                type="button"
+                onClick={handleAddCustomField}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Field
+              </button>
+            </div>
+
+            {customFields.length === 0 ? (
+              <p className="text-sm text-gray-400">No custom fields added.</p>
+            ) : (
+              <div className="space-y-3">
+                {customFields.map((field, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <input
+                      type="text"
+                      value={field.label}
+                      onChange={(e) => handleCustomFieldChange(index, "label", e.target.value)}
+                      placeholder="Field name"
+                      className="w-1/3 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <select
+                      value={field.type}
+                      onChange={(e) => handleCustomFieldChange(index, "type", e.target.value)}
+                      className="w-28 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="date">Date</option>
+                    </select>
+                    <input
+                      type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                      value={field.value}
+                      onChange={(e) => handleCustomFieldChange(index, "value", e.target.value)}
+                      placeholder="Value"
+                      className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomField(index)}
+                      className="p-2.5 text-red-500 hover:text-red-700 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {validationErrors.customFields && (
+              <p className="mt-2 text-sm text-red-600">{validationErrors.customFields}</p>
+            )}
           </div>
 
           {/* Notes */}

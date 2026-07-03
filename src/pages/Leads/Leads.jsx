@@ -426,12 +426,17 @@ function LeadTableComponent() {
     }
   };
 
-  // A follow-up is "missed" if its date has passed, the lead is still open,
+  // A follow-up is "missed" only once its calendar day has fully passed
+  // (today's follow-ups are never "missed" yet), the lead is still open,
   // and no follow-up note has been logged for it yet.
   const isFollowUpMissed = (lead) => {
     if (!lead.followUpDate) return false;
     if (lead.status === "Converted" || lead.status === "Junk") return false;
-    const isPastDue = new Date(lead.followUpDate) < new Date();
+    const followUpDay = new Date(lead.followUpDate);
+    followUpDay.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPastDue = followUpDay < today;
     const hasNotes  = Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0;
     return isPastDue && !hasNotes;
   };
@@ -765,7 +770,7 @@ function LeadTableComponent() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-                History
+                {t("leads.table.history")}
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tour-lead-actions">{t("leads.table.actions")}</th>
             </tr>

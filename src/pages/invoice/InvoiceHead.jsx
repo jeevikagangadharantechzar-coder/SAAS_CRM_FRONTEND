@@ -80,16 +80,12 @@ const InvoiceHead = () => {
   const [summaryStats, setSummaryStats] = useState({
     total: 0,
     paid: 0,
-    pending: 0,
     unpaid: 0,
     partiallyPaid: 0,
-    inProgress: 0,
     totalAmount: 0,
     paidAmount: 0,
-    pendingAmount: 0,
     unpaidAmount: 0,
     partiallyPaidAmount: 0,
-    inProgressAmount: 0,
   });
 
   // Pagination — only affects the TABLE, not the cards
@@ -149,8 +145,8 @@ const InvoiceHead = () => {
 
   // ─── Summary stats computed from statsInvoices (all statuses) ─────────────
   useEffect(() => {
-    let total = 0, paid = 0, pending = 0, unpaid = 0, partiallyPaid = 0, inProgress = 0;
-    let totalAmount = 0, paidAmount = 0, pendingAmount = 0, unpaidAmount = 0, partiallyPaidAmount = 0, inProgressAmount = 0;
+    let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0;
+    let totalAmount = 0, paidAmount = 0, unpaidAmount = 0, partiallyPaidAmount = 0;
 
     statsInvoices.forEach((inv) => {
       total++;
@@ -160,24 +156,18 @@ const InvoiceHead = () => {
       if (inv.status === "paid") {
         paid++;
         paidAmount += amount;
-      } else if (inv.status === "send") {
-        pending++;
-        pendingAmount += amount;
       } else if (inv.status === "unpaid") {
         unpaid++;
         unpaidAmount += amount;
       } else if (inv.status === "partially_paid") {
         partiallyPaid++;
         partiallyPaidAmount += amount;
-      } else if (inv.status === "in_progress") {
-        inProgress++;
-        inProgressAmount += amount;
       }
     });
 
     setSummaryStats({
-      total, paid, pending, unpaid, partiallyPaid, inProgress,
-      totalAmount, paidAmount, pendingAmount, unpaidAmount, partiallyPaidAmount, inProgressAmount,
+      total, paid, unpaid, partiallyPaid,
+      totalAmount, paidAmount, unpaidAmount, partiallyPaidAmount,
     });
   }, [statsInvoices]);
 
@@ -422,9 +412,9 @@ const InvoiceHead = () => {
     const [displayValue, setDisplayValue] = useState(null);
 
     useEffect(() => {
-      // Paid/Partially Paid/In Progress invoice with frozen value stored in DB — never recalculate
+      // Paid/Partially Paid invoice with frozen value stored in DB — never recalculate
       if (
-        ["paid", "partially_paid", "in_progress"].includes(invoice.status) &&
+        ["paid", "partially_paid"].includes(invoice.status) &&
         invoice.preferredCurrencyValue &&
         invoice.preferredCurrency === userCurrency
       ) {
@@ -432,7 +422,7 @@ const InvoiceHead = () => {
         return;
       }
 
-      // Unpaid/Pending — use live rate
+      // Unpaid — use live rate
       const fetchLiveRate = async () => {
         const amount = Number(invoice.total) || 0;
         if (invoice.currency === userCurrency) {
@@ -457,8 +447,6 @@ const InvoiceHead = () => {
           ? "text-green-600 font-semibold"
           : invoice.status === "partially_paid"
           ? "text-purple-600 font-semibold"
-          : invoice.status === "in_progress"
-          ? "text-indigo-600 font-semibold"
           : "text-orange-500";
       return (
         <span className={colorClass}>
@@ -472,17 +460,16 @@ const InvoiceHead = () => {
 
   // ─── Preferred currency totals computed from statsInvoices ──────────────────
   const [preferredTotals, setPreferredTotals] = useState({
-    total: 0, paid: 0, pending: 0, unpaid: 0, partiallyPaid: 0, inProgress: 0,
+    total: 0, paid: 0, unpaid: 0, partiallyPaid: 0,
   });
 
   useEffect(() => {
     const calculatePreferredTotals = async () => {
-      let total = 0, paid = 0, pending = 0, unpaid = 0, partiallyPaid = 0, inProgress = 0;
+      let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0;
 
       for (const inv of statsInvoices) {
         const amount = Number(inv.total) || 0;
         const isPaidFamily = ["paid", "partially_paid"].includes(inv.status);
-        const isInProgress = inv.status === "in_progress";
         // Partially paid invoices only count the amount actually collected so far
         const collectedAmount = isPaidFamily ? (Number(inv.amountPaid) || amount) : amount;
         const hasFrozenValue = inv.preferredCurrencyValue != null && inv.preferredCurrency === userCurrency;
@@ -490,10 +477,7 @@ const InvoiceHead = () => {
         let convertedTotal = amount;
         let convertedCollected = collectedAmount;
 
-        if (isInProgress && hasFrozenValue) {
-          // Frozen at the time status became In Progress — never recalculate
-          convertedTotal = inv.preferredCurrencyValue;
-        } else if (inv.currency !== userCurrency) {
+        if (inv.currency !== userCurrency) {
           try {
             const res = await axios.get(`https://open.er-api.com/v6/latest/${inv.currency}`);
             const rate = res.data?.rates?.[userCurrency] || 1;
@@ -510,18 +494,14 @@ const InvoiceHead = () => {
           convertedCollected = inv.preferredCurrencyValue;
         }
 
-        // Payment In Progress invoices are tracked in their own card only —
-        // excluded from the overall Total Invoices value
-        if (inv.status !== "in_progress") total += convertedTotal;
+        total += convertedTotal;
 
         if (inv.status === "paid") paid += convertedCollected;
-        else if (inv.status === "send") pending += convertedTotal;
         else if (inv.status === "unpaid") unpaid += convertedTotal;
         else if (inv.status === "partially_paid") partiallyPaid += convertedCollected;
-        else if (inv.status === "in_progress") inProgress += convertedTotal;
       }
 
-      setPreferredTotals({ total, paid, pending, unpaid, partiallyPaid, inProgress });
+      setPreferredTotals({ total, paid, unpaid, partiallyPaid });
     };
 
     calculatePreferredTotals();
@@ -545,7 +525,7 @@ const InvoiceHead = () => {
       </div>
 
       {/* Summary Cards — show totals across ALL filtered invoices, not just current page */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div
           className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
           onClick={() => setFilterStatus("")}
@@ -581,25 +561,6 @@ const InvoiceHead = () => {
           <div className="flex flex-col">
             <span className="text-xs text-gray-500 mb-1">Paid Value ({userCurrency})</span>
             <span className="text-xl font-bold text-green-600">{currencySymbol} {formatPreferred(preferredTotals.paid)}</span>
-          </div>
-        </div>
-
-        <div
-          className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => setFilterStatus("send")}
-        >
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Pending Invoices</p>
-              <p className="text-2xl font-bold text-yellow-600">{summaryStats.pending}</p>
-            </div>
-            <div className="p-2 bg-yellow-100 rounded-xl">
-              <Receipt className="h-5 w-5 text-yellow-600" />
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-500 mb-1">Pending Value ({userCurrency})</span>
-            <span className="text-xl font-bold text-yellow-600">{currencySymbol} {formatPreferred(preferredTotals.pending)}</span>
           </div>
         </div>
 
@@ -641,24 +602,6 @@ const InvoiceHead = () => {
           </div>
         </div>
 
-        <div
-          className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => setFilterStatus("in_progress")}
-        >
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Payment In Progress</p>
-              <p className="text-2xl font-bold text-indigo-600">{summaryStats.inProgress}</p>
-            </div>
-            <div className="p-2 bg-indigo-100 rounded-xl">
-              <Clock className="h-5 w-5 text-indigo-600" />
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-500 mb-1">In Progress Value ({userCurrency})</span>
-            <span className="text-xl font-bold text-indigo-600">{currencySymbol} {formatPreferred(preferredTotals.inProgress)}</span>
-          </div>
-        </div>
       </div>
 
       {statusFilter === "pending" && (
@@ -717,10 +660,8 @@ const InvoiceHead = () => {
           >
             <option value="">All Status</option>
             <option value="paid">Paid</option>
-            <option value="send">Pending</option>
             <option value="unpaid">Unpaid</option>
             <option value="partially_paid">Partially Paid</option>
-            <option value="in_progress">Payment In Progress</option>
           </select>
         </div>
 
@@ -816,20 +757,12 @@ const InvoiceHead = () => {
                     className={`px-3 py-1 text-xs font-semibold rounded-full ${
                       invoice.status === "paid"
                         ? "bg-green-100 text-green-700"
-                        : invoice.status === "send"
-                        ? "bg-blue-100 text-blue-700"
                         : invoice.status === "partially_paid"
                         ? "bg-purple-100 text-purple-700"
-                        : invoice.status === "in_progress"
-                        ? "bg-indigo-100 text-indigo-700"
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {invoice.status === "partially_paid"
-                      ? "Partially Paid"
-                      : invoice.status === "in_progress"
-                      ? "Payment In Progress"
-                      : invoice.status}
+                    {invoice.status === "partially_paid" ? "Partially Paid" : invoice.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 font-semibold">
