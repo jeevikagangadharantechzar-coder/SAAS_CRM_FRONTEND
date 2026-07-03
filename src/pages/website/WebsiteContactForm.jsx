@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
 import ReCAPTCHA from "react-google-recaptcha";
@@ -19,6 +20,7 @@ import "react-phone-input-2/lib/style.css";
 import "react-toastify/dist/ReactToastify.css";
 
 const WebsiteContactForm = () => {
+  const { tenantSlug } = useParams();
   const API_URL = import.meta.env.VITE_API_URL;
   const [countries] = useState(getNames());
   const [captchaToken, setCaptchaToken] = useState(null);
@@ -181,7 +183,13 @@ const WebsiteContactForm = () => {
       setIsSubmitting(false);
       return;
     }
-    console.log("Submitting to:", `${API_URL}/public/contact-form`);
+
+    const baseUrl = API_URL.replace(/\/api$/, "");
+    const submitUrl = tenantSlug 
+      ? `${baseUrl}/${tenantSlug}/api/public/contact-form`
+      : `${API_URL}/public/contact-form`;
+
+    console.log("Submitting to:", submitUrl);
     console.log("FORM DATA BEING SENT ", formData);
 
     try {
@@ -204,7 +212,7 @@ const WebsiteContactForm = () => {
       });
 
       await axios.post(
-        `${API_URL}/public/contact-form`,
+        submitUrl,
         dataToSend,
       );
       toast.dismiss();
@@ -228,7 +236,8 @@ const WebsiteContactForm = () => {
 
     } catch (err) {
       toast.dismiss();
-      toast.error("Something went wrong. Please try again.");
+      const errorMessage = err.response?.data?.message || "Something went wrong. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

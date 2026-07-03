@@ -206,6 +206,7 @@ function App() {
               <Route path="/:tenantSlug/upgrade" element={<UpgradePlan />} />
               <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
               <Route path="/contact" element={<WebsiteContactForm />} />
+              <Route path="/:tenantSlug/contact" element={<WebsiteContactForm />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
