@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
+import { initSocket, getSocket } from "../../utils/socket";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -48,21 +49,38 @@ function AllDealsComponent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState(null);
-  const [selectedDeals, setSelectedDeals] = useState([]);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteDeal, setDeleteDeal] = useState(null);
   const [users, setUsers] = useState([]);
   const [userRole, setUserRole] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [filters, setFilters] = useState({ stage: "", assignedTo: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdownCoords, setDropdownCoords] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [hoveredDeal, setHoveredDeal] = useState(null);
   const [tooltipCoords, setTooltipCoords] = useState(null);
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
   const [targetLinkedDealIds, setTargetLinkedDealIds] = useState(new Map());
+
+  // Reject modal
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [dealToReject, setDealToReject] = useState(null); // { id, name }
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
+  // Rejection-reason hover tooltip (portalled so it's never clipped)
+  const [hoveredRejectedDeal, setHoveredRejectedDeal] = useState(null);
+  const [rejectTooltipCoords, setRejectTooltipCoords] = useState(null);
+  const [rejectTooltipTimeout, setRejectTooltipTimeout] = useState(null);
+
+  const handleRejectionHover = (deal, event) => {
+    if (rejectTooltipTimeout) clearTimeout(rejectTooltipTimeout);
+    const rect = event.currentTarget.getBoundingClientRect();
+    setRejectTooltipCoords({ top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX });
+    setHoveredRejectedDeal(deal);
+  };
+  const handleRejectionLeave = () => {
+    const timeout = setTimeout(() => setHoveredRejectedDeal(null), 200);
+    setRejectTooltipTimeout(timeout);
+  };
 
   const itemsPerPage = 10;
 
@@ -74,12 +92,39 @@ function AllDealsComponent() {
       try {
         const user = JSON.parse(userData);
         role = user.role?.name || "";
+        setCurrentUserId(user._id || user.id || "");
       } catch (err) {
         console.error("Error parsing user data:", err);
       }
     }
     setUserRole(role);
   }, [setIsOpen, setSteps]);
+
+  useEffect(() => {
+    initSocket();
+  }, []);
+
+  // When Admin rejects a deal, it disappears from the sales person's own
+  // account immediately instead of waiting for their next refresh.
+  useEffect(() => {
+    if (userRole === "Admin" || !userRole) return;
+    const socket = getSocket();
+    if (!socket) return;
+    const rejectedHandler = ({ dealId, dealName }) => {
+      setDeals((prev) => prev.filter((d) => d._id !== dealId));
+      toast.info(`Deal "${dealName}" was rejected by Admin and removed from your list.`);
+    };
+    // Any stage change (e.g. moving to Closed Won) should refresh immediately
+    // rather than waiting for the 30s poll, since Closed Won also disappears
+    // from the sales person's own account.
+    const stageHandler = () => fetchDeals();
+    socket.on("deal_rejected", rejectedHandler);
+    socket.on("deal_stage_updated", stageHandler);
+    return () => {
+      socket.off("deal_rejected", rejectedHandler);
+      socket.off("deal_stage_updated", stageHandler);
+    };
+  }, [userRole]);
 
   const startTour = () => {
     setSteps(dealTourSteps);
@@ -315,81 +360,40 @@ function AllDealsComponent() {
     currentPage * itemsPerPage
   );
 
-  // Checkbox helpers
-  const handleCheckboxChange = (id) =>
-    setSelectedDeals((prev) =>
-      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
-    );
-
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      const allFilteredIds = filteredDeals.map((d) => d._id);
-      setSelectedDeals(allFilteredIds);
-    } else {
-      setSelectedDeals([]);
-    }
-  };
-
-  const isAllSelected =
-    filteredDeals.length > 0 &&
-    filteredDeals.every((d) => selectedDeals.includes(d._id));
-
-  // Bulk Delete
-  const handleBulkDelete = async () => {
-    if (!selectedDeals.length) return toast.info("Select deals to delete");
-    setIsBulkDeleteModalOpen(true);
-  };
-
-/* ── Handle Bulk Delete Confirm Function ─────────────────────── */
-  const handleBulkDeleteConfirm = async () => {
-    try {
-      setIsBulkDeleting(true);
-      const token = localStorage.getItem("token");
-      await axios.delete(`${API_URL}/deals/bulk-delete`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { ids: selectedDeals },
-      });
-      toast.success(`Successfully deleted ${selectedDeals.length} deal(s)`);
-      setSelectedDeals([]);
-      setIsBulkDeleteModalOpen(false);
-      await fetchDeals();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete deals");
-    } finally {
-      setIsBulkDeleting(false);
-    }
-  };
-
 /* ── Handle Edit Function ─────────────────────── */
   const handleEdit = (deal) => {
     navigate(`/${tenantSlug}/createDeal`, { state: { deal } });
     setOpenDropdownId(null);
   };
 
-/* ── Handle Delete Click Function ─────────────────────── */
-  const handleDeleteClick = (deal) => {
-    setDeleteDeal(deal);
-    setIsDeleteModalOpen(true);
+/* ── Handle Reject Click / Submit Functions ─────────────────────── */
+  const handleRejectClick = (deal) => {
+    setDealToReject({ id: deal._id, name: deal.dealName });
+    setRejectReason("");
+    setShowRejectModal(true);
     setOpenDropdownId(null);
   };
 
-/* ── Handle Delete Confirm Function ─────────────────────── */
-  const handleDeleteConfirm = async () => {
+  const handleRejectSubmit = async () => {
+    if (!dealToReject) return;
+    if (!rejectReason.trim()) return toast.error("Please enter a reason for rejecting this deal");
+    setRejecting(true);
     try {
-      setIsDeleting(true);
       const token = localStorage.getItem("token");
-      await axios.delete(`${API_URL}/deals/delete-deal/${deleteDeal._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("Deal deleted successfully");
-      setIsDeleteModalOpen(false);
-      await fetchDeals();
-      setSelectedDeals((prev) => prev.filter((d) => d !== deleteDeal._id));
-    } catch (err) {
-      console.error("Delete error:", err);
-      toast.error(err.response?.data?.message || "Failed to delete deal");
+      await axios.patch(
+        `${API_URL}/deals/${dealToReject.id}/reject`,
+        { reason: rejectReason.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Deal rejected");
+      setShowRejectModal(false);
+      setDealToReject(null);
+      setRejectReason("");
+      fetchDeals();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to reject deal");
     } finally {
-      setIsDeleting(false);
+      setRejecting(false);
     }
   };
 
@@ -418,6 +422,14 @@ function AllDealsComponent() {
           >
             <Eye className="w-4 h-4" /> Take Tour
           </button>
+          {userRole === "Admin" && (
+            <button
+              onClick={() => navigate(`/${tenantSlug}/deals/rejected`)}
+              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+            >
+              <Ban className="w-4 h-4" /> Reject Deals
+            </button>
+          )}
           {userRole === "Admin" && (
             <button
               onClick={() => navigate(`/${tenantSlug}/createDeal`)}
@@ -526,50 +538,11 @@ function AllDealsComponent() {
         </div>
       )}
 
-      {/* Bulk Delete Bar */}
-      {selectedDeals.length > 0 && (
-        <div className="mb-3 flex items-center gap-3">
-          <span className="text-sm text-gray-600 font-medium">
-            {selectedDeals.length} deal{selectedDeals.length > 1 ? "s" : ""} selected
-          </span>
-          <button
-            onClick={handleBulkDelete}
-            disabled={isBulkDeleting}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
-          >
-            <Trash2 size={15} />
-            {isBulkDeleting
-              ? "Deleting..."
-              : `Delete Selected (${selectedDeals.length})`}
-          </button>
-          <button
-            onClick={() => setSelectedDeals([])}
-            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Clear selection
-          </button>
-        </div>
-      )}
-
       {/* Deals Table */}
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm tour-deals-table">
         <table className="min-w-full text-sm text-gray-700">
           <thead className="bg-gray-100">
             <tr>
-              
-                <th className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    onChange={handleSelectAll}
-                    checked={isAllSelected}
-                    ref={(input) => {
-                      if (input) {
-                        input.indeterminate = !isAllSelected && selectedDeals.length > 0;
-                      }
-                    }}
-                  />
-                </th>
-              
               <th className="px-6 py-3 text-left">Deal Name</th>
               <th className="px-6 py-3 text-left">Client Type</th>
               <th className="px-6 py-3 text-left">Assigned To</th>
@@ -586,21 +559,31 @@ function AllDealsComponent() {
                 const hasFollowUp = deal.followUpDate;
                 const isToday = isFollowUpToday(deal.followUpDate);
                 const isOverdue = isFollowUpOverdue(deal.followUpDate);
-                
+                const isActiveDisabled = deal.isActive === false && userRole !== "Admin";
+                const isTerminal = deal.stage === "Rejected" || deal.stage === "Closed Won";
+
+                const rejectedByName = deal.rejectedBy ? `${deal.rejectedBy.firstName || ""} ${deal.rejectedBy.lastName || ""}`.trim() : "";
+                const wonByName = deal.wonBy ? `${deal.wonBy.firstName || ""} ${deal.wonBy.lastName || ""}`.trim() : "";
+                const convertedByName = deal.convertedBy ? `${deal.convertedBy.firstName || ""} ${deal.convertedBy.lastName || ""}`.trim() : "";
+                const isSelfRejected = deal.rejectedBy && String(deal.rejectedBy._id) === String(currentUserId);
+                const isSelfWon = deal.wonBy && String(deal.wonBy._id || deal.wonBy) === String(currentUserId);
+                const isSelfConverted = deal.convertedBy && String(deal.convertedBy._id || deal.convertedBy) === String(currentUserId);
+                const rejectedBadgeText = isSelfRejected ? "You rejected the deal" : `${rejectedByName || "Admin"} rejected the deal`;
+                const wonByIsAdmin = deal.wonBy?.role?.name === "Admin";
+                const wonBadgeText = isSelfWon ? "You closed deal won" : wonByIsAdmin ? `Admin ${wonByName || "—"} won the deal` : `${wonByName || "Someone"} closed deal won`;
+                const convertedByIsAdmin = deal.convertedBy?.role?.name === "Admin";
+                const convertedBadgeText = isSelfConverted ? "You converted lead to deal" : convertedByIsAdmin ? `Admin ${convertedByName || "—"} converted lead to deal` : `${convertedByName || "Someone"} converted lead to deal`;
+
                 return (
                   <tr
                     key={deal._id}
-                    className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                    title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
+                    className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                      isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
+                      : isTerminal ? "pointer-events-none select-none"
+                      : ""
+                    }`}
                   >
-                    
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          onChange={() => handleCheckboxChange(deal._id)}
-                          checked={selectedDeals.includes(deal._id)}
-                        />
-                      </td>
-                    
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
@@ -609,6 +592,23 @@ function AllDealsComponent() {
                         >
                           {deal.dealName || "-"}
                         </button>
+                        {deal.stage === "Rejected" ? (
+                          <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
+                            {rejectedBadgeText}
+                          </span>
+                        ) : deal.stage === "Closed Won" ? (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto">
+                            {wonBadgeText}
+                          </span>
+                        ) : deal.convertedBy ? (
+                          <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto">
+                            {convertedBadgeText}
+                          </span>
+                        ) : isActiveDisabled ? (
+                          <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
+                            Pending Reassignment
+                          </span>
+                        ) : null}
                         {/* Follow-up bell (only when not target-linked to avoid double bell) */}
                         {hasFollowUp && !targetLinkedDealIds.has(String(deal._id)) && (
                           <div
@@ -656,7 +656,19 @@ function AllDealsComponent() {
                         ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}`
                         : "-"}
                     </td>
-                    <td className="px-6 py-4">{deal.stage || "-"}</td>
+                    <td className="px-6 py-4">
+                      {deal.stage === "Rejected" ? (
+                        <span
+                          className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
+                          onMouseEnter={(e) => deal.rejectionReason && handleRejectionHover(deal, e)}
+                          onMouseLeave={handleRejectionLeave}
+                        >
+                          Rejected
+                        </span>
+                      ) : (
+                        deal.stage || "-"
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       {formatCurrencyValue(deal.value)}
                     </td>
@@ -680,7 +692,7 @@ function AllDealsComponent() {
             ) : (
               <tr>
                 <td
-                  colSpan={userRole === "Admin" ? "7" : "6"}
+                  colSpan={7}
                   className="px-6 py-8 text-center text-gray-500"
                 >
                   No deals found
@@ -823,77 +835,100 @@ function AllDealsComponent() {
               left: dropdownCoords.left,
             }}
           >
-            <button
-              onClick={() =>
-                handleEdit(deals.find((d) => d._id === openDropdownId))
-              }
-              className="flex items-center px-3 py-2 hover:bg-gray-100 w-full text-left"
-            >
-              <Edit size={16} className="mr-2" /> Edit
-            </button>
-            <button
-              onClick={() =>
-                handleDeleteClick(deals.find((d) => d._id === openDropdownId))
-              }
-              className="flex items-center px-3 py-2 hover:bg-gray-100 w-full text-left text-red-600"
-            >
-              <Trash2 size={16} className="mr-2" /> Delete
-            </button>
+            {(() => {
+              const activeDeal = deals.find((d) => d._id === openDropdownId);
+              const activeIsTerminal = activeDeal?.stage === "Rejected" || activeDeal?.stage === "Closed Won";
+              const editDisabled = (activeDeal?.isActive === false && userRole !== "Admin") || activeIsTerminal;
+              return (
+                <>
+                  <button
+                    onClick={() => !editDisabled && handleEdit(activeDeal)}
+                    disabled={editDisabled}
+                    title={editDisabled ? "Disabled pending admin reassignment" : undefined}
+                    className={`flex items-center px-3 py-2 w-full text-left ${editDisabled ? "text-gray-300 cursor-not-allowed" : "hover:bg-gray-100"}`}
+                  >
+                    <Edit size={16} className="mr-2" /> Edit
+                  </button>
+                  {userRole === "Admin" && !activeIsTerminal && (
+                    <button
+                      onClick={() => handleRejectClick(activeDeal)}
+                      className="flex items-center px-3 py-2 hover:bg-gray-100 w-full text-left text-red-600"
+                    >
+                      <Ban size={16} className="mr-2" /> Reject
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>,
           document.body
         )}
 
-      {/* Delete Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="max-w-sm p-6">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <p>
-            Are you sure you want to delete{" "}
-            <strong>{deleteDeal?.dealName}</strong>?
-          </p>
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              onClick={() => setIsDeleteModalOpen(false)}
-              className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-              className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </button>
+      {/* Rejection reason tooltip — portalled so it's never clipped */}
+      {hoveredRejectedDeal?.rejectionReason && rejectTooltipCoords && ReactDOM.createPortal(
+        <div
+          className="fixed z-50 w-80 max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-xl p-3"
+          style={{ top: rejectTooltipCoords.top, left: rejectTooltipCoords.left }}
+          onMouseEnter={() => { if (rejectTooltipTimeout) clearTimeout(rejectTooltipTimeout); }}
+          onMouseLeave={handleRejectionLeave}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
+            {hoveredRejectedDeal.rejectedAt && (
+              <p className="text-[10px] text-gray-400 font-medium shrink-0 ml-2">
+                {new Date(hoveredRejectedDeal.rejectedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                {" "}
+                {new Date(hoveredRejectedDeal.rejectedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+          <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{hoveredRejectedDeal.rejectionReason}</p>
+        </div>,
+        document.body
+      )}
 
-      {/* Bulk Delete Modal */}
-      <Dialog open={isBulkDeleteModalOpen} onOpenChange={setIsBulkDeleteModalOpen}>
-        <DialogContent className="max-w-sm p-6">
+      {/* Reject Modal */}
+      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Ban className="w-5 h-5" />
+              Reject Deal
+            </DialogTitle>
           </DialogHeader>
-          <p>
-            Are you sure you want to delete <strong>{selectedDeals.length}</strong> deal(s)?
+
+          <p className="mb-3 text-gray-700">
+            Rejecting <span className="font-semibold">{dealToReject?.name}</span>. It will move to
+            the Reject Deals list and disappear from the sales person's account. Please give a reason.
           </p>
-          <p className="text-sm text-red-600 mt-2">This action cannot be undone.</p>
-          <div className="mt-6 flex justify-end space-x-3">
+
+          <textarea
+            rows={4}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Reason for rejecting this deal..."
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none mb-4"
+          />
+
+          <div className="flex justify-end gap-3">
             <button
-              onClick={() => setIsBulkDeleteModalOpen(false)}
-              className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+              onClick={() => {
+                setShowRejectModal(false);
+                setDealToReject(null);
+                setRejectReason("");
+              }}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
             >
               Cancel
             </button>
+
             <button
-              onClick={handleBulkDeleteConfirm}
-              disabled={isBulkDeleting}
-              className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed"
+              onClick={handleRejectSubmit}
+              disabled={rejecting || !rejectReason.trim()}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2 disabled:opacity-60"
             >
-              {isBulkDeleting ? "Deleting..." : "Delete All"}
+              <Ban className="w-4 h-4" />
+              {rejecting ? "Rejecting..." : "Reject Deal"}
             </button>
           </div>
         </DialogContent>

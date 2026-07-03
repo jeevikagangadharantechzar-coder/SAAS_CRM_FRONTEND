@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,7 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   MoreVertical,
-  Trash2,
+  Ban,
   Edit,
   Handshake,
   Search,
@@ -19,7 +20,7 @@ import {
   MessageSquarePlus,
 } from "lucide-react";
 
-import { initSocket } from "../../utils/socket";
+import { initSocket, getSocket } from "../../utils/socket";
 import {
   Dialog,
   DialogContent,
@@ -50,10 +51,29 @@ function LeadTableComponent() {
   const { t } = useTranslation();
 
   const [leads, setLeads] = useState([]);
-  const [selectedLeads, setSelectedLeads] = useState([]);
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [leadToDelete, setLeadToDelete] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [leadToReject, setLeadToReject] = useState(null); // { id, name }
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
+  // Rejection-reason hover tooltip (portalled so it never gets clipped by the
+  // table's horizontal-scroll container)
+  const [hoveredRejectedLead, setHoveredRejectedLead] = useState(null);
+  const [rejectTooltipCoords, setRejectTooltipCoords] = useState(null);
+  const [rejectTooltipTimeout, setRejectTooltipTimeout] = useState(null);
+
+  const handleRejectionHover = (lead, event) => {
+    if (rejectTooltipTimeout) clearTimeout(rejectTooltipTimeout);
+    const rect = event.currentTarget.getBoundingClientRect();
+    setRejectTooltipCoords({ top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX });
+    setHoveredRejectedLead(lead);
+  };
+
+  const handleRejectionLeave = () => {
+    const timeout = setTimeout(() => setHoveredRejectedLead(null), 200);
+    setRejectTooltipTimeout(timeout);
+  };
 
   const [loading, setLoading] = useState(true);
 
@@ -66,6 +86,7 @@ function LeadTableComponent() {
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 1 });
 
   const [userRole, setUserRole] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [targetLinkedLeadIds, setTargetLinkedLeadIds] = useState(new Map());
 
   // Filters
@@ -117,6 +138,7 @@ function LeadTableComponent() {
     if (userData) {
       const user = JSON.parse(userData);
       setUserRole(user.role?.name || "");
+      setCurrentUserId(user._id || user.id || "");
     }
   }, []);
 
@@ -169,6 +191,35 @@ function LeadTableComponent() {
   useEffect(() => {
     initSocket();
   }, []);
+
+  // When Admin rejects a lead, it disappears from the sales person's own
+  // account immediately instead of waiting for their next list refresh.
+  useEffect(() => {
+    if (userRole === "Admin") return;
+    const socket = getSocket();
+    if (!socket) return;
+    const handler = ({ leadId, leadName }) => {
+      setLeads((prev) => prev.filter((l) => l._id !== leadId));
+      toast.info(`Lead "${leadName}" was rejected by Admin and removed from your list.`);
+    };
+    socket.on("lead_rejected", handler);
+    return () => socket.off("lead_rejected", handler);
+  }, [userRole]);
+
+  // When Admin converts one of the sales person's leads to a deal, it disappears
+  // from their own account immediately too — the read-only copy is Admin-only.
+  // (Also fires for the sales person's own conversions — harmless no-op there
+  // since handleConvertDeal already removed it optimistically.)
+  useEffect(() => {
+    if (userRole === "Admin") return;
+    const socket = getSocket();
+    if (!socket) return;
+    const handler = ({ leadId }) => {
+      setLeads((prev) => prev.filter((l) => l._id !== leadId));
+    };
+    socket.on("lead_converted", handler);
+    return () => socket.off("lead_converted", handler);
+  }, [userRole]);
 
   // fetch leads
   const fetchLeads = useCallback(async () => {
@@ -262,7 +313,6 @@ function LeadTableComponent() {
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    setSelectedLeads([]);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -301,76 +351,34 @@ function LeadTableComponent() {
     setMenuOpen(null);
   };
 
-  const handleDeleteClick = (leadId) => {
-    setLeadToDelete(leadId);
-    setShowDeleteModal(true);
+  const handleRejectClick = (lead) => {
+    setLeadToReject({ id: lead._id, name: lead.leadName });
+    setRejectReason("");
+    setShowRejectModal(true);
     setMenuOpen(null);
   };
 
-  const handleDeleteLead = async (id) => {
+  const handleRejectSubmit = async () => {
+    if (!leadToReject) return;
+    if (!rejectReason.trim()) return toast.error("Please enter a reason for rejecting this lead");
+    setRejecting(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.delete(`${API_URL}/leads/deleteLead/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 200) {
-        setLeads((prev) => prev.filter((lead) => lead._id !== id));
-        toast.success(t("leads.toast.deleteSuccess"));
-        if (leads.length === 1 && currentPage > 1) {
-          setCurrentPage(currentPage - 1);
-        }
-        fetchLeads();
-      } else {
-        toast.error(t("leads.toast.deleteFailed"));
-      }
-    } catch (error) {
-      toast.error(t("leads.toast.deleteError"));
-    } finally {
-      setShowDeleteModal(false);
-      setLeadToDelete(null);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const responses = await Promise.all(
-        selectedLeads.map((id) =>
-          axios.delete(`${API_URL}/leads/deleteLead/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-        )
+      await axios.patch(
+        `${API_URL}/leads/${leadToReject.id}/reject`,
+        { reason: rejectReason.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      const allSuccess = responses.every((res) => res.status === 200);
-      if (allSuccess) {
-        setLeads((prev) => prev.filter((l) => !selectedLeads.includes(l._id)));
-        toast.success(t("leads.toast.bulkDeleteSuccess", { count: selectedLeads.length }));
-        setSelectedLeads([]);
-        if (leads.length === selectedLeads.length && currentPage > 1) {
-          setCurrentPage(currentPage - 1);
-        }
-        fetchLeads();
-      } else {
-        toast.error(t("leads.toast.bulkDeletePartialFail"));
-      }
+      toast.success("Lead rejected");
+      setShowRejectModal(false);
+      setLeadToReject(null);
+      setRejectReason("");
+      fetchLeads();
     } catch (error) {
-      toast.error(t("leads.toast.bulkDeleteError"));
+      toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
-      setShowDeleteModal(false);
+      setRejecting(false);
     }
-  };
-
-  const handleSelectLead = (id) => {
-    setSelectedLeads((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAll = (e) => {
-    if (e.target.checked) setSelectedLeads(leads.map((l) => l._id));
-    else setSelectedLeads([]);
   };
 
   // Convert Modal
@@ -411,8 +419,14 @@ function LeadTableComponent() {
         autoClose: 3000,
       });
 
-      setLeads((prev) => prev.filter((l) => l._id !== selectedLead._id));
-      setSelectedLeads((prev) => prev.filter((id) => id !== selectedLead._id));
+      // The lead always keeps a "Converted" copy server-side, but only Admin's
+      // own account can see it — the sales person never sees a copy of their
+      // own (or anyone else's) conversions.
+      if (userRole === "Admin") {
+        setLeads((prev) => prev.map((l) => (l._id === selectedLead._id ? { ...l, status: "Converted" } : l)));
+      } else {
+        setLeads((prev) => prev.filter((l) => l._id !== selectedLead._id));
+      }
       setConvertModalOpen(false);
       setSelectedLead(null);
       fetchLeads();
@@ -634,13 +648,10 @@ function LeadTableComponent() {
             <Eye className="w-4 h-4" /> {t("leads.buttons.takeTour")}
           </button>
 
-          {selectedLeads.length > 0 && (
+          {userRole === "Admin" && (
             <button
-              onClick={() => {
-                setLeadToDelete(null);
-                setShowDeleteModal(true);
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow flex items-center gap-2"
+              onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
+              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
               {t("leads.buttons.deleteSelected", { count: selectedLeads.length })}
@@ -778,20 +789,28 @@ function LeadTableComponent() {
 
           <tbody className="divide-y divide-gray-200">
             {leads.length > 0 ? (
-              leads.map((lead, idx) => (
+              leads.map((lead, idx) => {
+                const isTerminal = lead.status === "Rejected" || lead.status === "Converted";
+                const isActiveDisabled = lead.isActive === false && userRole !== "Admin";
+                const isDisabled = isTerminal || isActiveDisabled;
+                const rejectedByName = lead.rejectedBy ? `${lead.rejectedBy.firstName || ""} ${lead.rejectedBy.lastName || ""}`.trim() : "";
+                const convertedByName = lead.convertedBy ? `${lead.convertedBy.firstName || ""} ${lead.convertedBy.lastName || ""}`.trim() : "";
+                const isSelfRejected = lead.rejectedBy && String(lead.rejectedBy._id) === String(currentUserId);
+                const isSelfConverted = lead.convertedBy && String(lead.convertedBy._id) === String(currentUserId);
+                const rejectedBadgeText = isSelfRejected ? "You rejected the lead" : `${rejectedByName || "Admin"} rejected the lead`;
+                const convertedBadgeText = isSelfConverted ? "You converted lead to deal" : `${convertedByName || "Someone"} converted lead to deal`;
+                return (
                 <tr
                   key={lead._id}
-                  className={`hover:bg-gray-50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} whitespace-nowrap`}
+                  title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
+                  className={`hover:bg-gray-50 ${
+                    idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  } whitespace-nowrap ${
+                    isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
+                    : isTerminal ? "pointer-events-none select-none"
+                    : ""
+                  }`}
                 >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      checked={selectedLeads.includes(lead._id)}
-                      onChange={() => handleSelectLead(lead._id)}
-                    />
-                  </td>
-
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
@@ -805,6 +824,19 @@ function LeadTableComponent() {
                           >
                             {lead.leadName || t("leads.table.unnamedLead")}
                           </span>
+                          {lead.status === "Rejected" ? (
+                            <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
+                              {rejectedBadgeText}
+                            </span>
+                          ) : lead.status === "Converted" ? (
+                            <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto">
+                              {convertedBadgeText}
+                            </span>
+                          ) : isActiveDisabled ? (
+                            <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
+                              Pending Reassignment
+                            </span>
+                          ) : null}
                           {targetLinkedLeadIds.has(String(lead._id)) && (() => {
                             const tInfo = targetLinkedLeadIds.get(String(lead._id));
                             const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -843,16 +875,33 @@ function LeadTableComponent() {
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
 
                   <td className="px-4 py-3">
-                    <select
-                      value={lead.status}
-                      onChange={(e) => handleStatusChange(lead._id, e.target.value)}
-                      className={getStatusSelectClass(lead.status)}
-                    >
-                      <option value="Hot">{t("leads.status.hot")}</option>
-                      <option value="Warm">{t("leads.status.warm")}</option>
-                      <option value="Cold">{t("leads.status.cold")}</option>
-                      <option value="Junk">{t("leads.status.junk")}</option>
-                    </select>
+                    {lead.status === "Rejected" ? (
+                      <span
+                        className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
+                        onMouseEnter={(e) => lead.rejectionReason && handleRejectionHover(lead, e)}
+                        onMouseLeave={handleRejectionLeave}
+                      >
+                        Rejected
+                      </span>
+                    ) : lead.status === "Converted" ? (
+                      <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
+                        Converted
+                      </span>
+                    ) : (
+                      <select
+                        value={lead.status}
+                        disabled={isDisabled}
+                        onChange={(e) =>
+                          handleStatusChange(lead._id, e.target.value)
+                        }
+                        className={`${getStatusSelectClass(lead.status)} ${isDisabled ? "cursor-not-allowed opacity-70" : ""}`}
+                      >
+                        <option value="Hot">Hot</option>
+                        <option value="Warm">Warm</option>
+                        <option value="Cold">Cold</option>
+                        <option value="Junk">Junk</option>
+                      </select>
+                    )}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-700">
@@ -869,9 +918,10 @@ function LeadTableComponent() {
                     <div className="relative flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => openFollowUpPicker(lead._id)}
-                        className="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 transition"
-                        disabled={followUpSavingId === lead._id}
+                        onClick={() => !isDisabled && openFollowUpPicker(lead._id)}
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
+                        title={isDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
+                        disabled={followUpSavingId === lead._id || isDisabled}
                       >
                         <Calendar className="w-4 h-4 text-gray-500" />
                         <span className="text-sm">
@@ -929,8 +979,13 @@ function LeadTableComponent() {
                         style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
                       >
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleEdit(lead._id); }}
-                          className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isDisabled) return;
+                            handleEdit(lead._id);
+                          }}
+                          disabled={isDisabled}
+                          className={`flex items-center w-full px-3 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
                         >
                           <Edit className="w-4 h-4 mr-2" /> {t("leads.actions.edit")}
                         </button>
@@ -938,6 +993,7 @@ function LeadTableComponent() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                              if (isDisabled) return;
                             openAddNoteModal(lead);
                           }}
                           className="flex items-center w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-100"
@@ -948,23 +1004,30 @@ function LeadTableComponent() {
                         {lead.status !== "Converted" && (
                           <button
                             onClick={(e) => { e.stopPropagation(); openConvertModal(lead); }}
-                            className="flex items-center w-full px-3 py-2 text-sm text-green-600 hover:bg-gray-100"
+                            disabled={isDisabled}
+                            className={`flex items-center w-full px-3 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:bg-gray-100"}`}
                           >
                             <Handshake className="w-4 h-4 mr-2" /> {t("leads.actions.convert")}
                           </button>
                         )}
 
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(lead._id); }}
-                          className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> {t("leads.actions.delete")}
-                        </button>
+                        {userRole === "Admin" && !isTerminal && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRejectClick(lead);
+                            }}
+                            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
+                          >
+                            <Ban className="w-4 h-4 mr-2" /> Reject
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
                 </tr>
-              ))
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={12} className="px-4 py-12 text-center text-gray-500 text-sm">
@@ -1020,36 +1083,71 @@ function LeadTableComponent() {
         </div>
       )}
 
-      {/* Delete Modal */}
-      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+      {/* Rejection reason tooltip — portalled so it's never clipped by the table's scroll container */}
+      {hoveredRejectedLead?.rejectionReason && rejectTooltipCoords && ReactDOM.createPortal(
+        <div
+          className="fixed z-50 w-80 max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-xl p-3"
+          style={{ top: rejectTooltipCoords.top, left: rejectTooltipCoords.left }}
+          onMouseEnter={() => { if (rejectTooltipTimeout) clearTimeout(rejectTooltipTimeout); }}
+          onMouseLeave={handleRejectionLeave}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
+            {hoveredRejectedLead.rejectedAt && (
+              <p className="text-[10px] text-gray-400 font-medium shrink-0 ml-2">
+                {new Date(hoveredRejectedLead.rejectedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                {" "}
+                {new Date(hoveredRejectedLead.rejectedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
+          </div>
+          <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{hoveredRejectedLead.rejectionReason}</p>
+        </div>,
+        document.body
+      )}
+
+      {/* Reject Modal */}
+      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Trash2 className="w-5 h-5" />
-              {t("leads.deleteModal.title")}
+              <Ban className="w-5 h-5" />
+              Reject Lead
             </DialogTitle>
           </DialogHeader>
 
-          <p className="mb-6 text-gray-700">
-            {leadToDelete
-              ? t("leads.deleteModal.messageSingle")
-              : t("leads.deleteModal.messageBulk", { count: selectedLeads.length })}
+          <p className="mb-3 text-gray-700">
+            Rejecting <span className="font-semibold">{leadToReject?.name}</span>. It will be marked
+            Rejected and stay disabled in the list for everyone. Please give a reason.
           </p>
+
+          <textarea
+            rows={4}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Reason for rejecting this lead..."
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none mb-4"
+          />
 
           <div className="flex justify-end gap-3">
             <button
-              onClick={() => { setShowDeleteModal(false); setLeadToDelete(null); }}
+              onClick={() => {
+                setShowRejectModal(false);
+                setLeadToReject(null);
+                setRejectReason("");
+              }}
               className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
             >
               {t("leads.deleteModal.cancel")}
             </button>
 
             <button
-              onClick={() => leadToDelete ? handleDeleteLead(leadToDelete) : handleBulkDelete()}
-              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
+              onClick={handleRejectSubmit}
+              disabled={rejecting || !rejectReason.trim()}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2 disabled:opacity-60"
             >
-              <Trash2 className="w-4 h-4" />
-              {t("leads.deleteModal.delete")}
+              <Ban className="w-4 h-4" />
+              {rejecting ? "Rejecting..." : "Reject Lead"}
             </button>
           </div>
         </DialogContent>

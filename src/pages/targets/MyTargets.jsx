@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
+import { useTargetSocket } from "../../context/TargetSocketContext";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -9,7 +10,7 @@ import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
   Activity, Trophy, ArrowRight, Award, Clock, ChevronDown,
   ChevronUp, Briefcase, Mail, Building2, Send, MessageSquare,
-  Bell, AlertCircle, Check, XCircle, X,
+  Bell, AlertCircle, Check, XCircle, X, Trash2,
 } from "lucide-react";
 
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
@@ -49,6 +50,22 @@ const STAGE_COLOR = {
   "Closed Won": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "Closed Lost": "bg-red-100 text-red-600 border-red-200",
 };
+
+// Who converted/worked this deal, from the viewing sales person's own
+// perspective — "You" when it was their own action, the admin's name when it
+// wasn't. Converting and moving stages later are different actions and get
+// distinct, specific wording. Rendered on its own line (never inline with the
+// name) so a long name never squeezes the deal/lead name down to nothing.
+function getAdminActionBadge(d) {
+  if (d.convertedByName) {
+    const text = d.salesPersonConverted ? "You converted lead to deal" : `Admin ${d.convertedByName} converted lead to deal`;
+    return { text, title: text };
+  }
+  if (d.takenByAdminName) {
+    return { text: `Admin ${d.takenByAdminName} took this deal`, title: `This deal has been worked on by Admin ${d.takenByAdminName}` };
+  }
+  return null;
+}
 const STAGE_DOT = {
   Qualification: "bg-blue-400",
   "Proposal Sent-Negotiation": "bg-yellow-400",
@@ -254,8 +271,28 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
 /* ── My Target Card ─────────────────────── */
 function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoExpand }) {
   const [expanded, setExpanded] = useState(false);
-  const [expandedDealIdx, setExpandedDealIdx] = useState(null);
+  // Each item's expand/collapse is fully independent — a Set of open keys,
+  // not a single shared value, so opening one item never affects any other.
+  const [expandedItems, setExpandedItems] = useState(() => new Set());
+  const toggleExpand = (key) => setExpandedItems(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
   const cardRef = useRef(null);
+
+  // Sales can remove their own already-completed cards (Closed Won/Lost, Converted leads)
+  const handleRemoveCompleted = async (e, type, itemId, itemName) => {
+    e.stopPropagation();
+    if (!window.confirm(`Remove "${itemName}" from this target? This only clears it from your target view.`)) return;
+    try {
+      await axios.post(`${baseUrl}/targets/${t._id}/unlink-item`, { type, itemId }, { headers });
+      toast.success("Removed from target");
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove");
+    }
+  };
 
   const { percentages = {}, actuals = {} } = t;
 
@@ -267,19 +304,40 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
   }, [autoExpand]);
   const overall = percentages.overall || 0;
 
-  // linkedLeads: existing leads (not yet converted); convertedLeadDeals: deals created from converted linked leads
-  const linkedLeads = (t.linkedLeads || []).filter(Boolean);
+  // linkedLeads: existing leads (not yet converted); convertedLeadDeals: deals created from converted linked leads.
+  // Converted leads are excluded here since they already render as their
+  // resulting deal via convertedLeadDeals — otherwise the same conversion
+  // shows up twice.
+  const linkedLeads = (t.linkedLeads || []).filter(Boolean).filter(l => l.status !== "Converted");
   const convertedLeadDeals = (t.convertedLeadDeals || []);
   const allLinkedLeadsCount = linkedLeads.length + convertedLeadDeals.length;
   const convertedLeadsCount = convertedLeadDeals.length;
+  // Only count conversions the sales person actually did themselves for the
+  // success badge — admin-driven conversions get their own "Converted by Admin" tag instead.
+  const selfConvertedCount = convertedLeadDeals.filter(d => d.salesPersonConverted !== false).length;
   const linkedDeals = (t.linkedDeals || []).filter(Boolean);
-  const wonDeals    = linkedDeals.filter(d => d.stage === "Closed Won");
-  const liveDeals   = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost");
+
+  // convertedLeadDeals always carries conversion attribution reliably (it's looked
+  // up by leadId); borrow it here in case the same deal shows up in linkedDeals
+  // via a path that didn't already have convertedByName/salesPersonConverted set.
+  const convertedInfoById = new Map(convertedLeadDeals.map(cd => [String(cd._id), cd]));
+  const withConversionInfo = (d) => {
+    const match = convertedInfoById.get(String(d._id));
+    if (!match) return d;
+    return {
+      ...d,
+      convertedByName: d.convertedByName ?? match.convertedByName ?? null,
+      salesPersonConverted: d.salesPersonConverted ?? match.salesPersonConverted ?? null,
+    };
+  };
+
+  const wonDeals    = linkedDeals.filter(d => d.stage === "Closed Won").map(withConversionInfo);
+  const liveDeals   = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads Converted", target: t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",  countOnly: false },
-    { label: "Deals Won",       target: t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100", countOnly: false },
-    { label: "Lead → Deal Won", target: null,              actual: actuals.leadDealWon || 0,     pct: null, icon: <Trophy size={13} className="text-amber-500" />,  bg: "bg-amber-50",  border: "border-amber-100",  countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
+    { label: "Leads to Deals Converted", target: t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",  countOnly: false },
+    { label: "Deals Won",                target: t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100", countOnly: false },
+    { label: "Leads to Deals Won",       target: null,              actual: actuals.leadDealWon || 0,     pct: null, icon: <Trophy size={13} className="text-amber-500" />,  bg: "bg-amber-50",  border: "border-amber-100",  countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
     { label: "Deals Lost",      target: null,              actual: actuals.dealsLost || 0,       pct: null, icon: <XCircle size={13} className="text-red-500" />,   bg: "bg-red-50",    border: "border-red-100",    countOnly: true, badgeText: "closed lost",  badgeClass: "text-red-600 bg-red-100"   },
     { label: "Calls Made",      target: t.targetCalls,    actual: actuals.calls || 0,           pct: percentages.callsPercent || 0,    icon: <Phone size={13} className="text-orange-500" />,     bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
     { label: "Meetings Done",   target: t.targetMeetings, actual: actuals.meetings || 0,        pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />,  bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
@@ -414,31 +472,43 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                     const wonDate      = d.wonAt ? new Date(d.wonAt) : null;
                     const totalDays    = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
                     const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
-                    const isOpen = expandedDealIdx === i;
+                    const isOpen = expandedItems.has(`won-${i}`);
+                    const adminBadge = getAdminActionBadge(d);
                     return (
                       <div key={d._id} className="bg-emerald-50 border border-emerald-200 rounded-2xl overflow-hidden">
                         {/* Accordion header — always visible */}
-                        <button
-                          type="button"
-                          onClick={() => setExpandedDealIdx(isOpen ? null : i)}
-                          className="w-full px-3 pt-3 pb-2.5 text-left"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
-                            <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
-                            <CheckCircle size={13} className="text-emerald-500 shrink-0" />
-                            {isOpen ? <ChevronUp size={13} className="text-emerald-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
-                          </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                            {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                            {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
-                            {totalDays !== null && (
-                              <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
-                                <Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}
+                        <div className="w-full px-3 pt-3 pb-2.5 flex items-start gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(`won-${i}`)}
+                            className="flex-1 min-w-0 text-left"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                              <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
+                              <CheckCircle size={13} className="text-emerald-500 shrink-0" />
+                              {isOpen ? <ChevronUp size={13} className="text-emerald-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
+                            </div>
+                            {adminBadge && (
+                              <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
+                                {adminBadge.text}
                               </span>
                             )}
-                          </div>
-                        </button>
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                              {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                              {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
+                              {totalDays !== null && (
+                                <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
+                                  <Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                          <button onClick={(e) => handleRemoveCompleted(e, "deal", d._id, d.dealName || d.dealTitle)}
+                            className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
 
                         {/* Accordion body — expanded details */}
                         {isOpen && (
@@ -513,23 +583,35 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                       const lostDate     = d.stageLostAt ? new Date(d.stageLostAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
                       const totalDays    = lostDate && createdDate ? Math.max(0, Math.round((lostDate - createdDate) / 86400000)) : null;
                       const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
-                      const isOpen = expandedDealIdx === `lost-${i}`;
+                      const isOpen = expandedItems.has(`lost-${i}`);
+                      const adminBadge = getAdminActionBadge(d);
                       return (
                         <div key={d._id} className="bg-red-50 border border-red-200 rounded-2xl overflow-hidden">
-                          <button type="button" onClick={() => setExpandedDealIdx(isOpen ? null : `lost-${i}`)} className="w-full px-3 pt-3 pb-2.5 text-left">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
-                              <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
-                              <XCircle size={13} className="text-red-500 shrink-0" />
-                              {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
-                            </div>
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                              {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                              {d.value && <span className="text-[10px] font-bold text-red-700">{d.currency || "INR"} {d.value}</span>}
-                              {totalDays !== null && <span className="text-[10px] text-red-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d in pipeline`}</span>}
-                              {d.lossReason && <span className="text-[10px] text-red-600 font-medium">Reason: {d.lossReason}</span>}
-                            </div>
-                          </button>
+                          <div className="w-full px-3 pt-3 pb-2.5 flex items-start gap-1.5">
+                            <button type="button" onClick={() => toggleExpand(`lost-${i}`)} className="flex-1 min-w-0 text-left">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                                <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
+                                <XCircle size={13} className="text-red-500 shrink-0" />
+                                {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
+                              </div>
+                              {adminBadge && (
+                                <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
+                                  {adminBadge.text}
+                                </span>
+                              )}
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                                {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                                {d.value && <span className="text-[10px] font-bold text-red-700">{d.currency || "INR"} {d.value}</span>}
+                                {totalDays !== null && <span className="text-[10px] text-red-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d in pipeline`}</span>}
+                                {d.lossReason && <span className="text-[10px] text-red-600 font-medium">Reason: {d.lossReason}</span>}
+                              </div>
+                            </button>
+                            <button onClick={(e) => handleRemoveCompleted(e, "deal", d._id, d.dealName || d.dealTitle)}
+                              className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                           {isOpen && (
                             <div className="border-t border-red-100">
                               <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
@@ -592,46 +674,64 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
               ) : null;
             })()}
 
-            {/* Live deals */}
+            {/* Live deals — accordion */}
             {liveDeals.length > 0 && (
               <div>
                 <p className="text-[11px] font-bold text-gray-600 mb-2 flex items-center gap-1"><Briefcase size={11} /> Active Deals ({liveDeals.length})</p>
-                <div className="space-y-2">
-                  {liveDeals.map((d) => {
+                <div className={`space-y-2 ${liveDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
+                  {liveDeals.map((d, i) => {
                     const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                     const daysInPipeline = d.createdAt ? Math.max(0, Math.round((Date.now() - new Date(d.createdAt)) / 86400000)) : null;
+                    const isOpen = expandedItems.has(`active-${i}`);
+                    const adminBadge = getAdminActionBadge(d);
                     return (
-                      <div key={d._id} className="bg-white border border-gray-100 rounded-xl p-2.5 space-y-1.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
-                        </div>
-                        <ReportBox
-                          targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName || d.dealTitle}
-                          itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage, statusColor: STAGE_COLOR[d.stage], dateNote: d.createdAt ? `since ${fmt(d.createdAt)}` : null }}
-                          baseUrl={baseUrl} headers={headers}
-                          isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
-                        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                          {d.companyName && <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><Building2 size={8} />{d.companyName}</span>}
-                          {d.value && <span className="text-[10px] font-bold text-gray-700">{d.currency} {d.value}</span>}
-                          {d.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={8} />{d.phoneNumber}</span>}
-                        </div>
-                        {d.email && <p className="text-[10px] text-gray-400 flex items-center gap-0.5 truncate"><Mail size={8} />{d.email}</p>}
-                        {/* Stage history mini */}
-                        {stageHistory.length > 0 && (
-                          <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-gray-50">
-                            {stageHistory.map((h, hi) => (
-                              <span key={hi} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${STAGE_COLOR[h.stage] || "bg-gray-50 text-gray-400 border-gray-100"}`}>
-                                {h.stage.split(" ")[0]} · {fmt(h.movedAt)}
-                              </span>
-                            ))}
+                      <div key={d._id} className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+                        <button type="button" onClick={() => toggleExpand(`active-${i}`)} className="w-full text-left p-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                              {isOpen ? <ChevronUp size={12} className="text-gray-500" /> : <ChevronDown size={12} className="text-gray-400" />}
+                            </div>
                           </div>
-                        )}
-                        {daysInPipeline !== null && (
-                          <p className="text-[10px] text-gray-400 flex items-center gap-1">
-                            <Clock size={8} className="text-gray-300" />
-                            {daysInPipeline === 0 ? "Created today" : `${daysInPipeline}d in pipeline`} · since {fmt(d.createdAt)}
-                          </p>
+                          {adminBadge && (
+                            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1" title={adminBadge.title}>{adminBadge.text}</span>
+                          )}
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                            {d.companyName && <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><Building2 size={8} />{d.companyName}</span>}
+                            {d.value && <span className="text-[10px] font-bold text-gray-700">{d.currency} {d.value}</span>}
+                          </div>
+                        </button>
+                        <div className="px-2.5 pb-2.5">
+                          <ReportBox
+                            targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName || d.dealTitle}
+                            itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage, statusColor: STAGE_COLOR[d.stage], dateNote: d.createdAt ? `since ${fmt(d.createdAt)}` : null }}
+                            baseUrl={baseUrl} headers={headers}
+                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
+                        </div>
+                        {isOpen && (
+                          <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2 space-y-1.5">
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                              {d.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={8} />{d.phoneNumber}</span>}
+                              {d.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[160px]"><Mail size={8} />{d.email}</span>}
+                            </div>
+                            {/* Stage history mini */}
+                            {stageHistory.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-gray-50">
+                                {stageHistory.map((h, hi) => (
+                                  <span key={hi} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${STAGE_COLOR[h.stage] || "bg-gray-50 text-gray-400 border-gray-100"}`}>
+                                    {h.stage.split(" ")[0]} · {fmt(h.movedAt)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {daysInPipeline !== null && (
+                              <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                <Clock size={8} className="text-gray-300" />
+                                {daysInPipeline === 0 ? "Created today" : `${daysInPipeline}d in pipeline`} · since {fmt(d.createdAt)}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -645,75 +745,103 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1"><Users size={11} /> Linked Leads ({allLinkedLeadsCount})</p>
-                  {convertedLeadsCount > 0 && (
+                  {selfConvertedCount > 0 && (
                     <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                      <CheckCircle size={8} /> {convertedLeadsCount} Converted to Deal
+                      <CheckCircle size={8} /> {selfConvertedCount} Converted to Deal
                     </span>
                   )}
                 </div>
-                <div className="space-y-2">
-                  {/* Active (not yet converted) leads with status journey */}
-                  {linkedLeads.map((l) => {
+                <div className={`space-y-2 ${allLinkedLeadsCount > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
+                  {/* Active (not yet converted) leads with status journey — accordion */}
+                  {linkedLeads.map((l, i) => {
                     const history = (l.statusHistory || []).sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt));
+                    const isOpen = expandedItems.has(`lead-${i}`);
                     return (
-                      <div key={l._id} className="bg-gray-50 border border-gray-100 rounded-xl p-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-gray-800 truncate">{l.leadName}</p>
-                            {l.companyName && <p className="text-[10px] text-gray-400 flex items-center gap-0.5 truncate"><Building2 size={8} />{l.companyName}</p>}
-                          </div>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500"}`}>{l.status}</span>
-                        </div>
-                        <ReportBox
-                          targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
-                          itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
-                          baseUrl={baseUrl} headers={headers}
-                          isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(l._id) && n.status === "pending")} />
-                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                          {l.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={8} />{l.phoneNumber}</span>}
-                          {l.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[140px]"><Mail size={8} />{l.email}</span>}
-                        </div>
-                        {/* Status journey */}
-                        {(history.length > 0 || l.createdAt) && (
-                          <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Status Journey</p>
-                            <div className="flex items-center gap-0.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                              <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(l.createdAt)}</span>
+                      <div key={l._id} className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                        <button type="button" onClick={() => toggleExpand(`lead-${i}`)} className="w-full text-left p-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{l.leadName}</p>
+                              {l.companyName && <p className="text-[10px] text-gray-400 flex items-center gap-0.5 truncate"><Building2 size={8} />{l.companyName}</p>}
                             </div>
-                            {history.map((h, hi) => (
-                              <div key={hi} className="flex items-center gap-0.5 pl-1">
-                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEAD_STATUS_COLOR[h.status] ? "bg-current" : "bg-gray-300"}`} style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                                <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500"}`}>{l.status}</span>
+                              {isOpen ? <ChevronUp size={12} className="text-gray-500" /> : <ChevronDown size={12} className="text-gray-400" />}
+                            </div>
+                          </div>
+                        </button>
+                        <div className="px-2.5 pb-2.5">
+                          <ReportBox
+                            targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
+                            itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
+                            baseUrl={baseUrl} headers={headers}
+                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(l._id) && n.status === "pending")} />
+                        </div>
+                        {isOpen && (
+                          <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2">
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                              {l.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={8} />{l.phoneNumber}</span>}
+                              {l.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[140px]"><Mail size={8} />{l.email}</span>}
+                            </div>
+                            {/* Status journey */}
+                            {(history.length > 0 || l.createdAt) && (
+                              <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Status Journey</p>
+                                <div className="flex items-center gap-0.5">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                                  <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
+                                  <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(l.createdAt)}</span>
+                                </div>
+                                {history.map((h, hi) => (
+                                  <div key={hi} className="flex items-center gap-0.5 pl-1">
+                                    <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEAD_STATUS_COLOR[h.status] ? "bg-current" : "bg-gray-300"}`} style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
+                                    <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
+                                    <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
                           </div>
                         )}
                       </div>
                     );
                   })}
-                  {/* Converted leads — shown as their deal */}
-                  {convertedLeadDeals.map((d) => {
+                  {/* Converted leads — shown as their deal — accordion */}
+                  {convertedLeadDeals.map((d, i) => {
                     const history = (d.leadStatusHistory || []).sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt));
+                    const isOpen = expandedItems.has(`convlead-${i}`);
                     return (
-                      <div key={d._id} className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
-                            <p className="text-[10px] text-gray-400">{d.currency} {d.value}</p>
+                      <div key={d._id} className="bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
+                        <button type="button" onClick={() => toggleExpand(`convlead-${i}`)} className="w-full text-left p-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
+                              <p className="text-[10px] text-gray-400">{d.currency} {d.value}</p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!d.convertedByName && (
+                                <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Converted → Deal</span>
+                              )}
+                              {isOpen ? <ChevronUp size={12} className="text-emerald-600" /> : <ChevronDown size={12} className="text-gray-400" />}
+                            </div>
                           </div>
-                          <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded shrink-0">Converted → Deal</span>
+                          {d.convertedByName && (
+                            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
+                              {d.salesPersonConverted ? `Converted Lead to Deal by ${d.convertedByName}` : `Converted Lead to Deal by Admin ${d.convertedByName}`}
+                            </span>
+                          )}
+                        </button>
+                        <div className="px-2.5 pb-2.5">
+                          <ReportBox
+                            targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName}
+                            itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage || "Qualification", statusColor: "bg-emerald-100 text-emerald-700", dateNote: d.convertedAt ? `converted ${fmt(d.convertedAt)}` : null }}
+                            baseUrl={baseUrl} headers={headers}
+                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
                         </div>
-                        <ReportBox
-                          targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName}
-                          itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage || "Qualification", statusColor: "bg-emerald-100 text-emerald-700", dateNote: d.convertedAt ? `converted ${fmt(d.convertedAt)}` : null }}
-                          baseUrl={baseUrl} headers={headers}
-                          isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
                         {/* Lead status journey before conversion */}
-                        <div className="mt-2 pt-2 border-t border-emerald-100 space-y-1">
+                        {isOpen && (
+                        <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
                           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
                           <div className="flex items-center gap-0.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
@@ -728,11 +856,16 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                               <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                             </div>
                           ))}
-                          <div className="flex items-center gap-0.5 pl-1">
+                          <div className="flex items-center gap-0.5 pl-1 flex-wrap">
                             <div className="w-px h-2 bg-gray-200 mr-0.5" />
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                             <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
                             <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            {!d.salesPersonConverted && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
+                                Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
+                              </span>
+                            )}
                           </div>
                           {/* Deal stage start */}
                           <div className="flex items-center gap-0.5 pl-1 mt-0.5">
@@ -760,8 +893,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                               <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
                             </div>
                           ))}
-                          {/* Show current stage if not yet reflected in stageHistory */}
-                          {d.stage && d.stage !== "Qualification" && (d.stageHistory || []).length === 0 && (
+                          {/* Fallback: show current stage when not already in stageHistory */}
+                          {d.stage && d.stage !== "Qualification" && !(d.stageHistory || []).some(h => h.stage === d.stage) && (
                             <div className="flex items-center gap-0.5 pl-1">
                               <div className="w-px h-2 bg-gray-200 mr-0.5" />
                               <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -772,10 +905,11 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                 : "bg-blue-400"
                               }`} />
                               <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
-                              <span className="text-[10px] text-orange-500 font-bold ml-0.5">● Live</span>
+                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-0.5">● Live</span>}
                             </div>
                           )}
                         </div>
+                        )}
                       </div>
                     );
                   })}
@@ -810,6 +944,7 @@ export default function MyTargets() {
   const location = useLocation();
   const expandTargetId = location.state?.expandTargetId || null;
   const socket = useSocket();
+  const targetSocket = useTargetSocket();
 
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
@@ -828,16 +963,34 @@ export default function MyTargets() {
     }
   }, [baseUrl]);
 
-  // Live refresh when a deal stage changes or lead converts to deal
+  // Live refresh when a deal stage changes or lead converts to deal (generic socket)
   useEffect(() => {
     if (!socket) return;
     const handler = () => fetchTargets();
+    const newNotifHandler = () => { fetchNotifications(); setMyView("notifications"); };
+    socket.on("deal_stage_updated", handler);
+    socket.on("lead_converted", handler);
+    socket.on("new_notification", newNotifHandler);
+    return () => {
+      socket.off("deal_stage_updated", handler);
+      socket.off("lead_converted", handler);
+      socket.off("new_notification", newNotifHandler);
+    };
+  }, [socket, fetchTargets, fetchNotifications]);
+
+  // Target-management-specific real-time events (dedicated socket namespace)
+  useEffect(() => {
+    if (!targetSocket) return;
     const reminderHandler = (data) => {
       toast.warning(data?.message || "Target reminder from admin!", { autoClose: 6000 });
+      fetchNotifications();
+      setMyView("notifications");
       fetchTargets();
     };
     const expiredHandler = (data) => {
       toast.error(data?.message || "Your target has expired! Some items were removed.", { autoClose: 8000 });
+      fetchNotifications();
+      setMyView("notifications");
       fetchTargets();
     };
     const reassignHandler = (data) => {
@@ -876,38 +1029,34 @@ export default function MyTargets() {
       // No fetchTargets() needed — the card is already gone
     };
     const targetsRefreshHandler = () => fetchTargets();
-    const newNotifHandler = () => fetchNotifications();
-    socket.on("deal_stage_updated", handler);
-    socket.on("lead_converted", handler);
-    socket.on("target_reminder", reminderHandler);
-    socket.on("target_due_today", reminderHandler);
-    socket.on("target_expired", expiredHandler);
-    socket.on("item_reassigned", reassignHandler);
-    socket.on("item_reactivated", reactivateHandler);
-    socket.on("item_removed", removedHandler);
-    socket.on("target_deleted", targetDeletedHandler);
-    socket.on("new_notification", newNotifHandler);
-    socket.on("targets_refresh", targetsRefreshHandler);
+    targetSocket.on("target_reminder", reminderHandler);
+    targetSocket.on("target_due_today", reminderHandler);
+    targetSocket.on("target_expired", expiredHandler);
+    targetSocket.on("item_reassigned", reassignHandler);
+    targetSocket.on("item_reactivated", reactivateHandler);
+    targetSocket.on("item_removed", removedHandler);
+    targetSocket.on("target_deleted", targetDeletedHandler);
+    targetSocket.on("targets_refresh", targetsRefreshHandler);
     return () => {
-      socket.off("deal_stage_updated", handler);
-      socket.off("lead_converted", handler);
-      socket.off("target_reminder", reminderHandler);
-      socket.off("target_due_today", reminderHandler);
-      socket.off("item_reactivated", reactivateHandler);
-      socket.off("item_removed", removedHandler);
-      socket.off("target_expired", expiredHandler);
-      socket.off("item_reassigned", reassignHandler);
-      socket.off("target_deleted", targetDeletedHandler);
-      socket.off("new_notification", newNotifHandler);
-      socket.off("targets_refresh", targetsRefreshHandler);
+      targetSocket.off("target_reminder", reminderHandler);
+      targetSocket.off("target_due_today", reminderHandler);
+      targetSocket.off("item_reactivated", reactivateHandler);
+      targetSocket.off("item_removed", removedHandler);
+      targetSocket.off("target_expired", expiredHandler);
+      targetSocket.off("item_reassigned", reassignHandler);
+      targetSocket.off("target_deleted", targetDeletedHandler);
+      targetSocket.off("targets_refresh", targetsRefreshHandler);
     };
-  }, [socket, fetchTargets, fetchNotifications]);
+  }, [targetSocket, fetchTargets, fetchNotifications]);
 
   useEffect(() => {
     fetchTargets();
   }, []);
 
-  const TARGET_NOTIF_TYPES = ["target_reminder","target_due_today","target_expired","target_reassign","target","reason_note"];
+  // Plain "target" notifications (lead converted by Admin, deal stage moved by
+  // Admin, new target assigned, etc.) belong here too — the sales person should
+  // see them in this tab and its badge count, live, not just the header bell.
+  const TARGET_NOTIF_TYPES = ["target","target_reminder","target_due_today","target_expired","target_reassign","reason_note"];
 
   const switchToNotifications = () => {
     setMyView(v => {
@@ -1056,7 +1205,7 @@ export default function MyTargets() {
           <p className="text-xs mt-1">Your admin will set targets for you here</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
           {filtered.map((t) => {
             const hasUnread = notifications.some(n =>
               n.type === "target" && !n.read && !n.isRead &&

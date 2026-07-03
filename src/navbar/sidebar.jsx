@@ -198,7 +198,7 @@ const Collapsible = ({
 };
 
 /* ── Small Link ─────────────────────── */
-const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }) => {
+const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true, badge = 0 }) => {
   const { tenantSlug } = useParams();
   const location = useLocation();
 
@@ -230,11 +230,14 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
     >
       {sidebarOpen ? (
         <>
-          <div className="w-8 h-8 flex items-center justify-center rounded-full shadow-sm bg-white">
+          <div className="relative w-8 h-8 flex items-center justify-center rounded-full shadow-sm bg-white">
             {React.cloneElement(icon, {
               color: isResolvedActive ? "#008ecc" : "#475569",
               size: 15,
             })}
+            {badge > 0 && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+            )}
           </div>
           <span
             className={`text-base font-medium ${
@@ -243,12 +246,24 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true }
           >
             {label}
           </span>
+          {badge > 0 && (
+            <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {badge > 99 ? "99+" : badge}
+            </span>
+          )}
         </>
       ) : (
-        React.cloneElement(icon, {
-          color: isResolvedActive ? "#008ecc" : "#475569",
-          size: 18,
-        })
+        <div className="relative">
+          {React.cloneElement(icon, {
+            color: isResolvedActive ? "#008ecc" : "#475569",
+            size: 18,
+          })}
+          {badge > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+              {badge > 9 ? "9+" : badge}
+            </span>
+          )}
+        </div>
       )}
     </NavLink>
   );
@@ -436,13 +451,20 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       ).length
     : 0;
 
+  // Plain "target" notifications (lead converted by Admin, deal stage moved by
+  // Admin, new target assigned, etc.) belong in the My Targets/Target
+  // Management badge too, live, not just the header bell.
+  const TARGET_NOTIF_TYPES = ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign", "reason_note"];
+
   const salesTargetBadge = !isAdmin
     ? notifications.filter(
-        (n) =>
-          n.type === "target" &&
-          (n.meta?.targetAssigned || n.meta?.targetUpdated) &&
-          !n.read &&
-          !n.isRead
+        (n) => TARGET_NOTIF_TYPES.includes(n.type) && !n.read && !n.isRead
+      ).length
+    : 0;
+
+  const adminTargetBadge = isAdmin
+    ? notifications.filter(
+        (n) => TARGET_NOTIF_TYPES.includes(n.type) && !n.read && !n.isRead
       ).length
     : 0;
 
