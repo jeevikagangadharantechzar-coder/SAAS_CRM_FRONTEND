@@ -473,13 +473,13 @@ const CreateEmail = () => {
 
   return (
     <div className="w-full h-full">
-      <div className="w-full bg-white">
+      <div className="w-full bg-white flex flex-col h-full">
         {/* Modal Header */}
-        <div className="border-b border-gray-200 p-6 bg-white">
-          <div className="flex justify-between items-center">
+        <div className="border-b border-gray-200 p-4 sm:p-6 bg-white flex-shrink-0">
+          <div className="flex justify-between items-start gap-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">Compose Email</h2>
-              <p className="text-gray-600 text-sm mt-1">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Compose Email</h2>
+              <p className="text-gray-600 text-xs sm:text-sm mt-1">
                 Sending to {emailData.selectedContacts.length} contacts
               </p>
             </div>
@@ -493,7 +493,7 @@ const CreateEmail = () => {
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
           {/* Select Template */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -746,17 +746,17 @@ const CreateEmail = () => {
                         ? 'bg-purple-50 border border-purple-100' 
                         : 'bg-blue-50 border border-blue-100'
                     }`}>
-                      <div className="flex items-center space-x-3">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-semibold ${
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${
                           contact.type === 'deal' 
                             ? 'bg-purple-100 text-purple-600' 
                             : 'bg-blue-100 text-blue-600'
                         }`}>
                           {contact.name?.charAt(0) || 'C'}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{contact.name}</div>
-                          <div className="text-xs text-gray-500">{contact.email}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm break-words">{contact.name}</div>
+                          <div className="text-xs text-gray-500 break-words">{contact.email}</div>
                         </div>
                       </div>
                       <button
@@ -764,7 +764,7 @@ const CreateEmail = () => {
                           const updated = emailData.selectedContacts.filter((_, i) => i !== index);
                           setEmailData({...emailData, selectedContacts: updated});
                         }}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0 p-2"
                         title="Remove recipient"
                       >
                         ✕
@@ -778,21 +778,21 @@ const CreateEmail = () => {
         </div>
 
         {/* Modal Footer */}
-        <div className="border-t border-gray-200 p-6 bg-gray-50">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-3">
+        <div className="border-t border-gray-200 p-3 sm:p-6 bg-gray-50 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+            <div className="w-full sm:w-auto order-2 sm:order-1">
               <button
                 onClick={() => navigate(-1)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
               >
                 Cancel
               </button>
             </div>
-            <div className="flex gap-3">
+            <div className="flex w-full sm:w-auto gap-3 order-1 sm:order-2">
               <button
                 type='button'
                 onClick={() => setShowSchedulePicker(true)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center gap-2"
+                className="flex-1 sm:w-auto px-2 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center justify-center gap-2"
               >
                 <Clock size={18} />
                 Schedule
@@ -801,7 +801,7 @@ const CreateEmail = () => {
               <button
                 onClick={isEditMode ? handleUpdateEmail : handleSendEmail}
                 disabled={isSending || emailData.selectedContacts.length === 0 || !emailData.subject || !emailData.content}
-                className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
+                className={`flex-1 sm:w-auto px-2 sm:px-6 py-2 rounded-lg flex items-center justify-center gap-2 ${
                   isSending || emailData.selectedContacts.length === 0 || !emailData.subject || !emailData.content
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -810,7 +810,7 @@ const CreateEmail = () => {
                 <Send size={18} />
                 {isSending 
                   ? (isEditMode ? "Updating..." : "Sending...") 
-                  : (isEditMode ? "Update Email" : "Send Email")}
+                  : (isEditMode ? "Update" : "Send")}
               </button>
             </div>
           </div>

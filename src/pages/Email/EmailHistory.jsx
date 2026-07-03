@@ -351,7 +351,7 @@ const EmailHistory = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="p-6 flex items-center justify-between">
+        <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/mass-email')}
@@ -370,7 +370,7 @@ const EmailHistory = () => {
           
           {/* Bulk delete button and selection info */}
           {getSelectionCount() > 0 && (
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4 sm:mt-0 w-full sm:w-auto">
               <span className="text-sm text-gray-600">
                 {getSelectionText()}
               </span>
@@ -458,7 +458,10 @@ const EmailHistory = () => {
                       </th>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Sent Time
+                      Created At
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Sent / Scheduled For
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
@@ -551,6 +554,25 @@ const EmailHistory = () => {
                           {new Date(email.createdAt).toLocaleString()}
                         </div>
                       </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          {email.status === 'scheduled' ? (
+                            <>
+                              <Clock className="w-4 h-4 text-blue-500" />
+                              <span className="text-blue-600 font-medium">
+                                {email.scheduledFor ? new Date(email.scheduledFor).toLocaleString() : 'Pending'}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Calendar className="w-4 h-4 text-green-500" />
+                              <span className="text-green-600 font-medium">
+                                {new Date(email.updatedAt || email.createdAt).toLocaleString()}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <button
                           onClick={() => handleDeleteClick(email)}
@@ -602,11 +624,28 @@ const EmailHistory = () => {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      <span className="text-xs text-gray-500">
-                        <Clock className="w-3 h-3 inline mr-1" />
-                        {new Date(email.createdAt).toLocaleDateString()}
-                      </span>
                     </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center bg-gray-50 p-2 rounded text-xs text-gray-600">
+                     <div>
+                       <span className="font-semibold block text-gray-500 mb-1">Created At</span>
+                       {new Date(email.createdAt).toLocaleDateString()}
+                     </div>
+                     <div className="text-right">
+                       <span className="font-semibold block text-gray-500 mb-1">Sent / Scheduled</span>
+                       {email.status === 'scheduled' ? (
+                         <span className="text-blue-600 font-medium flex items-center justify-end">
+                           <Clock className="w-3 h-3 mr-1" />
+                           {email.scheduledFor ? new Date(email.scheduledFor).toLocaleString() : 'Pending'}
+                         </span>
+                       ) : (
+                         <span className="text-green-600 font-medium flex items-center justify-end">
+                           <Calendar className="w-3 h-3 mr-1" />
+                           {new Date(email.updatedAt || email.createdAt).toLocaleString()}
+                         </span>
+                       )}
+                     </div>
                   </div>
                   
                   <p className="text-sm font-medium text-gray-900">{email.subject}</p>

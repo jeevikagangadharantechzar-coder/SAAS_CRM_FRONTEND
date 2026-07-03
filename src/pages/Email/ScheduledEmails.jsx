@@ -120,7 +120,7 @@ export default function ScheduledEmails() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header with back button */}
       <div className="flex items-center gap-4 mb-6">
         <button
@@ -157,10 +157,10 @@ export default function ScheduledEmails() {
               key={email._id}
               className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition"
             >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1 w-full">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <div className="w-full sm:w-auto">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
                         {email.subject}
@@ -179,10 +179,10 @@ export default function ScheduledEmails() {
                   {/* Show assignee for Admin only */}
                   {currentUser?.role?.name === "Admin" && getAssigneeName(email) && (
                     <div className="mt-3 flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm flex-shrink-0">
                         {getAssigneeInitials(email)}
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
                           <UserIcon className="w-3 h-3 text-gray-400" />
                           <span className="text-xs font-medium text-gray-500">Scheduled by:</span>
@@ -191,7 +191,7 @@ export default function ScheduledEmails() {
                           {getAssigneeName(email)}
                         </div>
                         {email.createdBy?.email && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 break-all">
                             {email.createdBy.email}
                           </div>
                         )}
@@ -309,7 +309,7 @@ export default function ScheduledEmails() {
                         <span className="text-xs font-medium text-gray-500 block mb-1">Recipients:</span>
                         <div className="flex flex-wrap gap-1">
                           {email.recipients.slice(0, 3).map((recipient, idx) => (
-                            <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                            <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full break-all max-w-full inline-block">
                               {recipient}
                             </span>
                           ))}

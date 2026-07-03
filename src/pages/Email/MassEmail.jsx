@@ -441,7 +441,7 @@ const MassEmail = () => {
             </div>
 
             {/* Type Filter */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setContactTypeFilter('all')}
                 className={`px-4 py-2 rounded-lg border text-sm font-medium ${
@@ -475,7 +475,7 @@ const MassEmail = () => {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 mt-4 lg:mt-0">
             {/* Refresh Button */}
             <button
               onClick={fetchAllContacts}
