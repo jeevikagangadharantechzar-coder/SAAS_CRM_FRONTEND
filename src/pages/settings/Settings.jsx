@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2 } from "react-feather";
+import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText } from "react-feather";
 
 const authHeader = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
