@@ -37,7 +37,6 @@ const getTourSteps = (t) => [
   { selector: ".tour-search",        content: t("leads.tour.search") },
   { selector: ".tour-filters",       content: t("leads.tour.filters") },
   { selector: ".tour-lead-table",    content: t("leads.tour.table") },
-  { selector: ".tour-checkbox",      content: t("leads.tour.checkbox") },
   { selector: ".tour-lead-actions",  content: t("leads.tour.actions") },
   { selector: ".tour-finish",        content: t("leads.tour.finish") },
 ];
@@ -653,8 +652,7 @@ function LeadTableComponent() {
               onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
               className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
             >
-              <Trash2 className="w-4 h-4" />
-              {t("leads.buttons.deleteSelected", { count: selectedLeads.length })}
+              <Ban className="w-4 h-4" /> Reject Leads
             </button>
           )}
 
@@ -762,14 +760,6 @@ function LeadTableComponent() {
         <table className="min-w-max w-full table-auto divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr className="whitespace-nowrap">
-              <th className="px-4 py-3 tour-checkbox">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                  checked={selectedLeads.length === leads.length && leads.length > 0}
-                  onChange={handleSelectAll}
-                />
-              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.lead")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
