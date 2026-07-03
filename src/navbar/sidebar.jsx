@@ -369,6 +369,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   const [userPermissions, setUserPermissions] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
+  const [planFeatures, setPlanFeatures] = useState(null);
+
+  // A feature is only blocked when the tenant's plan explicitly disables it
+  // (`false`). Missing/null keeps legacy sessions and plans without a
+  // features object fully working.
+  const hasPlanFeature = (key) => planFeatures?.[key] !== false;
 
   useEffect(() => {
     const _user = (() => {
@@ -378,6 +384,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         return {};
       }
     })();
+
+    setPlanFeatures(_user?.planFeatures || null);
 
     const adminStatus = _user?.role?.name === "Admin";
     setIsAdmin(adminStatus);
@@ -543,7 +551,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           sidebarOpen={isOpen}
           activePaths={["/deals", "/Pipelineview"]}
           hasPermission={
-            isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline
+            (isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline) &&
+            (hasPlanFeature("deals_all") || hasPlanFeature("deals_pipeline"))
           }
         >
           <SmallLink
@@ -579,7 +588,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               "/my-targets",
             ]}
           >
-            {(isAdmin || userPermissions.task_management) && (
+            {(isAdmin || userPermissions.task_management) && hasPlanFeature("task_management") && (
               <SmallLink
                 to="task-management"
                 icon={<ClipboardList />}
@@ -587,7 +596,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               />
             )}
 
-            {(isAdmin || userPermissions.target_management) && (
+            {(isAdmin || userPermissions.target_management) && hasPlanFeature("target_management") && (
               <SmallLink
                 to="target-management"
                 icon={<Target />}
@@ -595,7 +604,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               />
             )}
 
-            {!isAdmin && userPermissions.assigned_tasks && (
+            {!isAdmin && userPermissions.assigned_tasks && hasPlanFeature("assigned_tasks") && (
               <SmallLink
                 to="assigned-tasks"
                 icon={<CheckSquare />}
@@ -640,6 +649,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onToggle={() => setShowAnalysis((s) => !s)}
           sidebarOpen={isOpen}
           activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
+          hasPermission={hasPlanFeature("analytics")}
         >
           <SmallLink
             to="DealAnalysis"
@@ -675,7 +685,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onToggle={() => setShowEmail((s) => !s)}
           sidebarOpen={isOpen}
           hasPermission={
-            isAdmin || userPermissions.email_chat || userPermissions.email_campaigns
+            (isAdmin || userPermissions.email_chat || userPermissions.email_campaigns) &&
+            (hasPlanFeature("email_chat") || hasPlanFeature("email_campaigns"))
           }
         >
           <SmallLink

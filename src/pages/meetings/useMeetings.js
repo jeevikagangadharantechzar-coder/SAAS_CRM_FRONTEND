@@ -49,6 +49,7 @@ export default function useMeetings() {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [googleConfigured, setGoogleConfigured] = useState(false);
+  const [zoomConfigured, setZoomConfigured] = useState(false);
   const [alarmFired, setAlarmFired] = useState(null);
   const timersRef = useRef([]);
 
@@ -83,6 +84,15 @@ export default function useMeetings() {
     }
   }, []);
 
+  const checkZoomStatus = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}/zoom-auth/auth/status`, authHeader());
+      setZoomConfigured(res.data.connected);
+    } catch {
+      setZoomConfigured(false);
+    }
+  }, []);
+
   const fetchMeetings = useCallback(async () => {
     try {
       setLoading(true);
@@ -100,9 +110,10 @@ export default function useMeetings() {
   useEffect(() => {
     requestNotificationPermission();
     checkGoogleStatus();
+    checkZoomStatus();
     fetchMeetings();
     return () => clearAlarmTimers();
-  }, [fetchMeetings, checkGoogleStatus]);
+  }, [fetchMeetings, checkGoogleStatus, checkZoomStatus]);
 
   const createMeeting = async (data) => {
     const res = await axios.post(`${API_URL}/meetings`, data, authHeader());
@@ -154,6 +165,7 @@ export default function useMeetings() {
     meetings,
     loading,
     googleConfigured,
+    zoomConfigured,
     alarmFired,
     setAlarmFired,
     createMeeting,
