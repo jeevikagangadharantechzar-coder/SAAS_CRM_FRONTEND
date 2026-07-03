@@ -181,9 +181,12 @@ const handleLogout = async () => {
         const filter = n.meta?.taskApproved ? "Task Approved" : "All";
         navigate(`/${tenantSlug}/assigned-tasks`, { state: { filter } });
       }
-    } else if (n.type === "target") {
+    } else if (
+      ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign", "reason_note"].includes(n.type)
+    ) {
       if (isAdmin) {
-        navigate(`/${tenantSlug}/target-management`);
+        const openReassign = n.type === "reason_note" || (n.type === "target_expired" && n.meta?.needsReassign);
+        navigate(`/${tenantSlug}/target-management`, { state: openReassign ? { mainView: "reasonNotes" } : { mainView: "notifications" } });
       } else {
         const targetId = n.meta?.targetId;
         navigate(`/${tenantSlug}/my-targets`, { state: { expandTargetId: targetId } });

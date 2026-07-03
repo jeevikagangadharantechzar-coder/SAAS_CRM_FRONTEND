@@ -956,9 +956,14 @@
     userId,
     className = "",
   }) {
+    // Overdue on an expired target, awaiting admin reassignment — read-only
+    // for the owning sales person until it's reassigned.
+    const isDisabled = deal.isActive === false && userRole !== "Admin";
+
     const [{ isDragging }, dragRef] = useDrag({
       type: ItemTypes.DEAL,
       item: { id: deal._id, from: stageId },
+      canDrag: () => !isDisabled,
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     });
 
@@ -1009,9 +1014,10 @@
 
     return (
       <div
-        ref={dragRef}
-        className={`border bg-white border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-all cursor-move flex flex-col gap-3 relative ${className}`}
-        style={{ opacity: isDragging ? 0.5 : 1 }}
+        ref={isDisabled ? null : dragRef}
+        title={isDisabled ? "Disabled — pending admin reassignment" : undefined}
+        className={`border bg-white border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col gap-3 relative ${isDisabled ? "cursor-not-allowed opacity-50 grayscale pointer-events-none select-none" : "cursor-move"} ${className}`}
+        style={{ opacity: isDragging ? 0.5 : isDisabled ? 0.5 : 1 }}
       >
         {/* Three-dot menu - only show if user has permission */}
         {canEditDelete && (
@@ -1032,8 +1038,11 @@
             {menuOpen && (
               <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className={`block w-full text-left px-4 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                  disabled={isDisabled}
+                  title={isDisabled ? "Disabled pending admin reassignment" : undefined}
                   onClick={() => {
+                    if (isDisabled) return;
                     onEdit(deal);
                     setMenuOpen(false);
                   }}
@@ -1071,6 +1080,14 @@
           >
             {deal.dealName}
           </h3>
+
+          {isDisabled && (
+            <div className="mb-1">
+              <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
+                Pending Reassignment
+              </span>
+            </div>
+          )}
 
           <div className="text-xs text-stone-800 font-medium bg-indigo-100 py-1 px-2 rounded-full inline-block">
             {deal.companyName || "No company"}
