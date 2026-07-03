@@ -34,11 +34,16 @@ export default function MeetingCard({ meeting, onEdit, onCancel }) {
           </div>
           <h3 className="font-semibold text-gray-800 truncate text-sm">{meeting.title}</h3>
         </div>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_STYLES[effectiveStatus] || "bg-gray-100 text-gray-600"}`}
-        >
-          {effectiveStatus}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">
+            {meeting.provider === "zoom" ? "Zoom" : "Google Meet"}
+          </span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[effectiveStatus] || "bg-gray-100 text-gray-600"}`}
+          >
+            {effectiveStatus}
+          </span>
+        </div>
       </div>
 
       {/* Description */}

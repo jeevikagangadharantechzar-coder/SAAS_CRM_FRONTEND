@@ -368,6 +368,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   const [userPermissions, setUserPermissions] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
+  const [planFeatures, setPlanFeatures] = useState(null);
+
+  // A feature is only blocked when the tenant's plan explicitly disables it
+  // (`false`). Missing/null keeps legacy sessions and plans without a
+  // features object fully working.
+  const hasPlanFeature = (key) => planFeatures?.[key] !== false;
 
   useEffect(() => {
     const _user = (() => {
@@ -377,6 +383,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         return {};
       }
     })();
+
+    setPlanFeatures(_user?.planFeatures || null);
 
     const adminStatus = _user?.role?.name === "Admin";
     setIsAdmin(adminStatus);
@@ -520,7 +528,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="dashboard"
           icon={<Home />}
           label="Dashboard"
-          hasPermission={isAdmin || userPermissions.dashboard}
+          hasPermission={(isAdmin || userPermissions.dashboard) && hasPlanFeature("dashboard")}
           sidebarOpen={isOpen}
         />
 
@@ -529,7 +537,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="leads"
           icon={<Users />}
           label="Leads"
-          hasPermission={isAdmin || userPermissions.leads}
+          hasPermission={(isAdmin || userPermissions.leads) && hasPlanFeature("leads")}
           sidebarOpen={isOpen}
         />
 
@@ -542,20 +550,21 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           sidebarOpen={isOpen}
           activePaths={["/deals", "/Pipelineview"]}
           hasPermission={
-            isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline
+            (isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline) &&
+            (hasPlanFeature("deals_all") || hasPlanFeature("deals_pipeline"))
           }
         >
           <SmallLink
             to="Pipelineview"
             icon={<GitBranch />}
             label="Pipeline View"
-            hasPermission={isAdmin || userPermissions.deals_pipeline}
+            hasPermission={(isAdmin || userPermissions.deals_pipeline) && hasPlanFeature("deals_pipeline")}
           />
           <SmallLink
             to="deals"
             icon={<TrendingUp />}
             label="All Deals"
-            hasPermission={isAdmin || userPermissions.deals_all}
+            hasPermission={(isAdmin || userPermissions.deals_all) && hasPlanFeature("deals_all")}
           />
         </Collapsible>
 
@@ -578,7 +587,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               "/my-targets",
             ]}
           >
-            {(isAdmin || userPermissions.task_management) && (
+            {(isAdmin || userPermissions.task_management) && hasPlanFeature("task_management") && (
               <SmallLink
                 to="task-management"
                 icon={<ClipboardList />}
@@ -586,7 +595,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               />
             )}
 
-            {(isAdmin || userPermissions.target_management) && (
+            {(isAdmin || userPermissions.target_management) && hasPlanFeature("target_management") && (
               <SmallLink
                 to="target-management"
                 icon={<Target />}
@@ -594,7 +603,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               />
             )}
 
-            {!isAdmin && userPermissions.assigned_tasks && (
+            {!isAdmin && userPermissions.assigned_tasks && hasPlanFeature("assigned_tasks") && (
               <SmallLink
                 to="assigned-tasks"
                 icon={<CheckSquare />}
@@ -617,7 +626,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="proposal"
           icon={<ClipboardList />}
           label="Proposal"
-          hasPermission={isAdmin || userPermissions.proposal}
+          hasPermission={(isAdmin || userPermissions.proposal) && hasPlanFeature("proposal")}
           sidebarOpen={isOpen}
         />
 
@@ -627,7 +636,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           exact
           icon={<Receipt />}
           label="Invoices"
-          hasPermission={isAdmin || userPermissions.invoices}
+          hasPermission={(isAdmin || userPermissions.invoices) && hasPlanFeature("invoices")}
           sidebarOpen={isOpen}
         />
 
@@ -639,21 +648,25 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onToggle={() => setShowAnalysis((s) => !s)}
           sidebarOpen={isOpen}
           activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
+          hasPermission={hasPlanFeature("analytics")}
         >
           <SmallLink
             to="DealAnalysis"
             icon={<BarChart3 />}
             label="Deal Analysis"
+            hasPermission={hasPlanFeature("analytics")}
           />
           <SmallLink
             to="cltv/dashboard"
             icon={<TrendingUp />}
             label="Won Analysis"
+            hasPermission={hasPlanFeature("analytics")}
           />
           <SmallLink
             to="LossAnalysis"
             icon={<TrendingDown />}
             label="Loss Analysis"
+            hasPermission={hasPlanFeature("analytics")}
           />
         </Collapsible>
 
@@ -662,7 +675,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="leaderboard"
           icon={<Trophy />}
           label="Leaderboard"
-          hasPermission={isAdmin || userPermissions.streak_leaderboard}
+          hasPermission={(isAdmin || userPermissions.streak_leaderboard) && hasPlanFeature("streak_leaderboard")}
           sidebarOpen={isOpen}
         />
 
@@ -674,20 +687,21 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onToggle={() => setShowEmail((s) => !s)}
           sidebarOpen={isOpen}
           hasPermission={
-            isAdmin || userPermissions.email_chat || userPermissions.email_campaigns
+            (isAdmin || userPermissions.email_chat || userPermissions.email_campaigns) &&
+            (hasPlanFeature("email_chat") || hasPlanFeature("email_campaigns"))
           }
         >
           <SmallLink
             to="emailchat"
             icon={<Mail />}
             label="Email Chat"
-            hasPermission={isAdmin || userPermissions.email_chat}
+            hasPermission={(isAdmin || userPermissions.email_chat) && hasPlanFeature("email_chat")}
           />
           <SmallLink
             to="mass-email"
             icon={<Send />}
             label="Email Campaign"
-            hasPermission={isAdmin || userPermissions.email_campaigns}
+            hasPermission={(isAdmin || userPermissions.email_campaigns) && hasPlanFeature("email_campaigns")}
           />
         </Collapsible>
 
@@ -708,7 +722,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="team-analytics"
           icon={<BarChart3 />}
           label="Team Analytics"
-          hasPermission={isAdmin || userPermissions.reports}
+          hasPermission={(isAdmin || userPermissions.reports) && hasPlanFeature("reports")}
           sidebarOpen={isOpen}
         />
 
@@ -717,7 +731,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="user&roles"
           icon={<Shield />}
           label="Users & Roles"
-          hasPermission={isAdmin || userPermissions.users_roles}
+          hasPermission={(isAdmin || userPermissions.users_roles) && hasPlanFeature("users_roles")}
           sidebarOpen={isOpen}
         />
 

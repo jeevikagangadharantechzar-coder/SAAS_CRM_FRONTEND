@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, Video } from "lucide-react";
 import { toast } from "react-toastify";
 
 const EMPTY_FORM = {
@@ -10,7 +10,13 @@ const EMPTY_FORM = {
   endDateTime: "",
   attendees: [],
   reminderMinutes: 10,
+  provider: "google_meet",
 };
+
+const PROVIDERS = [
+  { value: "google_meet", label: "Google Meet" },
+  { value: "zoom", label: "Zoom" },
+];
 
 const toLocalInput = (iso) => {
   if (!iso) return "";
@@ -19,7 +25,7 @@ const toLocalInput = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export default function MeetingModal({ isOpen, onClose, onSave, editMeeting }) {
+export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoomConfigured }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [emailInput, setEmailInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,6 +40,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting }) {
         endDateTime: toLocalInput(editMeeting.endDateTime),
         attendees: editMeeting.attendees || [],
         reminderMinutes: editMeeting.reminderMinutes ?? 10,
+        provider: editMeeting.provider || "google_meet",
       });
     } else {
       setForm(EMPTY_FORM);
@@ -116,6 +123,51 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting }) {
               placeholder="e.g. Weekly Sales Sync"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Meeting Provider */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Meeting Provider
+            </label>
+            {editMeeting ? (
+              <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                <Video className="w-4 h-4 text-gray-400" />
+                {PROVIDERS.find((p) => p.value === form.provider)?.label || form.provider}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {PROVIDERS.map(({ value, label }) => {
+                    const disabled = value === "zoom" && !zoomConfigured;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => !disabled && set("provider", value)}
+                        title={disabled ? "Zoom is not configured for this workspace" : ""}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          disabled
+                            ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
+                            : form.provider === value
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!zoomConfigured && (
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Zoom is not configured for this workspace — contact your administrator.
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Description */}

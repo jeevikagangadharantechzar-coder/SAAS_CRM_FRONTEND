@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UploadCloud, Save, Image, Globe, Bookmark, Send } from "react-feather";
+import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2 } from "react-feather";
+
+const authHeader = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
 
 export default function Settings() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -19,10 +23,66 @@ export default function Settings() {
   const [selectedInvoiceLogo, setSelectedInvoiceLogo] = useState(null);
   const [tenantName, setTenantName] = useState("");
 
+  // Zoom Integration states
+  const [zoomStatus, setZoomStatus] = useState({ connected: false, connectedAt: null });
+  const [zoomForm, setZoomForm] = useState({ clientId: "", clientSecret: "", accountId: "", hostUserId: "" });
+  const [zoomSaving, setZoomSaving] = useState(false);
+
   // Fetch current settings
   useEffect(() => {
     fetchSettings();
+    fetchZoomStatus();
   }, []);
+
+  /* ── Zoom Integration Functions ─────────────────────── */
+  const fetchZoomStatus = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/zoom-integration`, authHeader());
+      setZoomStatus(data);
+      setZoomForm((f) => ({
+        ...f,
+        clientId: data.clientId || "",
+        accountId: data.accountId || "",
+        hostUserId: data.hostUserId || "",
+      }));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleZoomFieldChange = (field, value) =>
+    setZoomForm((f) => ({ ...f, [field]: value }));
+
+  const handleZoomSave = async () => {
+    const { clientId, clientSecret, accountId, hostUserId } = zoomForm;
+    if (!clientId.trim() || !clientSecret.trim() || !accountId.trim() || !hostUserId.trim()) {
+      toast.error("Client ID, Client Secret, Account ID, and Host User ID are all required");
+      return;
+    }
+    try {
+      setZoomSaving(true);
+      await axios.post(`${API_URL}/zoom-integration`, zoomForm, authHeader());
+      toast.success("Zoom integration saved");
+      setZoomForm((f) => ({ ...f, clientSecret: "" }));
+      fetchZoomStatus();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save Zoom integration");
+    } finally {
+      setZoomSaving(false);
+    }
+  };
+
+  const handleZoomRemove = async () => {
+    if (!window.confirm("Remove Zoom integration? Existing Zoom meetings will keep their join links.")) return;
+    try {
+      await axios.delete(`${API_URL}/zoom-integration`, authHeader());
+      toast.success("Zoom integration removed");
+      setZoomForm({ clientId: "", clientSecret: "", accountId: "", hostUserId: "" });
+      fetchZoomStatus();
+    } catch {
+      toast.error("Failed to remove");
+    }
+  };
 
   /* ── Fetch Settings Function ─────────────────────── */
   const fetchSettings = async () => {
@@ -492,6 +552,120 @@ export default function Settings() {
             >
               <UploadCloud size={16} className="sm:w-4 sm:h-4" />
               {loading ? "Uploading..." : "Update Invoice Logo"}
+            </button>
+          </div>
+
+          {/* ================= ZOOM INTEGRATION CARD ================= */}
+          <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-sky-200 md:col-span-2 lg:col-span-3">
+
+            <div className="space-y-4 sm:space-y-5 flex-1">
+              {/* Header with icon */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="p-1.5 bg-sky-50 rounded-lg">
+                      <Video className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600" />
+                    </div>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                      Zoom Integration
+                    </h2>
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Connect your own Zoom account so this workspace can auto-generate Zoom meetings.
+                  </p>
+                </div>
+                {zoomStatus.connected && (
+                  <span className="px-2 py-1 bg-green-50 text-green-600 text-xs rounded-full border border-green-200 shrink-0">
+                    Active
+                  </span>
+                )}
+              </div>
+
+              {/* Status */}
+              <div
+                className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border ${
+                  zoomStatus.connected ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+                }`}
+              >
+                {zoomStatus.connected ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-gray-400 shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800">
+                    {zoomStatus.connected ? "Zoom Connected" : "Not Connected"}
+                  </p>
+                  {zoomStatus.connectedAt && (
+                    <p className="text-xs text-gray-500">
+                      Connected on {new Date(zoomStatus.connectedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                {zoomStatus.connected && (
+                  <button
+                    onClick={handleZoomRemove}
+                    className="flex items-center gap-1.5 text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {/* Credential Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Client ID</label>
+                  <input
+                    type="text"
+                    value={zoomForm.clientId}
+                    onChange={(e) => handleZoomFieldChange("clientId", e.target.value)}
+                    placeholder="Zoom app Client ID"
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Client Secret</label>
+                  <input
+                    type="password"
+                    value={zoomForm.clientSecret}
+                    onChange={(e) => handleZoomFieldChange("clientSecret", e.target.value)}
+                    placeholder={zoomStatus.connected ? "Enter to update" : "Zoom app Client Secret"}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Account ID</label>
+                  <input
+                    type="text"
+                    value={zoomForm.accountId}
+                    onChange={(e) => handleZoomFieldChange("accountId", e.target.value)}
+                    placeholder="Zoom Account ID"
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Host User ID</label>
+                  <input
+                    type="text"
+                    value={zoomForm.hostUserId}
+                    onChange={(e) => handleZoomFieldChange("hostUserId", e.target.value)}
+                    placeholder="Zoom user email that hosts meetings"
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={handleZoomSave}
+              disabled={zoomSaving}
+              className="mt-4 sm:mt-6 w-full sm:w-auto sm:self-start flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-600 to-sky-700 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-sky-700 hover:to-sky-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              <Save size={16} className="sm:w-4 sm:h-4" />
+              {zoomSaving ? "Saving..." : zoomStatus.connected ? "Update Zoom Integration" : "Save Zoom Integration"}
             </button>
           </div>
 
