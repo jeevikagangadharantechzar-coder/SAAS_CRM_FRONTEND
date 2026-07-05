@@ -19,11 +19,30 @@ const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 /* ── Helpers ─────────────────────── */
+// Animates from 0 up to the real value on every mount/update instead of
+// snapping straight to it — a CSS transition only plays on a style change
+// *after* the browser has painted the previous value, so a single rAF isn't
+// reliable (it can still land in the same paint as the initial 0 render);
+// nesting two rAFs guarantees a 0%-width frame is actually painted first,
+// so the next style change to the real value is a genuine transition.
 function ProgressBar({ value, color = "bg-[#008ecc]" }) {
+  const target = Math.min(100, value);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    setWidth(0);
+    let raf2;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setWidth(target));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [target]);
   return (
     <div className="w-full bg-gray-100 rounded-full h-2">
-      <div className={`h-2 rounded-full transition-all duration-500 ${color}`}
-        style={{ width: `${Math.min(100, value)}%` }} />
+      <div className={`h-2 rounded-full transition-all duration-500 ease-out ${color}`}
+        style={{ width: `${width}%` }} />
     </div>
   );
 }
@@ -173,21 +192,6 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
         </div>
       )}
 
-      {/* Won highlight */}
-      {deals.list.filter(d => d.stage === "Closed Won").length > 0 && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
-          <p className="text-[11px] font-bold text-emerald-700 mb-1 flex items-center gap-1">
-            <Award size={11} /> {deals.list.filter(d => d.stage === "Closed Won").length} Deal(s) Won
-          </p>
-          {deals.list.filter(d => d.stage === "Closed Won").slice(0, 2).map(d => (
-            <p key={d._id} className="text-[11px] text-emerald-700 pl-1">
-              • {d.dealName}{d.wonAtFormatted ? ` — ${d.wonAtFormatted}` : ""}
-              {d.daysTaken !== undefined && <span className="text-emerald-500"> ({d.daysTaken}d)</span>}
-            </p>
-          ))}
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 shrink-0">
         <button type="button" onClick={() => setTab("leads")}
@@ -268,12 +272,6 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
                     {d.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
                   </div>
                   {d.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
-                  {d.stage === "Closed Won" && d.wonAtFormatted && (
-                    <div className="flex items-center gap-1.5 bg-emerald-50 rounded-lg px-2 py-1 mt-1">
-                      <Award size={9} className="text-emerald-500 shrink-0" />
-                      <p className="text-[10px] text-emerald-700 font-medium">Won {d.wonAtFormatted}{d.daysTaken !== undefined && ` · ${d.daysTaken === 0 ? "Same day" : `${d.daysTaken}d to close`}`}</p>
-                    </div>
-                  )}
                   <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
                 </div>
               </div>
@@ -1727,7 +1725,7 @@ export default function TargetManagement() {
   const [loading, setLoading] = useState(true);
   const [periodFilter, setPeriodFilter] = useState("all");
   const [viewMode, setViewMode] = useState("card");
-  const [mainView, setMainView] = useState("targets"); // "targets" | "notifications" | "reasonNotes"
+  const [mainView, setMainView] = useState("targets"); // "targets" | "notifications" | "reasonNotes" | "adminActivity"
   const { notifications: allNotifications, setNotifications: setGlobalNotifications, fetchNotifications } = useNotifications();
   const [reasonNotes, setReasonNotes] = useState([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
@@ -1740,6 +1738,9 @@ export default function TargetManagement() {
   const [unlinking, setUnlinking] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name } — target to delete
   const [noteDeleteConfirm, setNoteDeleteConfirm] = useState(null); // { targetId, noteIdx, isBulk, count }
+  const [adminActivity, setAdminActivity] = useState(null); // { leadsConvertedByAdmin, dealsWonByAdmin, counts }
+  const [loadingAdminActivity, setLoadingAdminActivity] = useState(false);
+  const [dismissConfirm, setDismissConfirm] = useState(null); // { itemType, itemId, itemName }
   const [selectedNotes, setSelectedNotes] = useState(new Set()); // "targetId__noteIdx"
   const [notesPage, setNotesPage] = useState(1);
   const NOTES_PER_PAGE = 8;
@@ -1785,7 +1786,10 @@ export default function TargetManagement() {
     } finally { setLoading(false); }
   }, [baseUrl]);
 
-  const TARGET_NOTIF_TYPES = ["target_reminder", "target_due_today", "target_expired", "reason_note", "target_reassign"];
+  // "reason_note" is deliberately excluded — it has its own dedicated Reason
+  // Notes tab (see mainView === "reasonNotes" below); including it here too
+  // would show the same reported issue twice.
+  const TARGET_NOTIF_TYPES = ["target_reminder", "target_due_today", "target_expired", "target_reassign"];
 
   const notifications = allNotifications
     .filter(n => TARGET_NOTIF_TYPES.includes(n.type))
@@ -1813,6 +1817,40 @@ export default function TargetManagement() {
     } catch { /* silently fail */ }
     finally { setLoadingNotes(false); }
   }, [baseUrl]);
+
+  // Target Management's own "Admin Completed" feed — leads/deals Admin
+  // personally converted/won that are linked to a Target. Independent
+  // endpoint and dismiss flag from Task Management's equivalent tab, so the
+  // two never share data or state.
+  const fetchAdminActivity = useCallback(async () => {
+    setLoadingAdminActivity(true);
+    try {
+      const { data } = await axios.get(`${baseUrl}/targets/admin-activity`, { headers });
+      setAdminActivity(data);
+    } catch {
+      toast.error("Failed to load admin activity");
+    } finally {
+      setLoadingAdminActivity(false);
+    }
+  }, [baseUrl]);
+
+  const handleDismissAdminActivity = async () => {
+    if (!dismissConfirm) return;
+    const { itemType, itemId } = dismissConfirm;
+    setDismissConfirm(null);
+    setAdminActivity((prev) => prev && {
+      ...prev,
+      leadsConvertedByAdmin: itemType === "lead" ? prev.leadsConvertedByAdmin.filter((l) => l._id !== itemId) : prev.leadsConvertedByAdmin,
+      dealsWonByAdmin: itemType === "deal" ? prev.dealsWonByAdmin.filter((d) => d._id !== itemId) : prev.dealsWonByAdmin,
+    });
+    try {
+      await axios.post(`${baseUrl}/targets/admin-activity/dismiss`, { itemType, itemId }, { headers });
+      toast.success("Removed from Admin Completed");
+    } catch {
+      toast.error("Failed to remove");
+      fetchAdminActivity();
+    }
+  };
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -1859,6 +1897,7 @@ export default function TargetManagement() {
       });
     }
     if (mainView === "reasonNotes") { fetchReasonNotes(); setNotesPage(1); setSelectedNotes(new Set()); }
+    if (mainView === "adminActivity") { fetchAdminActivity(); }
   }, [mainView]);
 
   const handleUnlinkItem = async () => {
@@ -2043,6 +2082,12 @@ export default function TargetManagement() {
               {reasonNotes.filter(n => n.status === "pending").length}
             </span>
           )}
+        </button>
+
+        {/* Admin Completed tab */}
+        <button onClick={() => setMainView(mainView === "adminActivity" ? "targets" : "adminActivity")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "adminActivity" ? "bg-indigo-500 text-white border-indigo-500 shadow-sm" : "bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50"}`}>
+          <Trophy size={13} /> Admin Completed
         </button>
 
         {/* Count + Card/Table toggle — always visible */}
@@ -2281,6 +2326,94 @@ export default function TargetManagement() {
         );
       })()}
 
+      {/* ── ADMIN COMPLETED VIEW ── */}
+      {/* Strictly Target-scoped — only leads/deals actually linked to a
+          Target (see target.controller.js's getAdminActivity). Same visual
+          design as Task Management's own Admin Completed tab (list format),
+          but an independent endpoint/dismiss-flag/component — no shared
+          state with Task Management at all. */}
+      {mainView === "adminActivity" && (() => {
+        const leads = adminActivity?.leadsConvertedByAdmin || [];
+        const deals = adminActivity?.dealsWonByAdmin || [];
+        const rows = [
+          ...leads.map((l) => ({
+            key: `lead-${l._id}`, itemType: "lead", itemId: l._id,
+            typeLabel: "Lead → Deal Converted", typeClass: "bg-purple-100 text-purple-700 border-purple-200",
+            name: l.leadName, company: l.companyName, salesperson: l.assignTo ? `${l.assignTo.firstName} ${l.assignTo.lastName}` : "—",
+            date: l.updatedAt, value: null,
+          })),
+          ...deals.map((d) => ({
+            key: `deal-${d._id}`, itemType: "deal", itemId: d._id,
+            typeLabel: "Deal Closed Won", typeClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
+            name: d.dealName || d.dealTitle, company: d.companyName, salesperson: d.assignedTo ? `${d.assignedTo.firstName} ${d.assignedTo.lastName}` : "—",
+            date: d.wonAt, value: d.value ? `${d.currency || "INR"} ${d.value}` : null,
+          })),
+        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <Trophy size={16} className="text-indigo-500" /> Admin Completed Leads &amp; Deals
+              </h2>
+              <button onClick={fetchAdminActivity} className="text-xs text-[#008ecc] hover:underline font-medium">Refresh</button>
+            </div>
+
+            {/* Summary counts — display only, never fed back into any
+                target's own progress bar/percentages. */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center">
+                <p className="text-[11px] text-purple-600 font-semibold">Leads Converted by Admin</p>
+                <p className="text-xl font-bold text-purple-700">{leads.length}</p>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+                <p className="text-[11px] text-emerald-600 font-semibold">Deals Won by Admin</p>
+                <p className="text-xl font-bold text-emerald-700">{deals.length}</p>
+              </div>
+            </div>
+
+            {loadingAdminActivity ? (
+              <div className="text-center text-gray-400 py-10 text-sm">Loading...</div>
+            ) : rows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <Trophy size={36} className="mb-3 opacity-20" />
+                <p className="text-sm font-medium">No admin-completed leads or deals yet</p>
+                <p className="text-xs mt-1">When Admin personally converts a Target-linked lead or closes a Target-linked deal Won, it shows up here</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
+                  {["Type", "Name", "Company", "Salesperson", "Date & Time", "Actions"].map((h, i) => (
+                    <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
+                  ))}
+                </div>
+                {rows.map((r) => (
+                  <div key={r.key} className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] px-4 py-3 border-b border-gray-100 last:border-0 items-center hover:bg-gray-50/70">
+                    <div><span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${r.typeClass}`}>{r.typeLabel}</span></div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{r.name}</p>
+                      {r.value && <p className="text-[11px] font-bold text-emerald-600">{r.value}</p>}
+                    </div>
+                    <div className="text-xs text-gray-600 truncate">{r.company || "—"}</div>
+                    <div className="text-xs text-gray-600 truncate">{r.salesperson}</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={9} />{fmt(r.date)} {fmtTime(r.date)}</div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setDismissConfirm({ itemType: r.itemType, itemId: r.itemId, itemName: r.name })}
+                        className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500"
+                        title="Remove from this list"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── TARGETS VIEW ── */}
       {mainView === "targets" && (
         loading ? (
@@ -2401,6 +2534,27 @@ export default function TargetManagement() {
             <div className="flex justify-end gap-3 pt-1">
               <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-200 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">Cancel</button>
               <button onClick={handleDelete} className="px-5 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600">Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADMIN COMPLETED DISMISS CONFIRMATION MODAL ── */}
+      {dismissConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800 text-base">Remove from Admin Completed?</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Remove <span className="font-semibold text-gray-700">"{dismissConfirm.itemName}"</span> from this list? It won't be deleted — just hidden from Admin Completed.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button onClick={() => setDismissConfirm(null)} className="px-4 py-2 border border-gray-200 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">Cancel</button>
+              <button onClick={handleDismissAdminActivity} className="px-5 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600">Remove</button>
             </div>
           </div>
         </div>
