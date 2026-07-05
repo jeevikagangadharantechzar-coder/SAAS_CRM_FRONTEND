@@ -299,7 +299,7 @@ export default function Settings() {
       const formData = new FormData();
       formData.append("favicon", selectedFavicon);
 
-      await axios.post(`${API_URL}/settings/favicon`, formData, {
+      const { data } = await axios.post(`${API_URL}/settings/favicon`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -308,11 +308,14 @@ export default function Settings() {
 
       toast.success("Favicon updated successfully!");
       setSelectedFavicon(null);
-      fetchSettings();
+
+      const baseUrl = API_URL.replace("/api", "");
+      const newFaviconUrl = `${baseUrl}/${data.data.favicon.replace(/\\/g, "/")}`;
+      setFavicon(newFaviconUrl);
 
       const faviconElement = document.getElementById("dynamic-favicon");
-      if (faviconElement && favicon) {
-        faviconElement.href = favicon;
+      if (faviconElement) {
+        faviconElement.href = newFaviconUrl;
       }
     } catch (err) {
       console.error(err);

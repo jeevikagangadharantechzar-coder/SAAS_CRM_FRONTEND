@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import "./App.css";
+import { applyTenantBranding } from "./utils/applyTenantBranding";
 
 import Login from "./pages/auth/login";
 import Layout from "./navbar/Layout";
@@ -84,6 +86,13 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const { token, slug } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (token && slug) {
+      applyTenantBranding();
+    }
+  }, [token, slug]);
 
   useEffect(() => {
     const handleStorageChange = () => {
