@@ -188,15 +188,23 @@ const InvoiceHead = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // The email has been sent successfully at this point. Advancing the
+      // deal's stage is a best-effort follow-up — e.g. it's a no-op/rejected
+      // when the deal is already in a terminal stage (Closed Won/Rejected) —
+      // so its failure must not be reported as a failure to send the email.
       const invoice = invoices.find((inv) => inv._id === invoiceId);
       const dealId = invoice?.items?.[0]?.deal?._id;
 
       if (dealId) {
-        await axios.patch(
-          `${API_URL}/deals/update-deal/${dealId}`,
-          { stage: "Invoice Sent" },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        try {
+          await axios.patch(
+            `${API_URL}/deals/update-deal/${dealId}`,
+            { stage: "Invoice Sent" },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (stageError) {
+          console.warn("Could not update deal stage after sending invoice:", stageError.response?.data?.message || stageError.message);
+        }
       }
 
       setEmailStatus("success");
