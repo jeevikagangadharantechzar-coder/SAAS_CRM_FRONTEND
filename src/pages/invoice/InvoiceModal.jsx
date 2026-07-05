@@ -486,10 +486,10 @@ setSalesUsers(response.data.users);
         </DialogHeader>
 
         <div className="p-6 max-h-[80vh] overflow-y-auto ">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-stretch">
             {/* Left Column */}
-            <div className="space-y-6">
-              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+            <div>
+              <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                 <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                   <svg
                     className="w-5 h-5 mr-2 text-blue-600"
@@ -670,8 +670,8 @@ setSalesUsers(response.data.users);
             </div>
 
             {/* Right Column */}
-            <div className="space-y-6">
-              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+            <div>
+              <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                 <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                   <svg
                     className="w-5 h-5 mr-2 text-green-600"
@@ -784,51 +784,69 @@ setSalesUsers(response.data.users);
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Billing Details — varies by country/client, so kept optional */}
-              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                <h3 className="text-lg font-medium text-gray-800 mb-4">Billing Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Billing Address
-                    </label>
-                    <textarea
-                      name="billingAddress"
-                      rows="2"
-                      value={invoiceData.billingAddress}
-                      onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                      placeholder="Defaults to the deal's address"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Client Tax ID
-                      </label>
-                      <input
-                        type="text"
-                        name="clientTaxId"
-                        value={invoiceData.clientTaxId}
-                        onChange={handleChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                        placeholder="e.g. GSTIN, VAT No."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        PO Number
-                      </label>
-                      <input
-                        type="text"
-                        name="poNumber"
-                        value={invoiceData.poNumber}
-                        onChange={handleChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                      />
-                    </div>
-                  </div>
+          {/* Billing Details — varies by country/client, so kept optional. Full-width,
+              like Financial Details below, rather than squeezed into one column —
+              it doesn't pair evenly in height with either Basic Information or
+              Deal Information. */}
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+              <svg
+                className="w-5 h-5 mr-2 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Billing Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Billing Address
+                </label>
+                <textarea
+                  name="billingAddress"
+                  rows="4"
+                  value={invoiceData.billingAddress}
+                  onChange={handleChange}
+                  className="w-full h-[calc(100%-1.75rem)] p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+                  placeholder="Defaults to the deal's address"
+                />
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Tax ID
+                  </label>
+                  <input
+                    type="text"
+                    name="clientTaxId"
+                    value={invoiceData.clientTaxId}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    placeholder="e.g. GSTIN, VAT No."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    PO Number
+                  </label>
+                  <input
+                    type="text"
+                    name="poNumber"
+                    value={invoiceData.poNumber}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  />
                 </div>
               </div>
             </div>
