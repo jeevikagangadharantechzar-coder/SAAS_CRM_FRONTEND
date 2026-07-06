@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UploadCloud, Save, Image, Globe, Bookmark, Send } from "react-feather";
+import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText } from "react-feather";
+
+const authHeader = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
 
 export default function Settings() {
   const API_URL = import.meta.env.VITE_API_URL;
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [logo, setLogo] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -19,10 +27,83 @@ export default function Settings() {
   const [selectedInvoiceLogo, setSelectedInvoiceLogo] = useState(null);
   const [tenantName, setTenantName] = useState("");
 
+  // Business details shown on invoices
+  const [businessDetails, setBusinessDetails] = useState({
+    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "",
+  });
+
+  // Bank details shown on invoices
+  const [bankDetails, setBankDetails] = useState({
+    accountName: "", accountNumber: "", bankName: "", ifscOrSwift: "", branch: "",
+  });
+
+  // Invoice terms & conditions footer text
+  const [termsAndConditions, setTermsAndConditions] = useState("");
+
+  // Gmail account connected (via OAuth) for sending invoices
+  const [invoiceGmailEmail, setInvoiceGmailEmail] = useState(null);
+  const [connectingGmail, setConnectingGmail] = useState(false);
+
+  // Zoom Integration states
+  const [zoomStatus, setZoomStatus] = useState({ connected: false, connectedAt: null });
+  const [zoomForm, setZoomForm] = useState({ clientId: "", clientSecret: "", accountId: "", hostUserId: "" });
+  const [zoomSaving, setZoomSaving] = useState(false);
+
   // Fetch current settings
   useEffect(() => {
     fetchSettings();
+    fetchZoomStatus();
   }, []);
+
+  /* ── Zoom Integration Functions ─────────────────────── */
+  const fetchZoomStatus = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/zoom-integration`, authHeader());
+      setZoomStatus(data);
+      setZoomForm((f) => ({
+        ...f,
+        clientId: data.clientId || "",
+        accountId: data.accountId || "",
+        hostUserId: data.hostUserId || "",
+      }));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleZoomFieldChange = (field, value) =>
+    setZoomForm((f) => ({ ...f, [field]: value }));
+
+  const handleZoomSave = async () => {
+    const { clientId, clientSecret, accountId, hostUserId } = zoomForm;
+    if (!clientId.trim() || !clientSecret.trim() || !accountId.trim() || !hostUserId.trim()) {
+      toast.error("Client ID, Client Secret, Account ID, and Host User ID are all required");
+      return;
+    }
+    try {
+      setZoomSaving(true);
+      await axios.post(`${API_URL}/zoom-integration`, zoomForm, authHeader());
+      toast.success("Zoom integration saved");
+      setZoomForm((f) => ({ ...f, clientSecret: "" }));
+      fetchZoomStatus();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save Zoom integration");
+    } finally {
+      setZoomSaving(false);
+    }
+  };
+
+  const handleZoomRemove = async () => {
+    if (!window.confirm("Remove Zoom integration? Existing Zoom meetings will keep their join links.")) return;
+    try {
+      await axios.delete(`${API_URL}/zoom-integration`, authHeader());
+      toast.success("Zoom integration removed");
+      setZoomForm({ clientId: "", clientSecret: "", accountId: "", hostUserId: "" });
+      fetchZoomStatus();
+    } catch {
+      toast.error("Failed to remove");
+    }
+  };
 
   /* ── Fetch Settings Function ─────────────────────── */
   const fetchSettings = async () => {
@@ -57,9 +138,80 @@ export default function Settings() {
       }
 
       setTenantName(data?.tenantName || "");
+
+      setBusinessDetails({
+        address: data?.address || "",
+        phone: data?.phone || "",
+        email: data?.email || "",
+        taxIdLabel: data?.taxIdLabel || "Tax ID",
+        taxId: data?.taxId || "",
+      });
+      setBankDetails({
+        accountName: data?.bankDetails?.accountName || "",
+        accountNumber: data?.bankDetails?.accountNumber || "",
+        bankName: data?.bankDetails?.bankName || "",
+        ifscOrSwift: data?.bankDetails?.ifscOrSwift || "",
+        branch: data?.bankDetails?.branch || "",
+      });
+      setTermsAndConditions(data?.termsAndConditions || "");
+      setInvoiceGmailEmail(data?.invoiceSenderEmail || null);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load settings");
+    }
+  };
+
+  // ─── URL params (OAuth callback from Connect Gmail) ───────────────────────
+  useEffect(() => {
+    const connected = searchParams.get("gmail_invoice_connected");
+    const gmailError = searchParams.get("gmail_error");
+    const returnedEmail = searchParams.get("email");
+
+    if (connected === "1") {
+      toast.success(`Gmail connected: ${returnedEmail || ""}`);
+      if (returnedEmail) setInvoiceGmailEmail(returnedEmail);
+      navigate(location.pathname, { replace: true });
+      setConnectingGmail(false);
+    }
+    if (gmailError) {
+      toast.error(searchParams.get("error") || "Error connecting Gmail.");
+      navigate(location.pathname, { replace: true });
+      setConnectingGmail(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  /* ── Handle Connect Invoice Gmail Function ─────────────────────── */
+  const handleConnectInvoiceGmail = async () => {
+    try {
+      setConnectingGmail(true);
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`${API_URL}/settings/invoice-email/connect-url`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to start Gmail connection");
+      setConnectingGmail(false);
+    }
+  };
+
+  /* ── Handle Disconnect Invoice Gmail Function ─────────────────────── */
+  const handleDisconnectInvoiceGmail = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_URL}/settings/invoice-email`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Gmail disconnected");
+      setInvoiceGmailEmail(null);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to disconnect");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -147,7 +299,7 @@ export default function Settings() {
       const formData = new FormData();
       formData.append("favicon", selectedFavicon);
 
-      await axios.post(`${API_URL}/settings/favicon`, formData, {
+      const { data } = await axios.post(`${API_URL}/settings/favicon`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -156,11 +308,14 @@ export default function Settings() {
 
       toast.success("Favicon updated successfully!");
       setSelectedFavicon(null);
-      fetchSettings();
+
+      const baseUrl = API_URL.replace("/api", "");
+      const newFaviconUrl = `${baseUrl}/${data.data.favicon.replace(/\\/g, "/")}`;
+      setFavicon(newFaviconUrl);
 
       const faviconElement = document.getElementById("dynamic-favicon");
-      if (faviconElement && favicon) {
-        faviconElement.href = favicon;
+      if (faviconElement) {
+        faviconElement.href = newFaviconUrl;
       }
     } catch (err) {
       console.error(err);
@@ -206,6 +361,58 @@ export default function Settings() {
       setLoading(false);
     }
   };
+
+  /* ── Handle Business Details Update Function ─────────────────────── */
+  const handleBusinessDetailsUpdate = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      await axios.put(`${API_URL}/settings/business-details`, businessDetails, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Business details updated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── Handle Bank Details Update Function ─────────────────────── */
+  const handleBankDetailsUpdate = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      await axios.put(`${API_URL}/settings/bank-details`, bankDetails, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Bank details updated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── Handle Terms & Conditions Update Function ─────────────────────── */
+  const handleTermsUpdate = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      await axios.put(`${API_URL}/settings/terms`, { termsAndConditions }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Terms & conditions updated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -492,6 +699,357 @@ export default function Settings() {
             >
               <UploadCloud size={16} className="sm:w-4 sm:h-4" />
               {loading ? "Uploading..." : "Update Invoice Logo"}
+            </button>
+          </div>
+
+          {/* ================= BUSINESS DETAILS CARD ================= */}
+          <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-200">
+            <div className="space-y-4 sm:space-y-5 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 bg-orange-50 rounded-lg">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">Business Details</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Shown on every invoice PDF</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Business Address</label>
+                <textarea
+                  rows="2"
+                  value={businessDetails.address}
+                  onChange={(e) => setBusinessDetails((p) => ({ ...p, address: e.target.value }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  placeholder="Street, City, State, ZIP, Country"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Phone</label>
+                  <input
+                    type="text"
+                    value={businessDetails.phone}
+                    onChange={(e) => setBusinessDetails((p) => ({ ...p, phone: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Email</label>
+                  <input
+                    type="email"
+                    value={businessDetails.email}
+                    onChange={(e) => setBusinessDetails((p) => ({ ...p, email: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Tax ID Label</label>
+                  <input
+                    type="text"
+                    value={businessDetails.taxIdLabel}
+                    onChange={(e) => setBusinessDetails((p) => ({ ...p, taxIdLabel: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    placeholder="e.g. GSTIN, VAT No., EIN"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Tax ID</label>
+                  <input
+                    type="text"
+                    value={businessDetails.taxId}
+                    onChange={(e) => setBusinessDetails((p) => ({ ...p, taxId: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleBusinessDetailsUpdate}
+              disabled={loading}
+              className="mt-4 sm:mt-6 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-orange-700 hover:to-orange-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              <Save size={16} className="sm:w-4 sm:h-4" />
+              Save Business Details
+            </button>
+          </div>
+
+          {/* ================= BANK DETAILS CARD ================= */}
+          <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-200">
+            <div className="space-y-4 sm:space-y-5 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 bg-teal-50 rounded-lg">
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">Bank Details</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Payment info shown on invoices</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Account Name</label>
+                <input
+                  type="text"
+                  value={bankDetails.accountName}
+                  onChange={(e) => setBankDetails((p) => ({ ...p, accountName: e.target.value }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Account Number</label>
+                  <input
+                    type="text"
+                    value={bankDetails.accountNumber}
+                    onChange={(e) => setBankDetails((p) => ({ ...p, accountNumber: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Bank Name</label>
+                  <input
+                    type="text"
+                    value={bankDetails.bankName}
+                    onChange={(e) => setBankDetails((p) => ({ ...p, bankName: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">IFSC / SWIFT</label>
+                  <input
+                    type="text"
+                    value={bankDetails.ifscOrSwift}
+                    onChange={(e) => setBankDetails((p) => ({ ...p, ifscOrSwift: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Branch</label>
+                  <input
+                    type="text"
+                    value={bankDetails.branch}
+                    onChange={(e) => setBankDetails((p) => ({ ...p, branch: e.target.value }))}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleBankDetailsUpdate}
+              disabled={loading}
+              className="mt-4 sm:mt-6 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-teal-700 hover:to-teal-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              <Save size={16} className="sm:w-4 sm:h-4" />
+              Save Bank Details
+            </button>
+          </div>
+
+          {/* ================= TERMS & CONDITIONS CARD ================= */}
+          <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-200">
+            <div className="space-y-4 sm:space-y-5 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 bg-pink-50 rounded-lg">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">Terms & Conditions</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Footer text on every invoice</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <textarea
+                  rows="4"
+                  value={termsAndConditions}
+                  onChange={(e) => setTermsAndConditions(e.target.value)}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
+                  placeholder="e.g. Payment due within 30 days."
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleTermsUpdate}
+              disabled={loading}
+              className="mt-4 sm:mt-6 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-600 to-pink-700 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-pink-700 hover:to-pink-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              <Save size={16} className="sm:w-4 sm:h-4" />
+              Save Terms
+            </button>
+          </div>
+
+          {/* ================= INVOICE SENDING EMAIL CARD ================= */}
+          <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-200">
+            <div className="space-y-4 sm:space-y-5 flex-1">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="p-1.5 bg-cyan-50 rounded-lg">
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">Invoice Sending Email</h2>
+                    <p className="text-xs sm:text-sm text-gray-500">Send invoices from your own Gmail</p>
+                  </div>
+                </div>
+                {invoiceGmailEmail && (
+                  <span className="px-2 py-1 bg-green-50 text-green-600 text-xs rounded-full border border-green-200">
+                    Connected
+                  </span>
+                )}
+              </div>
+
+              {invoiceGmailEmail ? (
+                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  Sending as <span className="font-medium">{invoiceGmailEmail}</span>
+                </div>
+              ) : (
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Not connected — invoices currently send via the platform's shared mailbox. Connect your own Gmail so invoices come from your business.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 sm:mt-6">
+              {invoiceGmailEmail ? (
+                <button
+                  onClick={handleDisconnectInvoiceGmail}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  onClick={handleConnectInvoiceGmail}
+                  disabled={connectingGmail}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-cyan-700 hover:to-cyan-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                >
+                  <Send size={16} className="sm:w-4 sm:h-4" />
+                  {connectingGmail ? "Redirecting..." : "Connect Gmail"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ================= ZOOM INTEGRATION CARD ================= */}
+          <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-sky-200 md:col-span-2 lg:col-span-3">
+
+            <div className="space-y-4 sm:space-y-5 flex-1">
+              {/* Header with icon */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="p-1.5 bg-sky-50 rounded-lg">
+                      <Video className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600" />
+                    </div>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                      Zoom Integration
+                    </h2>
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Connect your own Zoom account so this workspace can auto-generate Zoom meetings.
+                  </p>
+                </div>
+                {zoomStatus.connected && (
+                  <span className="px-2 py-1 bg-green-50 text-green-600 text-xs rounded-full border border-green-200 shrink-0">
+                    Active
+                  </span>
+                )}
+              </div>
+
+              {/* Status */}
+              <div
+                className={`flex items-center gap-3 p-3 sm:p-4 rounded-xl border ${
+                  zoomStatus.connected ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+                }`}
+              >
+                {zoomStatus.connected ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-gray-400 shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800">
+                    {zoomStatus.connected ? "Zoom Connected" : "Not Connected"}
+                  </p>
+                  {zoomStatus.connectedAt && (
+                    <p className="text-xs text-gray-500">
+                      Connected on {new Date(zoomStatus.connectedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                {zoomStatus.connected && (
+                  <button
+                    onClick={handleZoomRemove}
+                    className="flex items-center gap-1.5 text-xs text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {/* Credential Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Client ID</label>
+                  <input
+                    type="text"
+                    value={zoomForm.clientId}
+                    onChange={(e) => handleZoomFieldChange("clientId", e.target.value)}
+                    placeholder="Zoom app Client ID"
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Client Secret</label>
+                  <input
+                    type="password"
+                    value={zoomForm.clientSecret}
+                    onChange={(e) => handleZoomFieldChange("clientSecret", e.target.value)}
+                    placeholder={zoomStatus.connected ? "Enter to update" : "Zoom app Client Secret"}
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Account ID</label>
+                  <input
+                    type="text"
+                    value={zoomForm.accountId}
+                    onChange={(e) => handleZoomFieldChange("accountId", e.target.value)}
+                    placeholder="Zoom Account ID"
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Host User ID</label>
+                  <input
+                    type="text"
+                    value={zoomForm.hostUserId}
+                    onChange={(e) => handleZoomFieldChange("hostUserId", e.target.value)}
+                    placeholder="Zoom user email that hosts meetings"
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={handleZoomSave}
+              disabled={zoomSaving}
+              className="mt-4 sm:mt-6 w-full sm:w-auto sm:self-start flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-600 to-sky-700 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-sky-700 hover:to-sky-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              <Save size={16} className="sm:w-4 sm:h-4" />
+              {zoomSaving ? "Saving..." : zoomStatus.connected ? "Update Zoom Integration" : "Save Zoom Integration"}
             </button>
           </div>
 

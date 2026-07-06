@@ -60,11 +60,13 @@ function GoogleConnectBanner({ onConnect }) {
   );
 }
 
+
 export function Meetings() {
   const {
     meetings,
     loading,
     googleConfigured,
+    zoomConfigured,
     alarmFired,
     setAlarmFired,
     createMeeting,
@@ -250,6 +252,7 @@ export function Meetings() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         editMeeting={editMeeting}
+        zoomConfigured={zoomConfigured}
       />
     </div>
   );

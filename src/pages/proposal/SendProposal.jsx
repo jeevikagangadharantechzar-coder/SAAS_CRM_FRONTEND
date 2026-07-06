@@ -257,11 +257,15 @@ const SendProposal = () => {
             onChange={(e) => handleDealSelect(e.target.value)}
           >
             <option value="">-- Select a Deal --</option>
-            {deals.map((deal) => (
-              <option key={deal._id} value={deal._id}>
-                {deal.dealName || `Deal #${deal._id.substring(0, 8)}`}
-              </option>
-            ))}
+            {deals
+              // Closed Won deals are already completed and shouldn't receive new proposals.
+              // Still show the deal already linked to this proposal so editing doesn't blank it out.
+              .filter((deal) => deal.stage !== "Closed Won" || deal._id === selectedDealId)
+              .map((deal) => (
+                <option key={deal._id} value={deal._id}>
+                  {deal.dealName || `Deal #${deal._id.substring(0, 8)}`}
+                </option>
+              ))}
           </select>
         </div>
 

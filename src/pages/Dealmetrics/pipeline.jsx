@@ -1324,8 +1324,17 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
 // ==================== MAIN DASHBOARD ====================
 
+const CURRENCY_SYMBOLS = {
+  USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+  AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+  SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
 function DealIntelligenceDashboard() {
   const API_URL = import.meta.env.VITE_API_URL;
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userCurrencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
   const [deals, setDeals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
@@ -1889,6 +1898,11 @@ function DealIntelligenceDashboard() {
                                   <DollarSign size={10} />
                                   {formatCurrencyValue(deal.value) || "No value"}
                                 </div>
+                                {deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {userCurrencySymbol} {Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}
+                                  </div>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -2184,8 +2198,13 @@ function DealIntelligenceDashboard() {
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">Value: {formatCurrencyValue(deal.value)}</div>
+                        {deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {userCurrencySymbol} {Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}
+                          </div>
+                        )}
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
                           if (deal.companyName && deal.stage === "Closed Won") {
                             navigate(`/${tenantSlug}/cltv/client/${encodeURIComponent(deal.companyName)}`);

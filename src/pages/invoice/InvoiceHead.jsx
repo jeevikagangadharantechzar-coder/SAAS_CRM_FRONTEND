@@ -44,6 +44,12 @@ const CustomCalendarInput = React.forwardRef(({ value, onClick, placeholder }, r
   </div>
 ));
 
+const CURRENCY_SYMBOLS = {
+  USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+  AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+  SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
 const InvoiceHead = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -53,6 +59,8 @@ const InvoiceHead = () => {
   const [startDate, setStartDate] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
+  // Invoices filtered by everything EXCEPT the status dropdown — used for summary cards
+  const [statsInvoices, setStatsInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAssignTo, setFilterAssignTo] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -68,14 +76,16 @@ const InvoiceHead = () => {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [dropdownButton, setDropdownButton] = useState(null);
 
-  // Summary stats — always computed from ALL filteredInvoices
+  // Summary stats — always computed from statsInvoices (unaffected by the status dropdown)
   const [summaryStats, setSummaryStats] = useState({
     total: 0,
     paid: 0,
     unpaid: 0,
+    partiallyPaid: 0,
     totalAmount: 0,
     paidAmount: 0,
     unpaidAmount: 0,
+    partiallyPaidAmount: 0,
   });
 
   // Pagination — only affects the TABLE, not the cards
@@ -133,12 +143,12 @@ const InvoiceHead = () => {
     setCurrentPage(1);
   }, [searchTerm, startDate, filterAssignTo, filterStatus, filterMethod, invoices, statusFilter]);
 
-  // ─── Summary stats computed from ALL filteredInvoices ─────────────
+  // ─── Summary stats computed from statsInvoices (all statuses) ─────────────
   useEffect(() => {
-    let total = 0, paid = 0, unpaid = 0;
-    let totalAmount = 0, paidAmount = 0, unpaidAmount = 0;
+    let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0;
+    let totalAmount = 0, paidAmount = 0, unpaidAmount = 0, partiallyPaidAmount = 0;
 
-    filteredInvoices.forEach((inv) => {
+    statsInvoices.forEach((inv) => {
       total++;
       const amount = Number(inv.total) || 0;
       totalAmount += amount;
@@ -146,16 +156,24 @@ const InvoiceHead = () => {
       if (inv.status === "paid") {
         paid++;
         paidAmount += amount;
-      } else {
+      } else if (inv.status === "unpaid") {
         unpaid++;
         unpaidAmount += amount;
+      } else if (inv.status === "partially_paid") {
+        partiallyPaid++;
+        partiallyPaidAmount += amount;
       }
     });
 
-    setSummaryStats({ total, paid, unpaid, totalAmount, paidAmount, unpaidAmount });
-  }, [filteredInvoices]);
+    setSummaryStats({
+      total, paid, unpaid, partiallyPaid,
+      totalAmount, paidAmount, unpaidAmount, partiallyPaidAmount,
+    });
+  }, [statsInvoices]);
 
   const user = JSON.parse(localStorage.getItem("user"));
+  const userCurrency = user?.currency || "USD";
+  const currencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
 
 /* ── Handle Send Email Function ─────────────────────── */
   const handleSendEmail = async (invoiceId) => {
@@ -165,18 +183,28 @@ const InvoiceHead = () => {
       setEmailStatus("loading");
       setEmailMessage("📨 Sending invoice email...");
 
-      await axios.post(`${API_URL}/invoices/sendEmail/${invoiceId}`);
+      const token = localStorage.getItem("token");
+      await axios.post(`${API_URL}/invoices/sendEmail/${invoiceId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
+      // The email has been sent successfully at this point. Advancing the
+      // deal's stage is a best-effort follow-up — e.g. it's a no-op/rejected
+      // when the deal is already in a terminal stage (Closed Won/Rejected) —
+      // so its failure must not be reported as a failure to send the email.
       const invoice = invoices.find((inv) => inv._id === invoiceId);
       const dealId = invoice?.items?.[0]?.deal?._id;
 
       if (dealId) {
-        const token = localStorage.getItem("token");
-        await axios.patch(
-          `${API_URL}/deals/update-deal/${dealId}`,
-          { stage: "Invoice Sent" },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        try {
+          await axios.patch(
+            `${API_URL}/deals/update-deal/${dealId}`,
+            { stage: "Invoice Sent" },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (stageError) {
+          console.warn("Could not update deal stage after sending invoice:", stageError.response?.data?.message || stageError.message);
+        }
       }
 
       setEmailStatus("success");
@@ -226,10 +254,6 @@ const InvoiceHead = () => {
       });
     }
 
-    if (filterStatus) {
-      filtered = filtered.filter((inv) => inv.status === filterStatus);
-    }
-
     // URL query param filter (e.g. ?status=pending)
     if (statusFilter === "pending") {
       filtered = filtered.filter((inv) =>
@@ -239,6 +263,14 @@ const InvoiceHead = () => {
 
     if (filterAssignTo) {
       filtered = filtered.filter((inv) => inv.assignTo?._id === filterAssignTo);
+    }
+
+    // Summary cards should reflect the full breakdown (Total/Paid/Pending/Unpaid),
+    // so they must not be narrowed down by the status dropdown itself.
+    setStatsInvoices(filtered);
+
+    if (filterStatus) {
+      filtered = filtered.filter((inv) => inv.status === filterStatus);
     }
 
     setFilteredInvoices(filtered);
@@ -373,44 +405,60 @@ const InvoiceHead = () => {
   const formatCurrency = (amount) =>
     amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
- // Per-row live INR cell
-  const INRCell = ({ invoice }) => {
-    const [liveInrValue, setLiveInrValue] = useState(null);
+  // Paid / balance breakdown for a single invoice row — total never changes,
+  // amountPaid is the cumulative figure tracked separately on the backend
+  const getPaymentBreakdown = (invoice) => {
+    const total = Number(invoice.total) || 0;
+    const isPaidFamily = ["paid", "partially_paid"].includes(invoice.status);
+    const paid = isPaidFamily ? Number(invoice.amountPaid) || 0 : 0;
+    const balance = Math.max(total - paid, 0);
+    return { paid, balance };
+  };
+
+  // Per-row preferred currency cell
+  const PreferredCurrencyCell = ({ invoice }) => {
+    const [displayValue, setDisplayValue] = useState(null);
 
     useEffect(() => {
-      const fetchLiveINR = async () => {
-        // Fetch live rate if:
-        // 1. Unpaid invoice (no stored inrAmount)
-        // 2. Paid invoice but inrAmount was never saved (old invoices)
-        if (!invoice.inrAmount) {
-          try {
-            const response = await axios.get(
-              `${API_URL}/invoices/exchange-rate/${invoice.currency}`
-            );
-            const rate = response.data?.rate || 1;
-            setLiveInrValue((Number(invoice.total) || 0) * rate);
-          } catch (err) {
-            console.error("Error fetching rate:", err);
-          }
+      // Paid/Partially Paid invoice with frozen value stored in DB — never recalculate
+      if (
+        ["paid", "partially_paid"].includes(invoice.status) &&
+        invoice.preferredCurrencyValue &&
+        invoice.preferredCurrency === userCurrency
+      ) {
+        setDisplayValue(invoice.preferredCurrencyValue);
+        return;
+      }
+
+      // Unpaid — use live rate
+      const fetchLiveRate = async () => {
+        const amount = Number(invoice.total) || 0;
+        if (invoice.currency === userCurrency) {
+          setDisplayValue(amount);
+          return;
+        }
+        try {
+          const res = await axios.get(`https://open.er-api.com/v6/latest/${invoice.currency}`);
+          const rate = res.data?.rates?.[userCurrency] || 1;
+          setDisplayValue(amount * rate);
+        } catch (err) {
+          console.error("Error fetching rate:", err);
+          setDisplayValue(Number(invoice.total) || 0);
         }
       };
-      fetchLiveINR();
-    }, [invoice.currency, invoice.total, invoice.inrAmount]);
+      fetchLiveRate();
+    }, [invoice.currency, invoice.total, invoice.status, invoice.preferredCurrencyValue]);
 
-    // Paid invoice with stored INR amount (new invoices)
-    if (invoice.inrAmount) {
+    if (displayValue !== null) {
+      const colorClass =
+        invoice.status === "paid"
+          ? "text-green-600 font-semibold"
+          : invoice.status === "partially_paid"
+          ? "text-purple-600 font-semibold"
+          : "text-orange-500";
       return (
-        <span className="text-green-600 font-semibold">
-          ₹ {invoice.inrAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-      );
-    }
-
-    // Live converted value (unpaid invoices OR old paid invoices without stored inrAmount)
-    if (liveInrValue !== null) {
-      return (
-        <span className={invoice.status === "paid" ? "text-green-600 font-semibold" : "text-orange-500"}>
-          ₹ {liveInrValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <span className={colorClass}>
+          {currencySymbol} {displayValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       );
     }
@@ -418,54 +466,57 @@ const InvoiceHead = () => {
     return <span className="text-gray-400 text-xs">Loading...</span>;
   };
 
-  // ─── FIX 5: INR totals computed from ALL filteredInvoices ─────────────────
-  const [inrTotals, setInrTotals] = useState({ total: 0, paid: 0, unpaid: 0 });
+  // ─── Preferred currency totals computed from statsInvoices ──────────────────
+  const [preferredTotals, setPreferredTotals] = useState({
+    total: 0, paid: 0, unpaid: 0, partiallyPaid: 0,
+  });
 
   useEffect(() => {
-    const calculateINRTotals = async () => {
-      let totalINR = 0, paidINR = 0, unpaidINR = 0;
+    const calculatePreferredTotals = async () => {
+      let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0;
 
-      for (const inv of filteredInvoices) {
+      for (const inv of statsInvoices) {
         const amount = Number(inv.total) || 0;
+        const isPaidFamily = ["paid", "partially_paid"].includes(inv.status);
+        // Partially paid invoices only count the amount actually collected so far
+        const collectedAmount = isPaidFamily ? (Number(inv.amountPaid) || amount) : amount;
+        const hasFrozenValue = inv.preferredCurrencyValue != null && inv.preferredCurrency === userCurrency;
 
-        if (inv.inrAmount) {
-          // Has stored INR amount (paid invoices with conversion saved)
-          totalINR += inv.inrAmount;
-          paidINR += inv.inrAmount;
-        } else {
-          // Fetch live rate for unpaid OR old paid invoices without stored inrAmount
+        let convertedTotal = amount;
+        let convertedCollected = collectedAmount;
+
+        if (inv.currency !== userCurrency) {
           try {
-            const response = await axios.get(
-              `${API_URL}/invoices/exchange-rate/${inv.currency}`
-            );
-            const rate = response.data?.rate || 1;
-            const inrValue = amount * rate;
-            totalINR += inrValue;
-
-            if (inv.status === "paid") {
-              paidINR += inrValue;
-            } else {
-              unpaidINR += inrValue;
-            }
+            const res = await axios.get(`https://open.er-api.com/v6/latest/${inv.currency}`);
+            const rate = res.data?.rates?.[userCurrency] || 1;
+            convertedTotal = amount * rate;
+            convertedCollected = collectedAmount * rate;
           } catch {
-            totalINR += amount;
-            if (inv.status === "paid") {
-              paidINR += amount;
-            } else {
-              unpaidINR += amount;
-            }
+            convertedTotal = amount;
+            convertedCollected = collectedAmount;
           }
         }
+
+        // Frozen conversion (captured at payment time) takes precedence for the collected amount only
+        if (isPaidFamily && hasFrozenValue) {
+          convertedCollected = inv.preferredCurrencyValue;
+        }
+
+        total += convertedTotal;
+
+        if (inv.status === "paid") paid += convertedCollected;
+        else if (inv.status === "unpaid") unpaid += convertedTotal;
+        else if (inv.status === "partially_paid") partiallyPaid += convertedCollected;
       }
 
-      setInrTotals({ total: totalINR, paid: paidINR, unpaid: unpaidINR });
+      setPreferredTotals({ total, paid, unpaid, partiallyPaid });
     };
 
-    calculateINRTotals();
-  }, [filteredInvoices]);
+    calculatePreferredTotals();
+  }, [statsInvoices, userCurrency]);
 
-  const formatINR = (amount) =>
-    amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatPreferred = (amount) =>
+    amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="p-4">
@@ -482,8 +533,11 @@ const InvoiceHead = () => {
       </div>
 
       {/* Summary Cards — show totals across ALL filtered invoices, not just current page */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div
+          className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
+          onClick={() => setFilterStatus("")}
+        >
           <div className="flex justify-between items-start mb-3">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Total Invoices</p>
@@ -494,8 +548,8 @@ const InvoiceHead = () => {
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-gray-500 mb-1">Total Value (INR)</span>
-            <span className="text-xl font-bold text-gray-800">₹ {formatINR(inrTotals.total)}</span>
+            <span className="text-xs text-gray-500 mb-1">Total Value ({userCurrency})</span>
+            <span className="text-xl font-bold text-gray-800">{currencySymbol} {formatPreferred(preferredTotals.total)}</span>
           </div>
         </div>
 
@@ -513,8 +567,8 @@ const InvoiceHead = () => {
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-gray-500 mb-1">Paid Value (INR)</span>
-            <span className="text-xl font-bold text-green-600">₹ {formatINR(inrTotals.paid)}</span>
+            <span className="text-xs text-gray-500 mb-1">Paid Value ({userCurrency})</span>
+            <span className="text-xl font-bold text-green-600">{currencySymbol} {formatPreferred(preferredTotals.paid)}</span>
           </div>
         </div>
 
@@ -532,10 +586,30 @@ const InvoiceHead = () => {
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-gray-500 mb-1">Unpaid Value (INR)</span>
-            <span className="text-xl font-bold text-red-600">₹ {formatINR(inrTotals.unpaid)}</span>
+            <span className="text-xs text-gray-500 mb-1">Unpaid Value ({userCurrency})</span>
+            <span className="text-xl font-bold text-red-600">{currencySymbol} {formatPreferred(preferredTotals.unpaid)}</span>
           </div>
         </div>
+
+        <div
+          className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
+          onClick={() => setFilterStatus("partially_paid")}
+        >
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Partially Paid</p>
+              <p className="text-2xl font-bold text-purple-600">{summaryStats.partiallyPaid}</p>
+            </div>
+            <div className="p-2 bg-purple-100 rounded-xl">
+              <Receipt className="h-5 w-5 text-purple-600" />
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-500 mb-1">Partially Paid Value ({userCurrency})</span>
+            <span className="text-xl font-bold text-purple-600">{currencySymbol} {formatPreferred(preferredTotals.partiallyPaid)}</span>
+          </div>
+        </div>
+
       </div>
 
       {statusFilter === "pending" && (
@@ -595,6 +669,7 @@ const InvoiceHead = () => {
             <option value="">All Status</option>
             <option value="paid">Paid</option>
             <option value="unpaid">Unpaid</option>
+            <option value="partially_paid">Partially Paid</option>
           </select>
         </div>
 
@@ -656,7 +731,9 @@ const InvoiceHead = () => {
               <th className="px-6 py-3">Deal</th>
               <th className="px-6 py-3">Status</th>
               <th className="px-6 py-3">Amount</th>
-              <th className="px-6 py-3">INR Value</th>
+              <th className="px-6 py-3">Paid</th>
+              <th className="px-6 py-3">Balance Due</th>
+              <th className="px-6 py-3">{userCurrency} Value</th>
               <th className="px-6 py-3">Assigned To</th>
               <th className="px-6 py-3">Due Date</th>
               <th className="px-6 py-3 text-center">Action</th>
@@ -688,12 +765,12 @@ const InvoiceHead = () => {
                     className={`px-3 py-1 text-xs font-semibold rounded-full ${
                       invoice.status === "paid"
                         ? "bg-green-100 text-green-700"
-                        : invoice.status === "send"
-                        ? "bg-blue-100 text-blue-700"
+                        : invoice.status === "partially_paid"
+                        ? "bg-purple-100 text-purple-700"
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {invoice.status}
+                    {invoice.status === "partially_paid" ? "Partially Paid" : invoice.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 font-semibold">
@@ -705,8 +782,14 @@ const InvoiceHead = () => {
                     : "-"}{" "}
                   {invoice.currency}
                 </td>
+                <td className="px-6 py-4 text-green-600 font-medium">
+                  {formatCurrency(getPaymentBreakdown(invoice).paid)} {invoice.currency}
+                </td>
+                <td className="px-6 py-4 text-red-600 font-medium">
+                  {formatCurrency(getPaymentBreakdown(invoice).balance)} {invoice.currency}
+                </td>
                 <td className="px-6 py-4">
-                  <INRCell invoice={invoice} />
+                  <PreferredCurrencyCell invoice={invoice} />
                 </td>
                 <td className="px-6 py-4">
                   {invoice.assignTo
@@ -787,7 +870,7 @@ const InvoiceHead = () => {
 
             {filteredInvoices.length === 0 && (
               <tr>
-                <td colSpan="9" className="text-center py-6 text-gray-400">
+                <td colSpan="11" className="text-center py-6 text-gray-400">
                   No invoices found.
                 </td>
               </tr>

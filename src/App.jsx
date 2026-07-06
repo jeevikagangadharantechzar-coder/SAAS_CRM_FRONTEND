@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import "./App.css";
+import { applyTenantBranding } from "./utils/applyTenantBranding";
 
 import Login from "./pages/auth/login";
 import Layout from "./navbar/Layout";
@@ -27,12 +29,15 @@ import TenantDetail from "./pages/superadmin/TenantDetail";
 // Providers
 import { NotificationProvider } from "./context/NotificationContext";
 import { SocketProvider } from "./context/SocketContext";
+import { TargetSocketProvider } from "./context/TargetSocketContext";
 
 // Pages
 import AdminDashboard from "./AdminDashboard/dashboard";
 import Leads from "./pages/Leads/Leads";
+import RejectedLeads from "./pages/Leads/RejectedLeads";
 import CreateLeads from "./pages/Leads/CreateLeads";
 import { AllDeals } from "./pages/Deals/allDeals";
+import RejectedDeals from "./pages/Deals/RejectedDeals";
 import CreateDeal from "./pages/Deals/CreateDeal";
 import Pipeline_view from "./pages/Pipeline_View/Pipelien_view";
 import Pipeline_modal_view from "./pages/Pipeline_View/Pipeline_modal_view";
@@ -81,6 +86,13 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const { token, slug } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (token && slug) {
+      applyTenantBranding();
+    }
+  }, [token, slug]);
 
   useEffect(() => {
     // 1. Browser Close Session Tracker (using BroadcastChannel and sessionStorage)
@@ -195,6 +207,7 @@ function App() {
 
   return (
     <SocketProvider userId={user?._id}>
+      <TargetSocketProvider userId={user?._id}>
       <NotificationProvider>
         <BrowserRouter>
           <div className="min-h-screen">
@@ -238,10 +251,12 @@ function App() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   
                   {/* COMMON ROUTES */}
-                  <Route path="DealAnalysis" element={<DealIntelligenceDashboard />} />
-                  <Route path="LossAnalysis" element={<LostDealAnalytics />} />
-                  <Route path="cltv/dashboard" element={<CLVDashboard />} />
-                  <Route path="cltv/client/:companyName" element={<ClientCLVDetails />} />
+                  <Route element={<PrivateRoute planFeature="analytics" />}>
+                    <Route path="DealAnalysis" element={<DealIntelligenceDashboard />} />
+                    <Route path="LossAnalysis" element={<LostDealAnalytics />} />
+                    <Route path="cltv/dashboard" element={<CLVDashboard />} />
+                    <Route path="cltv/client/:companyName" element={<ClientCLVDetails />} />
+                  </Route>
                   <Route path="leaderboard" element={<AllStreakLeaderboard />} />
                   <Route path="dashboard/notifications" element={<NotificationsPage />} />
 
@@ -260,6 +275,7 @@ function App() {
                   <Route element={<PrivateRoute permission="leads" />}>
                     <Route path="leads" element={<Leads />} />
                     <Route path="leads/view/:id" element={<ViewLead />} />
+                    <Route path="leads/rejected" element={<RejectedLeads />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_lead" />}>
@@ -268,6 +284,7 @@ function App() {
 
                   <Route element={<PrivateRoute permission="deals_all" />}>
                     <Route path="deals" element={<AllDeals />} />
+                    <Route path="deals/rejected" element={<RejectedDeals />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_deal" />}>
@@ -381,6 +398,7 @@ function App() {
           </div>
         </BrowserRouter>
       </NotificationProvider>
+      </TargetSocketProvider>
     </SocketProvider>
   );
 }

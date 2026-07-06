@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useSocket } from "../context/SocketContext";
+import { useTranslation } from "react-i18next";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "../components/ui/card";
@@ -12,7 +14,7 @@ import {
 import { Skeleton } from "../components/ui/skeleton";
 import { Badge } from "../components/ui/badge";
 import {
-  Users, Trophy, DollarSign, FileText, TrendingUp, Globe,
+  Users, Trophy, FileText, TrendingUp, Globe,
   Receipt, BarChart3, Target, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import axios from "axios";
@@ -94,7 +96,9 @@ const CurrencyDisplay = ({ value, currency = "USD", className }) => {
 };
 
 /* ── Summary card ─────────────────────────────────────────────────────────── */
-const SummaryCard = ({ title, value, change, color, icon, loading, onClick }) => {
+const SummaryCard = ({ title, value, prefix, change, color, icon, loading, onClick }) => {
+  const { t } = useTranslation();
+
   if (loading) return (
     <Card className="border-0 shadow-lg bg-white/80">
       <CardContent className="p-5">
@@ -121,7 +125,7 @@ const SummaryCard = ({ title, value, change, color, icon, loading, onClick }) =>
           <div className="flex justify-between items-start mb-3">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
-              <div className="text-2xl font-bold text-gray-900">{value?.toLocaleString() ?? 0}</div>
+              <div className="text-2xl font-bold text-gray-900">{prefix ? `${prefix} ` : ""}{value?.toLocaleString() ?? 0}</div>
             </div>
             <div className={cn("p-2 rounded-xl",
               color === "blue" && "bg-blue-100 text-blue-600",
@@ -137,7 +141,7 @@ const SummaryCard = ({ title, value, change, color, icon, loading, onClick }) =>
             <span className={cn("text-sm font-medium", change >= 0 ? "text-green-500" : "text-red-500")}>
               {change >= 0 ? `+${change}%` : `${change}%`}
             </span>
-            <span className="text-xs text-gray-500 ml-2">vs previous</span>
+            <span className="text-xs text-gray-500 ml-2">{t("dashboard.cards.vsPrevious")}</span>
           </div>
         </CardContent>
       </Card>
@@ -147,19 +151,25 @@ const SummaryCard = ({ title, value, change, color, icon, loading, onClick }) =>
 
 /* ── Currency Breakdown (FIX: scrollable CardContent) ─────────────────────── */
 const CurrencyBreakdownCard = ({ revenueData, loading }) => {
+  const { t } = useTranslation();
+
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
+
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userSymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
 
   const currencies = Object.entries(revenueData || {})
     .filter(([, d]) => d.amount > 0)
     .map(([currency, d]) => ({
       currency,
       amount: Number(d.amount),
-      inr: Number(d.inr || 0),
+      preferred: Number(d.preferredCurrencyValue || 0),
       count: d.count
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  const totalRevenueINR = currencies.reduce((s, c) => s + (c.inr || 0), 0);
+  const totalRevenuePreferred = currencies.reduce((s, c) => s + (c.preferred || 0), 0);
 
   return (
     <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm flex flex-col">
@@ -167,19 +177,19 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Globe className="h-5 w-5 text-purple-600" />
-            Revenue by Currency
+            {t("dashboard.revenueCurrency.title")}
           </CardTitle>
-          <Badge variant="secondary">{currencies.length} Currencies</Badge>
+          <Badge variant="secondary">{t("dashboard.revenueCurrency.currenciesBadge", { count: currencies.length })}</Badge>
         </div>
         <div className="mt-4 p-4 bg-white/60 rounded-lg border">
-          <div className="text-sm font-medium text-gray-600 mb-1">Total Revenue (INR)</div>
-          <div className="text-2xl font-bold text-gray-900">₹ {totalRevenueINR.toLocaleString()}</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.revenueCurrency.totalRevenuePreferred", { currency: userCurrency })}</div>
+          <div className="text-2xl font-bold text-gray-900">{userSymbol} {totalRevenuePreferred.toLocaleString()}</div>
         </div>
       </CardHeader>
 
-     
+
       <CardContent className="space-y-3 max-h-56 overflow-y-auto pr-2 flex-1">
-        {currencies.length > 0 ? currencies.map(({ currency, amount, count, inr }, idx) => {
+        {currencies.length > 0 ? currencies.map(({ currency, amount, count, preferred }, idx) => {
           const info = allowedCurrencies.find((c) => c.code === currency);
           return (
             <div key={currency} className="flex items-center justify-between p-3 bg-white/60 rounded-lg border">
@@ -195,13 +205,13 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
                   {info?.symbol ?? ""}{amount.toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">
-                  ₹ {Number(inr || 0).toLocaleString()}
+                  {userSymbol} {Number(preferred || 0).toLocaleString()}
                 </div>
-                <div className="text-xs text-gray-500">{count} invoices</div>
+                <div className="text-xs text-gray-500">{count} {t("dashboard.revenueCurrency.invoices")}</div>
               </div>
             </div>
           );
-        }) : <div className="text-center py-6 text-gray-500">No revenue data for this period</div>}
+        }) : <div className="text-center py-6 text-gray-500">{t("dashboard.revenueCurrency.noData")}</div>}
       </CardContent>
     </Card>
   );
@@ -209,11 +219,15 @@ const CurrencyBreakdownCard = ({ revenueData, loading }) => {
 
 /* ── Pending Invoices (FIX: scrollable CardContent) ───────────────────────── */
 const PendingInvoicesCard = ({ invoices, loading }) => {
-  const [currenciesWithINR, setCurrenciesWithINR] = useState([]);
-  const [totalPendingINR, setTotalPendingINR] = useState(0);
+  const { t } = useTranslation();
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userSymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
+  const [currenciesWithPreferred, setCurrenciesWithPreferred] = useState([]);
+  const [totalPendingPreferred, setTotalPendingPreferred] = useState(0);
 
   useEffect(() => {
-    const calculateINRValues = async () => {
+    const calculatePreferredValues = async () => {
       const pending = (invoices ?? []).filter((inv) => ["pending", "unpaid", "Pending", "Unpaid"].includes(inv.status));
       const byCurrency = {};
 
@@ -232,39 +246,39 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
         .map(([currency, d]) => ({ currency, amount: d.amount, count: d.count }));
 
       if (currencies.length === 0) {
-        setCurrenciesWithINR([]);
-        setTotalPendingINR(0);
+        setCurrenciesWithPreferred([]);
+        setTotalPendingPreferred(0);
         return;
       }
 
       const updatedCurrencies = await Promise.all(
         currencies.map(async ({ currency, amount, count }) => {
-          let inrValue = amount;
-          if (currency !== "INR") {
+          let preferredValue = amount;
+          if (currency !== userCurrency) {
             try {
               const response = await axios.get(`https://open.er-api.com/v6/latest/${currency}`);
-              const rate = response.data?.rates?.INR || 1;
-              inrValue = amount * rate;
+              const rate = response.data?.rates?.[userCurrency] || 1;
+              preferredValue = amount * rate;
             } catch (err) {
               console.error(`Error fetching rate for ${currency}:`, err);
-              inrValue = amount;
+              preferredValue = amount;
             }
           }
-          return { currency, amount, count, inr: inrValue };
+          return { currency, amount, count, preferred: preferredValue };
         })
       );
 
       updatedCurrencies.sort((a, b) => b.amount - a.amount);
-      setCurrenciesWithINR(updatedCurrencies);
-      setTotalPendingINR(updatedCurrencies.reduce((sum, c) => sum + c.inr, 0));
+      setCurrenciesWithPreferred(updatedCurrencies);
+      setTotalPendingPreferred(updatedCurrencies.reduce((sum, c) => sum + c.preferred, 0));
     };
 
-    calculateINRValues();
-  }, [invoices]);
+    calculatePreferredValues();
+  }, [invoices, userCurrency]);
 
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
-  const totalInvoices = currenciesWithINR.reduce((s, c) => s + c.count, 0);
+  const totalInvoices = currenciesWithPreferred.reduce((s, c) => s + c.count, 0);
 
   return (
     <Card className="shadow-lg border-0 bg-blue-50/50 backdrop-blur-sm flex flex-col">
@@ -272,19 +286,19 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Receipt className="h-5 w-5 text-blue-600" />
-            Pending Invoices
+            {t("dashboard.pendingInvoices.title")}
           </CardTitle>
-          <Badge variant="secondary">{totalInvoices} Invoices</Badge>
+          <Badge variant="secondary">{t("dashboard.pendingInvoices.invoicesBadge", { count: totalInvoices })}</Badge>
         </div>
         <div className="mt-4 p-4 bg-white/50 rounded-lg border border-blue-200">
-          <div className="text-sm font-medium text-gray-600 mb-1">Total Pending (INR)</div>
-          <div className="text-2xl font-bold text-gray-900">₹ {totalPendingINR.toLocaleString()}</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.pendingInvoices.totalPendingPreferred", { currency: userCurrency })}</div>
+          <div className="text-2xl font-bold text-gray-900">{userSymbol} {totalPendingPreferred.toLocaleString()}</div>
         </div>
       </CardHeader>
 
-      
+
       <CardContent className="space-y-3 max-h-56 overflow-y-auto pr-2 flex-1">
-        {currenciesWithINR.length > 0 ? currenciesWithINR.map(({ currency, amount, count, inr }) => {
+        {currenciesWithPreferred.length > 0 ? currenciesWithPreferred.map(({ currency, amount, count, preferred }) => {
           const info = allowedCurrencies.find((c) => c.code === currency);
           return (
             <div key={currency} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-blue-200">
@@ -300,13 +314,13 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
                   {info?.symbol ?? ""}{amount.toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-500">
-                  ₹ {Number(inr || 0).toLocaleString()}
+                  {userSymbol} {Number(preferred || 0).toLocaleString()}
                 </div>
-                <div className="text-xs text-gray-500">{count} pending</div>
+                <div className="text-xs text-gray-500">{count} {t("dashboard.pendingInvoices.pending")}</div>
               </div>
             </div>
           );
-        }) : <div className="text-center py-6 text-gray-500">No pending invoices</div>}
+        }) : <div className="text-center py-6 text-gray-500">{t("dashboard.pendingInvoices.noData")}</div>}
       </CardContent>
     </Card>
   );
@@ -314,23 +328,30 @@ const PendingInvoicesCard = ({ invoices, loading }) => {
 
 /* ── Revenue Trend ────────────────────────────────────────────────────────── */
 const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
+  const { t } = useTranslation();
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userSymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
+
   const chartData = months.map((month, monthIndex) => {
     const entry = { month };
 
     const monthInvoices = (invoices ?? []).filter(inv => {
-      if (!["paid", "Paid"].includes(inv.status)) return false;
+      if (!["paid", "Paid", "partially_paid"].includes(inv.status)) return false;
       const date = new Date(inv.paidAt || inv.createdAt);
       return !isNaN(date) && date.getMonth() === monthIndex;
     });
 
-    let totalINR = 0;
+    let total = 0;
     monthInvoices.forEach(inv => {
-      const inrValue = inv.inrAmount || Number(inv.total);
-      totalINR += inrValue;
+      // Partially paid invoices only count the amount actually collected so far
+      const value = inv.preferredCurrency === userCurrency && inv.preferredCurrencyValue != null
+        ? inv.preferredCurrencyValue
+        : Number(inv.amountPaid) || Number(inv.total);
+      total += value;
     });
 
-    entry.total = totalINR;
-    entry.INR = totalINR;
+    entry.total = total;
 
     return entry;
   });
@@ -346,7 +367,7 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
               <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
               {p.name}
             </span>
-            <strong>₹ {p.value?.toLocaleString()}</strong>
+            <strong>{userSymbol} {p.value?.toLocaleString()}</strong>
           </div>
         ))}
       </div>
@@ -359,14 +380,14 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
         <div className="flex justify-between items-center flex-wrap gap-2">
           <CardTitle className="text-xl flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-purple-600" />
-            Revenue Trend
+            {t("dashboard.revenueTrend.title")}
           </CardTitle>
         </div>
         <div className="mt-2">
           <p className="text-2xl font-semibold">
-            ₹ {chartData.reduce((sum, d) => sum + d.total, 0).toLocaleString()}
+            {userSymbol} {chartData.reduce((sum, d) => sum + d.total, 0).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-500">Total Revenue (INR)</p>
+          <p className="text-xs text-gray-500">{t("dashboard.revenueTrend.totalRevenuePreferred", { currency: userCurrency })}</p>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
@@ -378,13 +399,13 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
                 <XAxis dataKey="month" tick={{ fill: "#6B7280", fontSize: 12 }} />
                 <YAxis
                   tick={{ fill: "#6B7280", fontSize: 12 }}
-                  tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
+                  tickFormatter={(v) => `${userSymbol}${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="total"
-                  name="Revenue"
+                  name={t("dashboard.revenueTrend.revenueLabel")}
                   stroke="#8B5CF6"
                   strokeWidth={3}
                   dot={{ r: 4, fill: "#8B5CF6" }}
@@ -401,6 +422,7 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
 
 /* ── Sales Pipeline ───────────────────────────────────────────────────────── */
 const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) => {
+  const { t } = useTranslation();
   const [hoveredBar, setHoveredBar] = useState(null);
 
   const CustomPipelineTooltip = ({ active, payload, label }) => {
@@ -418,12 +440,12 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
               <span style={{ display: "inline-block", width: 10, height: 10, background: p.color, marginRight: 8, borderRadius: "50%" }} />
               {p.name}
             </div>
-            <strong className="ml-2">{p.value} deals</strong>
+            <strong className="ml-2">{p.value} {t("dashboard.salesPipeline.deals")}</strong>
           </div>
         ))}
         <div className="mt-3 pt-2 border-t border-gray-200">
           <div className="text-sm font-medium text-gray-700">
-            Total: {payload.reduce((sum, p) => sum + p.value, 0)} deals
+            {t("dashboard.salesPipeline.total")}: {payload.reduce((sum, p) => sum + p.value, 0)} {t("dashboard.salesPipeline.deals")}
           </div>
         </div>
       </motion.div>
@@ -442,14 +464,14 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
           <div className="flex justify-between items-center">
             <CardTitle className="text-xl text-gray-800 flex items-center gap-2">
               <Users className="h-5 w-5 text-blue-600" />
-              Sales Pipeline Analytics
+              {t("dashboard.salesPipeline.title")}
             </CardTitle>
             <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
-              {totalPipelineLeads} Total Deals
+              {t("dashboard.salesPipeline.totalDealsBadge", { count: totalPipelineLeads })}
             </Badge>
           </div>
           <CardDescription>
-            Monthly breakdown of open opportunities vs won deals with performance metrics
+            {t("dashboard.salesPipeline.description")}
           </CardDescription>
         </CardHeader>
 
@@ -482,8 +504,8 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
                     <XAxis dataKey="month" tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 12 }} interval={0} />
                     <YAxis tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 12 }} />
                     <Tooltip content={<CustomPipelineTooltip />} />
-                    <Bar dataKey="Open" name="Open Opportunities" fill="url(#gOpen)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={400} animationDuration={1500} />
-                    <Bar dataKey="Won" name="Won Deals" fill="url(#gWon)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={800} animationDuration={1500} />
+                    <Bar dataKey="Open" name={t("dashboard.salesPipeline.openOpportunities")} fill="url(#gOpen)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={400} animationDuration={1500} />
+                    <Bar dataKey="Won" name={t("dashboard.salesPipeline.wonDeals")} fill="url(#gWon)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={800} animationDuration={1500} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -492,14 +514,14 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
                 <div className="flex gap-4 justify-center">
                   <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
                     <span className="w-3 h-3 rounded-full bg-[#3B82F6]" />
-                    <span className="text-sm font-medium text-gray-700">Open Opportunities</span>
+                    <span className="text-sm font-medium text-gray-700">{t("dashboard.salesPipeline.openOpportunities")}</span>
                     <Badge variant="secondary" className="bg-white">
                       {pipelineBarData.reduce((sum, d) => sum + d.Open, 0)}
                     </Badge>
                   </motion.div>
                   <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
                     <span className="w-3 h-3 rounded-full bg-[#10B981]" />
-                    <span className="text-sm font-medium text-gray-700">Won Deals</span>
+                    <span className="text-sm font-medium text-gray-700">{t("dashboard.salesPipeline.wonDeals")}</span>
                     <Badge variant="secondary" className="bg-white">
                       {pipelineBarData.reduce((sum, d) => sum + d.Won, 0)}
                     </Badge>
@@ -514,13 +536,13 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
                           pipelineBarData.reduce((sum, d) => sum + (d.Open + d.Won), 0)) * 100 || 0
                       ).toFixed(1)}%
                     </div>
-                    <div>Win Rate</div>
+                    <div>{t("dashboard.salesPipeline.winRate")}</div>
                   </div>
                   <div className="text-center">
                     <div className="font-semibold text-gray-700">
                       {pipelineBarData.reduce((sum, d) => sum + d.Open, 0)}
                     </div>
-                    <div>Active Pipeline</div>
+                    <div>{t("dashboard.salesPipeline.activePipeline")}</div>
                   </div>
                 </div>
               </div>
@@ -534,11 +556,13 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
 
 /* ── Deal Distribution ( totalDeals = open+won+lost, not deals.length) ── */
 const DealDistributionChart = ({ data, loading, totalDeals }) => {
+  const { t } = useTranslation();
+
   if (loading) return <Skeleton className="h-80 w-full rounded-lg" />;
   const pieData = [
-    { name: "Open", value: data.open, color: "#3B82F6" },
-    { name: "Won", value: data.won, color: "#10B981" },
-    { name: "Lost", value: data.lost, color: "#F59E0B" },
+    { name: t("dashboard.dealDistribution.open"), value: data.open, color: "#3B82F6" },
+    { name: t("dashboard.dealDistribution.won"), value: data.won, color: "#10B981" },
+    { name: t("dashboard.dealDistribution.lost"), value: data.lost, color: "#F59E0B" },
   ].filter((d) => d.value > 0);
 
   return (
@@ -547,16 +571,16 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
         <div className="flex justify-between items-center">
           <CardTitle className="text-xl flex items-center gap-2">
             <Target className="h-5 w-5 text-blue-600" />
-            Deal Distribution
+            {t("dashboard.dealDistribution.title")}
           </CardTitle>
-          <Badge variant="secondary">{totalDeals} Total</Badge>
+          <Badge variant="secondary">{t("dashboard.dealDistribution.totalBadge", { count: totalDeals })}</Badge>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
         {totalDeals === 0 ? (
           <div className="h-56 flex flex-col items-center justify-center text-gray-400">
             <Target className="h-12 w-12 mb-2 opacity-30" />
-            <p>No deals for this period</p>
+            <p>{t("dashboard.dealDistribution.noDeals")}</p>
           </div>
         ) : (
           <>
@@ -581,7 +605,7 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
                   <div className="text-2xl font-bold">{totalDeals}</div>
-                  <div className="text-xs text-gray-500">Total</div>
+                  <div className="text-xs text-gray-500">{t("dashboard.dealDistribution.totalLabel")}</div>
                 </div>
               </div>
             </div>
@@ -604,6 +628,10 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
    Main Dashboard
 ══════════════════════════════════════════════════════════════════════════ */
 const AdminDashboard = () => {
+  const { t } = useTranslation();
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userCurrency = storedUser?.currency || "USD";
+  const userCurrencySymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activePreset, setActivePreset] = useState("7days");
@@ -622,6 +650,7 @@ const AdminDashboard = () => {
   const [resolvedRange, setResolvedRange] = useState({ start: "", end: "" });
 
   const navigate = useNavigate();
+  const socket = useSocket();
 
   const getDateRange = useCallback((preset = activePreset, month = selectedMonth, year = selectedYear) => {
     if (preset === "today") return getTodayRange();
@@ -640,17 +669,17 @@ const AdminDashboard = () => {
   }, [activePreset, selectedMonth, selectedYear]);
 
   const handleCardClick = (card) => {
-    switch (card.title) {
-      case "Total Leads":
+    switch (card.id) {
+      case "totalLeads":
         navigate("/leads");
         break;
-      case "Deals Won":
+      case "dealsWon":
         navigate("/deals?status=won");
         break;
-      case "Total Revenue":
+      case "totalRevenue":
         navigate("/invoices");
         break;
-      case "Pending Invoices":
+      case "pendingInvoices":
         navigate("/invoices?status=pending");
         break;
       default:
@@ -658,7 +687,7 @@ const AdminDashboard = () => {
     }
   };
 
-      
+
 
   // Dashboard needs ALL records, not paginated 10.
   // Pass limit=9999 so the backend returns everything in one shot.
@@ -734,7 +763,7 @@ const AdminDashboard = () => {
         return wonDate >= startDate && wonDate <= endDate;
       }).length;
 
-      const totalRevenue = Object.values(summary.revenueByCurrency || {}).reduce((s, d) => s + (d.inr || 0), 0);
+      const totalRevenue = Object.values(summary.revenueByCurrency || {}).reduce((s, d) => s + (d.preferredCurrencyValue || 0), 0);
       const pendingCount = current.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length;
 
       const prevRevenue = {};
@@ -749,10 +778,10 @@ const AdminDashboard = () => {
       const prevTotalRevenue = Object.values(prevRevenue).reduce((s, d) => s + d.amount, 0);
 
       setSummaryCards([
-        { title: "Total Leads", value: totalLeads, change: computeChange(totalLeads, previous.leads.length), color: "blue", icon: <Users className="h-5 w-5" /> },
-        { title: "Deals Won", value: dealsWon, change: computeChange(dealsWon, previous.deals.filter((d) => isWonDeal(d.stage)).length), color: "green", icon: <Trophy className="h-5 w-5" /> },
-        { title: "Total Revenue", value: totalRevenue, change: computeChange(totalRevenue, prevTotalRevenue), color: "purple", icon: <DollarSign className="h-5 w-5" /> },
-        { title: "Pending Invoices", value: pendingCount, change: computeChange(pendingCount, previous.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length), color: "orange", icon: <FileText className="h-5 w-5" /> },
+        { id: "totalLeads", value: totalLeads, change: computeChange(totalLeads, previous.leads.length), color: "blue", icon: <Users className="h-5 w-5" /> },
+        { id: "dealsWon", value: dealsWon, change: computeChange(dealsWon, previous.deals.filter((d) => isWonDeal(d.stage)).length), color: "green", icon: <Trophy className="h-5 w-5" /> },
+        { id: "totalRevenue", value: totalRevenue, prefix: userCurrencySymbol, change: computeChange(totalRevenue, prevTotalRevenue), color: "purple", icon: <span className="h-5 w-5 flex items-center justify-center font-bold text-base leading-none">{userCurrencySymbol}</span> },
+        { id: "pendingInvoices", value: pendingCount, change: computeChange(pendingCount, previous.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length), color: "orange", icon: <FileText className="h-5 w-5" /> },
       ]);
 
       setPipelineLeads(totalLeads);
@@ -785,23 +814,34 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      setError("Failed to load dashboard data. Check your network connection.");
+      setError(t("dashboard.error.fetchFailed"));
     } finally {
       setLoading(false);
     }
-  }, [getDateRange, getPreviousRange, fetchAll]);
+  }, [getDateRange, getPreviousRange, fetchAll, t, userCurrencySymbol]);
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 60_000);
 
     if (localStorage.getItem("db_refreshed_toast") === "true") {
       toast.success("Your plan has been upgraded successfully! All existing data has been preserved.");
       localStorage.removeItem("db_refreshed_toast");
     }
-
-    return () => clearInterval(interval);
   }, [fetchDashboardData]);
+
+  // Re-fetch only when something actually changes on the backend — no polling
+  useEffect(() => {
+    if (!socket) return;
+    const refresh = () => fetchDashboardData();
+    socket.on("lead_created",       refresh);
+    socket.on("deal_stage_updated", refresh);
+    socket.on("invoice_updated",    refresh);
+    return () => {
+      socket.off("lead_created",       refresh);
+      socket.off("deal_stage_updated", refresh);
+      socket.off("invoice_updated",    refresh);
+    };
+  }, [socket, fetchDashboardData]);
 
   /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
@@ -810,23 +850,23 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <BarChart3 className="h-8 w-8 text-purple-600" />Business Dashboard
+            <BarChart3 className="h-8 w-8 text-purple-600" />{t("dashboard.title")}
           </h1>
-          <p className="text-gray-600 mt-1">Real-time insights and performance metrics</p>
+          <p className="text-gray-600 mt-1">{t("dashboard.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={activePreset} onValueChange={setActivePreset}>
-            <SelectTrigger className="w-[160px] bg-white border"><SelectValue placeholder="Period" /></SelectTrigger>
+            <SelectTrigger className="w-[160px] bg-white border"><SelectValue placeholder={t("dashboard.period.label")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="7days">Last 7 Days</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="today">{t("dashboard.period.today")}</SelectItem>
+              <SelectItem value="7days">{t("dashboard.period.last7days")}</SelectItem>
+              <SelectItem value="month">{t("dashboard.period.thisMonth")}</SelectItem>
+              <SelectItem value="year">{t("dashboard.period.thisYear")}</SelectItem>
             </SelectContent>
           </Select>
           {(activePreset === "month" || activePreset === "year") && (
             <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
-              <SelectTrigger className="w-[130px]"><SelectValue placeholder="Month" /></SelectTrigger>
+              <SelectTrigger className="w-[130px]"><SelectValue placeholder={t("dashboard.period.month")} /></SelectTrigger>
               <SelectContent>
                 {months.map((m, i) => <SelectItem key={i} value={String(i)}>{m}</SelectItem>)}
               </SelectContent>
@@ -834,7 +874,7 @@ const AdminDashboard = () => {
           )}
           {activePreset === "year" && (
             <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-              <SelectTrigger className="w-[100px]"><SelectValue placeholder="Year" /></SelectTrigger>
+              <SelectTrigger className="w-[100px]"><SelectValue placeholder={t("dashboard.period.year")} /></SelectTrigger>
               <SelectContent>
                 {[2023, 2024, 2025, 2026].map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
@@ -854,7 +894,13 @@ const AdminDashboard = () => {
         {loading
           ? Array(4).fill(0).map((_, i) => <SummaryCard key={i} loading />)
           : summaryCards.map((card) => (
-            <SummaryCard key={card.title} {...card} loading={false} onClick={() => handleCardClick(card)} />
+            <SummaryCard
+              key={card.id}
+              {...card}
+              title={t(`dashboard.cards.${card.id}`)}
+              loading={false}
+              onClick={() => handleCardClick(card)}
+            />
           ))}
       </div>
 

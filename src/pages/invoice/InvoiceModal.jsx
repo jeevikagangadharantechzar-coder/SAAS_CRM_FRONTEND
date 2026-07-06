@@ -5,11 +5,13 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { useModal } from "../../context/ModalContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -31,22 +33,39 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
     discountValue: 0,
     note: "",
     currency: "INR",
+    billingAddress: "",
+    clientTaxId: "",
+    poNumber: "",
   });
+  // Ad-hoc fields the admin adds for invoices that need something the fixed form doesn't cover
+  const [customFields, setCustomFields] = useState([]);
+  // Amount typed in "Amount Received Now" — only used for paid/partially_paid statuses
+  const [paymentReceivedNow, setPaymentReceivedNow] = useState("");
   const [note, setNote] = useState("");
   const [isNoteVisible, setIsNoteVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [issueDateObj, setIssueDateObj] = useState(null);
+  const [dueDateObj, setDueDateObj] = useState(null);
+  const issueDateRef = useRef(null);
+  const dueDateRef = useRef(null);
+
+  const toMMDDYYYY = (isoOrDate) => {
+    if (!isoOrDate) return { formatted: "", obj: null };
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return { formatted: `${mm}/${dd}/${d.getFullYear()}`, obj: d };
+  };
 
   // Load editing invoice if any
   useEffect(() => {
     if (editingInvoice) {
+      const issue = toMMDDYYYY(editingInvoice.issueDate);
+      const due = toMMDDYYYY(editingInvoice.dueDate);
       setInvoiceData({
         assignTo: editingInvoice.assignTo?._id || "",
-        issueDate: editingInvoice.issueDate
-          ? new Date(editingInvoice.issueDate).toISOString().split("T")[0]
-          : "",
-        dueDate: editingInvoice.dueDate
-          ? new Date(editingInvoice.dueDate).toISOString().split("T")[0]
-          : "",
+        issueDate: issue.formatted,
+        dueDate: due.formatted,
         status: editingInvoice.status || "unpaid",
         deal: editingInvoice.items?.[0]?.deal?._id || "",
         price: editingInvoice.items?.[0]?.price || 0,
@@ -56,9 +75,18 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         discountValue: editingInvoice.discountValue || 0,
         note: editingInvoice.note || "",
         currency: editingInvoice.currency || "INR",
+        billingAddress: editingInvoice.billingAddress || "",
+        clientTaxId: editingInvoice.clientTaxId || "",
+        poNumber: editingInvoice.poNumber || "",
       });
+      setIssueDateObj(issue.obj);
+      setDueDateObj(due.obj);
       setNote(editingInvoice.note || "");
       setIsNoteVisible(!!editingInvoice.note);
+      setPaymentReceivedNow("");
+      setCustomFields(
+        (editingInvoice.customFields || []).map((f) => ({ ...f }))
+      );
 
       const selectedDeal = deals.find(
         (d) => d._id === editingInvoice.items?.[0]?.deal?._id
@@ -78,10 +106,17 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         discountValue: 0,
         note: "",
         currency: "INR",
+        billingAddress: "",
+        clientTaxId: "",
+        poNumber: "",
       });
+      setIssueDateObj(null);
+      setDueDateObj(null);
       setNote("");
       setIsNoteVisible(false);
       setSelectedDealRequirement(null);
+      setPaymentReceivedNow("");
+      setCustomFields([]);
     }
     setValidationErrors({});
   }, [editingInvoice, isOpen, deals]);
@@ -140,6 +175,65 @@ setSalesUsers(response.data.users);
           currency: currency || "INR",
         }));
       }
+      if (selectedDeal?.address) {
+        setInvoiceData((prev) => ({ ...prev, billingAddress: selectedDeal.address }));
+      }
+    }
+  };
+
+  // Custom fields
+  const handleAddCustomField = () => {
+    setCustomFields((prev) => [...prev, { label: "", type: "text", value: "" }]);
+  };
+  const handleCustomFieldChange = (index, key, value) => {
+    setCustomFields((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, [key]: value } : f))
+    );
+  };
+  const handleRemoveCustomField = (index) => {
+    setCustomFields((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleIssueDateChange = (date) => {
+    setIssueDateObj(date);
+    if (date) {
+      const { formatted } = toMMDDYYYY(date);
+      setInvoiceData((prev) => ({ ...prev, issueDate: formatted }));
+      setValidationErrors((prev) => ({ ...prev, issueDate: "" }));
+      // Re-validate due date if it's now before the new issue date
+      if (dueDateObj) {
+        if (dueDateObj < date) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            dueDate: "Due date must be on or after the issue date.",
+          }));
+        } else if (validationErrors.dueDate) {
+          setValidationErrors((prev) => ({ ...prev, dueDate: "" }));
+        }
+      }
+    } else {
+      setInvoiceData((prev) => ({ ...prev, issueDate: "" }));
+      setValidationErrors((prev) => ({ ...prev, issueDate: "Issue Date is required." }));
+    }
+  };
+
+  const handleDueDateChange = (date) => {
+    setDueDateObj(date);
+    if (date) {
+      const { formatted } = toMMDDYYYY(date);
+      setInvoiceData((prev) => ({ ...prev, dueDate: formatted }));
+      if (validationErrors.dueDate) {
+        const err =
+          issueDateObj && date < issueDateObj
+            ? "Due date must be on or after the issue date."
+            : "";
+        setValidationErrors((prev) => ({ ...prev, dueDate: err }));
+      }
+    } else {
+      setInvoiceData((prev) => ({ ...prev, dueDate: "" }));
+      if (validationErrors.dueDate) {
+        setValidationErrors((prev) => ({ ...prev, dueDate: "Due Date is required." }));
+      }
     }
   };
 
@@ -158,7 +252,7 @@ setSalesUsers(response.data.users);
   // Validation
   const validateInputs = () => {
     const errors = {};
-    const { assignTo, issueDate, dueDate, deal, price } = invoiceData;
+    const { assignTo, issueDate, dueDate, deal, price, status } = invoiceData;
 
     if (!assignTo) errors.assignTo = "Sales user is required.";
     if (!issueDate) errors.issueDate = "Issue Date is required.";
@@ -166,13 +260,44 @@ setSalesUsers(response.data.users);
     if (!deal) errors.deal = "Deal is required.";
     if (price <= 0) errors.price = "Price must be greater than 0.";
 
-    if (issueDate && dueDate) {
-      const issue = new Date(issueDate);
-      const due = new Date(dueDate);
-      if (due <= issue) errors.dueDate = "Due Date must be after Issue Date.";
+    if (issueDateObj && dueDateObj && dueDateObj < issueDateObj) {
+      errors.dueDate = "Due date must be on or after the issue date.";
+    }
+
+    if (customFields.some((f) => !f.label.trim())) {
+      errors.customFields = "Every custom field needs a name.";
+    }
+
+    // Paid and Partially Paid both require an entered amount — unless the invoice was
+    // already saved as Paid, in which case status/payment are locked and nothing new is collected
+    const statusLocked = editingInvoice?.status === "paid";
+    const requiresPaymentEntry = !statusLocked && ["paid", "partially_paid"].includes(status);
+    const entered = Number(paymentReceivedNow) || 0;
+
+    if (requiresPaymentEntry && !(entered > 0)) {
+      errors.paymentReceivedNow = "Amount received is required.";
+    } else if (!statusLocked && (status === "paid" || status === "partially_paid")) {
+      const total = Number(calculateTotalBreakdown().total);
+      const remaining = Math.max(total - previousAmountPaid, 0);
+      const EPS = 0.01;
+
+      if (entered - remaining > EPS) {
+        errors.paymentReceivedNow = `Payment exceeds the remaining balance. Maximum allowed: ${remaining.toFixed(2)}.`;
+      } else if (status === "paid" && remaining - entered > EPS) {
+        errors.paymentReceivedNow = `To mark as Paid, the full remaining amount (${remaining.toFixed(2)}) must be entered.`;
+      } else if (status === "partially_paid" && remaining - entered <= EPS) {
+        errors.paymentReceivedNow = `This covers the full remaining amount. Please select "Paid" instead.`;
+      }
     }
 
     setValidationErrors(errors);
+
+    if (errors.issueDate) {
+      setTimeout(() => issueDateRef.current?.setFocus(), 50);
+    } else if (errors.dueDate) {
+      setTimeout(() => dueDateRef.current?.setFocus(), 50);
+    }
+
     return Object.keys(errors).length === 0;
   };
 
@@ -232,8 +357,16 @@ setSalesUsers(response.data.users);
 
     const breakdown = calculateTotalBreakdown();
 
+    const toISO = (mmddyyyy) => {
+      if (!mmddyyyy) return "";
+      const [mm, dd, yyyy] = mmddyyyy.split("/");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
     const invoiceToSave = {
       ...invoiceData,
+      issueDate: toISO(invoiceData.issueDate),
+      dueDate: toISO(invoiceData.dueDate),
       items: [
         {
           deal: invoiceData.deal,
@@ -249,7 +382,45 @@ setSalesUsers(response.data.users);
       tax: Number(invoiceData.tax),
       taxType: invoiceData.taxType === "none" ? "fixed" : invoiceData.taxType,
       total: Number(breakdown.total),
+      customFields: customFields.filter((f) => f.label.trim()),
     };
+
+    // Paid and Partially Paid both track the CUMULATIVE amount actually collected so far
+    // (previous + this payment), and freeze the preferred-currency conversion against
+    // that real amount — not the total. Skipped once already saved as Paid, since status
+    // and payment are locked and there's nothing new to collect.
+    if (isPaidFamily && editingInvoice?.status !== "paid") {
+      const total = Number(breakdown.total);
+      const payment = Number(paymentReceivedNow) || 0;
+      const maxAllowed = Math.max(total - previousAmountPaid, 0);
+
+      if (payment > maxAllowed) {
+        toast.error(`Payment exceeds invoice total. Maximum you can enter now: ${maxAllowed.toFixed(2)}`);
+        return;
+      }
+
+      const newAmountPaid = previousAmountPaid + payment;
+      invoiceToSave.paymentReceivedNow = payment;
+
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const userCurrency = storedUser?.currency || "USD";
+      try {
+        let preferredValue;
+        if (invoiceData.currency === userCurrency) {
+          preferredValue = newAmountPaid;
+        } else {
+          const rateRes = await axios.get(
+            `https://open.er-api.com/v6/latest/${invoiceData.currency}`
+          );
+          const rate = rateRes.data?.rates?.[userCurrency];
+          preferredValue = rate ? parseFloat((newAmountPaid * rate).toFixed(2)) : null;
+        }
+        invoiceToSave.preferredCurrency = userCurrency;
+        invoiceToSave.preferredCurrencyValue = preferredValue;
+      } catch {
+        // proceed without frozen rate — backend will leave it null
+      }
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -292,10 +463,18 @@ setSalesUsers(response.data.users);
       } else {
         toast.error("Failed to save invoice.");
       }
-    } catch {
-      toast.error("Failed to save invoice.");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to save invoice.");
     }
   };
+
+  const PAID_FAMILY = ["paid", "partially_paid"];
+  const isPaidFamily = PAID_FAMILY.includes(invoiceData.status);
+  // Amount already collected before this save — carries over between paid/partially_paid
+  const previousAmountPaid =
+    editingInvoice && PAID_FAMILY.includes(editingInvoice.status)
+      ? Number(editingInvoice.amountPaid) || 0
+      : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={closeModal}>
@@ -307,10 +486,10 @@ setSalesUsers(response.data.users);
         </DialogHeader>
 
         <div className="p-6 max-h-[80vh] overflow-y-auto ">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-stretch">
             {/* Left Column */}
-            <div className="space-y-6">
-              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+            <div>
+              <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                 <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                   <svg
                     className="w-5 h-5 mr-2 text-blue-600"
@@ -366,11 +545,18 @@ setSalesUsers(response.data.users);
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Issue Date *
                       </label>
-                      <input
-                        type="date"
-                        name="issueDate"
-                        value={invoiceData.issueDate}
-                        onChange={handleChange}
+                      <DatePicker
+                        ref={issueDateRef}
+                        selected={issueDateObj}
+                        onChange={handleIssueDateChange}
+                        minDate={new Date()}
+                        dateFormat="MM/dd/yyyy"
+                        placeholderText="mm/dd/yyyy"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        isClearable
+                        wrapperClassName="w-full"
                         className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
                           validationErrors.issueDate
                             ? "border-red-500"
@@ -388,11 +574,18 @@ setSalesUsers(response.data.users);
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Due Date *
                       </label>
-                      <input
-                        type="date"
-                        name="dueDate"
-                        value={invoiceData.dueDate}
-                        onChange={handleChange}
+                      <DatePicker
+                        ref={dueDateRef}
+                        selected={dueDateObj}
+                        onChange={handleDueDateChange}
+                        minDate={issueDateObj || new Date()}
+                        dateFormat="MM/dd/yyyy"
+                        placeholderText="mm/dd/yyyy"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        isClearable
+                        wrapperClassName="w-full"
                         className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
                           validationErrors.dueDate
                             ? "border-red-500"
@@ -415,20 +608,70 @@ setSalesUsers(response.data.users);
                       name="status"
                       value={invoiceData.status}
                       onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      disabled={editingInvoice?.status === "paid"}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="unpaid">Unpaid</option>
                       <option value="paid">Paid</option>
-                      <option value="send">Send</option>
+                      <option value="partially_paid">Partially Paid</option>
                     </select>
+                    {editingInvoice?.status === "paid" && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        This invoice is marked Paid and its status can no longer be changed.
+                      </p>
+                    )}
                   </div>
+
+                  {isPaidFamily && editingInvoice?.status !== "paid" && (() => {
+                    const total = Number(calculateTotalBreakdown().total);
+                    const maxAllowed = Math.max(total - previousAmountPaid, 0);
+                    const entered = Number(paymentReceivedNow) || 0;
+                    const exceeds = entered > maxAllowed;
+
+                    return (
+                      <div>
+                        {previousAmountPaid > 0 && (
+                          <p className="text-sm text-gray-600 mb-1">
+                            Already Received:{" "}
+                            <span className="font-semibold text-green-700">
+                              {invoiceData.currency} {previousAmountPaid.toFixed(2)}
+                            </span>
+                          </p>
+                        )}
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Amount Received Now *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={paymentReceivedNow}
+                          onChange={(e) => setPaymentReceivedNow(e.target.value)}
+                          placeholder={`Max ${maxAllowed.toFixed(2)}`}
+                          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                            exceeds || validationErrors.paymentReceivedNow ? "border-red-500" : "border-gray-300"
+                          }`}
+                        />
+                        {exceeds && (
+                          <p className="mt-1 text-sm text-red-600">
+                            Payment exceeds invoice total. Maximum you can enter now: {maxAllowed.toFixed(2)}
+                          </p>
+                        )}
+                        {!exceeds && validationErrors.paymentReceivedNow && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {validationErrors.paymentReceivedNow}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
 
             {/* Right Column */}
-            <div className="space-y-6">
-              <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+            <div>
+              <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
                 <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                   <svg
                     className="w-5 h-5 mr-2 text-green-600"
@@ -461,7 +704,7 @@ setSalesUsers(response.data.users);
                       }`}
                     >
                       <option value="">Select a Deal</option>
-                      {deals.map((deal) => (
+                      {deals.filter((deal) => deal.stage !== "Closed Won").map((deal) => (
                         <option key={deal._id} value={deal._id}>
                           {deal.dealName}
                         </option>
@@ -539,6 +782,71 @@ setSalesUsers(response.data.users);
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Billing Details — varies by country/client, so kept optional. Full-width,
+              like Financial Details below, rather than squeezed into one column —
+              it doesn't pair evenly in height with either Basic Information or
+              Deal Information. */}
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+              <svg
+                className="w-5 h-5 mr-2 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Billing Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Billing Address
+                </label>
+                <textarea
+                  name="billingAddress"
+                  rows="4"
+                  value={invoiceData.billingAddress}
+                  onChange={handleChange}
+                  className="w-full h-[calc(100%-1.75rem)] p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+                  placeholder="Defaults to the deal's address"
+                />
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Tax ID
+                  </label>
+                  <input
+                    type="text"
+                    name="clientTaxId"
+                    value={invoiceData.clientTaxId}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    placeholder="e.g. GSTIN, VAT No."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    PO Number
+                  </label>
+                  <input
+                    type="text"
+                    name="poNumber"
+                    value={invoiceData.poNumber}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  />
                 </div>
               </div>
             </div>
@@ -695,6 +1003,69 @@ setSalesUsers(response.data.users);
                 );
               })()}
             </div>
+          </div>
+
+          {/* Custom Fields — for anything the fixed form doesn't cover (varies by country/client) */}
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-800">Custom Fields</h3>
+              <button
+                type="button"
+                onClick={handleAddCustomField}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Field
+              </button>
+            </div>
+
+            {customFields.length === 0 ? (
+              <p className="text-sm text-gray-400">No custom fields added.</p>
+            ) : (
+              <div className="space-y-3">
+                {customFields.map((field, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <input
+                      type="text"
+                      value={field.label}
+                      onChange={(e) => handleCustomFieldChange(index, "label", e.target.value)}
+                      placeholder="Field name"
+                      className="w-1/3 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <select
+                      value={field.type}
+                      onChange={(e) => handleCustomFieldChange(index, "type", e.target.value)}
+                      className="w-28 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="date">Date</option>
+                    </select>
+                    <input
+                      type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                      value={field.value}
+                      onChange={(e) => handleCustomFieldChange(index, "value", e.target.value)}
+                      placeholder="Value"
+                      className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomField(index)}
+                      className="p-2.5 text-red-500 hover:text-red-700 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {validationErrors.customFields && (
+              <p className="mt-2 text-sm text-red-600">{validationErrors.customFields}</p>
+            )}
           </div>
 
           {/* Notes */}

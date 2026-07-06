@@ -169,6 +169,8 @@ export default function CreateDeal() {
     dealName: "",
     dealValue: "",
     currency: "INR",
+    preferredCurrency: "",
+    preferredCurrencyValue: "",
     stage: "Qualification",
     assignTo: "",
     notes: "",
@@ -186,7 +188,7 @@ export default function CreateDeal() {
     followUpDate: null,
     followUpComment: "",
     followUpStatus: "",
-     clientType: "",
+    clientType: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -195,6 +197,9 @@ export default function CreateDeal() {
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [userRole, setUserRole] = useState("");
   const [userId, setUserId] = useState("");
+  const [userCurrency, setUserCurrency] = useState("USD");
+  const [convertedValue, setConvertedValue] = useState(null);
+  const [isConverting, setIsConverting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [countries] = useState(getNames());
   const [previewFile, setPreviewFile] = useState(null);
@@ -207,8 +212,44 @@ export default function CreateDeal() {
       const user = JSON.parse(userData);
       setUserRole(user.role?.name || "");
       setUserId(user._id || "");
+      setUserCurrency(user.currency || "USD");
     }
   }, []);
+
+/* ── Live Currency Conversion ─────────────────────── */
+  useEffect(() => {
+    const dealValue = parseFloat(formData.dealValue);
+    if (!formData.dealValue || isNaN(dealValue) || dealValue <= 0) {
+      setConvertedValue(null);
+      setFormData((prev) => ({ ...prev, preferredCurrencyValue: "", preferredCurrency: "" }));
+      return;
+    }
+
+    if (formData.currency === userCurrency) {
+      setConvertedValue(dealValue);
+      setFormData((prev) => ({ ...prev, preferredCurrencyValue: dealValue, preferredCurrency: userCurrency }));
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsConverting(true);
+      try {
+        const res = await axios.get(`https://open.er-api.com/v6/latest/${formData.currency}`);
+        const rate = res.data?.rates?.[userCurrency];
+        if (rate) {
+          const converted = parseFloat((dealValue * rate).toFixed(2));
+          setConvertedValue(converted);
+          setFormData((prev) => ({ ...prev, preferredCurrencyValue: converted, preferredCurrency: userCurrency }));
+        }
+      } catch {
+        setConvertedValue(null);
+      } finally {
+        setIsConverting(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [formData.dealValue, formData.currency, userCurrency]);
 
 /* ── Initialise Form Data Function ─────────────────────── */
   useEffect(() => {
@@ -732,6 +773,20 @@ export default function CreateDeal() {
                 {errors.dealValue && (
                   <p className="text-red-500 text-sm mt-1">Deal Value is required</p>
                 )}
+                <div className="h-5 mt-1">
+                  {formData.dealValue && userCurrency && (
+                    <p className="flex items-center gap-1 text-sm text-gray-500">
+                      Your currency ({userCurrency}):
+                      {isConverting ? (
+                        <span className="text-gray-400 animate-pulse">Converting...</span>
+                      ) : convertedValue !== null ? (
+                        <span className="font-semibold text-green-600">
+                          {currencyOptions.find((c) => c.code === userCurrency)?.symbol} {convertedValue.toLocaleString()}
+                        </span>
+                      ) : null}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Dynamic fields */}

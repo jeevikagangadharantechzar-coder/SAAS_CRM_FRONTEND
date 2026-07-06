@@ -486,7 +486,8 @@ const ProposalHeadContent = () => {
                         STATUS_STYLES[proposal.status]
                       }`}
                     >
-                      <option value="draft">Draft</option>
+                      {/* <option value="draft" >Draft</option> */}
+                      <option value="draft" disabled={proposal.status !== "draft"}>Draft</option>
                       <option value="sent">Sent</option>
                       <option value="no reply">No Reply</option>
                       <option value="rejection">Rejection</option>
@@ -498,8 +499,8 @@ const ProposalHeadContent = () => {
                     onClick={() => openFollowUpDialog(proposal)}
                   >
                     {proposal.followUpDate
-                      ? new Date(proposal.followUpDate).toLocaleDateString()
-                      : new Date(proposal.createdAt).toLocaleDateString()}
+                      ? new Date(proposal.followUpDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
+                      : new Date(proposal.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </td>
                   <td className="px-4 py-3 relative tour-actions">
                     <button

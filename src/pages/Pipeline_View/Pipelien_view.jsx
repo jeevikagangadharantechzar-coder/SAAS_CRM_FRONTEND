@@ -18,7 +18,17 @@
   import useLostDealModal from "../LostDealModal/LossDeal";
   import LostDealModal from "../LostDealModal/ModalLoss";
 
-  const STAGES = [
+  // A deal that just moved to Closed Won rests visibly (and locked — not
+// draggable) in that column for this long before dropping off the board, so
+// the person who closed it gets clear visual confirmation the drop worked
+// instead of the card vanishing instantly.
+const WON_GRACE_MS = 5 * 60 * 1000;
+function isWithinWonGrace(deal) {
+  if (deal.stage !== "Closed Won" || !deal.wonAt) return false;
+  return Date.now() - new Date(deal.wonAt).getTime() < WON_GRACE_MS;
+}
+
+const STAGES = [
     {
       id: "Qualification",
       title: "Qualification",
@@ -102,6 +112,12 @@
       content: "You've completed the tour! Click here anytime to review the features again.",
     },
   ];
+
+  const CURRENCY_SYMBOLS = {
+    USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+    AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+    SGD: "S$", ZAR: "R", SAR: "﷼",
+  };
 
 /* ── Format Currency Value Function ─────────────────────── */
   const formatCurrencyValue = (val) => {
@@ -267,6 +283,13 @@
     }
 
     dealsArray.forEach((deal) => {
+      // A deal that's been Closed Won for more than the grace window is done
+      // — it stays visible in All Deals (Admin) but no longer sits as a card
+      // on this drag-and-drop board for either role. Still within the grace
+      // window, it stays visible (locked, see DealCard) so whoever closed it
+      // gets a moment of visual confirmation before it drops off the board.
+      if (deal.stage === "Closed Won" && !isWithinWonGrace(deal)) return;
+
       if (!grouped[deal.stage]) grouped[deal.stage] = [];
 
       // Find associated lead data - safely check if leadsArray is array
@@ -462,7 +485,11 @@
       // Store deal info before update for CLV recalculation
       const deal = columns[fromStage]?.find(d => d._id === dealId);
       
-      // 🔹 Local UI update
+      // 🔹 Local UI update — a deal moved into Closed Won rests there, locked
+      // (see DealCard/isWithinWonGrace), for a grace window so whoever closed
+      // it gets clear visual confirmation, then drops off the board on its
+      // own (still fully visible in All Deals throughout).
+      const wonAt = new Date();
       setColumns((prev) => {
         let deal;
         const next = { ...prev };
@@ -474,10 +501,19 @@
           return true;
         });
         if (deal) {
-          next[toStage] = [...prev[toStage], { ...deal, stage: toStage }];
+          next[toStage] = [...prev[toStage], { ...deal, stage: toStage, ...(toStage === "Closed Won" && { wonAt }) }];
         }
         return next;
       });
+
+      if (toStage === "Closed Won") {
+        setTimeout(() => {
+          setColumns((prev) => ({
+            ...prev,
+            "Closed Won": (prev["Closed Won"] || []).filter((d) => d._id !== dealId),
+          }));
+        }, WON_GRACE_MS);
+      }
 
       try {
         const token = localStorage.getItem("token");
@@ -956,11 +992,24 @@
     userId,
     className = "",
   }) {
+    // Overdue on an expired target, awaiting admin reassignment — read-only
+    // for the owning sales person until it's reassigned.
+    const isDisabled = deal.isActive === false && userRole !== "Admin";
+    // Just moved to Closed Won — resting visibly for a few minutes as
+    // confirmation before it drops off the board; locked so it can't be
+    // dragged to another stage during that window.
+    const isWonLocked = isWithinWonGrace(deal);
+
     const [{ isDragging }, dragRef] = useDrag({
       type: ItemTypes.DEAL,
       item: { id: deal._id, from: stageId },
+      canDrag: () => !isDisabled && !isWonLocked,
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     });
+
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const userCurrency = storedUser?.currency || "USD";
+    const userCurrencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
 
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
@@ -1009,10 +1058,16 @@
 
     return (
       <div
-        ref={dragRef}
-        className={`border bg-white border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-all cursor-move flex flex-col gap-3 relative ${className}`}
-        style={{ opacity: isDragging ? 0.5 : 1 }}
+        ref={isDisabled || isWonLocked ? null : dragRef}
+        title={isDisabled ? "Disabled — pending admin reassignment" : isWonLocked ? "Just closed Won — locks briefly before leaving the board" : undefined}
+        className={`border p-4 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col gap-3 relative ${isDisabled ? "cursor-not-allowed opacity-50 grayscale pointer-events-none select-none bg-white border-gray-200" : isWonLocked ? "cursor-not-allowed bg-emerald-50 border-emerald-200" : "cursor-move bg-white border-gray-200"} ${className}`}
+        style={{ opacity: isDragging ? 0.5 : isDisabled ? 0.5 : 1 }}
       >
+        {isWonLocked && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2 py-0.5 w-fit">
+            🎉 Closed Won — leaving the board shortly
+          </span>
+        )}
         {/* Three-dot menu - only show if user has permission */}
         {canEditDelete && (
           <div className="absolute top-3 right-3 deal-menu" ref={menuRef}>
@@ -1032,8 +1087,11 @@
             {menuOpen && (
               <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className={`block w-full text-left px-4 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                  disabled={isDisabled}
+                  title={isDisabled ? "Disabled pending admin reassignment" : undefined}
                   onClick={() => {
+                    if (isDisabled) return;
                     onEdit(deal);
                     setMenuOpen(false);
                   }}
@@ -1071,6 +1129,14 @@
           >
             {deal.dealName}
           </h3>
+
+          {isDisabled && (
+            <div className="mb-1">
+              <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
+                Pending Reassignment
+              </span>
+            </div>
+          )}
 
           <div className="text-xs text-stone-800 font-medium bg-indigo-100 py-1 px-2 rounded-full inline-block">
             {deal.companyName || "No company"}
@@ -1159,6 +1225,11 @@
                       "-"
                     )}
                   </div>
+                  {deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null && (
+                    <div className="text-xs text-gray-500">
+                      ({userCurrencySymbol} {Number(deal.preferredCurrencyValue).toLocaleString()})
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -37,13 +37,28 @@ const Login = () => {
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [showUpgradeButton, setShowUpgradeButton] = useState(false);
   const [platformLogo, setPlatformLogo] = useState("");
-  const [platformName, setPlatformName] = useState("");
+  const [platformName, setPlatformName] = useState(""); 
+   const [expiredNotice, setExpiredNotice] = useState(null);
+
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
   const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
+
+  // Show a popup if we were just logged out because the plan/trial expired
+  useEffect(() => {
+    const raw = sessionStorage.getItem("authExpiredNotice");
+    if (raw) {
+      sessionStorage.removeItem("authExpiredNotice");
+      try {
+        setExpiredNotice(JSON.parse(raw));
+      } catch {
+        setExpiredNotice(null);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     axios
@@ -363,6 +378,47 @@ const Login = () => {
 
       {/* Forgot Password Modal */}
       <ForgotPassword isOpen={isForgotOpen} onClose={() => setIsForgotOpen(false)} />
+
+      {/* Trial / Plan Expired Popup */}
+      {expiredNotice && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4" />
+                <path d="M12 16h.01" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {expiredNotice.trialExpired ? "Your Free Trial Has Ended" : "Subscription Expired"}
+            </h3>
+            <p className="text-gray-600 mb-6">{expiredNotice.message}</p>
+            <div className="flex flex-col gap-3">
+              {expiredNotice.trialExpired && tenantSlug && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpiredNotice(null);
+                    navigate(`/${tenantSlug}/upgrade`);
+                  }}
+                  className="w-full text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
+                  style={{ backgroundColor: "#008ECC" }}
+                >
+                  Upgrade Plan Now
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setExpiredNotice(null)}
+                className="w-full py-3 rounded-lg font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

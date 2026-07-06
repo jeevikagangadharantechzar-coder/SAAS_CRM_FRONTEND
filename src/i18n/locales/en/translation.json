@@ -1,0 +1,208 @@
+{
+  "leads": {
+    "title": "Leads",
+    "subtitle": "Manage and track your potential customers",
+    "tour": {
+      "welcome": "Welcome to the Leads Management page! Here you can view, manage, and convert your leads.",
+      "createLead": "Click here to create a new lead. You'll be able to add all the necessary details about a potential customer.",
+      "search": "Use this search bar to quickly find leads by name, email, phone, company, or source.",
+      "filters": "Filter your leads by status, assignee, or source to focus on specific segments of your pipeline.",
+      "table": "This is your leads table. It shows all your leads with their key information and status.",
+      "checkbox": "Select individual leads by checking these boxes, or use the header checkbox to select all visible leads.",
+      "actions": "Click the three-dot menu to edit, convert, or delete a lead. Converting a lead turns it into a deal.",
+      "finish": "You've completed the tour! Click here anytime to review the features again."
+    },
+    "buttons": {
+      "takeTour": "Take Tour",
+      "deleteSelected": "Delete Selected ({{count}})",
+      "createLead": "Create Lead"
+    },
+    "filters": {
+      "searchPlaceholder": "Search leads by name, email, phone, company...",
+      "allAssignees": "All Assignees",
+      "allStatus": "All Status",
+      "allSources": "All Sources",
+      "allClientTypes": "All Client Types"
+    },
+    "status": {
+      "hot": "Hot",
+      "warm": "Warm",
+      "cold": "Cold",
+      "junk": "Junk",
+      "converted": "Converted"
+    },
+    "source": {
+      "website": "Website",
+      "referral": "Referral",
+      "socialMedia": "Social Media",
+      "email": "Email",
+      "coldCall": "Cold Call",
+      "other": "Other"
+    },
+    "table": {
+      "lead": "Lead",
+      "contact": "Contact",
+      "company": "Company",
+      "clientType": "Client Type",
+      "country": "Country",
+      "source": "Source",
+      "status": "Status",
+      "assignee": "Assignee",
+      "created": "Created",
+      "followUp": "Follow-Up",
+      "history": "History",
+      "actions": "Actions",
+      "unnamedLead": "Unnamed Lead",
+      "assignedUser": "Assigned User",
+      "saving": "Saving...",
+      "noLeads": "No leads found."
+    },
+    "pagination": {
+      "showing": "Showing",
+      "of": "of",
+      "prev": "‹ Prev",
+      "next": "Next ›"
+    },
+    "deleteModal": {
+      "title": "Confirm Delete",
+      "messageSingle": "Are you sure you want to delete this lead? This action cannot be undone.",
+      "messageBulk": "Are you sure you want to delete {{count}} selected leads? This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "convertModal": {
+      "title": "Convert Lead to Deal",
+      "convertingPrefix": "Converting:",
+      "fromLabel": "from",
+      "dealValue": "Deal Value",
+      "valuePlaceholder": "Enter value",
+      "stage": "Stage",
+      "notes": "Notes",
+      "notesPlaceholder": "Add any notes...",
+      "cancel": "Cancel",
+      "convert": "Convert",
+      "convertingBtn": "Converting..."
+    },
+    "actions": {
+      "edit": "Edit",
+      "convert": "Convert",
+      "delete": "Delete"
+    },
+    "toast": {
+      "fetchFailed": "Failed to fetch leads",
+      "deleteSuccess": "Lead deleted successfully",
+      "deleteFailed": "Failed to delete lead",
+      "deleteError": "Error deleting lead",
+      "bulkDeleteSuccess": "{{count}} leads deleted successfully",
+      "bulkDeletePartialFail": "Failed to delete some leads",
+      "bulkDeleteError": "Error deleting leads",
+      "convertingLoad": "Converting lead to deal...",
+      "convertFailed": "Conversion failed. Please try again.",
+      "followUpSuccess": "Follow-up date updated",
+      "followUpFailed": "Failed to update follow-up date",
+      "statusSuccess": "Status updated successfully",
+      "statusFailed": "Failed to update status"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "leads": "Leads",
+    "deals": "Deals",
+    "pipelineView": "Pipeline View",
+    "allDeals": "All Deals",
+    "tasks": "Tasks",
+    "taskManagement": "Task Management",
+    "targetManagement": "Target Management",
+    "myTasks": "My Tasks",
+    "myTargets": "My Targets",
+    "proposal": "Proposal",
+    "invoices": "Invoices",
+    "analysis": "Analysis",
+    "dealAnalysis": "Deal Analysis",
+    "wonAnalysis": "Won Analysis",
+    "lossAnalysis": "Loss Analysis",
+    "leaderboard": "Leaderboard",
+    "email": "Email",
+    "emailChat": "Email Chat",
+    "emailCampaign": "Email Campaign",
+    "messages": "Messages",
+    "meetings": "Meetings",
+    "teamAnalytics": "Team Analytics",
+    "usersRoles": "Users & Roles",
+    "upgradePlan": "Upgrade Plan"
+  },
+  "leaderboard": {
+    "topPerformer": "Top Performer",
+    "myPerformance": "My Performance",
+    "noTopPerformer": "No Top Performer",
+    "refresh": "Refresh",
+    "conversion": "Conversion",
+    "activeDays": "Active Days",
+    "performance": "Performance"
+  },
+  "dashboard": {
+    "title": "Business Dashboard",
+    "subtitle": "Real-time insights and performance metrics",
+    "error": {
+      "fetchFailed": "Failed to load dashboard data. Check your network connection."
+    },
+    "period": {
+      "label": "Period",
+      "today": "Today",
+      "last7days": "Last 7 Days",
+      "thisMonth": "This Month",
+      "thisYear": "This Year",
+      "month": "Month",
+      "year": "Year"
+    },
+    "cards": {
+      "totalLeads": "Total Leads",
+      "dealsWon": "Deals Won",
+      "totalRevenue": "Total Revenue",
+      "pendingInvoices": "Pending Invoices",
+      "vsPrevious": "vs previous"
+    },
+    "revenueCurrency": {
+      "title": "Revenue by Currency",
+      "currenciesBadge": "{{count}} Currencies",
+      "totalRevenueINR": "Total Revenue (INR)",
+      "totalRevenuePreferred": "Total Revenue ({{currency}})",
+      "noData": "No revenue data for this period",
+      "invoices": "invoices"
+    },
+    "pendingInvoices": {
+      "title": "Pending Invoices",
+      "invoicesBadge": "{{count}} Invoices",
+      "totalPendingINR": "Total Pending (INR)",
+      "totalPendingPreferred": "Total Pending ({{currency}})",
+      "noData": "No pending invoices",
+      "pending": "pending"
+    },
+    "revenueTrend": {
+      "title": "Revenue Trend",
+      "totalRevenueINR": "Total Revenue (INR)",
+      "totalRevenuePreferred": "Total Revenue ({{currency}})",
+      "revenueLabel": "Revenue"
+    },
+    "salesPipeline": {
+      "title": "Sales Pipeline Analytics",
+      "totalDealsBadge": "{{count}} Total Deals",
+      "description": "Monthly breakdown of open opportunities vs won deals with performance metrics",
+      "openOpportunities": "Open Opportunities",
+      "wonDeals": "Won Deals",
+      "winRate": "Win Rate",
+      "activePipeline": "Active Pipeline",
+      "deals": "deals",
+      "total": "Total"
+    },
+    "dealDistribution": {
+      "title": "Deal Distribution",
+      "totalBadge": "{{count}} Total",
+      "noDeals": "No deals for this period",
+      "totalLabel": "Total",
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    }
+  }
+}

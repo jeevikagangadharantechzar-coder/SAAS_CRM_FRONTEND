@@ -27,6 +27,15 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       const slug = store.getState().auth.slug;
+      if (error.response.data?.planExpired) {
+        sessionStorage.setItem(
+          "authExpiredNotice",
+          JSON.stringify({
+            message: error.response.data.message,
+            trialExpired: !!error.response.data.trialExpired,
+          })
+        );
+      }
       store.dispatch(clearCredentials());
       if (slug) {
         window.location.href = `/${slug}/login`;
@@ -100,6 +109,15 @@ axios.interceptors.response.use(
           window.location.href = "/";
         } else if (!window.location.pathname.includes("/login")) {
           const slug = store.getState().auth.slug;
+          if (error.response.data?.planExpired) {
+            sessionStorage.setItem(
+              "authExpiredNotice",
+              JSON.stringify({
+                message: error.response.data.message,
+                trialExpired: !!error.response.data.trialExpired,
+              })
+            );
+          }
           store.dispatch(clearCredentials());
           if (slug) {
             window.location.href = `/${slug}/login`;

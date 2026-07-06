@@ -13,6 +13,8 @@ import {
   Percent,
   IndianRupee,
   Receipt,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -59,6 +61,11 @@ const InvoiceView = () => {
     );
   }
 
+  // Total never changes — amountPaid is the cumulative figure tracked separately
+  const isPaidFamily = ["paid", "partially_paid"].includes(invoice.status);
+  const amountPaid = isPaidFamily ? Number(invoice.amountPaid) || 0 : 0;
+  const balanceDue = Math.max((Number(invoice.total) || 0) - amountPaid, 0);
+
 /* ── Get Status Classes Function ─────────────────────── */
   const getStatusClasses = (status) => {
     switch (status?.toLowerCase()) {
@@ -66,10 +73,6 @@ const InvoiceView = () => {
         return "bg-green-100 text-green-800";
       case "unpaid":
         return "bg-red-100 text-red-800";
-      case "sent":
-        return "bg-blue-100 text-blue-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -163,6 +166,35 @@ const InvoiceView = () => {
                           </p>
                         </div>
                       </div>
+                      {(invoice.billingAddress || invoice.items?.[0]?.deal?.address) && (
+                        <div className="flex items-start text-slate-700">
+                          <FileText size={18} className="mr-3 mt-0.5 text-slate-500" />
+                          <div>
+                            <p className="text-sm font-medium">Billing Address</p>
+                            <p className="text-slate-900 whitespace-pre-line">
+                              {invoice.billingAddress || invoice.items?.[0]?.deal?.address}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {invoice.clientTaxId && (
+                        <div className="flex items-center text-slate-700">
+                          <FileText size={18} className="mr-3 text-slate-500" />
+                          <div>
+                            <p className="text-sm font-medium">Client Tax ID</p>
+                            <p className="text-slate-900">{invoice.clientTaxId}</p>
+                          </div>
+                        </div>
+                      )}
+                      {invoice.poNumber && (
+                        <div className="flex items-center text-slate-700">
+                          <FileText size={18} className="mr-3 text-slate-500" />
+                          <div>
+                            <p className="text-sm font-medium">PO Number</p>
+                            <p className="text-slate-900">{invoice.poNumber}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -212,6 +244,24 @@ const InvoiceView = () => {
                         </div>
                       </div>
                       <div className="flex items-center text-slate-700">
+                        <CheckCircle size={18} className="mr-3 text-green-500" />
+                        <div>
+                          <p className="text-sm font-medium">Amount Paid</p>
+                          <p className="text-green-700 font-semibold">
+                            {invoice.currency} {amountPaid.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-slate-700">
+                        <AlertCircle size={18} className="mr-3 text-red-500" />
+                        <div>
+                          <p className="text-sm font-medium">Balance Due</p>
+                          <p className="text-red-700 font-semibold">
+                            {invoice.currency} {balanceDue.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-slate-700">
                         <Calendar size={18} className="mr-3 text-slate-500" />
                         <div>
                           <p className="text-sm font-medium">Issue Date</p>
@@ -238,6 +288,29 @@ const InvoiceView = () => {
                     </div>
                   </div>
                 </div>
+
+                {invoice.customFields?.length > 0 && (
+                  <div className="p-6 border-t border-slate-100">
+                    <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                      Custom Fields
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {invoice.customFields.map((field, index) => (
+                        <div key={index} className="flex items-center text-slate-700">
+                          <FileText size={18} className="mr-3 text-slate-500" />
+                          <div>
+                            <p className="text-sm font-medium">{field.label}</p>
+                            <p className="text-slate-900">
+                              {field.type === "date" && field.value
+                                ? new Date(field.value).toLocaleDateString()
+                                : field.value}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

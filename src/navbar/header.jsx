@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Menu, Power, ChevronDown, Bell } from "react-feather";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useNotifications } from "../context/NotificationContext";
 import { disconnectSocket } from "../utils/socket";
+import { getNotificationBadge, getNotificationAccentClass } from "../utils/taskNotifications";
 import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2 } from "lucide-react";
 
 import { Settings, Plug } from "lucide-react";
@@ -46,9 +48,13 @@ const Navbar = ({ toggleSidebar }) => {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const currentLang = i18n.language?.startsWith("ar") ? "ar" : "en";
 
   const notificationRef = useRef(null);
   const dropdownRef = useRef(null);
+  const langRef = useRef(null);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const API_SI = import.meta.env.VITE_SI_URI;
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -156,6 +162,12 @@ const handleLogout = async () => {
       ) {
         setShowDropdown(false);
       }
+      if (
+        langRef.current &&
+        !langRef.current.contains(event.target)
+      ) {
+        setShowLangDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -184,9 +196,12 @@ const handleLogout = async () => {
         const filter = n.meta?.taskApproved ? "Task Approved" : "All";
         navigate(`/${tenantSlug}/assigned-tasks`, { state: { filter } });
       }
-    } else if (n.type === "target") {
+    } else if (
+      ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign", "reason_note"].includes(n.type)
+    ) {
       if (isAdmin) {
-        navigate(`/${tenantSlug}/target-management`);
+        const openReassign = n.type === "reason_note" || (n.type === "target_expired" && n.meta?.needsReassign);
+        navigate(`/${tenantSlug}/target-management`, { state: openReassign ? { mainView: "reasonNotes" } : { mainView: "notifications" } });
       } else {
         const targetId = n.meta?.targetId;
         navigate(`/${tenantSlug}/my-targets`, { state: { expandTargetId: targetId } });
@@ -279,6 +294,38 @@ const handleLogout = async () => {
 
         {/* Right Section */}
         <div className="flex items-center space-x-4 relative">
+          {/* Language Dropdown */}
+          <div className="relative" ref={langRef}>
+            {/* <button
+              onClick={() => setShowLangDropdown((p) => !p)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+            >
+              <span>{currentLang === "ar" ? "AR" : "EN"}</span>
+              <ChevronDown size={14} className={`transition-transform duration-200 ${showLangDropdown ? "rotate-180" : ""}`} />
+            </button> */}
+            {showLangDropdown && (
+              <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 z-50">
+                {[{ code: "en", label: "English" }, { code: "ar", label: "العربية" }].map(({ code, label }) => (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      i18n.changeLanguage(code);
+                      localStorage.setItem("language", code);
+                      document.documentElement.dir = code === "ar" ? "rtl" : "ltr";
+                      document.documentElement.lang = code;
+                      setShowLangDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-blue-50 dark:hover:bg-gray-700 ${
+                      currentLang === code ? "font-semibold text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Fullscreen Toggle */}
           <div className="relative group">
           <button
@@ -352,12 +399,15 @@ const handleLogout = async () => {
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.length > 0 ? (
-                    notifications.slice(0, 8).map((n) => (
+                    notifications.slice(0, 8).map((n) => {
+                      const accent = getNotificationAccentClass(n);
+                      const badge = getNotificationBadge(n);
+                      return (
                       <div
                         key={n._id}
                         onClick={() => handleNotificationClick(n)}
-                        className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-0 group ${
-                          !n.read && !n.isRead ? "bg-blue-50/40 dark:bg-blue-900/20" : ""
+                        className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-l-4 border-gray-100 dark:border-gray-600 last:border-0 group ${
+                          accent || (!n.read && !n.isRead ? "border-l-transparent bg-blue-50/40 dark:bg-blue-900/20" : "border-l-transparent")
                         }`}
                       >
                         <div className="flex-shrink-0 relative">
@@ -372,19 +422,9 @@ const handleLogout = async () => {
                         </div>
                         <div className="ml-3 flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            {n.meta?.taskApproved && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
-                                ✓ Task Approved
-                              </span>
-                            )}
-                            {n.meta?.taskAssigned && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
-                                📋 New Task
-                              </span>
-                            )}
-                            {n.meta?.taskCompleted && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
-                                ✔ Task Completed
+                            {badge && (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${badge.className}`}>
+                                {badge.emoji} {badge.label}
                               </span>
                             )}
                           </div>
@@ -406,7 +446,8 @@ const handleLogout = async () => {
                           <XIcon size={13} />
                         </button>
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="p-6 text-gray-400 text-sm text-center">
                       No notifications

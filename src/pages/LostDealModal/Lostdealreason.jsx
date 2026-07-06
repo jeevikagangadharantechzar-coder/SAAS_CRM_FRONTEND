@@ -992,7 +992,7 @@ export default function LostDealAnalytics() {
             <div>
               <h4 className="font-semibold text-red-800 mb-1">High-Value Alert</h4>
               <p className="text-sm text-red-600 mb-2">
-                {highValueDeals.length} deals over ₹1L lost
+                {highValueDeals.length} deals over ₹5L lost
               </p>
               <button
                 onClick={() =>
@@ -2293,4 +2293,4 @@ export default function LostDealAnalytics() {
       )}
     </div>
   );
-}
+};
