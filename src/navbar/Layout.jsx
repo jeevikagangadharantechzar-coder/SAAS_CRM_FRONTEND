@@ -43,6 +43,15 @@ const Layout = ({ isModalOpen }) => {
 
   const toggleSidebar = () => setSidebarOpen(prev => !prev);
 
+  const hasChatbot = (() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user?.planFeatures?.chatbot !== false;
+    } catch {
+      return true;
+    }
+  })();
+
   return (
     <>
       <div className="flex h-screen overflow-hidden">
@@ -72,7 +81,7 @@ const Layout = ({ isModalOpen }) => {
         <BottomNavItem to="/leaderboard" icon={<Trophy />} label="Streak" />
       </div>
 
-      <ChatWidget />
+      {hasChatbot && <ChatWidget />}
       <MissedFollowUpModal />
     </>
   );

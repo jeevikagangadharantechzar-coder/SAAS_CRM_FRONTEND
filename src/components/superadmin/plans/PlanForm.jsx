@@ -35,6 +35,9 @@ import {
   Lock,
   Settings as SettingsIcon,
   Sparkles,
+  Calendar,
+  Video,
+  Bot,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -62,6 +65,11 @@ const DEFAULT_FEATURES = {
   assigned_tasks: true,
   task_management: true,
   target_management: true,
+  meetings: true,
+  google_meet_sync: true,
+  zoom_meetings: true,
+  messages: true,
+  chatbot: true,
 };
 
 const FEATURE_GROUPS = [
@@ -101,6 +109,8 @@ const FEATURE_GROUPS = [
       { key: "email_chat", label: "Email Chat", icon: Mail },
       { key: "email_campaigns", label: "Email Campaigns", icon: Send },
       { key: "whatsapp_chat", label: "WhatsApp Chat", icon: MessageCircle },
+      { key: "messages", label: "Internal Messages", icon: MessageSquare },
+      { key: "chatbot", label: "AI Chatbot Assistant", icon: Bot },
     ],
   },
   {
@@ -119,6 +129,15 @@ const FEATURE_GROUPS = [
       { key: "task_management", label: "Task Management", icon: ClipboardList },
       { key: "target_management", label: "Target Management", icon: Target },
       { key: "assigned_tasks", label: "Assigned Tasks", icon: CheckSquare },
+    ],
+  },
+  {
+    title: "Meetings",
+    icon: Calendar,
+    features: [
+      { key: "meetings", label: "Meetings Scheduler", icon: Calendar },
+      { key: "google_meet_sync", label: "Google Meet Sync", icon: Video },
+      { key: "zoom_meetings", label: "Zoom Meetings", icon: Video },
     ],
   },
   {
@@ -514,31 +533,32 @@ export const PlanForm = ({
             <h3 className="text-md font-bold tracking-tight">SECTION 3 — Limits</h3>
           </div>
           <div className="p-6 space-y-6">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Max Users Per Tenant
-              </label>
-              <input
-                type="number"
-                placeholder="0 = unlimited"
-                disabled={planType === "enterprise"}
-                {...register("max_users_per_tenant", {
-                  min: { value: 0, message: "Value must be greater than or equal to 0" },
-                  valueAsNumber: true,
-                })}
-                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner ${
-                  planType === "enterprise" ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" : ""
-                } ${errors.max_users_per_tenant ? "border-red-300 focus:ring-red-500" : "border-slate-300"}`}
-              />
-              {planType === "enterprise" ? (
-                <p className="text-amber-600 text-[10px] mt-1.5 font-semibold">Locked to Unlimited for Enterprise tier.</p>
-              ) : (
+            {planType === "enterprise" ? (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-650 text-xs font-medium">
+                Enterprise plans include unlimited users per tenant, so this field isn't applicable.
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Max Users Per Tenant
+                </label>
+                <input
+                  type="number"
+                  placeholder="0 = unlimited"
+                  {...register("max_users_per_tenant", {
+                    min: { value: 0, message: "Value must be greater than or equal to 0" },
+                    valueAsNumber: true,
+                  })}
+                  className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner ${
+                    errors.max_users_per_tenant ? "border-red-300 focus:ring-red-500" : "border-slate-300"
+                  }`}
+                />
                 <p className="text-slate-400 text-[10px] mt-1.5">Enter 0 for unlimited users per tenant database.</p>
-              )}
-              {errors.max_users_per_tenant && (
-                <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.max_users_per_tenant.message}</p>
-              )}
-            </div>
+                {errors.max_users_per_tenant && (
+                  <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.max_users_per_tenant.message}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

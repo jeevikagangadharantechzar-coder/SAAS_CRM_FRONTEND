@@ -555,7 +555,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="dashboard"
           icon={<Home />}
           label={t("sidebar.dashboard")}
-          hasPermission={isAdmin || userPermissions.dashboard}
+          hasPermission={(isAdmin || userPermissions.dashboard) && hasPlanFeature("dashboard")}
           sidebarOpen={isOpen}
         />
 
@@ -564,7 +564,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="leads"
           icon={<Users />}
           label={t("sidebar.leads")}
-          hasPermission={isAdmin || userPermissions.leads}
+          hasPermission={(isAdmin || userPermissions.leads) && hasPlanFeature("leads")}
           sidebarOpen={isOpen}
         />
 
@@ -585,22 +585,27 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             to="Pipelineview"
             icon={<GitBranch />}
             label={t("sidebar.pipelineView")}
-            hasPermission={isAdmin || userPermissions.deals_pipeline}
+            hasPermission={(isAdmin || userPermissions.deals_pipeline) && hasPlanFeature("deals_pipeline")}
           />
           <SmallLink
             to="deals"
             icon={<TrendingUp />}
             label={t("sidebar.allDeals")}
-            hasPermission={isAdmin || userPermissions.deals_all}
+            hasPermission={(isAdmin || userPermissions.deals_all) && hasPlanFeature("deals_all")}
           />
         </Collapsible>
 
-        {/* Tasks (Collapsible) */}
+        {/* Tasks (Collapsible) — the container itself must also respect plan
+            features, otherwise it shows as an empty expandable group once every
+            child feature underneath it has been disabled on the plan. */}
         {(isAdmin ||
           userPermissions.task_management ||
           userPermissions.target_management ||
           userPermissions.assigned_tasks ||
-          (!isAdmin && userPermissions.my_targets !== false)) && (
+          (!isAdmin && userPermissions.my_targets !== false)) &&
+          (hasPlanFeature("task_management") ||
+            hasPlanFeature("target_management") ||
+            hasPlanFeature("assigned_tasks")) && (
           <Collapsible
             label={t("sidebar.tasks")}
             icon={<CheckSquare />}
@@ -638,7 +643,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               />
             )}
 
-            {!isAdmin && userPermissions.my_targets !== false && (
+            {!isAdmin && userPermissions.my_targets !== false && hasPlanFeature("target_management") && (
               <SmallLink
                 to="my-targets"
                 icon={<Target />}
@@ -653,7 +658,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="proposal"
           icon={<ClipboardList />}
           label={t("sidebar.proposal")}
-          hasPermission={isAdmin || userPermissions.proposal}
+          hasPermission={(isAdmin || userPermissions.proposal) && hasPlanFeature("proposal")}
           sidebarOpen={isOpen}
         />
 
@@ -663,7 +668,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           exact
           icon={<Receipt />}
           label={t("sidebar.invoices")}
-          hasPermission={isAdmin || userPermissions.invoices}
+          hasPermission={(isAdmin || userPermissions.invoices) && hasPlanFeature("invoices")}
           sidebarOpen={isOpen}
         />
 
@@ -699,7 +704,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="leaderboard"
           icon={<Trophy />}
           label={t("sidebar.leaderboard")}
-          hasPermission={isAdmin || userPermissions.streak_leaderboard}
+          hasPermission={(isAdmin || userPermissions.streak_leaderboard) && hasPlanFeature("streak_leaderboard")}
           sidebarOpen={isOpen}
         />
 
@@ -730,14 +735,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         </Collapsible>
 
         {/* Internal Messages */}
-        <MessagesItem to="messages" sidebarOpen={isOpen} />
+        {hasPlanFeature("messages") && (
+          <MessagesItem to="messages" sidebarOpen={isOpen} />
+        )}
 
         {/* Meetings */}
         <SidebarItem
           to="meetings"
           icon={<Calendar />}
           label={t("sidebar.meetings")}
-          hasPermission={isAdmin || userPermissions.Meetings}
+          hasPermission={(isAdmin || userPermissions.Meetings) && hasPlanFeature("meetings")}
           sidebarOpen={isOpen}
         />
 
@@ -746,7 +753,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="team-analytics"
           icon={<BarChart3 />}
           label={t("sidebar.teamAnalytics")}
-          hasPermission={isAdmin || userPermissions.reports}
+          hasPermission={(isAdmin || userPermissions.reports) && hasPlanFeature("reports")}
           sidebarOpen={isOpen}
         />
 
@@ -755,7 +762,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="user&roles"
           icon={<Shield />}
           label={t("sidebar.usersRoles")}
-          hasPermission={isAdmin || userPermissions.users_roles}
+          hasPermission={(isAdmin || userPermissions.users_roles) && hasPlanFeature("users_roles")}
           sidebarOpen={isOpen}
         />
 
