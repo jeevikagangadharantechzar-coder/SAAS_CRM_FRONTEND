@@ -965,7 +965,7 @@ function LeadTableComponent() {
 
                     {menuOpen === lead._id && (
                       <div
-                        className="fixed z-50 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
+                        className="fixed z-50 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
                         style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
                       >
                         <button
@@ -975,7 +975,7 @@ function LeadTableComponent() {
                             handleEdit(lead._id);
                           }}
                           disabled={isDisabled}
-                          className={`flex items-center w-full px-3 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
                         >
                           <Edit className="w-4 h-4 mr-2" /> {t("leads.actions.edit")}
                         </button>
@@ -983,10 +983,11 @@ function LeadTableComponent() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                              if (isDisabled) return;
+                            if (isDisabled) return;
                             openAddNoteModal(lead);
                           }}
-                          className="flex items-center w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                          disabled={isDisabled}
+                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-gray-100"}`}
                         >
                           <MessageSquarePlus className="w-4 h-4 mr-2" /> Add Follow-up Note
                         </button>
@@ -995,7 +996,7 @@ function LeadTableComponent() {
                           <button
                             onClick={(e) => { e.stopPropagation(); openConvertModal(lead); }}
                             disabled={isDisabled}
-                            className={`flex items-center w-full px-3 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:bg-gray-100"}`}
+                            className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:bg-gray-100"}`}
                           >
                             <Handshake className="w-4 h-4 mr-2" /> {t("leads.actions.convert")}
                           </button>
@@ -1007,7 +1008,7 @@ function LeadTableComponent() {
                               e.stopPropagation();
                               handleRejectClick(lead);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
+                            className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
                           >
                             <Ban className="w-4 h-4 mr-2" /> Reject
                           </button>
