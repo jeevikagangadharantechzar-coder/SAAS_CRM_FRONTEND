@@ -24,6 +24,7 @@ import {
 const API_BASE = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const SETTINGS_URL = `${API_BASE}/superadmin/api/settings`;
 const LOGO_URL = `${SETTINGS_URL}/logo`;
+const FAVICON_URL = `${SETTINGS_URL}/favicon`;
 
 function authHeaders() {
   const token = localStorage.getItem("superAdminToken");
@@ -193,6 +194,12 @@ const SuperAdminSettings = () => {
   const [logoCleared, setLogoCleared] = useState(false);
   const fileRef = useRef();
 
+  // Super admin panel branding
+  const [superAdminTitle, setSuperAdminTitle] = useState("");
+  const [faviconPreview, setFaviconPreview] = useState("");
+  const [faviconUploading, setFaviconUploading] = useState(false);
+  const faviconRef = useRef();
+
   // Branding
   const [platformName, setPlatformName] = useState(DEFAULTS.platformName);
   const [supportEmail, setSupportEmail] = useState(DEFAULTS.supportEmail);
@@ -257,6 +264,22 @@ const SuperAdminSettings = () => {
     toast.info("Upgrade alerts reset to default — click Save to apply");
   };
 
+  const resetSuperAdminBranding = async () => {
+    setSuperAdminTitle("");
+    setFaviconPreview("");
+    // Reset favicon in browser tab immediately
+    const link = document.getElementById("dynamic-favicon");
+    if (link) link.href = "/src/assets/favicon.ico";
+    document.title = "TZI CRM";
+    // Clear from DB immediately (don't wait for Save)
+    try {
+      await axios.put(SETTINGS_URL, { superAdminTitle: "", superAdminFavicon: "" }, { headers: authHeaders() });
+      toast.info("Super admin branding reset to default");
+    } catch {
+      toast.error("Failed to reset super admin branding");
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -280,6 +303,10 @@ const SuperAdminSettings = () => {
         if (data.platformLogo) {
           setLogoPreview(`${API_BASE}/${data.platformLogo}`);
         }
+        setSuperAdminTitle(data.superAdminTitle || "");
+        if (data.superAdminFavicon) {
+          setFaviconPreview(`${API_BASE}/${data.superAdminFavicon}`);
+        }
       } catch (err) {
         toast.error("Failed to load settings");
       } finally {
@@ -295,6 +322,7 @@ const SuperAdminSettings = () => {
       const body = {
         platformName,
         supportEmail,
+        superAdminTitle,
         smtpHost,
         smtpPort,
         smtpUser,
@@ -337,6 +365,29 @@ const SuperAdminSettings = () => {
       toast.error("Logo upload failed");
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  const handleFaviconChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFaviconPreview(URL.createObjectURL(file));
+    setFaviconUploading(true);
+    try {
+      const form = new FormData();
+      form.append("favicon", file);
+      const { data } = await axios.post(FAVICON_URL, form, {
+        headers: { ...authHeaders(), "Content-Type": "multipart/form-data" },
+      });
+      setFaviconPreview(`${API_BASE}/${data.faviconPath}`);
+      // Apply immediately to browser tab
+      const link = document.getElementById("dynamic-favicon");
+      if (link) link.href = `${API_BASE}/${data.faviconPath}`;
+      toast.success("Favicon uploaded successfully");
+    } catch (err) {
+      toast.error("Favicon upload failed");
+    } finally {
+      setFaviconUploading(false);
     }
   };
 
@@ -438,6 +489,84 @@ const SuperAdminSettings = () => {
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   Recommended: PNG or SVG, max 5 MB.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Super Admin Panel Branding ── */}
+          <Card className="border-0 shadow-md bg-white">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg font-bold flex items-center space-x-2">
+                    <Globe size={18} className="text-purple-500" />
+                    <span>Super Admin Panel Branding</span>
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Tab title and favicon shown only in the super admin portal — independent from tenant branding.
+                  </CardDescription>
+                </div>
+                <ResetButton onClick={resetSuperAdminBranding} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Browser Tab Title
+                </label>
+                <input
+                  type="text"
+                  value={superAdminTitle}
+                  onChange={(e) => setSuperAdminTitle(e.target.value)}
+                  placeholder="e.g. Techzar Admin Console"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Shown in the browser tab when super admin is logged in. Leave blank to use the default.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Favicon (ICO / PNG / SVG)
+                </label>
+                <div className="flex items-center gap-4">
+                  {faviconPreview ? (
+                    <img
+                      src={faviconPreview}
+                      alt="Favicon preview"
+                      className="h-10 w-10 object-contain border border-slate-200 rounded-lg p-1 bg-slate-50"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  ) : (
+                    <div className="h-10 w-10 flex items-center justify-center border border-dashed border-slate-300 rounded-lg text-slate-300 text-xs">
+                      ICO
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => faviconRef.current.click()}
+                    disabled={faviconUploading}
+                    className="flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
+                  >
+                    {faviconUploading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Upload size={16} />
+                    )}
+                    <span>{faviconUploading ? "Uploading…" : "Upload Favicon"}</span>
+                  </button>
+                  <input
+                    ref={faviconRef}
+                    type="file"
+                    accept="image/*,.ico"
+                    className="hidden"
+                    onChange={handleFaviconChange}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Recommended: ICO or 32×32 PNG. Max 2 MB.
                 </p>
               </div>
             </CardContent>

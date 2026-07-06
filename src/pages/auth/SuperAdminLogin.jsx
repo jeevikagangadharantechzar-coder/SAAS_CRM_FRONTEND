@@ -22,7 +22,17 @@ const SuperAdminLogin = () => {
   useEffect(() => {
     axios
       .get(`${BASE_URL}/superadmin/api/public/branding`)
-      .then(({ data }) => { if (data.platformLogo) setPlatformLogo(data.platformLogo); })
+      .then(({ data }) => {
+        if (data.platformLogo) setPlatformLogo(data.platformLogo);
+        // Apply super admin tab title + favicon on the login page too
+        if (data.superAdminTitle) document.title = data.superAdminTitle;
+        const link = document.getElementById("dynamic-favicon");
+        if (link) {
+          link.href = data.superAdminFavicon
+            ? `${BASE_URL}/${data.superAdminFavicon}`
+            : "/src/assets/favicon.ico";
+        }
+      })
       .catch(() => {});
   }, []);
 

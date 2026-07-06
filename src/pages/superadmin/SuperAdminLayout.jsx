@@ -29,6 +29,7 @@ const SuperAdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pendingUpgrades, setPendingUpgrades] = useState(0);
   const [platformLogo, setPlatformLogo] = useState("");
+  const [superAdminTitle, setSuperAdminTitle] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -50,6 +51,18 @@ const SuperAdminLayout = () => {
       try {
         const { data } = await axios.get(`${BASE_URL}/superadmin/api/public/branding`);
         if (data.platformLogo) setPlatformLogo(`${BASE_URL}/${data.platformLogo}`);
+
+        // Apply super admin tab title — default to "TZI CRM" if not set
+        document.title = data.superAdminTitle || "TZI CRM";
+        if (data.superAdminTitle) setSuperAdminTitle(data.superAdminTitle);
+
+        // Apply super admin favicon — default to built-in favicon if not set
+        const link = document.getElementById("dynamic-favicon");
+        if (link) {
+          link.href = data.superAdminFavicon
+            ? `${BASE_URL}/${data.superAdminFavicon}`
+            : "/src/assets/favicon.ico";
+        }
       } catch (_) {}
     };
 

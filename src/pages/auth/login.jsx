@@ -65,7 +65,15 @@ const Login = () => {
       .get(`${SI_URI}/superadmin/api/public/branding`)
       .then(({ data }) => {
         if (data.platformLogo) setPlatformLogo(`${SI_URI}/${data.platformLogo}`);
-        if (data.platformName) setPlatformName(data.platformName);
+        if (data.platformName) {
+          setPlatformName(data.platformName);
+          document.title = data.platformName;
+        }
+        // Apply platform favicon on the tenant login page
+        const link = document.getElementById("dynamic-favicon");
+        if (link && data.superAdminFavicon) {
+          link.href = `${SI_URI}/${data.superAdminFavicon}`;
+        }
       })
       .catch(() => {});
   }, []);
