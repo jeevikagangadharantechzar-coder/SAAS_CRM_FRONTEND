@@ -321,7 +321,7 @@ function App() {
                     <Route path="user&roles" element={<UserManagement />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="reports" planFeature="reports" />}>
+                  <Route element={<PrivateRoute permission="reports" />}>
                     <Route path="team-analytics" element={<ReportsPage />} />
                   </Route>
 

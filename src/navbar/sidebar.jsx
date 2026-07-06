@@ -753,7 +753,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="team-analytics"
           icon={<BarChart3 />}
           label={t("sidebar.teamAnalytics")}
-          hasPermission={(isAdmin || userPermissions.reports) && hasPlanFeature("reports")}
+          hasPermission={isAdmin || userPermissions.reports}
           sidebarOpen={isOpen}
         />
 
