@@ -104,19 +104,19 @@ function AllDealsComponent() {
     initSocket();
   }, []);
 
-  // When Admin rejects a deal, it disappears from the sales person's own
-  // account immediately instead of waiting for their next refresh.
+  // Keep the list live via socket instead of polling: refresh on stage
+  // changes, and drop a deal immediately for the sales person it was
+  // rejected from. Admins also need this — they receive both events too
+  // (see notifyUser calls in deals.controller.js) but were previously
+  // skipped here, so their list only ever updated on a manual reload.
   useEffect(() => {
-    if (userRole === "Admin" || !userRole) return;
+    if (!userRole) return;
     const socket = getSocket();
     if (!socket) return;
     const rejectedHandler = ({ dealId, dealName }) => {
       setDeals((prev) => prev.filter((d) => d._id !== dealId));
       toast.info(`Deal "${dealName}" was rejected by Admin and removed from your list.`);
     };
-    // Any stage change (e.g. moving to Closed Won) should refresh immediately
-    // rather than waiting for the 30s poll, since Closed Won also disappears
-    // from the sales person's own account.
     const stageHandler = () => fetchDeals();
     socket.on("deal_rejected", rejectedHandler);
     socket.on("deal_stage_updated", stageHandler);
@@ -311,14 +311,6 @@ function AllDealsComponent() {
         })
         .catch(() => {});
     }
-  }, []);
-
-  // Auto-refresh deals every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchDeals();
-    }, 30000);
-    return () => clearInterval(interval);
   }, []);
 
 /* ── Format Date Function ─────────────────────── */
