@@ -454,7 +454,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   // Plain "target" notifications (lead converted by Admin, deal stage moved by
   // Admin, new target assigned, etc.) belong in the My Targets/Target
   // Management badge too, live, not just the header bell.
-  const TARGET_NOTIF_TYPES = ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign", "reason_note"];
+  // "reason_note" is deliberately excluded — it already has its own pending
+  // count on the Reason Notes tab badge itself; counting it here too made the
+  // sidebar nav badge and the Reason Notes tab badge both show the same "1"
+  // for the same single reported issue, reading as a duplicate/mismatch.
+  const TARGET_NOTIF_TYPES = ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign"];
 
   const salesTargetBadge = !isAdmin
     ? notifications.filter(

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useNotifications } from "../context/NotificationContext";
 import { disconnectSocket } from "../utils/socket";
+import { getNotificationBadge, getNotificationAccentClass } from "../utils/taskNotifications";
 import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2 } from "lucide-react";
 
 import { Settings, Plug } from "lucide-react";
@@ -395,12 +396,15 @@ const handleLogout = async () => {
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.length > 0 ? (
-                    notifications.slice(0, 8).map((n) => (
+                    notifications.slice(0, 8).map((n) => {
+                      const accent = getNotificationAccentClass(n);
+                      const badge = getNotificationBadge(n);
+                      return (
                       <div
                         key={n._id}
                         onClick={() => handleNotificationClick(n)}
-                        className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-0 group ${
-                          !n.read && !n.isRead ? "bg-blue-50/40 dark:bg-blue-900/20" : ""
+                        className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-l-4 border-gray-100 dark:border-gray-600 last:border-0 group ${
+                          accent || (!n.read && !n.isRead ? "border-l-transparent bg-blue-50/40 dark:bg-blue-900/20" : "border-l-transparent")
                         }`}
                       >
                         <div className="flex-shrink-0 relative">
@@ -415,19 +419,9 @@ const handleLogout = async () => {
                         </div>
                         <div className="ml-3 flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            {n.meta?.taskApproved && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
-                                ✓ Task Approved
-                              </span>
-                            )}
-                            {n.meta?.taskAssigned && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
-                                📋 New Task
-                              </span>
-                            )}
-                            {n.meta?.taskCompleted && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
-                                ✔ Task Completed
+                            {badge && (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${badge.className}`}>
+                                {badge.emoji} {badge.label}
                               </span>
                             )}
                           </div>
@@ -449,7 +443,8 @@ const handleLogout = async () => {
                           <XIcon size={13} />
                         </button>
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="p-6 text-gray-400 text-sm text-center">
                       No notifications

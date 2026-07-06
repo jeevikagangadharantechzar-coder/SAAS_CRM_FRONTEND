@@ -8,6 +8,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { getNotificationBadge, getNotificationAccentClass } from "../../utils/taskNotifications";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const API_SI  = import.meta.env.VITE_SI_URI;
@@ -376,6 +377,8 @@ export default function NotificationsPage() {
               const avatar   = n.profileImage ? buildProfileImageUrl(n.profileImage) : DEFAULT_AVATAR;
               const time     = n.createdAt ? formatDistanceToNow(new Date(n.createdAt), { addSuffix: true }) : "";
               const dateStr  = n.createdAt ? format(new Date(n.createdAt), "dd MMM yyyy, hh:mm a") : "";
+              const accent = getNotificationAccentClass(n);
+              const badge = getNotificationBadge(n);
 
               return (
                 <div
@@ -387,9 +390,12 @@ export default function NotificationsPage() {
                       navigate(path, { state: { contactFormData: n.meta } });
                     }
                   }}
-                  className={`flex items-start gap-3 px-4 py-4 group transition-colors cursor-pointer ${
-                    isUnread ? "bg-blue-50/40" : "bg-white hover:bg-gray-50"
+                  className={`flex items-start gap-3 px-4 py-4 group transition-colors border-l-4 ${
+                    accent || (isUnread ? "border-l-transparent bg-blue-50/40" : "border-l-transparent bg-white hover:bg-gray-50")
                   }`}
+                  // className={`flex items-start gap-3 px-4 py-4 group transition-colors cursor-pointer ${
+                  //   isUnread ? "bg-blue-50/40" : "bg-white hover:bg-gray-50"
+                  // }`}
                 >
                   {/* Checkbox */}
                   <input
@@ -418,19 +424,9 @@ export default function NotificationsPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          {n.meta?.taskApproved && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                              ✓ Task Approved
-                            </span>
-                          )}
-                          {n.meta?.taskAssigned && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
-                              📋 New Task
-                            </span>
-                          )}
-                          {n.meta?.taskCompleted && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">
-                              ✔ Task Completed
+                          {badge && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.className}`}>
+                              {badge.emoji} {badge.label}
                             </span>
                           )}
                         </div>

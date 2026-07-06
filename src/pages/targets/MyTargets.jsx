@@ -16,11 +16,30 @@ import {
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+// Animates from 0 up to the real value on every mount/update instead of
+// snapping straight to it — a CSS transition only plays on a style change
+// *after* the browser has painted the previous value, so a single rAF isn't
+// reliable (it can still land in the same paint as the initial 0 render);
+// nesting two rAFs guarantees a 0%-width frame is actually painted first,
+// so the next style change to the real value is a genuine transition.
 function ProgressBar({ value, color = "bg-[#008ecc]" }) {
+  const target = Math.min(100, value);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    setWidth(0);
+    let raf2;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setWidth(target));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [target]);
   return (
     <div className="w-full bg-gray-100 rounded-full h-2.5">
-      <div className={`h-2.5 rounded-full transition-all duration-700 ${color}`}
-        style={{ width: `${Math.min(100, value)}%` }} />
+      <div className={`h-2.5 rounded-full transition-all duration-700 ease-out ${color}`}
+        style={{ width: `${width}%` }} />
     </div>
   );
 }
@@ -335,8 +354,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
   const liveDeals   = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads to Deals Converted", target: t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",  countOnly: false },
-    { label: "Deals Won",                target: t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100", countOnly: false },
+    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",  countOnly: false },
+    { label: "Deals Won",                target: percentages.effTargetDeals ?? t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100", countOnly: false },
     { label: "Leads to Deals Won",       target: null,              actual: actuals.leadDealWon || 0,     pct: null, icon: <Trophy size={13} className="text-amber-500" />,  bg: "bg-amber-50",  border: "border-amber-100",  countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
     { label: "Deals Lost",      target: null,              actual: actuals.dealsLost || 0,       pct: null, icon: <XCircle size={13} className="text-red-500" />,   bg: "bg-red-50",    border: "border-red-100",    countOnly: true, badgeText: "closed lost",  badgeClass: "text-red-600 bg-red-100"   },
     { label: "Calls Made",      target: t.targetCalls,    actual: actuals.calls || 0,           pct: percentages.callsPercent || 0,    icon: <Phone size={13} className="text-orange-500" />,     bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
@@ -1053,19 +1072,25 @@ export default function MyTargets() {
     fetchTargets();
   }, []);
 
-  // Plain "target" notifications (lead converted by Admin, deal stage moved by
-  // Admin, new target assigned, etc.) belong here too — the sales person should
-  // see them in this tab and its badge count, live, not just the header bell.
-  const TARGET_NOTIF_TYPES = ["target","target_reminder","target_due_today","target_expired","target_reassign","reason_note"];
+  // Strict separation from Task Management: only genuine "target"-family
+  // notifications show here — never "task"-typed ones (lead converted, deal
+  // stage/status changed, deal closed Won, etc.), even though those are also
+  // deal/lead related. Those belong exclusively in Task Management's/Assigned
+  // Tasks's own Notifications & Reminders tab — see utils/taskNotifications.
+  // "reason_note" notifications are admin-only (sent to admins when a sales
+  // person reports an issue) and belong exclusively in admin's Reason Notes
+  // tab — never in a sales person's own Notifications & Reminders feed.
+  const TARGET_NOTIF_TYPES = ["target","target_reminder","target_due_today","target_expired","target_reassign"];
+  const isTargetTabNotif = (n) => TARGET_NOTIF_TYPES.includes(n.type);
 
   const switchToNotifications = () => {
     setMyView(v => {
       if (v === "notifications") return "targets";
       // Mark all target notifications as read when opening the tab
       setNotifications(prev => {
-        const unread = prev.filter(n => TARGET_NOTIF_TYPES.includes(n.type) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
+        const unread = prev.filter(n => isTargetTabNotif(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
         unread.forEach(n => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
-        return prev.map(n => TARGET_NOTIF_TYPES.includes(n.type) ? { ...n, read: true, isRead: true } : n);
+        return prev.map(n => isTargetTabNotif(n) ? { ...n, read: true, isRead: true } : n);
       });
       return "notifications";
     });
@@ -1126,7 +1151,7 @@ export default function MyTargets() {
 
       {/* Tab bar — always visible */}
       {(() => {
-        const targetNotifs = notifications.filter(n => TARGET_NOTIF_TYPES.includes(n.type));
+        const targetNotifs = notifications.filter(isTargetTabNotif);
         const unreadCount = targetNotifs.filter(n => !n.read && !n.isRead).length;
         return (
           <div className="flex items-center gap-2 mb-5 flex-wrap">
@@ -1149,7 +1174,7 @@ export default function MyTargets() {
 
       {/* Notifications view */}
       {myView === "notifications" && (() => {
-        const targetNotifs = notifications.filter(n => TARGET_NOTIF_TYPES.includes(n.type));
+        const targetNotifs = notifications.filter(isTargetTabNotif);
         const unreadCount = targetNotifs.filter(n => !n.read && !n.isRead).length;
         return (
           <div className="space-y-2 mb-5">
@@ -1221,3 +1246,4 @@ export default function MyTargets() {
     </div>
   );
 }
+

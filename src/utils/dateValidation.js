@@ -35,6 +35,25 @@ export function validateTargetDates(startDate, endDate, { isCreate = true } = {}
   return null;
 }
 
+// Task Management only has a single Due Date field (no Start Date) — must be
+// today or a future day whenever it's set or changed.
+export function validateTaskDueDate(dueDate) {
+  if (!dueDate) return "Due Date is required.";
+
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dueDate)) return "Please enter a valid date.";
+
+  const due = new Date(`${dueDate}T00:00:00`);
+  if (isNaN(due.getTime())) return "Please enter a valid date.";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (due < today) return "Due Date cannot be a past date.";
+
+  return null;
+}
+
 // Build a YYYY-MM-DD string from a date's LOCAL calendar day — never use
 // .toISOString() for this, it converts to UTC and shifts the day backward
 // in positive-UTC-offset timezones (e.g. IST) whenever the local time is
