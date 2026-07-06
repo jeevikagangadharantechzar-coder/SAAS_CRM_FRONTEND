@@ -274,6 +274,8 @@ const SendProposal = () => {
           <label className="font-medium">Customer Emails</label>
           <input
             type="text"
+            name="customerEmails"
+            autoComplete="off"
             className="w-full max-w-[700px] p-2 border border-gray-300 rounded-md focus:outline-blue-500"
             placeholder="Enter multiple emails separated by commas"
             value={emails}
@@ -286,6 +288,8 @@ const SendProposal = () => {
           <label className="font-medium">CC Email</label>
           <input
             type="email"
+            name="ccEmail"
+            autoComplete="off"
             className="w-full max-w-[700px] p-2 border border-gray-300 rounded-md focus:outline-blue-500"
             placeholder="Enter CC email (optional)"
             value={ccEmail}
