@@ -147,7 +147,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm Zia, your Sales AI Assistant . I can help you with deals, leads, users, and analytics!",
+      text: "Hello! I'm Ziya, your Sales AI Assistant . I can help you with deals, leads, users, and analytics!",
       sender: 'bot',
       timestamp: new Date()
     }
@@ -383,7 +383,7 @@ export default function ChatWidget() {
       const token = localStorage.getItem('token');
       if (!token) {
         setIsTyping(false); setLoading(false);
-        setMessages(prev => [...prev, { id: Date.now(), text: ' Please login to use ZIA PULSE CRM.', sender: 'bot', timestamp: new Date() }]);
+        setMessages(prev => [...prev, { id: Date.now(), text: ' Please login to use ZIYA PULSE CRM.', sender: 'bot', timestamp: new Date() }]);
         return;
       }
 
@@ -492,7 +492,7 @@ export default function ChatWidget() {
             <div className="flex items-center space-x-3">
               <AILogo size="medium" />
               <div>
-                <h3 className="font-semibold text-sm">ZIA PULSE CRM</h3>
+                <h3 className="font-semibold text-sm">ZIYA PULSE CRM</h3>
                 <p className="text-xs text-blue-100 opacity-90">
                   {callInProgress ? 'Session tracking active...' : 'Click to expand • Ready to help'}
                 </p>
@@ -526,7 +526,7 @@ export default function ChatWidget() {
         <div className="flex items-center space-x-3">
           <AILogo size="medium" />
           <div>
-            <h3 className="font-semibold">ZIA PULSE CRM</h3>
+            <h3 className="font-semibold">ZIYA PULSE CRM</h3>
             <p className="text-xs text-blue-100 opacity-90">
               {callInProgress ? 'WhatsApp session tracking...' : 'Connected to your CRM dashboard'}
             </p>
@@ -543,7 +543,7 @@ export default function ChatWidget() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" /></svg>
           </button>
           <button
-            onClick={() => setMessages([{ id: 1, text: "Hello! I'm your ZIA CRM Assistant. How can I help you today?", sender: 'bot', timestamp: new Date() }])}
+            onClick={() => setMessages([{ id: 1, text: "Hello! I'm your ZIYA CRM Assistant. How can I help you today?", sender: 'bot', timestamp: new Date() }])}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Clear chat"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
