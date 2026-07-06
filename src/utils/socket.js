@@ -39,6 +39,18 @@ export const initSocket = (userId) => {
     console.log(" Socket disconnected:", socket?.id);
   });
 
+  // Server rejected this connection because the tenant behind the stored
+  // token/dbName no longer exists — clear the dead session so the login
+  // page stops reporting it as "already active".
+  socket.on("session_invalid", () => {
+    console.warn("Socket: session invalid, clearing stale tenant session");
+    disconnectSocket();
+    localStorage.removeItem("token");
+    localStorage.removeItem("tenantSlug");
+    localStorage.removeItem("user");
+    window.location.reload();
+  });
+
   return socket;
 };
 

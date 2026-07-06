@@ -58,41 +58,39 @@ const Login = () => {
     }
   }, []);
 
+  // A token is only worth honoring/blocking on if it hasn't expired yet.
+  // A dead token (expired, or left over from a deleted tenant) should never
+  // be able to permanently lock the login page.
+  const isTokenLive = (token) => {
+    if (!token) return false;
+    const decoded = decodeToken(token);
+    return !!decoded?.exp && decoded.exp * 1000 > Date.now();
+  };
+
   useEffect(() => {
-    const activeToken = localStorage.getItem("token");
-    const activeSlug = localStorage.getItem("tenantSlug");
+    const evaluateSession = () => {
+      const activeToken = localStorage.getItem("token");
+      const activeSlug = localStorage.getItem("tenantSlug");
 
-    if (activeToken && activeSlug) {
-      if (!tenantSlug || activeSlug === tenantSlug) {
-        navigate(`/${activeSlug}/dashboard`, { replace: true });
-      } else {
-        setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
-        setIsError(true);
-      }
-    } else {
-      setMessage("");
-      setIsError(false);
-    }
-
-    const handleStorageChange = () => {
-      const currentToken = localStorage.getItem("token");
-      const currentSlug = localStorage.getItem("tenantSlug");
-      if (currentToken && currentSlug) {
-        if (!tenantSlug || currentSlug === tenantSlug) {
-          navigate(`/${currentSlug}/dashboard`, { replace: true });
+      if (activeToken && activeSlug && isTokenLive(activeToken)) {
+        if (!tenantSlug || activeSlug === tenantSlug) {
+          navigate(`/${activeSlug}/dashboard`, { replace: true });
         } else {
-          setMessage(`Another tenant session (${currentSlug}) is already active. Please log out of that session first.`);
+          setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
           setIsError(true);
         }
       } else {
+        if (activeToken || activeSlug) dispatch(clearCredentials());
         setMessage("");
         setIsError(false);
       }
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [tenantSlug, navigate]);
+    evaluateSession();
+
+    window.addEventListener("storage", evaluateSession);
+    return () => window.removeEventListener("storage", evaluateSession);
+  }, [tenantSlug, navigate, dispatch]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -100,10 +98,10 @@ const Login = () => {
     setMessage("");
     setShowUpgradeButton(false);
 
-    // 1. Check if another tenant is already logged in
+    // 1. Check if another tenant is already logged in (ignore dead/expired tokens)
     const activeToken = localStorage.getItem("token");
     const activeSlug = localStorage.getItem("tenantSlug");
-    if (activeToken && activeSlug && tenantSlug && activeSlug !== tenantSlug) {
+    if (activeToken && activeSlug && tenantSlug && activeSlug !== tenantSlug && isTokenLive(activeToken)) {
       setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
       setIsError(true);
       setIsLoading(false);
