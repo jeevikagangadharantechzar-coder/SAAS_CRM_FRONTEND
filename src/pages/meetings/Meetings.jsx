@@ -77,6 +77,8 @@ export function Meetings() {
   } = useMeetings();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const hasGoogleMeetSync = user?.planFeatures?.google_meet_sync !== false;
+  const hasZoomMeetings = user?.planFeatures?.zoom_meetings !== false;
   const [modalOpen, setModalOpen] = useState(false);
   const [editMeeting, setEditMeeting] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -134,7 +136,7 @@ export function Meetings() {
       <AlarmBanner meeting={alarmFired} onDismiss={() => setAlarmFired(null)} />
 
       {/* Google Connect Banner — shown when user hasn't connected Google */}
-      {!googleConfigured && (
+      {hasGoogleMeetSync && !googleConfigured && (
         <GoogleConnectBanner onConnect={connectGoogle} />
       )}
 
@@ -253,6 +255,8 @@ export function Meetings() {
         onSave={handleSave}
         editMeeting={editMeeting}
         zoomConfigured={zoomConfigured}
+        googleMeetSyncEnabled={hasGoogleMeetSync}
+        zoomMeetingsEnabled={hasZoomMeetings}
       />
     </div>
   );

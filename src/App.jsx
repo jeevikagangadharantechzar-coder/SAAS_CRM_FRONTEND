@@ -272,39 +272,39 @@ function App() {
                     <Route path="dashboard" element={<AdminDashboard />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="leads" />}>
+                  <Route element={<PrivateRoute permission="leads" planFeature="leads" />}>
                     <Route path="leads" element={<Leads />} />
                     <Route path="leads/view/:id" element={<ViewLead />} />
                     <Route path="leads/rejected" element={<RejectedLeads />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="create_lead" />}>
+                  <Route element={<PrivateRoute permission="create_lead" planFeature="leads" />}>
                     <Route path="createleads" element={<CreateLeads />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="deals_all" />}>
+                  <Route element={<PrivateRoute permission="deals_all" planFeature="deals_all" />}>
                     <Route path="deals" element={<AllDeals />} />
                     <Route path="deals/rejected" element={<RejectedDeals />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="create_deal" />}>
+                  <Route element={<PrivateRoute permission="create_deal" planFeature="deals_all" />}>
                     <Route path="createDeal" element={<CreateDeal />} />
                     <Route path="createDeal/:id" element={<CreateDeal />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="deals_pipeline" />}>
+                  <Route element={<PrivateRoute permission="deals_pipeline" planFeature="deals_pipeline" />}>
                     <Route path="Pipelineview" element={<Pipeline_view />} />
                     <Route path="Pipelineview/:dealId?" element={<Pipeline_modal_view />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="proposal" />}>
+                  <Route element={<PrivateRoute permission="proposal" planFeature="proposal" />}>
                     <Route path="proposal" element={<ProposalHead />} />
                     <Route path="proposal/sendproposal" element={<SendProposal />} />
                     <Route path="proposal/drafts" element={<DraftsPage />} />
                     <Route path="proposal/view/:id" element={<ViewProposal />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="invoices" />}>
+                  <Route element={<PrivateRoute permission="invoices" planFeature="invoices" />}>
                     <Route path="invoices" element={<InvoiceHead />} />
                     <Route path="invoices/:id" element={<InvoiceView />} />
                   </Route>
@@ -317,7 +317,7 @@ function App() {
                     <Route path="list" element={<Activity />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="users_roles" />}>
+                  <Route element={<PrivateRoute permission="users_roles" planFeature="users_roles" />}>
                     <Route path="user&roles" element={<UserManagement />} />
                   </Route>
 
@@ -334,17 +334,23 @@ function App() {
                   </Route>
 
                   {/* MESSAGES */}
-                  <Route path="messages" element={<MessagesPage />} />
+                  <Route element={<PrivateRoute planFeature="messages" />}>
+                    <Route path="messages" element={<MessagesPage />} />
+                  </Route>
                   {/* TASKS & TARGETS */}
                   <Route path="task-management" element={<TaskManagement />} />
                   <Route path="assigned-tasks" element={<AssignedTasks />} />
                   <Route path="target-management" element={<TargetManagement />} />
                   <Route path="my-targets" element={<MyTargets />} />
                   {/* MEETINGS */}
-                  <Route path="meetings" element={<Meetings />} />
+                  <Route element={<PrivateRoute planFeature="meetings" />}>
+                    <Route path="meetings" element={<Meetings />} />
+                  </Route>
 
                   {/* GOOGLE INTEGRATION SETTINGS */}
-                  <Route path="settings/google-integration" element={<GoogleIntegration />} />
+                  <Route element={<PrivateRoute planFeature="google_meet_sync" />}>
+                    <Route path="settings/google-integration" element={<GoogleIntegration />} />
+                  </Route>
 
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />

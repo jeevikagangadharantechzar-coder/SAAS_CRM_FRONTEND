@@ -25,7 +25,7 @@ const toLocalInput = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoomConfigured }) {
+export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoomConfigured, googleMeetSyncEnabled = true, zoomMeetingsEnabled = true }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [emailInput, setEmailInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -43,10 +43,11 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
         provider: editMeeting.provider || "google_meet",
       });
     } else {
-      setForm(EMPTY_FORM);
+      const defaultProvider = googleMeetSyncEnabled ? "google_meet" : zoomMeetingsEnabled ? "zoom" : "google_meet";
+      setForm({ ...EMPTY_FORM, provider: defaultProvider });
     }
     setEmailInput("");
-  }, [isOpen, editMeeting]);
+  }, [isOpen, editMeeting, googleMeetSyncEnabled, zoomMeetingsEnabled]);
 
   if (!isOpen) return null;
 
@@ -138,7 +139,10 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2">
-                  {PROVIDERS.map(({ value, label }) => {
+                  {PROVIDERS.filter(({ value }) =>
+                    (value !== "google_meet" || googleMeetSyncEnabled) &&
+                    (value !== "zoom" || zoomMeetingsEnabled)
+                  ).map(({ value, label }) => {
                     const disabled = value === "zoom" && !zoomConfigured;
                     return (
                       <button
@@ -161,7 +165,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
                     );
                   })}
                 </div>
-                {!zoomConfigured && (
+                {zoomMeetingsEnabled && !zoomConfigured && (
                   <p className="text-[11px] text-gray-400 mt-1">
                     Zoom is not configured for this workspace — contact your administrator.
                   </p>
