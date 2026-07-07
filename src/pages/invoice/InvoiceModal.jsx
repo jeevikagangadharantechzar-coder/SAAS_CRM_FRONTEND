@@ -704,7 +704,10 @@ setSalesUsers(response.data.users);
                       }`}
                     >
                       <option value="">Select a Deal</option>
-                      {deals.filter((deal) => deal.stage !== "Closed Won").map((deal) => (
+                      {deals.filter((deal) => 
+  deal.stage !== "Closed Won" && (deal.stage !== "Closed Lost" || deal.lossReason === "")
+)
+.map((deal) => (
                         <option key={deal._id} value={deal._id}>
                           {deal.dealName}
                         </option>
