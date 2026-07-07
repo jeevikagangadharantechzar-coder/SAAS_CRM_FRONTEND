@@ -15,6 +15,15 @@ export default function Settings() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const hasZoomMeetings = (() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user?.planFeatures?.zoom_meetings !== false;
+    } catch {
+      return true;
+    }
+  })();
+
   const [logo, setLogo] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -940,6 +949,7 @@ export default function Settings() {
           </div>
 
           {/* ================= ZOOM INTEGRATION CARD ================= */}
+          {hasZoomMeetings && (
           <div className="group bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-sky-200 md:col-span-2 lg:col-span-3">
 
             <div className="space-y-4 sm:space-y-5 flex-1">
@@ -1052,6 +1062,7 @@ export default function Settings() {
               {zoomSaving ? "Saving..." : zoomStatus.connected ? "Update Zoom Integration" : "Save Zoom Integration"}
             </button>
           </div>
+          )}
 
         </div>
 
