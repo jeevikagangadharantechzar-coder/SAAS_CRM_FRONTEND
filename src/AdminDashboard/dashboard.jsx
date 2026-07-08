@@ -501,7 +501,7 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                    <XAxis dataKey="month" tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 12 }} interval={0} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 10 }} minTickGap={10} interval="preserveStartEnd" />
                     <YAxis tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 12 }} />
                     <Tooltip content={<CustomPipelineTooltip />} />
                     <Bar dataKey="Open" name={t("dashboard.salesPipeline.openOpportunities")} fill="url(#gOpen)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={400} animationDuration={1500} />
@@ -511,24 +511,28 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
               </div>
 
               <div className="mt-6 space-y-3">
-                <div className="flex gap-4 justify-center">
-                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                    <span className="w-3 h-3 rounded-full bg-[#3B82F6]" />
-                    <span className="text-sm font-medium text-gray-700">{t("dashboard.salesPipeline.openOpportunities")}</span>
-                    <Badge variant="secondary" className="bg-white">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center">
+                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 flex-1 min-w-[140px]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-[#3B82F6]" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">{t("dashboard.salesPipeline.openOpportunities")}</span>
+                    </div>
+                    <Badge variant="secondary" className="bg-white ml-2">
                       {pipelineBarData.reduce((sum, d) => sum + d.Open, 0)}
                     </Badge>
                   </motion.div>
-                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
-                    <span className="w-3 h-3 rounded-full bg-[#10B981]" />
-                    <span className="text-sm font-medium text-gray-700">{t("dashboard.salesPipeline.wonDeals")}</span>
-                    <Badge variant="secondary" className="bg-white">
+                  <motion.div whileHover={{ scale: 1.05 }} className="flex items-center justify-between gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200 flex-1 min-w-[140px]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-[#10B981]" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">{t("dashboard.salesPipeline.wonDeals")}</span>
+                    </div>
+                    <Badge variant="secondary" className="bg-white ml-2">
                       {pipelineBarData.reduce((sum, d) => sum + d.Won, 0)}
                     </Badge>
                   </motion.div>
                 </div>
 
-                <div className="flex justify-center gap-6 text-xs text-gray-500">
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs text-gray-500">
                   <div className="text-center">
                     <div className="font-semibold text-gray-700">
                       {(

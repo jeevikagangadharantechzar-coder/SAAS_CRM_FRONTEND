@@ -111,7 +111,7 @@ const STAGE_BASE_SCORES = {
 
 const STAGE_ACTIONS = {
   "Qualification": {
-    actions: ["Do Negotiation", "Send Proposal"],
+    actions: ["Manage Follow-ups & History", "Send Proposal"],
     icon: HelpCircle,
     color: "text-amber-600",
     bgColor: "bg-amber-50",
@@ -119,12 +119,12 @@ const STAGE_ACTIONS = {
     nextStep: "Move to Proposal Sent",
     label: "Need Attention",
     actionIcons: {
-      "Do Negotiation": TrendingUp,
+      "Manage Follow-ups & History": Clock,
       "Send Proposal": Send
     }
   },
   "Proposal Sent-Negotiation": {
-    actions: ["Do Follow-up", "Send Invoice"],
+    actions: ["Manage Follow-ups & History", "Send Invoice"],
     icon: Send,
     color: "text-blue-600",
     bgColor: "bg-blue-50",
@@ -132,12 +132,12 @@ const STAGE_ACTIONS = {
     nextStep: "Move to Invoice Sent",
     label: "Follow-up Needed",
     actionIcons: {
-      "Do Follow-up": Phone,
+      "Manage Follow-ups & History": Clock,
       "Send Invoice": FileText
     }
   },
   "Invoice Sent": {
-    actions: ["Make Payment Follow-up", "Convert to Won"],
+    actions: ["Manage Follow-ups & History", "Convert to Won"],
     icon: FileText,
     color: "text-purple-600",
     bgColor: "bg-purple-50",
@@ -145,7 +145,7 @@ const STAGE_ACTIONS = {
     nextStep: "Mark as Won",
     label: "Payment Pending",
     actionIcons: {
-      "Make Payment Follow-up": DollarSign,
+      "Manage Follow-ups & History": Clock,
       "Convert to Won": CheckCircle
     }
   },
@@ -518,8 +518,8 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
               <Target size={18} className="text-indigo-600" />
               Win Rate by Stage
             </h3>
-            <div className="h-80">
-              {winRateData && <Bar data={winRateData} />}
+            <div className="h-80 relative">
+              {winRateData && <Bar data={winRateData} options={{ maintainAspectRatio: false }} />}
             </div>
           </div>
 
@@ -528,8 +528,8 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
               <TrendingUp size={18} className="text-indigo-600" />
               Monthly Deals Trend
             </h3>
-            <div className="h-96">
-              {monthlyData && <Line data={monthlyData} />}
+            <div className="h-96 relative">
+              {monthlyData && <Line data={monthlyData} options={{ maintainAspectRatio: false }} />}
             </div>
           </div>
 
@@ -538,8 +538,8 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
               <PieChart size={18} className="text-indigo-600" />
               Stage Distribution
             </h3>
-            <div className="h-96 flex items-center justify-center">
-              {distributionData && <Doughnut data={distributionData} />}
+            <div className="h-96 flex items-center justify-center relative">
+              {distributionData && <Doughnut data={distributionData} options={{ maintainAspectRatio: false }} />}
             </div>
           </div>
         </div>
@@ -1551,8 +1551,9 @@ function DealIntelligenceDashboard() {
         navigate(`/${tenantSlug}/invoices`);
         setTimeout(() => setSelectedDeal(null), 100);
       } 
-      else if (action === "Do Follow-up" || action === "Make Payment Follow-up" || action === "Do Negotiation") {
-        setModalState(prev => ({ ...prev, followUp: true }));
+      else if (action === "Manage Follow-ups & History") {
+        navigate(`/${tenantSlug}/Pipelineview/${selectedDeal._id}`);
+        setTimeout(() => setSelectedDeal(null), 100);
       } 
       else if (action === "Convert to Won") {
         setLoading(true);
@@ -1750,7 +1751,7 @@ function DealIntelligenceDashboard() {
         
        {/* Pipeline Stage Dashboard */}
 {showStageIntelligence && (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+    <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 mb-8 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 hide-scrollbar">
     {[
       { stage: 'Qualification', label: 'Need Attention', sub: 'Qualification', count: pipelineInsights.qualificationDeals, color: 'amber', icon: HelpCircle },
       { stage: 'Proposal', label: 'Follow-up Needed', sub: 'Proposal', count: pipelineInsights.proposalDeals, color: 'blue', icon: Send },
@@ -1760,7 +1761,7 @@ function DealIntelligenceDashboard() {
     ].map(({ stage, label, sub, count, color, icon: Icon }) => (
       <div
         key={stage}
-        className={`relative bg-gradient-to-br from-${color}-50 to-white rounded-2xl border border-${color}-200 p-5 shadow-lg hover:shadow-xl transition-all cursor-pointer`}
+        className={`relative bg-gradient-to-br from-${color}-50 to-white rounded-2xl border border-${color}-200 p-5 shadow-lg hover:shadow-xl transition-all cursor-pointer flex-shrink-0 min-w-[260px] sm:min-w-0 snap-center`}
         onClick={() => handleStageFilter(stage)}
         onMouseEnter={() => {
           setHoveredStage(stage);

@@ -16,6 +16,22 @@ import { INDIAN_STATES, GST_SLABS } from "../../constants/indianStates";
 
 const CURRENCY_SYMBOL_MAP = { "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" };
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const MAX_INVOICE_PRICE = 999999999999.99; // 12 digits — well below the ~21-digit threshold where number inputs switch to scientific notation
+
+// Truncates (rather than replaces) an in-progress price string to 12 integer
+// digits + 2 decimal digits, so extra keystrokes past the limit are simply
+// ignored instead of the field jumping to an unrelated max value.
+const sanitizePriceInput = (raw) => {
+  if (raw === "") return "";
+  let cleaned = raw.replace(/[^\d.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot !== -1) {
+    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  }
+  const [intPart, decPart] = cleaned.split(".");
+  const boundedInt = intPart.slice(0, 12);
+  return decPart !== undefined ? `${boundedInt}.${decPart.slice(0, 2)}` : boundedInt;
+};
 
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -182,6 +198,16 @@ setSalesUsers(response.data.users);
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "price") {
+      // Stop accepting digits past a sane length instead of typing — keeps
+      // whatever the user actually entered rather than snapping to a fixed
+      // max, while still staying well below the ~21-digit threshold where
+      // number inputs flip into scientific notation.
+      setInvoiceData((prev) => ({ ...prev, price: sanitizePriceInput(value) }));
+      return;
+    }
+
     setInvoiceData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "deal") {
@@ -535,7 +561,7 @@ setSalesUsers(response.data.users);
 
   return (
     <Dialog open={isOpen} onOpenChange={closeModal}>
-      <DialogContent className="min-w-[1000px] max-w-4xl p-0 overflow-hidden rounded-lg shadow-xl">
+      <DialogContent className="w-[95vw] md:w-full md:min-w-[800px] lg:min-w-[1000px] max-w-4xl p-0 overflow-hidden rounded-lg shadow-xl">
         <DialogHeader className="bg-gray-50  text-black p-6">
           <DialogTitle className="text-xl font-semibold">
             {editingInvoice ? "Edit Invoice" : "Create New Invoice"}
@@ -543,7 +569,7 @@ setSalesUsers(response.data.users);
         </DialogHeader>
 
         <div className="p-6 max-h-[80vh] overflow-y-auto ">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
             {/* Left Column */}
             <div>
               <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
@@ -597,7 +623,7 @@ setSalesUsers(response.data.users);
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Issue Date *
@@ -808,7 +834,7 @@ setSalesUsers(response.data.users);
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Price *
@@ -817,6 +843,7 @@ setSalesUsers(response.data.users);
                         type="number"
                         name="price"
                         min="0"
+                        max={MAX_INVOICE_PRICE}
                         step="0.01"
                         value={invoiceData.price}
                         onChange={handleChange}
@@ -837,7 +864,7 @@ setSalesUsers(response.data.users);
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Amount
                       </label>
-                      <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg font-medium">
+                      <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg font-medium break-words">
                         {invoiceData.currency}: {calculateAmount()}
                       </div>
                     </div>
@@ -868,7 +895,7 @@ setSalesUsers(response.data.users);
               </svg>
               Billing Details
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Billing Address
@@ -878,7 +905,7 @@ setSalesUsers(response.data.users);
                   rows="4"
                   value={invoiceData.billingAddress}
                   onChange={handleChange}
-                  className="w-full h-[calc(100%-1.75rem)] p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none min-h-[100px]"
                   placeholder="Defaults to the deal's address"
                 />
               </div>
@@ -970,7 +997,7 @@ setSalesUsers(response.data.users);
               </svg>
               Financial Details
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tax Type
@@ -1071,17 +1098,17 @@ setSalesUsers(response.data.users);
               )}
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-800">
+            <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <span className="text-lg font-semibold text-gray-800 shrink-0">
                 Total Amount:
               </span>
               {(() => {
                 const breakdown = calculateTotalBreakdown();
                 return (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-gray-700">
-                      <span>Price:</span>
-                      <span>{invoiceData.currency} {breakdown.price}</span>
+                  <div className="space-y-1 w-full sm:w-auto sm:min-w-[260px]">
+                    <div className="flex justify-between gap-4 text-gray-700 text-sm">
+                      <span className="shrink-0">Price:</span>
+                      <span className="font-medium text-right break-all">{invoiceData.currency} {breakdown.price}</span>
                     </div>
 
                     {invoiceData.taxType !== "none" &&
@@ -1136,18 +1163,18 @@ setSalesUsers(response.data.users);
                       ))}
 
                     {invoiceData.discountType !== "none" && (
-                      <div className="flex justify-between text-gray-700">
-                        <span>Discount:</span>
-                        <span>
+                      <div className="flex justify-between gap-4 text-gray-700 text-sm">
+                        <span className="shrink-0">Discount:</span>
+                        <span className="font-medium text-right break-all">
                           {breakdown.discountText} = {invoiceData.currency} {" "}
                           {breakdown.discountAmount}
                         </span>
                       </div>
                     )}
 
-                    <div className="flex justify-between font-bold text-blue-600">
-                      <span>Total:</span>
-                      <span>{invoiceData.currency} {breakdown.total}</span>
+                    <div className="flex justify-between gap-4 font-bold text-blue-600 text-base border-t border-gray-100 pt-1 mt-1">
+                      <span className="shrink-0">Total:</span>
+                      <span className="text-right break-all">{invoiceData.currency} {breakdown.total}</span>
                     </div>
                   </div>
                 );
@@ -1176,18 +1203,18 @@ setSalesUsers(response.data.users);
             ) : (
               <div className="space-y-3">
                 {customFields.map((field, index) => (
-                  <div key={index} className="flex items-start gap-2">
+                  <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2 border-b sm:border-b-0 pb-3 sm:pb-0">
                     <input
                       type="text"
                       value={field.label}
                       onChange={(e) => handleCustomFieldChange(index, "label", e.target.value)}
                       placeholder="Field name"
-                      className="w-1/3 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      className="w-full sm:w-1/3 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                     />
                     <select
                       value={field.type}
                       onChange={(e) => handleCustomFieldChange(index, "type", e.target.value)}
-                      className="w-28 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      className="w-full sm:w-28 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                     >
                       <option value="text">Text</option>
                       <option value="number">Number</option>
@@ -1198,7 +1225,7 @@ setSalesUsers(response.data.users);
                       value={field.value}
                       onChange={(e) => handleCustomFieldChange(index, "value", e.target.value)}
                       placeholder="Value"
-                      className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      className="w-full sm:flex-1 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                     />
                     <button
                       type="button"
@@ -1291,16 +1318,16 @@ setSalesUsers(response.data.users);
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
             <button
-              className="px-5 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="px-5 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full sm:w-auto"
               type="button"
               onClick={closeModal}
             >
               Cancel
             </button>
             <button
-              className="px-5 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center"
+              className="px-5 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center justify-center w-full sm:w-auto"
               type="button"
               onClick={handleSaveInvoice}
             >

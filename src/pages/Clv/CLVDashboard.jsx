@@ -80,12 +80,6 @@ const CLVDashboard = () => {
   const [selectedClassification, setSelectedClassification] = useState("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
-  // Individual category search states
-  const [topValueSearch, setTopValueSearch] = useState('');
-  const [upsellSearch, setUpsellSearch] = useState('');
-  const [atRiskSearch, setAtRiskSearch] = useState('');
-  const [dormantSearch, setDormantSearch] = useState('');
-  
   // Modal states
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [showTopValueModal, setShowTopValueModal] = useState(false);
@@ -101,6 +95,11 @@ const CLVDashboard = () => {
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  
+  const [topPage, setTopPage] = useState(1);
+  const [upsellPage, setUpsellPage] = useState(1);
+  const [atRiskPage, setAtRiskPage] = useState(1);
+  const [dormantPage, setDormantPage] = useState(1);
 
   // Classifications for filter
   const classifications = [
@@ -274,42 +273,7 @@ const CLVDashboard = () => {
     return isNaN(num) ? "0" : num.toFixed(decimals);
   };
 
-  // Filter clients for each category based on their own search
-  const filteredTopClients = useMemo(() => {
-    const clients = dashboardData?.topClients || [];
-    if (!topValueSearch) return clients;
-    const searchLower = topValueSearch.toLowerCase();
-    return clients.filter(client => 
-      client.companyName?.toLowerCase().includes(searchLower)
-    );
-  }, [dashboardData?.topClients, topValueSearch]);
 
-  const filteredUpsellClients = useMemo(() => {
-    const clients = dashboardData?.upsellClients || [];
-    if (!upsellSearch) return clients;
-    const searchLower = upsellSearch.toLowerCase();
-    return clients.filter(client => 
-      client.companyName?.toLowerCase().includes(searchLower)
-    );
-  }, [dashboardData?.upsellClients, upsellSearch]);
-
-  const filteredRiskyClients = useMemo(() => {
-    const clients = dashboardData?.riskyClients || [];
-    if (!atRiskSearch) return clients;
-    const searchLower = atRiskSearch.toLowerCase();
-    return clients.filter(client => 
-      client.companyName?.toLowerCase().includes(searchLower)
-    );
-  }, [dashboardData?.riskyClients, atRiskSearch]);
-
-  const filteredDormantClients = useMemo(() => {
-    const clients = dashboardData?.dormantClients || [];
-    if (!dormantSearch) return clients;
-    const searchLower = dormantSearch.toLowerCase();
-    return clients.filter(client => 
-      client.companyName?.toLowerCase().includes(searchLower)
-    );
-  }, [dashboardData?.dormantClients, dormantSearch]);
 
   // Stable, data-driven monthly revenue trend using useMemo
   const monthlyData = useMemo(() => {
@@ -495,7 +459,7 @@ const CLVDashboard = () => {
         isOpen={showUpsellModal}
         onClose={() => setShowUpsellModal(false)}
         title="Upsell Clients"
-        data={filteredUpsellClients}
+        data={dashboardData?.upsellClients || []}
         type="Upsell"
       />
       
@@ -503,7 +467,7 @@ const CLVDashboard = () => {
         isOpen={showTopValueModal}
         onClose={() => setShowTopValueModal(false)}
         title="Top Value Clients"
-        data={filteredTopClients}
+        data={dashboardData?.topClients || []}
         type="Top Value"
       />
       
@@ -511,7 +475,7 @@ const CLVDashboard = () => {
         isOpen={showAtRiskModal}
         onClose={() => setShowAtRiskModal(false)}
         title="At Risk Clients"
-        data={filteredRiskyClients}
+        data={dashboardData?.riskyClients || []}
         type="At Risk"
       />
       
@@ -519,7 +483,7 @@ const CLVDashboard = () => {
         isOpen={showDormantModal}
         onClose={() => setShowDormantModal(false)}
         title="Dormant Clients"
-        data={filteredDormantClients}
+        data={dashboardData?.dormantClients || []}
         type="Dormant"
       />
 
@@ -996,68 +960,83 @@ const CLVDashboard = () => {
             <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Star size={16} className="text-yellow-500" />
               <span>Top Value</span>
-              {topValueSearch && <span className="text-xs text-gray-500">({filteredTopClients.length})</span>}
             </h2>
             
-            {/* Mobile Stacked Buttons */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[120px]">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-green-500 outline-none"
-                  value={topValueSearch}
-                  onChange={(e) => setTopValueSearch(e.target.value)}
-                />
-                <span className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">🔍</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setShowTopValueCriteriaModal(true)}
-                  className="text-blue-600 p-1 hover:bg-blue-50 rounded"
-                  title="Criteria"
-                >
-                  <Info size={14} />
-                </button>
-                <button 
-                  onClick={() => setShowTopValueModal(true)}
-                  className="text-xs text-blue-600 hover:underline whitespace-nowrap px-2 py-1"
-                >
-                  View {filteredTopClients.length}
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowTopValueCriteriaModal(true)}
+                className="text-blue-600 p-1 hover:bg-blue-50 rounded"
+                title="Criteria"
+              >
+                <Info size={14} />
+              </button>
+              <button 
+                onClick={() => setClassificationModalData({
+                  isOpen: true,
+                  title: "Top Value Clients",
+                  data: dashboardData?.topClients || [],
+                  classification: "Top Value"
+                })}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs transition border border-gray-200"
+              >
+                <Eye size={14} />
+                View {dashboardData?.topClients?.length || 0}
+              </button>
             </div>
           </div>
           
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1 sm:pr-2">
-            {filteredTopClients.length > 0 ? (
-              filteredTopClients.slice(0, 5).map((client, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
-                  onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${getClassificationColor(client.classification)} flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0`}>
-                      {client.companyName?.charAt(0) || "?"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                      <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs">
-                        <span className="text-gray-500 truncate">{formatCurrency(client.clv)}</span>
+          <div className="space-y-3">
+            {(dashboardData?.topClients || []).length > 0 ? (
+              <>
+                {(dashboardData?.topClients || []).slice((topPage - 1) * itemsPerPage, topPage * itemsPerPage).map((client, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
+                    onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${getClassificationColor(client.classification)} flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0`}>
+                        {client.companyName?.charAt(0) || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
+                        <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs">
+                          <span className="text-gray-500 truncate">{formatCurrency(client.clv)}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-1 sm:gap-2 ml-1 flex-shrink-0">
+                      <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">{client.supportTickets || 0}</span>
+                      <Eye size={14} className="text-gray-400" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 sm:gap-2 ml-1 flex-shrink-0">
-                    <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">{client.supportTickets || 0}</span>
-                    <Eye size={14} className="text-gray-400" />
+                ))}
+                {Math.ceil((dashboardData?.topClients?.length || 0) / itemsPerPage) > 1 && (
+                  <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => setTopPage(p => Math.max(1, p - 1))}
+                      disabled={topPage === 1}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Page {topPage} of {Math.ceil((dashboardData?.topClients?.length || 0) / itemsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setTopPage(p => Math.min(Math.ceil((dashboardData?.topClients?.length || 0) / itemsPerPage), p + 1))}
+                      disabled={topPage === Math.ceil((dashboardData?.topClients?.length || 0) / itemsPerPage)}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Next
+                    </button>
                   </div>
-                </div>
-              ))
+                )}
+              </>
             ) : (
-              <p className="text-xs sm:text-sm text-gray-500 text-center py-4">
-                {topValueSearch ? "No matches" : "No clients"}
-              </p>
+              <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-sm bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                No clients
+              </div>
             )}
           </div>
         </div>
@@ -1068,67 +1047,84 @@ const CLVDashboard = () => {
             <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Zap size={16} className="text-purple-500" />
               <span>Upsell</span>
-              {upsellSearch && <span className="text-xs text-gray-500">({filteredUpsellClients.length})</span>}
             </h2>
             
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[120px]">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 outline-none"
-                  value={upsellSearch}
-                  onChange={(e) => setUpsellSearch(e.target.value)}
-                />
-                <span className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">🔍</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setShowUpsellCriteriaModal(true)}
-                  className="text-blue-600 p-1 hover:bg-blue-50 rounded"
-                >
-                  <Info size={14} />
-                </button>
-                <button 
-                  onClick={() => setShowUpsellModal(true)}
-                  className="text-xs text-blue-600 hover:underline whitespace-nowrap px-2 py-1"
-                >
-                  View {filteredUpsellClients.length}
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowUpsellCriteriaModal(true)}
+                className="text-blue-600 p-1 hover:bg-blue-50 rounded"
+                title="Criteria"
+              >
+                <Info size={14} />
+              </button>
+              <button 
+                onClick={() => setClassificationModalData({
+                  isOpen: true,
+                  title: "Upsell Clients",
+                  data: dashboardData?.upsellClients || [],
+                  classification: "Upsell"
+                })}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs transition border border-gray-200"
+              >
+                <Eye size={14} />
+                View {dashboardData?.upsellClients?.length || 0}
+              </button>
             </div>
           </div>
           
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1 sm:pr-2">
-            {filteredUpsellClients.length > 0 ? (
-              filteredUpsellClients.slice(0, 5).map((client, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
-                  onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0">
-                      {client.companyName?.charAt(0) || "?"}
+          <div className="space-y-3">
+            {(dashboardData?.upsellClients || []).length > 0 ? (
+              <>
+                {(dashboardData?.upsellClients || []).slice((upsellPage - 1) * itemsPerPage, upsellPage * itemsPerPage).map((client, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
+                    onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0">
+                        {client.companyName?.charAt(0) || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                          {formatCurrency(client.clv)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">
-                        {formatCurrency(client.clv)}
-                      </p>
+                    <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                      <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full whitespace-nowrap">
+                        Ready
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                    <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full whitespace-nowrap">
-                      Ready
+                ))}
+                {Math.ceil((dashboardData?.upsellClients?.length || 0) / itemsPerPage) > 1 && (
+                  <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => setUpsellPage(p => Math.max(1, p - 1))}
+                      disabled={upsellPage === 1}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Page {upsellPage} of {Math.ceil((dashboardData?.upsellClients?.length || 0) / itemsPerPage)}
                     </span>
+                    <button
+                      onClick={() => setUpsellPage(p => Math.min(Math.ceil((dashboardData?.upsellClients?.length || 0) / itemsPerPage), p + 1))}
+                      disabled={upsellPage === Math.ceil((dashboardData?.upsellClients?.length || 0) / itemsPerPage)}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Next
+                    </button>
                   </div>
-                </div>
-              ))
+                )}
+              </>
             ) : (
-              <p className="text-xs sm:text-sm text-gray-500 text-center py-4">
-                {upsellSearch ? "No matches" : "No clients"}
-              </p>
+              <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-sm bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                No clients
+              </div>
             )}
           </div>
         </div>
@@ -1142,67 +1138,84 @@ const CLVDashboard = () => {
             <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
               <AlertTriangle size={16} className="text-red-500" />
               <span>At Risk</span>
-              {atRiskSearch && <span className="text-xs text-gray-500">({filteredRiskyClients.length})</span>}
             </h2>
             
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[120px]">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 outline-none"
-                  value={atRiskSearch}
-                  onChange={(e) => setAtRiskSearch(e.target.value)}
-                />
-                <span className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">🔍</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setShowAtRiskCriteriaModal(true)}
-                  className="text-blue-600 p-1 hover:bg-blue-50 rounded"
-                >
-                  <Info size={14} />
-                </button>
-                <button 
-                  onClick={() => setShowAtRiskModal(true)}
-                  className="text-xs text-blue-600 hover:underline whitespace-nowrap px-2 py-1"
-                >
-                  View {filteredRiskyClients.length}
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowAtRiskCriteriaModal(true)}
+                className="text-blue-600 p-1 hover:bg-blue-50 rounded"
+                title="Criteria"
+              >
+                <Info size={14} />
+              </button>
+              <button 
+                onClick={() => setClassificationModalData({
+                  isOpen: true,
+                  title: "At Risk Clients",
+                  data: dashboardData?.riskyClients || [],
+                  classification: "At Risk"
+                })}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs transition border border-gray-200"
+              >
+                <Eye size={14} />
+                View {dashboardData?.riskyClients?.length || 0}
+              </button>
             </div>
           </div>
           
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1 sm:pr-2">
-            {filteredRiskyClients.length > 0 ? (
-              filteredRiskyClients.slice(0, 5).map((client, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
-                  onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0">
-                      {client.companyName?.charAt(0) || "?"}
+          <div className="space-y-3">
+            {(dashboardData?.riskyClients || []).length > 0 ? (
+              <>
+                {(dashboardData?.riskyClients || []).slice((atRiskPage - 1) * itemsPerPage, atRiskPage * itemsPerPage).map((client, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
+                    onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0">
+                        {client.companyName?.charAt(0) || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                          {client.daysSinceFollowUp || 0}d without follow-up
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">
-                        {client.daysSinceFollowUp || 0}d
-                      </p>
+                    <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                      <span className="text-[10px] sm:text-xs text-red-600 font-medium">
+                        Risk
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                    <span className="text-[10px] sm:text-xs text-red-600 font-medium">
-                      Risk
+                ))}
+                {Math.ceil((dashboardData?.riskyClients?.length || 0) / itemsPerPage) > 1 && (
+                  <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => setAtRiskPage(p => Math.max(1, p - 1))}
+                      disabled={atRiskPage === 1}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Page {atRiskPage} of {Math.ceil((dashboardData?.riskyClients?.length || 0) / itemsPerPage)}
                     </span>
+                    <button
+                      onClick={() => setAtRiskPage(p => Math.min(Math.ceil((dashboardData?.riskyClients?.length || 0) / itemsPerPage), p + 1))}
+                      disabled={atRiskPage === Math.ceil((dashboardData?.riskyClients?.length || 0) / itemsPerPage)}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Next
+                    </button>
                   </div>
-                </div>
-              ))
+                )}
+              </>
             ) : (
-              <p className="text-xs sm:text-sm text-gray-500 text-center py-4">
-                {atRiskSearch ? "No matches" : "No clients"}
-              </p>
+              <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-sm bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                No clients
+              </div>
             )}
           </div>
         </div>
@@ -1213,73 +1226,90 @@ const CLVDashboard = () => {
             <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Clock size={16} className="text-gray-500" />
               <span>Dormant</span>
-              {dormantSearch && <span className="text-xs text-gray-500">({filteredDormantClients.length})</span>}
             </h2>
             
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[120px]">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-6 pr-1 py-1 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-500 outline-none"
-                  value={dormantSearch}
-                  onChange={(e) => setDormantSearch(e.target.value)}
-                />
-                <span className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">🔍</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setShowDormantCriteriaModal(true)}
-                  className="text-blue-600 p-1 hover:bg-blue-50 rounded"
-                >
-                  <Info size={14} />
-                </button>
-                <button 
-                  onClick={() => setShowDormantModal(true)}
-                  className="text-xs text-blue-600 hover:underline whitespace-nowrap px-2 py-1"
-                >
-                  View {filteredDormantClients.length}
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowDormantCriteriaModal(true)}
+                className="text-blue-600 p-1 hover:bg-blue-50 rounded"
+                title="Criteria"
+              >
+                <Info size={14} />
+              </button>
+              <button 
+                onClick={() => setClassificationModalData({
+                  isOpen: true,
+                  title: "Dormant Clients",
+                  data: dashboardData?.dormantClients || [],
+                  classification: "Dormant"
+                })}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-gray-50 hover:bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs transition border border-gray-200"
+              >
+                <Eye size={14} />
+                View {dashboardData?.dormantClients?.length || 0}
+              </button>
             </div>
           </div>
           
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1 sm:pr-2">
-            {filteredDormantClients.length > 0 ? (
-              filteredDormantClients.slice(0, 5).map((client, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
-                  onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0">
-                      {client.companyName?.charAt(0) || "?"}
+          <div className="space-y-3">
+            {(dashboardData?.dormantClients || []).length > 0 ? (
+              <>
+                {(dashboardData?.dormantClients || []).slice((dormantPage - 1) * itemsPerPage, dormantPage * itemsPerPage).map((client, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
+                    onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-medium text-xs sm:text-sm flex-shrink-0">
+                        {client.companyName?.charAt(0) || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                          {client.daysSinceFollowUp || 0}d
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">
-                        {client.daysSinceFollowUp || 0}d
-                      </p>
+                    <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`);
+                        }}
+                        className="text-[10px] sm:text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 whitespace-nowrap"
+                      >
+                        Engage
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`);
-                      }}
-                      className="text-[10px] sm:text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 whitespace-nowrap"
+                ))}
+                {Math.ceil((dashboardData?.dormantClients?.length || 0) / itemsPerPage) > 1 && (
+                  <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => setDormantPage(p => Math.max(1, p - 1))}
+                      disabled={dormantPage === 1}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
                     >
-                      Engage
+                      Prev
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Page {dormantPage} of {Math.ceil((dashboardData?.dormantClients?.length || 0) / itemsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setDormantPage(p => Math.min(Math.ceil((dashboardData?.dormantClients?.length || 0) / itemsPerPage), p + 1))}
+                      disabled={dormantPage === Math.ceil((dashboardData?.dormantClients?.length || 0) / itemsPerPage)}
+                      className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded disabled:opacity-50"
+                    >
+                      Next
                     </button>
                   </div>
-                </div>
-              ))
+                )}
+              </>
             ) : (
-              <p className="text-xs sm:text-sm text-gray-500 text-center py-4">
-                {dormantSearch ? "No matches" : "No clients"}
-              </p>
+              <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-sm bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                No clients
+              </div>
             )}
           </div>
         </div>

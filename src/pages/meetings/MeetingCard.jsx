@@ -27,7 +27,7 @@ export default function MeetingCard({ meeting, onEdit, onCancel }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
       {/* Header */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="bg-blue-50 p-2 rounded-lg shrink-0">
             <Video className="w-4 h-4 text-blue-600" />

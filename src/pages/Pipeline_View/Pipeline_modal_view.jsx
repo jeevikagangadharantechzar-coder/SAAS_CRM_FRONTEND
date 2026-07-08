@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import {
   ArrowLeft, Calendar, FileText, Mail, Paperclip, Tag, Clock,
   User, Building, Building2, DollarSign, CheckCircle, XCircle, AlertCircle,
-  Download, Eye, ChevronRight, Phone, MapPin, Globe, Briefcase,
+  Download, Eye, ChevronRight, ChevronLeft, Phone, MapPin, Globe, Briefcase,
   BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive
 } from "lucide-react";
 import DatePicker from "react-datepicker";
@@ -159,9 +159,13 @@ function Pipeline_modal_view() {
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [followUpData, setFollowUpData] = useState({
     followUpDate: null,
-    followUpComment: ""
+    followUpComment: "",
+    previousOutcome: "",
+    previousNotes: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [followUpPage, setFollowUpPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   // Preview state
   const [previewFile, setPreviewFile] = useState(null);
@@ -213,6 +217,18 @@ function Pipeline_modal_view() {
 
   // Handle schedule follow-up
   const handleScheduleFollowUp = async () => {
+    // If rescheduling, enforce completing previous follow-up
+    if (deal.followUpDate) {
+      if (!followUpData.previousOutcome) {
+        toast.error("Please select an outcome for the previous follow-up");
+        return;
+      }
+      if (!followUpData.previousNotes || followUpData.previousNotes.trim() === "") {
+        toast.error("Please provide notes for the previous follow-up");
+        return;
+      }
+    }
+
     if (!followUpData.followUpDate) {
       toast.error("Please select a follow-up date");
       return;
@@ -234,8 +250,10 @@ function Pipeline_modal_view() {
             ? followUpData.followUpDate.toISOString()
             : followUpData.followUpDate,
         followUpComment: followUpData.followUpComment,
-        // Include the previous follow-up date if rescheduling
-        previousFollowUpDate: deal.followUpDate || null
+        // Include the previous follow-up data if rescheduling
+        previousFollowUpDate: deal.followUpDate || null,
+        previousOutcome: followUpData.previousOutcome || "",
+        previousNotes: followUpData.previousNotes || ""
       };
 
       const response = await axios.post(
@@ -246,7 +264,7 @@ function Pipeline_modal_view() {
 
       toast.success(response.data.message || "Follow-up scheduled successfully");
       setIsFollowUpModalOpen(false);
-      setFollowUpData({ followUpDate: null, followUpComment: "" });
+      setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
       
       // Refresh deal details to show updated follow-up
       fetchDealDetails();
@@ -254,6 +272,53 @@ function Pipeline_modal_view() {
       if (!handleAuthError(err)) {
         console.error("Failed to schedule follow-up:", err);
         toast.error(err.response?.data?.message || "Failed to schedule follow-up");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle completing a follow-up without scheduling a new one
+  const handleCompleteOnly = async () => {
+    if (!followUpData.previousOutcome) {
+      toast.error("Please select an outcome for the previous follow-up");
+      return;
+    }
+    if (!followUpData.previousNotes || followUpData.previousNotes.trim() === "") {
+      toast.error("Please provide notes for the previous follow-up");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+
+      const payload = {
+        outcome: followUpData.previousOutcome,
+        notes: followUpData.previousNotes
+      };
+
+      const response = await axios.post(
+        `${API_URL}/deals/${dealId}/complete-followup`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success(response.data.message || "Follow-up completed successfully");
+      setIsFollowUpModalOpen(false);
+      setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
+      
+      // Refresh deal details
+      fetchDealDetails();
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Failed to complete follow-up:", err);
+        toast.error(err.response?.data?.message || "Failed to complete follow-up");
       }
     } finally {
       setIsSubmitting(false);
@@ -452,12 +517,12 @@ function Pipeline_modal_view() {
 
       {/* Follow-up Modal */}
       {isFollowUpModalOpen && (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="fixed inset-0 z-[50] overflow-y-auto">
           <div
             className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
             onClick={() => {
               setIsFollowUpModalOpen(false);
-              setFollowUpData({ followUpDate: null, followUpComment: "" });
+              setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
             }}
           />
 
@@ -473,7 +538,7 @@ function Pipeline_modal_view() {
                     <button
                       onClick={() => {
                         setIsFollowUpModalOpen(false);
-                        setFollowUpData({ followUpDate: null, followUpComment: "" });
+                        setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
                       }}
                       className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
                     >
@@ -484,7 +549,52 @@ function Pipeline_modal_view() {
 
                 <div className="bg-white px-6 py-6">
                   <div className="space-y-6">
+                    {deal.followUpDate && (
+                      <div className="bg-gray-50 -mx-6 px-6 py-4 border-b border-gray-200 mb-6">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <CheckCircle size={16} className="text-gray-500" />
+                          Complete Previous Follow-up
+                        </h4>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Outcome <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              value={followUpData.previousOutcome}
+                              onChange={(e) => setFollowUpData(prev => ({ ...prev, previousOutcome: e.target.value }))}
+                              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition"
+                            >
+                              <option value="">Select outcome...</option>
+                              <option value="Completed">Completed</option>
+                              <option value="Missed">Missed / No Response</option>
+                              <option value="Rescheduled">Rescheduled</option>
+                              <option value="Client No-Show">Client No-Show</option>
+                              <option value="Cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Outcome Notes <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={followUpData.previousNotes}
+                              onChange={(e) => setFollowUpData(prev => ({ ...prev, previousNotes: e.target.value }))}
+                              placeholder="Reason for missing, or summary of the conversation..."
+                              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-4">
+                        {deal.followUpDate ? "Schedule Next Follow-up" : "Schedule Follow-up"}
+                      </h4>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Follow-up Date & Time <span className="text-red-500">*</span>
                       </label>
@@ -530,22 +640,37 @@ function Pipeline_modal_view() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => {
                       setIsFollowUpModalOpen(false);
-                      setFollowUpData({ followUpDate: null, followUpComment: "" });
+                      setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
                     }}
-                    className="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors order-3 sm:order-1"
                   >
                     Cancel
                   </button>
+                  {deal.followUpDate && (
+                    <button
+                      type="button"
+                      onClick={handleCompleteOnly}
+                      disabled={isSubmitting}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-white border border-purple-600 text-purple-600 rounded-lg text-sm font-medium hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-2 sm:order-2"
+                    >
+                      {isSubmitting ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-600"></div>
+                      ) : (
+                        <CheckCircle size={16} />
+                      )}
+                      Complete & No Next Follow-up
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleScheduleFollowUp}
                     disabled={isSubmitting || !followUpData.followUpDate}
-                    className="px-5 py-2.5 bg-purple-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[160px] justify-center"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-3"
                   >
                     {isSubmitting ? (
                       <>
@@ -1133,251 +1258,324 @@ function Pipeline_modal_view() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Calendar size={32} className="text-purple-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">
-                        No upcoming follow-ups
-                      </h3>
-                      <p className="text-slate-600 mb-6 max-w-sm mx-auto">
-                        Schedule a follow-up to stay on track with this deal and never miss an important conversation.
+                    <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                      <p className="text-slate-600 font-medium mb-4">
+                        At present there is no follow-up
                       </p>
                       <button
                         onClick={() => setIsFollowUpModalOpen(true)}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition shadow-sm hover:shadow"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition shadow-sm"
                       >
-                        <Plus size={18} />
-                        Schedule First Follow-up
+                        <Plus size={16} />
+                        Schedule Follow-up
                       </button>
                     </div>
                   )}
 
                   {/* Past Follow-ups - Sorted Most Recent First */}
-                  {deal.followUpHistory && deal.followUpHistory.length > 0 && (
-                    <div className="mt-8">
-                      <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                        <Archive size={16} className="text-slate-600" />
-                        Past Follow-ups ({deal.followUpHistory.length})
-                      </h3>
+                  {deal.followUpHistory && (() => {
+                    const filteredHistory = deal.followUpHistory.filter(h => h.action !== "Scheduled");
+                    if (filteredHistory.length === 0) return null;
 
-                      <div className="space-y-4">
-                        {/* Sort the history array by date in descending order (most recent first) */}
-                        {[...deal.followUpHistory]
-                          .sort((a, b) => {
-                            const dateA = a.date ? new Date(a.date).getTime() : 0;
-                            const dateB = b.date ? new Date(b.date).getTime() : 0;
-                            return dateB - dateA;
-                          })
-                          .map((followUp, index) => {
-                            const actionDate = followUp.date
-                              ? new Date(followUp.date)
-                              : null;
-                            const scheduledDate = followUp.followUpDate
-                              ? new Date(followUp.followUpDate)
-                              : null;
+                    return (
+                      <div className="mt-8">
+                        <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                          <Archive size={16} className="text-slate-600" />
+                          Past Follow-ups ({filteredHistory.length})
+                        </h3>
 
-                            const outcome = followUp.outcome || "Completed";
+                        <div className="space-y-4">
+                          {/* Sort the history array by date in descending order (most recent first) */}
+                          {(() => {
+                            const sortedHistory = [...filteredHistory].sort((a, b) => {
+                              const dateA = a.date ? new Date(a.date).getTime() : 0;
+                              const dateB = b.date ? new Date(b.date).getTime() : 0;
+                              return dateB - dateA;
+                            });
+                          
+                          const totalPages = Math.ceil(sortedHistory.length / ITEMS_PER_PAGE);
+                          const startIndex = (followUpPage - 1) * ITEMS_PER_PAGE;
+                          const currentItems = sortedHistory.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-                            return (
-                              <div
-                                key={index}
-                                className="border border-slate-200 rounded-xl p-5 hover:bg-slate-50 transition"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <div className="flex items-center gap-3">
-                                      <div
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                          outcome === "Successful" ||
-                                          outcome === "Completed"
-                                            ? "bg-green-100"
-                                            : outcome === "Rescheduled"
-                                              ? "bg-yellow-100"
-                                              : outcome === "Cancelled"
-                                                ? "bg-red-100"
-                                                : outcome === "Created" ||
-                                                  outcome === "Updated"
-                                                  ? "bg-blue-100"
-                                                  : "bg-gray-100"
-                                        }`}
-                                      >
-                                        {outcome === "Successful" ||
-                                        outcome === "Completed" ? (
-                                          <CheckCircle
-                                            size={20}
-                                            className="text-green-600"
-                                          />
-                                        ) : outcome === "Rescheduled" ? (
-                                          <RefreshCw
-                                            size={20}
-                                            className="text-yellow-600"
-                                          />
-                                        ) : outcome === "Cancelled" ? (
-                                          <XCircle
-                                            size={20}
-                                            className="text-red-600"
-                                          />
-                                        ) : outcome === "Created" ? (
-                                          <Plus
-                                            size={20}
-                                            className="text-blue-600"
-                                          />
-                                        ) : outcome === "Updated" ? (
-                                          <Edit
-                                            size={20}
-                                            className="text-blue-600"
-                                          />
-                                        ) : (
-                                          <CheckCircle
-                                            size={20}
-                                            className="text-gray-600"
-                                          />
-                                        )}
-                                      </div>
+                          return (
+                            <>
+                              {currentItems.map((followUp, index) => {
+                                const actionDate = followUp.date
+                                  ? new Date(followUp.date)
+                                  : null;
+                                const scheduledDate = followUp.followUpDate
+                                  ? new Date(followUp.followUpDate)
+                                  : null;
+
+                                const outcome = followUp.outcome || (followUp.action === "Scheduled" ? "Scheduled" : followUp.action) || "Completed";
+
+                                return (
+                                  <div
+                                    key={index}
+                                    className="border border-slate-200 rounded-xl p-5 hover:bg-slate-50 transition"
+                                  >
+                                    <div className="flex justify-between items-start">
                                       <div>
-                                        <h4 className="font-medium text-slate-900">
-                                          Follow-up {outcome}
-                                        </h4>
-                                        <div className="flex items-center gap-4 mt-1">
-                                          {actionDate ? (
-                                            <>
-                                              <div className="flex items-center gap-1 text-sm text-slate-600">
-                                                <Calendar size={14} />
-                                                <span>
-                                                  {actionDate.toLocaleDateString(
-                                                    "en-US",
-                                                    {
-                                                      month: "short",
-                                                      day: "numeric",
-                                                      year: "numeric",
-                                                    }
-                                                  )}
+                                        <div className="flex items-center gap-3">
+                                          <div
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                              outcome === "Successful" ||
+                                              outcome === "Completed"
+                                                ? "bg-green-100"
+                                                : outcome === "Rescheduled"
+                                                  ? "bg-yellow-100"
+                                                  : outcome === "Cancelled"
+                                                    ? "bg-red-100"
+                                                    : outcome === "Created" ||
+                                                      outcome === "Updated"
+                                                      ? "bg-blue-100"
+                                                      : "bg-gray-100"
+                                            }`}
+                                          >
+                                            {outcome === "Successful" ||
+                                            outcome === "Completed" ? (
+                                              <CheckCircle
+                                                size={20}
+                                                className="text-green-600"
+                                              />
+                                            ) : outcome === "Rescheduled" ? (
+                                              <RefreshCw
+                                                size={20}
+                                                className="text-yellow-600"
+                                              />
+                                            ) : outcome === "Cancelled" ? (
+                                              <XCircle
+                                                size={20}
+                                                className="text-red-600"
+                                              />
+                                            ) : outcome === "Created" ? (
+                                              <Plus
+                                                size={20}
+                                                className="text-blue-600"
+                                              />
+                                            ) : outcome === "Updated" ? (
+                                              <Edit
+                                                size={20}
+                                                className="text-blue-600"
+                                              />
+                                            ) : (
+                                              <CheckCircle
+                                                size={20}
+                                                className="text-gray-600"
+                                              />
+                                            )}
+                                          </div>
+                                          <div>
+                                            <h4 className="font-medium text-slate-900">
+                                              Follow-up {outcome}
+                                            </h4>
+                                            <div className="flex items-center gap-4 mt-1">
+                                              {actionDate ? (
+                                                <>
+                                                  <div className="flex items-center gap-1 text-sm text-slate-600">
+                                                    <span className="font-medium text-slate-700 mr-1">Logged:</span>
+                                                    <Calendar size={14} />
+                                                    <span>
+                                                      {actionDate.toLocaleDateString(
+                                                        "en-US",
+                                                        {
+                                                          month: "short",
+                                                          day: "numeric",
+                                                          year: "numeric",
+                                                        }
+                                                      )}
+                                                    </span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1 text-sm text-slate-600">
+                                                    <Clock size={14} />
+                                                    <span>
+                                                      {actionDate.toLocaleTimeString(
+                                                        "en-US",
+                                                        {
+                                                          hour: "2-digit",
+                                                          minute: "2-digit",
+                                                          hour12: true,
+                                                        }
+                                                      )}
+                                                    </span>
+                                                  </div>
+                                                </>
+                                              ) : (
+                                                <span className="text-sm text-slate-500">
+                                                  Date not available
                                                 </span>
-                                              </div>
-                                              <div className="flex items-center gap-1 text-sm text-slate-600">
-                                                <Clock size={14} />
-                                                <span>
-                                                  {actionDate.toLocaleTimeString(
-                                                    "en-US",
-                                                    {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                      hour12: true,
-                                                    }
-                                                  )}
-                                                </span>
-                                              </div>
-                                            </>
-                                          ) : (
-                                            <span className="text-sm text-slate-500">
-                                              Date not available
-                                            </span>
-                                          )}
+                                              )}
+                                            </div>
+
+                                            {/* Show when it was scheduled for (if different from action date) */}
+                                            {scheduledDate && actionDate &&
+                                              Math.abs(scheduledDate.getTime() - actionDate.getTime()) > 1000 && (
+                                                <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                                                  <span>Scheduled for: </span>
+                                                  <span className="font-medium">
+                                                    {scheduledDate.toLocaleDateString(
+                                                      "en-US",
+                                                      {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                      }
+                                                    )}
+                                                  </span>
+                                                  <span className="mx-1">at</span>
+                                                  <span className="font-medium">
+                                                    {scheduledDate.toLocaleTimeString(
+                                                      "en-US",
+                                                      {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                      }
+                                                    )}
+                                                  </span>
+                                                </div>
+                                              )}
+                                          </div>
                                         </div>
 
-                                        {/* Show when it was scheduled for (if different from action date) */}
-                                        {scheduledDate && actionDate &&
-                                          Math.abs(scheduledDate - actionDate) > 1000 && (
-                                            <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
-                                              <span>Scheduled for: </span>
-                                              <span className="font-medium">
-                                                {scheduledDate.toLocaleDateString(
-                                                  "en-US",
-                                                  {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                  }
-                                                )}
-                                              </span>
-                                              <span className="mx-1">at</span>
-                                              <span className="font-medium">
-                                                {scheduledDate.toLocaleTimeString(
-                                                  "en-US",
-                                                  {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                  }
-                                                )}
+                                        <div className="mt-4">
+                                          <p className="text-sm font-medium text-slate-700 mb-2">
+                                            Agenda / Plan
+                                          </p>
+                                          <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
+                                            <p className="text-slate-700">
+                                              {followUp.followUpComment || <span className="text-slate-400 italic">No agenda provided</span>}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        {followUp.action !== "Scheduled" && (
+                                          <div className="mt-4">
+                                            <p className="text-sm font-medium text-slate-700 mb-2">
+                                              Meeting Summary
+                                            </p>
+                                            <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                                              <p className="text-slate-700">
+                                                {followUp.notes || <span className="text-slate-400 italic">No summary provided</span>}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {followUp.changedBy && (followUp.changedBy.firstName || followUp.changedBy.lastName) && (
+                                          <div className="mt-4">
+                                            <p className="text-sm font-medium text-slate-700">
+                                              Updated by
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                              <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                                                <User
+                                                  size={14}
+                                                  className="text-slate-600"
+                                                />
+                                              </div>
+                                              <span className="text-sm text-slate-700">
+                                                {followUp.changedBy.firstName || "User"}{" "}
+                                                {followUp.changedBy.lastName || ""}
                                               </span>
                                             </div>
-                                          )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <div className="text-right">
+                                        <span
+                                          className={`text-xs px-3 py-1 rounded-full font-medium ${
+                                            outcome === "Successful" ||
+                                            outcome === "Completed"
+                                              ? "bg-green-100 text-green-800"
+                                              : outcome === "Rescheduled"
+                                                ? "bg-yellow-100 text-yellow-800"
+                                                : outcome === "Cancelled"
+                                                  ? "bg-red-100 text-red-800"
+                                                  : outcome === "Created" ||
+                                                    outcome === "Updated"
+                                                    ? "bg-blue-100 text-blue-800"
+                                                    : "bg-gray-100 text-gray-800"
+                                          }`}
+                                        >
+                                          {outcome}
+                                        </span>
                                       </div>
                                     </div>
-
-                                    {followUp.followUpComment && (
-                                      <div className="mt-4">
-                                        <p className="text-sm font-medium text-slate-700 mb-2">
-                                          Notes
-                                        </p>
-                                        <div className="bg-slate-50 rounded-lg p-4">
-                                          <p className="text-slate-700">
-                                            {followUp.followUpComment}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {followUp.changedBy && (followUp.changedBy.firstName || followUp.changedBy.lastName) && (
-                                      <div className="mt-4">
-                                        <p className="text-sm font-medium text-slate-700">
-                                          Updated by
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                                            <User
-                                              size={14}
-                                              className="text-slate-600"
-                                            />
-                                          </div>
-                                          <span className="text-sm text-slate-700">
-                                            {followUp.changedBy.firstName || "User"}{" "}
-                                            {followUp.changedBy.lastName || ""}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
                                   </div>
+                                );
+                              })}
 
-                                  <div className="text-right">
-                                    <span
-                                      className={`text-xs px-3 py-1 rounded-full font-medium ${
-                                        outcome === "Successful" ||
-                                        outcome === "Completed"
-                                          ? "bg-green-100 text-green-800"
-                                          : outcome === "Rescheduled"
-                                            ? "bg-yellow-100 text-yellow-800"
-                                            : outcome === "Cancelled"
-                                              ? "bg-red-100 text-red-800"
-                                              : outcome === "Created" ||
-                                                outcome === "Updated"
-                                                ? "bg-blue-100 text-blue-800"
-                                                : "bg-gray-100 text-gray-800"
-                                      }`}
-                                    >
-                                      {outcome}
-                                    </span>
-                                    {actionDate && (
-                                      <p className="text-xs text-slate-500 mt-2">
-                                        {actionDate.toLocaleDateString(
-                                          "en-US",
-                                          {
-                                            month: "short",
-                                            day: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          }
-                                        )}
+                              {totalPages > 1 && (
+                                <div className="flex items-center justify-between border-t border-slate-200 bg-white pt-6 mt-6">
+                                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                                    <div>
+                                      <p className="text-sm text-slate-700">
+                                        Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + ITEMS_PER_PAGE, sortedHistory.length)}</span> of <span className="font-medium">{sortedHistory.length}</span> results
                                       </p>
-                                    )}
+                                    </div>
+                                    <div>
+                                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                        <button
+                                          onClick={() => setFollowUpPage(p => Math.max(1, p - 1))}
+                                          disabled={followUpPage === 1}
+                                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+                                        >
+                                          <span className="sr-only">Previous</span>
+                                          <ChevronLeft size={16} />
+                                        </button>
+                                        
+                                        {Array.from({ length: totalPages }).map((_, i) => (
+                                          <button
+                                            key={i}
+                                            onClick={() => setFollowUpPage(i + 1)}
+                                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0 transition-colors ${
+                                              followUpPage === i + 1 
+                                                ? 'z-10 bg-purple-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600' 
+                                                : 'text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50'
+                                            }`}
+                                          >
+                                            {i + 1}
+                                          </button>
+                                        ))}
+                                        
+                                        <button
+                                          onClick={() => setFollowUpPage(p => Math.min(totalPages, p + 1))}
+                                          disabled={followUpPage === totalPages}
+                                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+                                        >
+                                          <span className="sr-only">Next</span>
+                                          <ChevronRight size={16} />
+                                        </button>
+                                      </nav>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Mobile Pagination */}
+                                  <div className="flex flex-1 justify-between sm:hidden">
+                                    <button
+                                      onClick={() => setFollowUpPage(p => Math.max(1, p - 1))}
+                                      disabled={followUpPage === 1}
+                                      className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                    >
+                                      Previous
+                                    </button>
+                                    <button
+                                      onClick={() => setFollowUpPage(p => Math.min(totalPages, p + 1))}
+                                      disabled={followUpPage === totalPages}
+                                      className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                    >
+                                      Next
+                                    </button>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             )}

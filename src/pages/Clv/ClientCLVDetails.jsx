@@ -361,7 +361,7 @@ const ClientCLVDetails = () => {
     );
   }
 
-  const { client, deals = [], tickets = [], renewals = [], supportAnalysis = {} } = clientData;
+  const { client, deals = [], tickets = [], supportAnalysis = {} } = clientData;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -436,10 +436,7 @@ const ClientCLVDetails = () => {
             <p className="text-sm text-gray-500">Support Tickets</p>
             <p className="text-2xl font-bold">{tickets.length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-            <p className="text-sm text-gray-500">Renewals</p>
-            <p className="text-2xl font-bold">{renewals.length}</p>
-          </div>
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
             <p className="text-sm text-gray-500">Risk Score</p>
             <p className={`text-2xl font-bold ${getHealthColor(client.riskScore)}`}>
@@ -485,16 +482,7 @@ const ClientCLVDetails = () => {
             >
               Support Tickets ({tickets.length})
             </button>
-            <button
-              onClick={() => setActiveTab("renewals")}
-              className={`pb-3 px-1 whitespace-nowrap ${
-                activeTab === "renewals"
-                  ? "border-b-2 border-blue-600 text-blue-600 font-medium"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Renewals ({renewals.length})
-            </button>
+
           </nav>
         </div>
 
@@ -671,45 +659,7 @@ const ClientCLVDetails = () => {
           </div>
         )}
 
-        {activeTab === "renewals" && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Renewals</h3>
-            {renewals.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Renewal Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Value</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Probability</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {renewals.map((renewal, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm">{formatDate(renewal.renewalDate)}</td>
-                        <td className="px-4 py-3 text-sm font-medium">{formatCurrency(renewal.renewalValue)}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            renewal.status === "Completed" ? "bg-green-100 text-green-700" :
-                            renewal.status === "Pending" ? "bg-yellow-100 text-yellow-700" :
-                            "bg-red-100 text-red-700"
-                          }`}>
-                            {renewal.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">{renewal.renewalProbability}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">No renewals found</p>
-            )}
-          </div>
-        )}
+
 
         {/* Create Ticket Modal */}
         {showTicketModal && (
