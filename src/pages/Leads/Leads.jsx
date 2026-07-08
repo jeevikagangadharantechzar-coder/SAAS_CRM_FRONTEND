@@ -21,7 +21,6 @@ import {
   Upload,
   Trash2,
   Loader2,
-  Upload,
   Download,
   FileSpreadsheet,
 } from "lucide-react";
