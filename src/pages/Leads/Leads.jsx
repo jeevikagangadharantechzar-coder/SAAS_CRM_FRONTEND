@@ -334,12 +334,15 @@ function LeadTableComponent() {
     const menuHeight = 120;
     const viewportHeight = window.innerHeight;
 
-    let top = rect.bottom + window.scrollY + 4;
-    let left = rect.right + window.scrollX - 160;
+    let top = rect.bottom + 4; // Use fixed positioning instead of absolute for portal
+    let left = rect.right - 208; // 208px is w-52. Align right edge of menu with right edge of button.
 
-    if (rect.bottom + menuHeight > viewportHeight) {
-      top = rect.top + window.scrollY - menuHeight - 4;
+    if (top + menuHeight > viewportHeight) {
+      top = rect.top - menuHeight - 4;
     }
+    
+    // Ensure it doesn't go off the left side of screen
+    if (left < 10) left = 10;
 
     setMenuPosition({ top, left });
     setMenuOpen(menuOpen === leadId ? null : leadId);
@@ -677,7 +680,7 @@ function LeadTableComponent() {
               placeholder={t("leads.filters.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-11/12 md:w-full mx-auto pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 block"
             />
           </div>
 
@@ -686,7 +689,7 @@ function LeadTableComponent() {
               <select
                 value={assigneeFilter}
                 onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
               >
                 <option value="">{t("leads.filters.allAssignees")}</option>
                 {usersList.map((user) => (
@@ -702,7 +705,7 @@ function LeadTableComponent() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="">{t("leads.filters.allStatus")}</option>
               <option value="Hot">{t("leads.status.hot")}</option>
@@ -717,7 +720,7 @@ function LeadTableComponent() {
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="">{t("leads.filters.allSources")}</option>
               <option value="Website">{t("leads.source.website")}</option>
@@ -733,7 +736,7 @@ function LeadTableComponent() {
             <select
               value={clientTypeFilter}
               onChange={(e) => setClientTypeFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="">{t("leads.filters.allClientTypes")}</option>
               <option value="B2B">B2B</option>
@@ -745,7 +748,7 @@ function LeadTableComponent() {
             <select
               value={followUpFilter}
               onChange={(e) => setFollowUpFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="all">All Follow-ups</option>
               <option value="completed">Completed Follow-ups</option>
@@ -963,10 +966,11 @@ function LeadTableComponent() {
                       </button>
                     </div>
 
-                    {menuOpen === lead._id && (
+                    {menuOpen === lead._id && ReactDOM.createPortal(
                       <div
-                        className="fixed z-50 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
+                        className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
                         style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <button
                           onClick={(e) => {
@@ -1013,7 +1017,8 @@ function LeadTableComponent() {
                             <Ban className="w-4 h-4 mr-2" /> Reject
                           </button>
                         )}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </td>
                 </tr>

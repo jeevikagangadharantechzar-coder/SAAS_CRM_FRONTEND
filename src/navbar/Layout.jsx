@@ -53,7 +53,7 @@ const Layout = ({ isModalOpen }) => {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Navbar toggleSidebar={toggleSidebar} />
           <div
-            className={`flex-1 overflow-auto bg-gray-50 p-6 pb-24 lg:pb-6 transition-all duration-300 ${
+            className={`flex-1 overflow-auto bg-gray-50 p-4 md:p-6 pb-24 lg:pb-6 transition-all duration-300 ${
               isModalOpen ? "backdrop-blur-md pointer-events-none" : ""
             }`}
           >

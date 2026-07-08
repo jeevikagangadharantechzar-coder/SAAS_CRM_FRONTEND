@@ -7,6 +7,7 @@ import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
 import { todayISO, validateTaskDueDate } from "../../utils/dateValidation";
 import { isTaskTabNotif, getNotificationAccentClass } from "../../utils/taskNotifications";
+import Select from "react-select";
 import {
   Plus, Trash2, CheckCircle, Clock, User,
   Calendar, X, Edit2, StickyNote,
@@ -23,6 +24,25 @@ function fmtTime(date) {
   if (!date) return "";
   return new Date(date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
+
+const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: '42px',
+    borderRadius: '0.5rem',
+    borderColor: state.isFocused ? '#008ecc' : '#e5e7eb',
+    boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 142, 204, 0.3)' : 'none',
+    fontSize: '0.875rem',
+    '&:hover': { borderColor: state.isFocused ? '#008ecc' : '#d1d5db' }
+  }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  menu: (base) => ({ ...base, fontSize: '0.875rem' }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected ? '#008ecc' : state.isFocused ? '#e0f2fe' : 'white',
+    color: state.isSelected ? 'white' : '#1f2937'
+  })
+};
 
 // Which admin actually touched this task's linked lead/deal — shown so the
 // admin always sees who converted the lead or moved the deal's stage,
@@ -62,23 +82,23 @@ const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL;
 
 const PRIORITY_COLORS = {
-  Low:    "bg-blue-100 text-blue-700 border-blue-200",
+  Low: "bg-blue-100 text-blue-700 border-blue-200",
   Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  High:   "bg-orange-100 text-orange-700 border-orange-200",
+  High: "bg-orange-100 text-orange-700 border-orange-200",
   Urgent: "bg-red-100 text-red-700 border-red-200",
 };
 
 const PRIORITY_BORDER = {
-  Low:    "border-l-blue-400",
+  Low: "border-l-blue-400",
   Medium: "border-l-yellow-400",
-  High:   "border-l-orange-400",
+  High: "border-l-orange-400",
   Urgent: "border-l-red-500",
 };
 
 const STATUS_STYLES = {
-  Pending:       "bg-gray-100 text-gray-700",
+  Pending: "bg-gray-100 text-gray-700",
   "In Progress": "bg-blue-100 text-blue-700",
-  Completed:     "bg-green-100 text-green-700",
+  Completed: "bg-green-100 text-green-700",
 };
 
 // Task cards use the exact same "hero progress" concept as Target Management
@@ -762,9 +782,9 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={18} className="text-gray-500" /></button>
         </div>
 
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
+          <form onSubmit={handleSubmit} className="w-full lg:w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-100">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
               <input
@@ -787,18 +807,16 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 z-10">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                  value={form.priority}
-                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                >
-                  {["Low", "Medium", "High", "Urgent"].map((p) => (
-                    <option key={p}>{p}</option>
-                  ))}
-                </select>
+                <Select
+                  options={["Low", "Medium", "High", "Urgent"].map(p => ({ value: p, label: p }))}
+                  value={{ value: form.priority, label: form.priority }}
+                  onChange={(selected) => setForm({ ...form, priority: selected ? selected.value : "Medium" })}
+                  menuPortalTarget={document.body}
+                  styles={customSelectStyles}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
@@ -839,19 +857,18 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
-              <select
-                required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                value={form.assignedTo}
-                onChange={(e) => setForm({ ...form, assignedTo: e.target.value, leadRef: "", dealRef: "" })}
-              >
-                <option value="">— Select sales person —</option>
-                {salesUsers.map((u) => (
-                  <option key={u._id} value={u._id}>
-                    {u.firstName} {u.lastName}
-                  </option>
-                ))}
-              </select>
+              <Select
+                options={salesUsers.map((u) => ({ value: u._id, label: `${u.firstName} ${u.lastName}` }))}
+                value={form.assignedTo ? { value: form.assignedTo, label: (() => {
+                  const u = salesUsers.find(x => x._id === form.assignedTo);
+                  return u ? `${u.firstName} ${u.lastName}` : "";
+                })() } : null}
+                onChange={(selected) => setForm({ ...form, assignedTo: selected ? selected.value : "", leadRef: "", dealRef: "" })}
+                placeholder="Select sales person"
+                isClearable
+                menuPortalTarget={document.body}
+                styles={customSelectStyles}
+              />
             </div>
 
             {/* Linked summary chip */}
@@ -874,7 +891,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
           </form>
 
           {/* RIGHT — sales person preview, click to link a lead/deal */}
-          <div className="flex-1 min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
+          <div className="w-full lg:flex-1 lg:min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 shrink-0">
               {form.assignedTo ? "Sales Person Details — Click to link a lead/deal" : "Sales Person Details"}
             </p>
@@ -1005,9 +1022,10 @@ function TaskTableView({ tasks, onEdit, onDelete }) {
   const [expandedId, setExpandedId] = useState(null);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Table header */}
-      <div className="grid grid-cols-[2fr_1.3fr_1fr_1fr_1fr_1.4fr_1.2fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+      <div className="min-w-[900px]">
+        {/* Table header */}
+        <div className="grid grid-cols-[2fr_1.3fr_1fr_1fr_1fr_1.4fr_1.2fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
         {["Task", "Assigned To", "Priority", "Status", "Due Date", "Linked Lead/Deal", "Actions"].map((h, i) => (
           <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i >= 2 && i <= 4 ? "text-center" : i === 6 ? "text-center" : ""}`}>{h}</div>
         ))}
@@ -1124,6 +1142,7 @@ function TaskTableView({ tasks, onEdit, onDelete }) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -1237,7 +1256,7 @@ export default function TaskManagement() {
       if (toMarkRead.length > 0) {
         Promise.all(
           toMarkRead.map((id) =>
-            axios.patch(`${API_URL}/notifications/read/${id}`, {}, { headers }).catch(() => {})
+            axios.patch(`${API_URL}/notifications/read/${id}`, {}, { headers }).catch(() => { })
           )
         );
       }
@@ -1298,14 +1317,14 @@ export default function TaskManagement() {
   const handleMarkNotifRead = (n) => {
     if (n.read || n.isRead || !n._id || String(n._id).includes("-")) return;
     setNotifications((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true, isRead: true } : x)));
-    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {});
+    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { });
   };
 
   const handleDismissNotif = (e, n) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((x) => x._id !== n._id));
     if (n._id && !String(n._id).includes("-")) {
-      axios.delete(`${baseUrl}/notifications/${n._id}`, { headers }).catch(() => {});
+      axios.delete(`${baseUrl}/notifications/${n._id}`, { headers }).catch(() => { });
     }
   };
 
@@ -1315,7 +1334,7 @@ export default function TaskManagement() {
     // Mark all task reminder/due-today notifications as read when the tab opens
     setNotifications((prev) => {
       const unread = prev.filter((n) => TASK_NOTIF_TYPES_FILTER(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
-      unread.forEach((n) => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
+      unread.forEach((n) => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { }));
       return prev.map((n) => (TASK_NOTIF_TYPES_FILTER(n) ? { ...n, read: true, isRead: true } : n));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1499,17 +1518,17 @@ export default function TaskManagement() {
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
-            <StatCard label="Assigned Leads"   value={orgDashStats.monthly.totalLeads}       icon={<Users size={16} />}       color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
-            <StatCard label="Assigned Deals"   value={orgDashStats.monthly.totalDeals}       icon={<Briefcase size={16} />}   color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
-            <StatCard label="Leads Converted"  value={orgDashStats.monthly.convertedLeads}   icon={<CheckCircle size={16} />} color="text-green-600"  bg="bg-green-50 border border-green-100" />
-            <StatCard label="Lead → Deal Rate" value={`${orgDashStats.monthly.leadToDealRate}%`} icon={<TrendingUp size={16} />}  color="text-purple-600" bg="bg-purple-50 border border-purple-100" />
-            <StatCard label="Won Deals"        value={orgDashStats.monthly.wonDeals}         icon={<Award size={16} />}       color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Assigned Leads" value={orgDashStats.monthly.totalLeads} icon={<Users size={16} />} color="text-blue-600" bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Assigned Deals" value={orgDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600" bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Leads Converted" value={orgDashStats.monthly.convertedLeads} icon={<CheckCircle size={16} />} color="text-green-600" bg="bg-green-50 border border-green-100" />
+            <StatCard label="Lead → Deal Rate" value={`${orgDashStats.monthly.leadToDealRate}%`} icon={<TrendingUp size={16} />} color="text-purple-600" bg="bg-purple-50 border border-purple-100" />
+            <StatCard label="Won Deals" value={orgDashStats.monthly.wonDeals} icon={<Award size={16} />} color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard label="Monthly Calls"    value={orgDashStats.monthly.calls}    icon={<Phone size={16} />}    color="text-orange-600" bg="bg-orange-50 border border-orange-100" />
-            <StatCard label="Monthly Meetings" value={orgDashStats.monthly.meetings} icon={<Activity size={16} />} color="text-teal-600"   bg="bg-teal-50 border border-teal-100" />
-            <StatCard label="Weekly Calls"     value={orgDashStats.weekly.calls}     icon={<Phone size={16} />}    color="text-cyan-600"   bg="bg-cyan-50 border border-cyan-100" />
-            <StatCard label="Weekly Meetings"  value={orgDashStats.weekly.meetings}  icon={<Calendar size={16} />} color="text-pink-600"   bg="bg-pink-50 border border-pink-100" />
+            <StatCard label="Monthly Calls" value={orgDashStats.monthly.calls} icon={<Phone size={16} />} color="text-orange-600" bg="bg-orange-50 border border-orange-100" />
+            <StatCard label="Monthly Meetings" value={orgDashStats.monthly.meetings} icon={<Activity size={16} />} color="text-teal-600" bg="bg-teal-50 border border-teal-100" />
+            <StatCard label="Weekly Calls" value={orgDashStats.weekly.calls} icon={<Phone size={16} />} color="text-cyan-600" bg="bg-cyan-50 border border-cyan-100" />
+            <StatCard label="Weekly Meetings" value={orgDashStats.weekly.meetings} icon={<Calendar size={16} />} color="text-pink-600" bg="bg-pink-50 border border-pink-100" />
           </div>
         </div>
       )}
@@ -1520,11 +1539,10 @@ export default function TaskManagement() {
           <button
             key={f}
             onClick={() => { setFilter(f); setMainView("tasks"); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
-              filter === f && mainView === "tasks"
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${filter === f && mainView === "tasks"
                 ? "bg-[#008ecc] text-white"
                 : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
-            }`}
+              }`}
           >
             {f}
           </button>
@@ -1533,11 +1551,10 @@ export default function TaskManagement() {
         {/* Notifications & Reminders tab */}
         <button
           onClick={() => setMainView(mainView === "notifications" ? "tasks" : "notifications")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
-            mainView === "notifications"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "notifications"
               ? "bg-amber-500 text-white border-amber-500 shadow-sm"
               : "bg-white text-amber-600 border-amber-300 hover:bg-amber-50"
-          }`}
+            }`}
         >
           <Bell size={13} /> Notifications & Reminders
           {unreadTaskNotifCount > 0 && (
@@ -1550,11 +1567,10 @@ export default function TaskManagement() {
         {/* Reason Notes tab */}
         <button
           onClick={() => setMainView(mainView === "reasonNotes" ? "tasks" : "reasonNotes")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
-            mainView === "reasonNotes"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "reasonNotes"
               ? "bg-rose-500 text-white border-rose-500 shadow-sm"
               : "bg-white text-rose-600 border-rose-300 hover:bg-rose-50"
-          }`}
+            }`}
         >
           <Flag size={13} /> Reason Notes
           {reasonNotes.filter((n) => n.status === "pending").length > 0 && (
@@ -1567,11 +1583,10 @@ export default function TaskManagement() {
         {/* Admin Completed tab */}
         <button
           onClick={() => setMainView(mainView === "adminActivity" ? "tasks" : "adminActivity")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
-            mainView === "adminActivity"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "adminActivity"
               ? "bg-indigo-500 text-white border-indigo-500 shadow-sm"
               : "bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50"
-          }`}
+            }`}
         >
           <Trophy size={13} /> Admin Completed
         </button>
@@ -1845,11 +1860,11 @@ export default function TaskManagement() {
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <Trophy size={36} className="mb-3 opacity-20" />
                 <p className="text-sm font-medium">No admin-completed leads or deals yet</p>
-                <p className="text-xs mt-1">When Admin personally converts a lead or closes a deal Won, it shows up here</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+                <div className="min-w-[850px]">
+                  <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
                   {["Type", "Name", "Company", "Salesperson", "Date & Time", "Actions"].map((h, i) => (
                     <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
                   ))}
@@ -1875,6 +1890,7 @@ export default function TaskManagement() {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
 
