@@ -35,7 +35,6 @@ const Login = () => {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
-  const [showUpgradeButton, setShowUpgradeButton] = useState(false);
   const [expiredNotice, setExpiredNotice] = useState(null);
 
 
@@ -96,7 +95,6 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
-    setShowUpgradeButton(false);
 
     // 1. Check if another tenant is already logged in (ignore dead/expired tokens)
     const activeToken = localStorage.getItem("token");
@@ -182,10 +180,17 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login Error:", error);
-      setMessage(error.response?.data?.message || "Authentication failed. Check details.");
-      setIsError(true);
       if (error.response?.data?.planExpired) {
-        setShowUpgradeButton(true);
+        // Reuse the same polished popup shown after a mid-session expiry
+        // redirect, so a fresh blocked login attempt looks identical.
+        setExpiredNotice({
+          message: error.response.data.message,
+          trialExpired: !!error.response.data.trialExpired,
+          expiryDate: error.response.data.expiryDate || null,
+        });
+      } else {
+        setMessage(error.response?.data?.message || "Authentication failed. Check details.");
+        setIsError(true);
       }
     } finally {
       setIsLoading(false);
@@ -238,16 +243,6 @@ const Login = () => {
               }`}
             >
               <span className="font-semibold text-sm leading-relaxed">{message}</span>
-              
-              {isError && showUpgradeButton && (
-                <button
-                  type="button"
-                  onClick={() => navigate(`/${tenantSlug}/upgrade`)}
-                  className="px-5 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700 transition cursor-pointer shadow-sm hover:shadow-md mt-1 animate-pulse"
-                >
-                  Upgrade Plan Now
-                </button>
-              )}
             </div>
           )}
 
@@ -363,6 +358,11 @@ const Login = () => {
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               {expiredNotice.trialExpired ? "Your Free Trial Has Ended" : "Subscription Expired"}
             </h3>
+            {expiredNotice.expiryDate && (
+              <span className="inline-block px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-semibold mb-3">
+                {expiredNotice.trialExpired ? "Trial ended on" : "Expired on"} {expiredNotice.expiryDate}
+              </span>
+            )}
             <p className="text-gray-600 mb-6">{expiredNotice.message}</p>
             <div className="flex flex-col gap-3">
               {expiredNotice.trialExpired && tenantSlug && (

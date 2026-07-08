@@ -172,12 +172,8 @@ function TargetSnapshotGrid({ target: t }) {
   const overall = percentages.overall || 0;
 
   const metrics = [
-    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t?.targetLeads ?? 0, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
-    { label: "Deals Won", target: percentages.effTargetDeals ?? t?.targetDeals ?? 0, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Leads to Deals Won", actual: actuals.leadDealWon || 0, icon: <Trophy size={13} className="text-amber-500" />, bg: "bg-amber-50", border: "border-amber-100", countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
-    { label: "Deals Lost", actual: actuals.dealsLost || 0, icon: <XCircle size={13} className="text-red-500" />, bg: "bg-red-50", border: "border-red-100", countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
-    { label: "Calls Made", target: t?.targetCalls ?? 0, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
-    { label: "Meetings Done", target: t?.targetMeetings ?? 0, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
+    { label: "Deals Won",  target: percentages.effTargetDeals ?? t?.targetDeals ?? 0, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Deals Lost", target: null,                                             actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
   ];
 
   return (
@@ -813,29 +809,6 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
               </div>
             </div>
             {dateError && <p className="text-xs text-red-600 font-medium -mt-2">{dateError}</p>}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><Phone size={12} className="text-orange-500" /> Calls Made</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                  value={form.callsMade}
-                  onChange={(e) => setForm({ ...form, callsMade: Math.max(0, Number(e.target.value)) })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><Activity size={12} className="text-teal-500" /> Meetings Done</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                  value={form.meetingsDone}
-                  onChange={(e) => setForm({ ...form, meetingsDone: Math.max(0, Number(e.target.value)) })}
-                />
-              </div>
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
@@ -1498,18 +1471,11 @@ export default function TaskManagement() {
       {mainView === "tasks" && orgDashStats && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
-            <StatCard label="Assigned Leads"   value={orgDashStats.monthly.totalLeads}       icon={<Users size={16} />}       color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
-            <StatCard label="Assigned Deals"   value={orgDashStats.monthly.totalDeals}       icon={<Briefcase size={16} />}   color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
-            <StatCard label="Leads Converted"  value={orgDashStats.monthly.convertedLeads}   icon={<CheckCircle size={16} />} color="text-green-600"  bg="bg-green-50 border border-green-100" />
-            <StatCard label="Lead → Deal Rate" value={`${orgDashStats.monthly.leadToDealRate}%`} icon={<TrendingUp size={16} />}  color="text-purple-600" bg="bg-purple-50 border border-purple-100" />
-            <StatCard label="Won Deals"        value={orgDashStats.monthly.wonDeals}         icon={<Award size={16} />}       color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
-          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard label="Monthly Calls"    value={orgDashStats.monthly.calls}    icon={<Phone size={16} />}    color="text-orange-600" bg="bg-orange-50 border border-orange-100" />
-            <StatCard label="Monthly Meetings" value={orgDashStats.monthly.meetings} icon={<Activity size={16} />} color="text-teal-600"   bg="bg-teal-50 border border-teal-100" />
-            <StatCard label="Weekly Calls"     value={orgDashStats.weekly.calls}     icon={<Phone size={16} />}    color="text-cyan-600"   bg="bg-cyan-50 border border-cyan-100" />
-            <StatCard label="Weekly Meetings"  value={orgDashStats.weekly.meetings}  icon={<Calendar size={16} />} color="text-pink-600"   bg="bg-pink-50 border border-pink-100" />
+            <StatCard label="Total Leads" value={orgDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Total Deals" value={orgDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Deals Won"   value={orgDashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deals Lost"  value={orgDashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
           </div>
         </div>
       )}

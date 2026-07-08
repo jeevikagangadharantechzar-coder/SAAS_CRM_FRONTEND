@@ -31,6 +31,9 @@ import FreeTrialSignups from "./pages/superadmin/FreeTrialSignups";
 import { NotificationProvider } from "./context/NotificationContext";
 import { SocketProvider } from "./context/SocketContext";
 import { TargetSocketProvider } from "./context/TargetSocketContext";
+import { FreeTrialProvider } from "./context/FreeTrialContext";
+import TrialReminderBanner from "./components/FreeTrial/TrialReminderBanner";
+import TrialExpiredModal from "./components/FreeTrial/TrialExpiredModal";
 
 // Pages
 import AdminDashboard from "./AdminDashboard/dashboard";
@@ -115,9 +118,12 @@ function App() {
   return (
     <SocketProvider userId={user?._id}>
       <TargetSocketProvider userId={user?._id}>
+      <FreeTrialProvider userId={user?._id}>
       <NotificationProvider>
         <BrowserRouter>
           <div className="min-h-screen">
+            <TrialReminderBanner />
+            <TrialExpiredModal />
             <Routes>
               {/* PUBLIC */}
               <Route path="/" element={<SuperAdminLogin />} />
@@ -306,6 +312,7 @@ function App() {
           </div>
         </BrowserRouter>
       </NotificationProvider>
+      </FreeTrialProvider>
       </TargetSocketProvider>
     </SocketProvider>
   );

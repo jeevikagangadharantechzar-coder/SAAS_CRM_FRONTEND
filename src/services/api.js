@@ -25,7 +25,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isPlanExpired = error.response?.status === 403 && error.response.data?.planExpired;
+    if (error.response && (error.response.status === 401 || isPlanExpired)) {
       const slug = store.getState().auth.slug;
       if (error.response.data?.planExpired) {
         sessionStorage.setItem(
@@ -33,6 +34,7 @@ api.interceptors.response.use(
           JSON.stringify({
             message: error.response.data.message,
             trialExpired: !!error.response.data.trialExpired,
+            expiryDate: error.response.data.expiryDate || null,
           })
         );
       }
@@ -102,7 +104,8 @@ axios.interceptors.request.use((config) => {
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isPlanExpired = error.response?.status === 403 && error.response.data?.planExpired;
+    if (error.response && (error.response.status === 401 || isPlanExpired)) {
       const isAuthRoute = error.config.url && (error.config.url.includes("/auth/login") || error.config.url.includes("/login"));
       if (!isAuthRoute) {
         if (window.location.pathname.startsWith("/superadmin") && window.location.pathname !== "/") {
