@@ -18,16 +18,6 @@
   import useLostDealModal from "../LostDealModal/LossDeal";
   import LostDealModal from "../LostDealModal/ModalLoss";
 
-  // A deal that just moved to Closed Won rests visibly (and locked — not
-// draggable) in that column for this long before dropping off the board, so
-// the person who closed it gets clear visual confirmation the drop worked
-// instead of the card vanishing instantly.
-const WON_GRACE_MS = 5 * 60 * 1000;
-function isWithinWonGrace(deal) {
-  if (deal.stage !== "Closed Won" || !deal.wonAt) return false;
-  return Date.now() - new Date(deal.wonAt).getTime() < WON_GRACE_MS;
-}
-
 const STAGES = [
     {
       id: "Qualification",
@@ -151,6 +141,9 @@ const STAGES = [
     const [columns, setColumns] = useState({});
     const [leads, setLeads] = useState([]);
     const [query, setQuery] = useState("");
+    const [selectedStages, setSelectedStages] = useState([]);
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [dealToDelete, setDealToDelete] = useState(null);
@@ -283,13 +276,6 @@ const STAGES = [
     }
 
     dealsArray.forEach((deal) => {
-      // A deal that's been Closed Won for more than the grace window is done
-      // — it stays visible in All Deals (Admin) but no longer sits as a card
-      // on this drag-and-drop board for either role. Still within the grace
-      // window, it stays visible (locked, see DealCard) so whoever closed it
-      // gets a moment of visual confirmation before it drops off the board.
-      if (deal.stage === "Closed Won" && !isWithinWonGrace(deal)) return;
-
       if (!grouped[deal.stage]) grouped[deal.stage] = [];
 
       // Find associated lead data - safely check if leadsArray is array
@@ -484,12 +470,8 @@ const STAGES = [
     async function updateDealStage(dealId, fromStage, toStage) {
       // Store deal info before update for CLV recalculation
       const deal = columns[fromStage]?.find(d => d._id === dealId);
-      
-      // 🔹 Local UI update — a deal moved into Closed Won rests there, locked
-      // (see DealCard/isWithinWonGrace), for a grace window so whoever closed
-      // it gets clear visual confirmation, then drops off the board on its
-      // own (still fully visible in All Deals throughout).
-      const wonAt = new Date();
+
+      // 🔹 Local UI update — move the deal's card from its old column to the new one.
       setColumns((prev) => {
         let deal;
         const next = { ...prev };
@@ -501,19 +483,10 @@ const STAGES = [
           return true;
         });
         if (deal) {
-          next[toStage] = [...prev[toStage], { ...deal, stage: toStage, ...(toStage === "Closed Won" && { wonAt }) }];
+          next[toStage] = [...prev[toStage], { ...deal, stage: toStage }];
         }
         return next;
       });
-
-      if (toStage === "Closed Won") {
-        setTimeout(() => {
-          setColumns((prev) => ({
-            ...prev,
-            "Closed Won": (prev["Closed Won"] || []).filter((d) => d._id !== dealId),
-          }));
-        }, WON_GRACE_MS);
-      }
 
       try {
         const token = localStorage.getItem("token");
@@ -672,21 +645,40 @@ const STAGES = [
       navigate(`/${tenantSlug}/Pipelineview/${deal._id}`);
     };
 
-    // Filter deals for search query
-    const filtered = useMemo(() => {
-      if (!query.trim()) return columns;
+    const hasActiveFilters =
+      Boolean(query.trim()) || selectedStages.length > 0 || Boolean(dateFrom) || Boolean(dateTo);
 
-      const q = query.toLowerCase();
+    // Filter deals by search query + stage checkboxes + created-date range
+    const filtered = useMemo(() => {
+      if (!hasActiveFilters) return columns;
+
+      const q = query.trim().toLowerCase();
+      const fromTime = dateFrom ? new Date(dateFrom).setHours(0, 0, 0, 0) : null;
+      const toTime = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
       const obj = {};
 
       for (const key of Object.keys(columns)) {
-        const matchedDeals = columns[key].filter(
-          (d) =>
-            d.dealName.toLowerCase().includes(q) ||
-            (d.companyName || "").toLowerCase().includes(q) ||
-            (d.assignedTo?.firstName || "").toLowerCase().includes(q) ||
-            (d.assignedTo?.lastName || "").toLowerCase().includes(q),
-        );
+        if (selectedStages.length > 0 && !selectedStages.includes(key)) continue;
+
+        const matchedDeals = columns[key].filter((d) => {
+          if (q) {
+            const matchesQuery =
+              d.dealName.toLowerCase().includes(q) ||
+              (d.companyName || "").toLowerCase().includes(q) ||
+              (d.assignedTo?.firstName || "").toLowerCase().includes(q) ||
+              (d.assignedTo?.lastName || "").toLowerCase().includes(q);
+            if (!matchesQuery) return false;
+          }
+
+          if (fromTime !== null || toTime !== null) {
+            if (!d.createdAt) return false;
+            const createdTime = new Date(d.createdAt).getTime();
+            if (fromTime !== null && createdTime < fromTime) return false;
+            if (toTime !== null && createdTime > toTime) return false;
+          }
+
+          return true;
+        });
 
         //  only add stage if deals exist
         if (matchedDeals.length > 0) {
@@ -695,7 +687,20 @@ const STAGES = [
       }
 
       return obj;
-    }, [columns, query]);
+    }, [columns, query, selectedStages, dateFrom, dateTo, hasActiveFilters]);
+
+    function toggleStage(stageId) {
+      setSelectedStages((prev) =>
+        prev.includes(stageId) ? prev.filter((s) => s !== stageId) : [...prev, stageId],
+      );
+    }
+
+    function clearFilters() {
+      setQuery("");
+      setSelectedStages([]);
+      setDateFrom("");
+      setDateTo("");
+    }
 
     // Calculate total values per column
     const totals = useMemo(() => {
@@ -833,6 +838,52 @@ const STAGES = [
           </div>
         </div>
 
+        {/* Filters: created-date range + stage checkboxes */}
+        <div className="mx-auto mb-4 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap max-w-[1600px] bg-white border border-gray-200 rounded-xl p-3">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-gray-500">From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+            />
+            <label className="text-xs font-medium text-gray-500">To</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3 items-center">
+            {STAGES.map((stage) => (
+              <label
+                key={stage.id}
+                className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer select-none"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedStages.includes(stage.id)}
+                  onChange={() => toggleStage(stage.id)}
+                  className="rounded border-gray-300"
+                />
+                {stage.title}
+              </label>
+            ))}
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="ml-auto text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
         {/* Board */}
            {/* Board with "No deals found" message */}
       <div
@@ -840,13 +891,13 @@ const STAGES = [
         className="mx-auto flex gap-4 overflow-x-auto pb-4 max-w-[1600px]"
       >
         {(() => {
-          // Check if there are any search results
-          const hasSearchResults = query.trim() 
+          // Check if there are any results under the active filters
+          const hasResults = hasActiveFilters
             ? Object.keys(filtered).length > 0
             : true;
-          
-          // Show "No deals found" message when searching with no results
-          if (query.trim() && !hasSearchResults) {
+
+          // Show "No deals found" message when filtering with no results
+          if (hasActiveFilters && !hasResults) {
             return (
               <div className="w-full flex flex-col items-center justify-center py-20 px-4">
                 <div className="text-center">
@@ -867,21 +918,21 @@ const STAGES = [
                     No deals found
                   </h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    We couldn't find any deals matching "{query}"
+                    No deals match the current search/filters
                   </p>
                   <button
-                    onClick={() => setQuery("")}
+                    onClick={clearFilters}
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Clear Search
+                    Clear filters
                   </button>
                 </div>
               </div>
             );
           }
-          
+
           // Show filtered columns when there are results
-          const visibleStages = query.trim() 
+          const visibleStages = hasActiveFilters
             ? STAGES.filter(stage => filtered[stage.id] && filtered[stage.id].length > 0)
             : STAGES;
           
@@ -995,15 +1046,11 @@ const STAGES = [
     // Overdue on an expired target, awaiting admin reassignment — read-only
     // for the owning sales person until it's reassigned.
     const isDisabled = deal.isActive === false && userRole !== "Admin";
-    // Just moved to Closed Won — resting visibly for a few minutes as
-    // confirmation before it drops off the board; locked so it can't be
-    // dragged to another stage during that window.
-    const isWonLocked = isWithinWonGrace(deal);
 
     const [{ isDragging }, dragRef] = useDrag({
       type: ItemTypes.DEAL,
       item: { id: deal._id, from: stageId },
-      canDrag: () => !isDisabled && !isWonLocked,
+      canDrag: () => !isDisabled,
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     });
 
@@ -1058,16 +1105,11 @@ const STAGES = [
 
     return (
       <div
-        ref={isDisabled || isWonLocked ? null : dragRef}
-        title={isDisabled ? "Disabled — pending admin reassignment" : isWonLocked ? "Just closed Won — locks briefly before leaving the board" : undefined}
-        className={`border p-4 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col gap-3 relative ${isDisabled ? "cursor-not-allowed opacity-50 grayscale pointer-events-none select-none bg-white border-gray-200" : isWonLocked ? "cursor-not-allowed bg-emerald-50 border-emerald-200" : "cursor-move bg-white border-gray-200"} ${className}`}
+        ref={isDisabled ? null : dragRef}
+        title={isDisabled ? "Disabled — pending admin reassignment" : undefined}
+        className={`border p-4 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col gap-3 relative ${isDisabled ? "cursor-not-allowed opacity-50 grayscale pointer-events-none select-none bg-white border-gray-200" : "cursor-move bg-white border-gray-200"} ${className}`}
         style={{ opacity: isDragging ? 0.5 : isDisabled ? 0.5 : 1 }}
       >
-        {isWonLocked && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2 py-0.5 w-fit">
-            🎉 Closed Won — leaving the board shortly
-          </span>
-        )}
         {/* Three-dot menu - only show if user has permission */}
         {canEditDelete && (
           <div className="absolute top-3 right-3 deal-menu" ref={menuRef}>

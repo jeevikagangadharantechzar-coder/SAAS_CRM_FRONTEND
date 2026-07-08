@@ -18,6 +18,9 @@ import {
   Calendar,
   Bell,
   MessageSquarePlus,
+  Upload,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 
 import { initSocket, getSocket } from "../../utils/socket";
@@ -30,6 +33,22 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Kept in sync with the backend's extension maps (middlewares/upload.js,
+// routes/files.routes.js). Browsers don't reliably report audio mimetypes for
+// every extension — e.g. a WhatsApp "*.mpeg" voice note comes back as
+// "video/mpeg" — so extension is used as the source of truth for voice notes.
+const AUDIO_EXT_MIME_MAP = {
+  mp3: "audio/mpeg", mpeg: "audio/mpeg", mpga: "audio/mpeg",
+  wav: "audio/wav", ogg: "audio/ogg", webm: "audio/webm",
+  m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac",
+  opus: "audio/opus", amr: "audio/amr", caf: "audio/x-caf", "3gp": "audio/3gpp",
+};
+
+const guessAudioMime = (filename = "") => {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  return AUDIO_EXT_MIME_MAP[ext] || "application/octet-stream";
+};
+
 /* ── Tour Steps (i18n-aware) ─────────────────────── */
 const getTourSteps = (t) => [
   { selector: ".tour-lead-header",   content: t("leads.tour.welcome") },
@@ -40,6 +59,61 @@ const getTourSteps = (t) => [
   { selector: ".tour-lead-actions",  content: t("leads.tour.actions") },
   { selector: ".tour-finish",        content: t("leads.tour.finish") },
 ];
+
+/* ── Follow-up voice note player ─────────────────────── */
+// Fetches the recording through the authenticated /files/preview endpoint
+// (a plain <audio src> can't carry the Authorization header) and hands the
+// browser a blob URL to play.
+function FollowUpAudioPlayer({ audioPath }) {
+  const [status, setStatus] = useState("loading"); // loading | done | error
+  const [src, setSrc] = useState(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let live = true;
+    setStatus("loading");
+
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+          `${API_URL}/files/preview?filePath=${encodeURIComponent(audioPath)}`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal }
+        );
+        if (!res.ok) throw new Error("Failed to load recording");
+        const mime = res.headers.get("Content-Type") || "application/octet-stream";
+        const buf = await res.arrayBuffer();
+        if (!live) return;
+        setSrc(URL.createObjectURL(new Blob([buf], { type: mime })));
+        setStatus("done");
+      } catch (err) {
+        if (!live || err.name === "AbortError") return;
+        setStatus("error");
+      }
+    })();
+
+    return () => {
+      live = false;
+      ctrl.abort();
+      setSrc((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [audioPath]);
+
+  if (status === "loading") {
+    return (
+      <p className="text-xs text-gray-400 flex items-center gap-1 mt-2">
+        <Loader2 className="w-3 h-3 animate-spin" /> Loading recording…
+      </p>
+    );
+  }
+  if (status === "error") {
+    return <p className="text-xs text-red-400 mt-2">Could not load recording</p>;
+  }
+  return <audio controls src={src} className="w-full mt-2 h-9" />;
+}
 
 /* ── Lead Table Component ─────────────────────── */
 function LeadTableComponent() {
@@ -124,6 +198,11 @@ function LeadTableComponent() {
   const [noteLead, setNoteLead] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+
+  // Voice note upload for follow-up note
+  const [audioFile, setAudioFile] = useState(null);
+  const [audioFileUrl, setAudioFileUrl] = useState(null);
+  const [audioFileError, setAudioFileError] = useState("");
 
   // Follow-up History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -515,11 +594,53 @@ function LeadTableComponent() {
     }, 0);
   };
 
+  const discardAudioFile = () => {
+    setAudioFileUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setAudioFile(null);
+    setAudioFileError("");
+  };
+
   const openAddNoteModal = (lead) => {
     setNoteLead(lead);
     setNoteText("");
+    discardAudioFile();
     setAddNoteModalOpen(true);
     setMenuOpen(null);
+  };
+
+  const closeAddNoteModal = () => {
+    setAddNoteModalOpen(false);
+    setNoteLead(null);
+    setNoteText("");
+    discardAudioFile();
+  };
+
+  const handleAudioFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setAudioFileError("");
+    const mime = guessAudioMime(file.name);
+    if (!file.type.startsWith("audio/") && mime === "application/octet-stream") {
+      setAudioFileError("Please choose an audio file");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setAudioFileError("Audio file must be under 20MB");
+      return;
+    }
+
+    setAudioFileUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      // Re-wrap with the extension-derived mime so the preview player isn't
+      // stuck with a wrong/generic type the browser guessed from the name.
+      return URL.createObjectURL(new Blob([file], { type: mime || file.type }));
+    });
+    setAudioFile(file);
   };
 
   const handleAddFollowUpNote = async () => {
@@ -529,9 +650,18 @@ function LeadTableComponent() {
       setSavingNote(true);
       const token = localStorage.getItem("token");
 
+      let payload;
+      if (audioFile) {
+        payload = new FormData();
+        payload.append("note", noteText.trim());
+        payload.append("audio", audioFile);
+      } else {
+        payload = { note: noteText.trim() };
+      }
+
       const res = await axios.post(
         `${API_URL}/leads/${noteLead._id}/followup-notes`,
-        { note: noteText.trim() },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -542,9 +672,7 @@ function LeadTableComponent() {
       );
 
       toast.success("Follow-up note added");
-      setAddNoteModalOpen(false);
-      setNoteLead(null);
-      setNoteText("");
+      closeAddNoteModal();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add follow-up note");
     } finally {
@@ -1237,7 +1365,7 @@ function LeadTableComponent() {
       </Dialog>
 
       {/* Add Follow-up Note Modal */}
-      <Dialog open={addNoteModalOpen} onOpenChange={setAddNoteModalOpen}>
+      <Dialog open={addNoteModalOpen} onOpenChange={(open) => (open ? setAddNoteModalOpen(true) : closeAddNoteModal())}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600">
@@ -1261,9 +1389,51 @@ function LeadTableComponent() {
             className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
           />
 
+          {/* Voice note upload */}
+          <div className="mt-3">
+            <div className="flex items-center gap-3">
+              <label
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm cursor-pointer ${savingNote ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                <Upload className="w-4 h-4" />
+                {audioFile ? "Replace audio file" : "Upload audio file"}
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioFileChange}
+                  disabled={savingNote}
+                  className="hidden"
+                />
+              </label>
+
+              {audioFile && (
+                <button
+                  type="button"
+                  onClick={discardAudioFile}
+                  className="text-gray-400 hover:text-red-500"
+                  title="Remove audio file"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {audioFileError && (
+              <p className="text-xs text-red-500 mt-2">{audioFileError}</p>
+            )}
+
+            {audioFile && (
+              <p className="text-xs text-gray-500 mt-2 truncate">{audioFile.name}</p>
+            )}
+
+            {audioFileUrl && (
+              <audio controls src={audioFileUrl} className="w-full mt-2 h-9" />
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 mt-4">
             <button
-              onClick={() => setAddNoteModalOpen(false)}
+              onClick={closeAddNoteModal}
               className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
               disabled={savingNote}
             >
@@ -1306,6 +1476,7 @@ function LeadTableComponent() {
                 .map((n, i) => (
                   <div key={n._id || i} className="border border-gray-200 rounded-lg p-3">
                     <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.note}</p>
+                    {n.audioPath && <FollowUpAudioPlayer audioPath={n.audioPath} />}
                     <p className="text-xs text-gray-400 mt-2">
                       {new Date(n.createdAt).toLocaleDateString("en-US", {
                         month: "short",
