@@ -12,6 +12,10 @@ import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { INDIAN_STATES, GST_SLABS } from "../../constants/indianStates";
+
+const CURRENCY_SYMBOL_MAP = { "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" };
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -36,9 +40,12 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
     billingAddress: "",
     clientTaxId: "",
     poNumber: "",
+    clientState: "",
   });
   // Ad-hoc fields the admin adds for invoices that need something the fixed form doesn't cover
   const [customFields, setCustomFields] = useState([]);
+  // The company's own GST state, set once in Settings > Business Details and reused here
+  const [companyState, setCompanyState] = useState("");
   // Amount typed in "Amount Received Now" — only used for paid/partially_paid statuses
   const [paymentReceivedNow, setPaymentReceivedNow] = useState("");
   const [note, setNote] = useState("");
@@ -78,6 +85,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         billingAddress: editingInvoice.billingAddress || "",
         clientTaxId: editingInvoice.clientTaxId || "",
         poNumber: editingInvoice.poNumber || "",
+        clientState: editingInvoice.clientState || "",
       });
       setIssueDateObj(issue.obj);
       setDueDateObj(due.obj);
@@ -109,6 +117,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         billingAddress: "",
         clientTaxId: "",
         poNumber: "",
+        clientState: "",
       });
       setIssueDateObj(null);
       setDueDateObj(null);
@@ -157,6 +166,19 @@ setSalesUsers(response.data.users);
     fetchDeals();
   }, []);
 
+  // Fetch the company's own GST state, set in Settings > Business Details
+  useEffect(() => {
+    const fetchCompanyState = async () => {
+      try {
+        const { data } = await axios.get(`${API_URL}/settings`);
+        setCompanyState(data?.state || "");
+      } catch {
+        // GST split just won't be shown until this loads — non-blocking
+      }
+    };
+    fetchCompanyState();
+  }, []);
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -168,11 +190,13 @@ setSalesUsers(response.data.users);
 
       if (selectedDeal?.value) {
         const numericValue = Number(selectedDeal.value.replace(/[^0-9.]/g, ""));
-        const currency = selectedDeal.value.replace(/[\d.,\s]/g, "").trim();
+        const rawCurrency = selectedDeal.value.replace(/[\d.,\s]/g, "").trim();
+        const currency =
+          CURRENCY_SYMBOL_MAP[rawCurrency] || rawCurrency.toUpperCase() || "INR";
         setInvoiceData((prev) => ({
           ...prev,
           price: numericValue,
-          currency: currency || "INR",
+          currency,
         }));
       }
       if (selectedDeal?.address) {
@@ -268,6 +292,14 @@ setSalesUsers(response.data.users);
       errors.customFields = "Every custom field needs a name.";
     }
 
+    if (
+      invoiceData.currency === "INR" &&
+      invoiceData.clientTaxId.trim() &&
+      !GSTIN_PATTERN.test(invoiceData.clientTaxId.trim().toUpperCase())
+    ) {
+      errors.clientTaxId = "Enter a valid 15-character GSTIN.";
+    }
+
     // Paid and Partially Paid both require an entered amount — unless the invoice was
     // already saved as Paid, in which case status/payment are locked and nothing new is collected
     const statusLocked = editingInvoice?.status === "paid";
@@ -310,7 +342,7 @@ setSalesUsers(response.data.users);
   const calculateTotalBreakdown = () => {
     const price = Number(invoiceData.price) || 0;
 
-    // Discount
+    // Discount — applied first, on the original price
     let discountAmount = 0;
     if (invoiceData.discountType && invoiceData.discountType !== "none") {
       const discountVal = Number(invoiceData.discountValue) || 0;
@@ -320,9 +352,9 @@ setSalesUsers(response.data.users);
     }
     const priceAfterDiscount = price - discountAmount;
 
-    // Tax (only if INR)
+    // Tax — computed on the discounted price, for any currency
     let taxAmount = 0;
-    if (invoiceData.currency === "INR" && invoiceData.taxType !== "none") {
+    if (invoiceData.taxType !== "none") {
       const taxVal = Number(invoiceData.tax) || 0;
       if (invoiceData.taxType === "fixed") taxAmount = taxVal;
       else if (invoiceData.taxType === "percentage")
@@ -330,6 +362,26 @@ setSalesUsers(response.data.users);
     }
 
     const total = priceAfterDiscount + taxAmount;
+
+    // GST split: same state as the client -> CGST + SGST (half each), different state -> IGST.
+    // Purely presentational — the saved `tax`/`total` fields stay a single combined amount.
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
+    const gstSplitReady =
+      invoiceData.currency === "INR" &&
+      taxAmount > 0 &&
+      !!companyState &&
+      !!invoiceData.clientState;
+    const isIntraState = gstSplitReady && companyState === invoiceData.clientState;
+    if (gstSplitReady) {
+      if (isIntraState) {
+        cgstAmount = taxAmount / 2;
+        sgstAmount = taxAmount / 2;
+      } else {
+        igstAmount = taxAmount;
+      }
+    }
 
     return {
       price: price.toFixed(2),
@@ -345,6 +397,11 @@ setSalesUsers(response.data.users);
         invoiceData.taxType === "percentage"
           ? `${invoiceData.tax}% of ${priceAfterDiscount.toFixed(2)}`
           : taxAmount.toFixed(2),
+      gstSplitReady,
+      isIntraState,
+      cgstAmount: cgstAmount.toFixed(2),
+      sgstAmount: sgstAmount.toFixed(2),
+      igstAmount: igstAmount.toFixed(2),
     };
   };
 
@@ -835,9 +892,18 @@ setSalesUsers(response.data.users);
                     name="clientTaxId"
                     value={invoiceData.clientTaxId}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                      validationErrors.clientTaxId
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                     placeholder="e.g. GSTIN, VAT No."
                   />
+                  {validationErrors.clientTaxId && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {validationErrors.clientTaxId}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -851,6 +917,37 @@ setSalesUsers(response.data.users);
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   />
                 </div>
+                {invoiceData.currency === "INR" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Your State (GST)
+                      </label>
+                      <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700">
+                        {companyState || "Not set"}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Set in Settings &gt; Business Details.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Client State (GST)
+                      </label>
+                      <select
+                        name="clientState"
+                        value={invoiceData.clientState}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      >
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -874,61 +971,70 @@ setSalesUsers(response.data.users);
               Financial Details
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {invoiceData.currency === "INR" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tax Type
-                    </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tax Type
+                </label>
+                <select
+                  name="taxType"
+                  value={invoiceData.taxType || "none"}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                >
+                  <option value="none">Zero Tax</option>
+                  <option value="fixed">Fixed Amount</option>
+                  <option value="percentage">Percentage</option>
+                </select>
+              </div>
+
+              {invoiceData.taxType === "fixed" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tax Amount
+                  </label>
+                  <input
+                    type="number"
+                    name="tax"
+                    min="0"
+                    step="0.01"
+                    value={invoiceData.tax}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    placeholder="Enter fixed tax amount"
+                  />
+                </div>
+              )}
+
+              {invoiceData.taxType === "percentage" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {invoiceData.currency === "INR" ? "GST Rate" : "Tax %"}
+                  </label>
+                  {invoiceData.currency === "INR" ? (
                     <select
-                      name="taxType"
-                      value={invoiceData.taxType || "none"}
+                      name="tax"
+                      value={invoiceData.tax}
                       onChange={handleChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                     >
-                      <option value="none">Zero Tax</option>
-                      <option value="fixed">Fixed Amount</option>
-                      <option value="percentage">Percentage</option>
+                      {GST_SLABS.map((rate) => (
+                        <option key={rate} value={rate}>{rate}%</option>
+                      ))}
                     </select>
-                  </div>
-
-                  {invoiceData.taxType === "fixed" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tax Amount
-                      </label>
-                      <input
-                        type="number"
-                        name="tax"
-                        min="0"
-                        step="0.01"
-                        value={invoiceData.tax}
-                        onChange={handleChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                        placeholder="Enter fixed tax amount"
-                      />
-                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      name="tax"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={invoiceData.tax}
+                      onChange={handleChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      placeholder="Enter tax %"
+                    />
                   )}
-
-                  {invoiceData.taxType === "percentage" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tax Percentage
-                      </label>
-                      <input
-                        type="number"
-                        name="tax"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={invoiceData.tax}
-                        onChange={handleChange}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                        placeholder="Enter tax %"
-                      />
-                    </div>
-                  )}
-                </>
+                </div>
               )}
 
               <div>
@@ -978,15 +1084,56 @@ setSalesUsers(response.data.users);
                       <span>{invoiceData.currency} {breakdown.price}</span>
                     </div>
 
-                    {invoiceData.currency === "INR" &&
-                      invoiceData.taxType !== "none" && (
-                        <div className="flex justify-between text-gray-700">
-                          <span>Tax:</span>
-                          <span>
-                            {breakdown.taxText} = {invoiceData.currency} {breakdown.taxAmount}
-                          </span>
-                        </div>
-                      )}
+                    {invoiceData.taxType !== "none" &&
+                      (breakdown.gstSplitReady ? (
+                        breakdown.isIntraState ? (
+                          <>
+                            <div className="flex justify-between text-gray-700">
+                              <span>
+                                CGST
+                                {invoiceData.taxType === "percentage"
+                                  ? ` (${invoiceData.tax / 2}%)`
+                                  : ""}
+                                :
+                              </span>
+                              <span>{invoiceData.currency} {breakdown.cgstAmount}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-700">
+                              <span>
+                                SGST
+                                {invoiceData.taxType === "percentage"
+                                  ? ` (${invoiceData.tax / 2}%)`
+                                  : ""}
+                                :
+                              </span>
+                              <span>{invoiceData.currency} {breakdown.sgstAmount}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex justify-between text-gray-700">
+                            <span>
+                              IGST
+                              {invoiceData.taxType === "percentage" ? ` (${invoiceData.tax}%)` : ""}
+                              :
+                            </span>
+                            <span>{invoiceData.currency} {breakdown.igstAmount}</span>
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          <div className="flex justify-between text-gray-700">
+                            <span>Tax:</span>
+                            <span>
+                              {breakdown.taxText} = {invoiceData.currency} {breakdown.taxAmount}
+                            </span>
+                          </div>
+                          {invoiceData.currency === "INR" && (
+                            <p className="text-xs text-amber-600">
+                              Select both states above to see the CGST/SGST/IGST split.
+                            </p>
+                          )}
+                        </>
+                      ))}
 
                     {invoiceData.discountType !== "none" && (
                       <div className="flex justify-between text-gray-700">
