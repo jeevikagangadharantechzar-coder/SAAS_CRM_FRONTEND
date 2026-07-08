@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,35 @@ import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
 import { initSocket, getSocket } from "../../utils/socket";
+import { exportRowsToExcel, downloadExcelTemplate, parseExcelFile } from "../../utils/excelImportExport";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+/* ── Import/Export column definitions — shared between Export, Template,
+   and Import so a downloaded template always re-uploads successfully. ── */
+const DEAL_COLUMNS = [
+  { key: "dealName",        label: "Deal Name" },
+  { key: "companyName",     label: "Company Name" },
+  { key: "phoneNumber",     label: "Phone Number" },
+  { key: "dealTitle",       label: "Deal Title" },
+  { key: "assignedTo",      label: "Assigned To (Email)" },
+  { key: "value",           label: "Value" },
+  { key: "currency",        label: "Currency" },
+  { key: "clientType",      label: "Client Type (B2B/B2C)" },
+  { key: "discountGiven",   label: "Discount Given (%)", type: "number" },
+  { key: "stage",           label: "Stage" },
+  { key: "email",           label: "Email" },
+  { key: "source",          label: "Source" },
+  { key: "companySize",     label: "Company Size" },
+  { key: "industry",        label: "Industry" },
+  { key: "requirement",     label: "Requirement", wrap: true },
+  { key: "address",         label: "Address", wrap: true },
+  { key: "country",         label: "Country" },
+  { key: "notes",           label: "Notes", wrap: true },
+  { key: "followUpDate",    label: "Follow Up Date (YYYY-MM-DD)", type: "date" },
+  { key: "followUpComment", label: "Follow Up Comment", wrap: true },
+  { key: "createdAt",       label: "Created At", type: "date", exportOnly: true },
+];
 
 const CURRENCY_SYMBOLS = {
   USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
@@ -46,6 +73,14 @@ function AllDealsComponent() {
 
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Import / Export
+  const importFileInputRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -275,6 +310,80 @@ function AllDealsComponent() {
     }
   };
 
+/* ── Export Deals to Excel ─────────────────────── */
+  const handleExportDeals = async ({ startDate, endDate } = {}) => {
+    try {
+      setExporting(true);
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      const { data } = await axios.get(`${API_URL}/deals/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!data?.data?.length) {
+        toast.info("No data found for the selected criteria. There is nothing to export.");
+        return;
+      }
+      await exportRowsToExcel(data.data, DEAL_COLUMNS, `deals_${new Date().toISOString().slice(0, 10)}.xlsx`, "Deals");
+      toast.success(`Exported ${data.data.length} deal(s)`);
+      setShowExportModal(false);
+      setExportStartDate("");
+      setExportEndDate("");
+    } catch (err) {
+      console.error("Export deals error:", err);
+      toast.error("Failed to export deals");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+/* ── Download Deals Import Template ─────────────────────── */
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(DEAL_COLUMNS, "deals_import_template.xlsx", "Deals Template");
+  };
+
+/* ── Import Deals from Excel ─────────────────────── */
+  const handleImportButtonClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const rows = await parseExcelFile(file, DEAL_COLUMNS);
+      if (!rows.length) {
+        toast.error("No rows found in the uploaded file");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        `${API_URL}/deals/bulk-import`,
+        { deals: rows },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.created > 0) {
+        toast.success(`Imported ${data.created} deal(s)${data.failed ? `, ${data.failed} failed` : ""}`);
+      }
+      if (data.failed > 0) {
+        console.warn("Deal import errors:", data.errors);
+        toast.error(`${data.failed} row(s) failed — see console for details`);
+      }
+      fetchDeals();
+    } catch (err) {
+      console.error("Import deals error:", err);
+      toast.error(err.response?.data?.message || "Failed to import deals");
+    } finally {
+      setImporting(false);
+    }
+  };
+
 /* ── Fetch Users Function ─────────────────────── */
   const fetchUsers = async () => {
     try {
@@ -429,6 +538,38 @@ function AllDealsComponent() {
             >
               <Ban className="w-4 h-4" /> Reject Deals
             </button>
+          )}
+          {userRole === "Admin" && (
+            <>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={handleDownloadTemplate}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                title="Download an Excel template with all required columns"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Download Template
+              </button>
+              <button
+                onClick={handleImportButtonClick}
+                disabled={importing}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Upload className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+              </button>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={exporting}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+              </button>
+            </>
           )}
           {userRole === "Admin" && (
             <button
@@ -886,6 +1027,66 @@ function AllDealsComponent() {
         </div>,
         document.body
       )}
+
+      {/* Export Modal */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-gray-800">
+              <Download className="w-5 h-5" />
+              Export Deals
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-gray-500 mb-3">
+            Optionally filter by date range. Leave both blank to export all deals.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+                max={exportEndDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+                min={exportStartDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setShowExportModal(false);
+                setExportStartDate("");
+                setExportEndDate("");
+              }}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleExportDeals({ startDate: exportStartDate, endDate: exportEndDate })}
+              disabled={exporting}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>

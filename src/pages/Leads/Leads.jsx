@@ -18,6 +18,9 @@ import {
   Calendar,
   Bell,
   MessageSquarePlus,
+  Upload,
+  Download,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import { initSocket, getSocket } from "../../utils/socket";
@@ -27,8 +30,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import { exportRowsToExcel, downloadExcelTemplate, parseExcelFile } from "../../utils/excelImportExport";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+/* ── Import/Export column definitions — shared between Export, Template,
+   and Import so a downloaded template always re-uploads successfully. ── */
+// Mirrors the Create Lead form's own field groups/order (CreateLeads.jsx
+// `fieldGroups`) exactly, so the template reads like the form itself.
+const LEAD_COLUMNS = [
+  // Basic Information
+  { key: "leadName",     label: "Lead Name" },
+  { key: "companyName",  label: "Company Name" },
+  { key: "phoneNumber",  label: "Phone Number" },
+  { key: "email",        label: "Email" },
+  { key: "address",      label: "Address", wrap: true },
+  { key: "country",      label: "Country" },
+  // Business Details
+  { key: "clientType",   label: "Client Type (B2B/B2C)" },
+  { key: "industry",     label: "Industry" },
+  { key: "source",       label: "Source" },
+  { key: "requirement",  label: "Requirement", wrap: true },
+  // Lead Management
+  { key: "status",       label: "Status" },
+  { key: "assignTo",     label: "Assign To (Email)" },
+  { key: "followUpDate", label: "Follow-up Date (YYYY-MM-DD)", type: "date" },
+  // Additional Information
+  { key: "notes",        label: "Notes", wrap: true },
+  // Read-only, export only
+  { key: "createdAt",    label: "Created At", type: "date", exportOnly: true },
+];
 
 /* ── Tour Steps (i18n-aware) ─────────────────────── */
 const getTourSteps = (t) => [
@@ -50,6 +81,14 @@ function LeadTableComponent() {
   const { t } = useTranslation();
 
   const [leads, setLeads] = useState([]);
+
+  // Import / Export
+  const importFileInputRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [leadToReject, setLeadToReject] = useState(null); // { id, name }
@@ -288,6 +327,80 @@ function LeadTableComponent() {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+/* ── Export Leads to Excel ─────────────────────── */
+  const handleExportLeads = async ({ startDate, endDate } = {}) => {
+    try {
+      setExporting(true);
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      const { data } = await axios.get(`${API_URL}/leads/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!data?.data?.length) {
+        toast.info("No data found for the selected criteria. There is nothing to export.");
+        return;
+      }
+      await exportRowsToExcel(data.data, LEAD_COLUMNS, `leads_${new Date().toISOString().slice(0, 10)}.xlsx`, "Leads");
+      toast.success(`Exported ${data.data.length} lead(s)`);
+      setShowExportModal(false);
+      setExportStartDate("");
+      setExportEndDate("");
+    } catch (err) {
+      console.error("Export leads error:", err);
+      toast.error("Failed to export leads");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+/* ── Download Leads Import Template ─────────────────────── */
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(LEAD_COLUMNS, "leads_import_template.xlsx", "Leads Template");
+  };
+
+/* ── Import Leads from Excel ─────────────────────── */
+  const handleImportButtonClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const rows = await parseExcelFile(file, LEAD_COLUMNS);
+      if (!rows.length) {
+        toast.error("No rows found in the uploaded file");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        `${API_URL}/leads/bulk-import`,
+        { leads: rows },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.created > 0) {
+        toast.success(`Imported ${data.created} lead(s)${data.failed ? `, ${data.failed} failed` : ""}`);
+      }
+      if (data.failed > 0) {
+        console.warn("Lead import errors:", data.errors);
+        toast.error(`${data.failed} row(s) failed — see console for details`);
+      }
+      fetchLeads();
+    } catch (err) {
+      console.error("Import leads error:", err);
+      toast.error(err.response?.data?.message || "Failed to import leads");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Fetch target-linked lead IDs for sales users
   useEffect(() => {
@@ -654,6 +767,39 @@ function LeadTableComponent() {
             >
               <Ban className="w-4 h-4" /> Reject Leads
             </button>
+          )}
+
+          {userRole === "Admin" && (
+            <>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={handleDownloadTemplate}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                title="Download an Excel template with all required columns"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Download Template
+              </button>
+              <button
+                onClick={handleImportButtonClick}
+                disabled={importing}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Upload className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+              </button>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={exporting}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+              </button>
+            </>
           )}
 
           {userRole === "Admin" && (
@@ -1096,6 +1242,66 @@ function LeadTableComponent() {
         </div>,
         document.body
       )}
+
+      {/* Export Modal */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-gray-800">
+              <Download className="w-5 h-5" />
+              Export Leads
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-gray-500 mb-3">
+            Optionally filter by date range. Leave both blank to export all leads.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+                max={exportEndDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+                min={exportStartDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setShowExportModal(false);
+                setExportStartDate("");
+                setExportEndDate("");
+              }}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleExportLeads({ startDate: exportStartDate, endDate: exportEndDate })}
+              disabled={exporting}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>

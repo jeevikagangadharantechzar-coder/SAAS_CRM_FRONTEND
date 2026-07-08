@@ -8,11 +8,27 @@ import IndiaMartIntegrationCard from "../../components/integrations/IndiaMartInt
 import NinetyNineAcresIntegrationCard from "../../components/integrations/NinetyNineAcresIntegrationCard.jsx";
 import SulekhaIntegrationCard from "../../components/integrations/SulekhaIntegrationCard.jsx";
 
+const usePlanFeature = (key) => {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    return user?.planFeatures?.[key] !== false;
+  } catch {
+    return true;
+  }
+};
+
 export default function Integrations() {
   const [integrations, setIntegrations] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [connecting, setConnecting]     = useState(false);
   const [syncing, setSyncing]           = useState(false);
+
+  const hasFacebook  = usePlanFeature("integration_facebook");
+  const hasLinkedin  = usePlanFeature("integration_linkedin");
+  const hasJustdial  = usePlanFeature("integration_justdial");
+  const hasIndiamart = usePlanFeature("integration_indiamart");
+  const has99acres   = usePlanFeature("integration_99acres");
+  const hasSulekha   = usePlanFeature("integration_sulekha");
 
   // ── Fetch connected pages ─────────────────────────────────────────────────
   const fetchIntegrations = async () => {
@@ -29,8 +45,9 @@ export default function Integrations() {
   };
 
   useEffect(() => {
-    fetchIntegrations();
-  }, []);
+    if (hasFacebook) fetchIntegrations();
+    else setLoading(false);
+  }, [hasFacebook]);
 
   // ── Connect Facebook Page ─────────────────────────────────────────────────
   const handleConnectFacebook = async () => {
@@ -118,6 +135,7 @@ export default function Integrations() {
       </div>
 
       {/* Facebook / Instagram Card */}
+      {hasFacebook && (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
 
         {/* Card Header */}
@@ -225,20 +243,21 @@ export default function Integrations() {
           </p>
         </div>
       </div>
+      )}
 
       {/* LinkedIn Campaigns Card */}
-      <LinkedInIntegrationCard />
+      {hasLinkedin && <LinkedInIntegrationCard />}
 
       {/* Justdial Webhook Card */}
-      <JustdialIntegrationCard />
+      {hasJustdial && <JustdialIntegrationCard />}
       {/* IndiaMART Integration Card */}
-      <IndiaMartIntegrationCard />
+      {hasIndiamart && <IndiaMartIntegrationCard />}
 
       {/* 99acres Webhook Card */}
-      <NinetyNineAcresIntegrationCard />
+      {has99acres && <NinetyNineAcresIntegrationCard />}
 
       {/* Sulekha Webhook Card */}
-      <SulekhaIntegrationCard />
+      {hasSulekha && <SulekhaIntegrationCard />}
 
       {/* How it works */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
