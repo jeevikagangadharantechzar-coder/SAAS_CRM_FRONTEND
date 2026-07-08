@@ -16,6 +16,22 @@ import { INDIAN_STATES, GST_SLABS } from "../../constants/indianStates";
 
 const CURRENCY_SYMBOL_MAP = { "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" };
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const MAX_INVOICE_PRICE = 999999999999.99; // 12 digits — well below the ~21-digit threshold where number inputs switch to scientific notation
+
+// Truncates (rather than replaces) an in-progress price string to 12 integer
+// digits + 2 decimal digits, so extra keystrokes past the limit are simply
+// ignored instead of the field jumping to an unrelated max value.
+const sanitizePriceInput = (raw) => {
+  if (raw === "") return "";
+  let cleaned = raw.replace(/[^\d.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot !== -1) {
+    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  }
+  const [intPart, decPart] = cleaned.split(".");
+  const boundedInt = intPart.slice(0, 12);
+  return decPart !== undefined ? `${boundedInt}.${decPart.slice(0, 2)}` : boundedInt;
+};
 
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -182,6 +198,16 @@ setSalesUsers(response.data.users);
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "price") {
+      // Stop accepting digits past a sane length instead of typing — keeps
+      // whatever the user actually entered rather than snapping to a fixed
+      // max, while still staying well below the ~21-digit threshold where
+      // number inputs flip into scientific notation.
+      setInvoiceData((prev) => ({ ...prev, price: sanitizePriceInput(value) }));
+      return;
+    }
+
     setInvoiceData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "deal") {
@@ -817,6 +843,7 @@ setSalesUsers(response.data.users);
                         type="number"
                         name="price"
                         min="0"
+                        max={MAX_INVOICE_PRICE}
                         step="0.01"
                         value={invoiceData.price}
                         onChange={handleChange}
@@ -837,7 +864,7 @@ setSalesUsers(response.data.users);
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Amount
                       </label>
-                      <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg font-medium">
+                      <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg font-medium break-words">
                         {invoiceData.currency}: {calculateAmount()}
                       </div>
                     </div>
