@@ -9,7 +9,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { validateTargetDates, todayISO, tomorrowISO, toLocalDateString } from "../../utils/dateValidation";
 import {
   Plus, Target, Trash2, X, Users, Phone, TrendingUp,
-  Calendar, CheckCircle, Activity, Briefcase, Mail,
+  Calendar, CheckCircle, Briefcase, Mail,
   Clock, Award, ChevronDown, ChevronUp, Building2, Check, MessageSquare, Pencil,
   LayoutGrid, List, Bell, Flag, ArrowRightLeft, AlertCircle, UserCheck,
   ChevronLeft, ChevronRight, Trophy, XCircle,
@@ -746,12 +746,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
   const liveDeals = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",   countOnly: false },
-    { label: "Deals Won",                target: percentages.effTargetDeals ?? t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100",  countOnly: false },
-    { label: "Leads to Deals Won",       target: null,              actual: actuals.leadDealWon || 0,     pct: null, icon: <Trophy size={13} className="text-amber-500" />,  bg: "bg-amber-50",  border: "border-amber-100",  countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
-    { label: "Deals Lost",      target: null,              actual: actuals.dealsLost || 0,       pct: null, icon: <XCircle size={13} className="text-red-500" />,   bg: "bg-red-50",    border: "border-red-100",    countOnly: true, badgeText: "closed lost",  badgeClass: "text-red-600 bg-red-100"   },
-    { label: "Calls Made",      target: t.targetCalls,    actual: actuals.calls || 0,           pct: percentages.callsPercent || 0,    icon: <Phone size={13} className="text-orange-500" />,     bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
-    { label: "Meetings Done",   target: t.targetMeetings, actual: actuals.meetings || 0,        pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />,  bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
+    { label: "Deals Won",  target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Deals Lost", target: null,                                       actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
   ];
 
   return (
@@ -1428,13 +1424,11 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
 
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">Target Numbers</p>
-              <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel. Calls &amp; Meetings can be set manually.</p>
+              <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { key: "targetLeads",    label: "Leads",        icon: <Users size={12} className="text-blue-500" />,      auto: true },
                   { key: "targetDeals",    label: "Deals",        icon: <TrendingUp size={12} className="text-green-500" />, auto: true },
-                  { key: "targetCalls",    label: "Calls Made",   icon: <Phone size={12} className="text-orange-500" />,     auto: false },
-                  { key: "targetMeetings", label: "Meetings Done",icon: <Activity size={12} className="text-purple-500" />,  auto: false },
                 ].map(({ key, label, icon, auto }) => (
                   <div key={key}>
                     <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-[9px] text-blue-400 font-semibold ml-1">from ticks</span>}</label>
@@ -1641,13 +1635,11 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
             {/* Target Numbers */}
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">Target Numbers</p>
-              <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel. Calls &amp; Meetings can be set manually.</p>
+              <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { key: "targetLeads",    label: "Leads",        icon: <Users size={12} className="text-blue-500" />,      auto: true },
                   { key: "targetDeals",    label: "Deals",        icon: <TrendingUp size={12} className="text-green-500" />, auto: true },
-                  { key: "targetCalls",    label: "Calls Made",   icon: <Phone size={12} className="text-orange-500" />,     auto: false },
-                  { key: "targetMeetings", label: "Meetings Done",icon: <Activity size={12} className="text-purple-500" />,  auto: false },
                 ].map(({ key, label, icon, auto }) => (
                   <div key={key}>
                     <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-[9px] text-blue-400 font-semibold ml-1">from ticks</span>}</label>
@@ -2037,17 +2029,11 @@ export default function TargetManagement() {
       {dashStats && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            <StatCard label="Total Leads"      value={dashStats.monthly.totalLeads}          icon={<Users size={16} />}       color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
-            <StatCard label="Leads Converted"  value={dashStats.monthly.convertedLeads}      icon={<CheckCircle size={16} />} color="text-green-600"  bg="bg-green-50 border border-green-100" />
-            <StatCard label="Lead → Deal Rate" value={`${dashStats.monthly.leadToDealRate}%`} icon={<TrendingUp size={16} />}  color="text-purple-600" bg="bg-purple-50 border border-purple-100" />
-            <StatCard label="Won Deals"        value={dashStats.monthly.wonDeals}            icon={<Award size={16} />}       color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
-          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard label="Monthly Calls"    value={dashStats.monthly.calls}    icon={<Phone size={16} />}    color="text-orange-600" bg="bg-orange-50 border border-orange-100" />
-            <StatCard label="Monthly Meetings" value={dashStats.monthly.meetings} icon={<Activity size={16} />} color="text-teal-600"   bg="bg-teal-50 border border-teal-100" />
-            <StatCard label="Weekly Calls"     value={dashStats.weekly.calls}     icon={<Phone size={16} />}    color="text-cyan-600"   bg="bg-cyan-50 border border-cyan-100" />
-            <StatCard label="Weekly Meetings"  value={dashStats.weekly.meetings}  icon={<Calendar size={16} />} color="text-pink-600"   bg="bg-pink-50 border border-pink-100" />
+            <StatCard label="Total Leads" value={dashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Total Deals" value={dashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Deals Won"   value={dashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deals Lost"  value={dashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
           </div>
         </div>
       )}
