@@ -101,26 +101,7 @@ const SuperAdminTenants = () => {
     fetchTenants();
   }, []);
 
-  const handleImpersonate = async (tenant) => {
-    try {
-      const res = await superApi.post(`/tenants/${tenant._id}/impersonate`);
-      const { token, slug, user } = res.data;
-      if (token) {
-        dispatch(
-          setCredentials({
-            token,
-            slug,
-            user,
-          })
-        );
-        // Open the tenant dashboard in a new tab
-        window.open(`/${slug}/dashboard`, "_blank");
-      }
-    } catch (err) {
-      console.error("Failed to impersonate tenant:", err);
-      alert(err.response?.data?.message || err.response?.data?.error || "Failed to log in to tenant dashboard");
-    }
-  };
+
 
   const handleToggleActive = async (id, currentStatus) => {
     try {
@@ -291,14 +272,7 @@ const SuperAdminTenants = () => {
                             <ToggleLeft size={28} className="text-slate-400" />
                           )}
                         </button>
-                        {/* Launch portal button */}
-                        <button
-                          onClick={() => handleImpersonate(t)}
-                          className="p-1.5 border border-slate-200 rounded-lg hover:border-[#008ecc]/40 hover:text-[#008ecc] transition-all cursor-pointer flex items-center justify-center"
-                          title="Open tenant portal directly"
-                        >
-                          <ExternalLink size={15} />
-                        </button>
+
                         {/* Edit button */}
                         <button
                           onClick={() => handleEditClick(t)}

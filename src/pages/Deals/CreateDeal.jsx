@@ -5,6 +5,7 @@ import axios from "axios";
 import { getNames } from "country-list";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Select from "react-select";
 import {
   ArrowLeft,
   DollarSign,
@@ -694,9 +695,9 @@ export default function CreateDeal() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-10">
+        <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6 md:space-y-10">
           {/* Deal Info */}
-          <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">
+          <div className="space-y-4 md:space-y-6 p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold border-b pb-2 text-blue-600">
               Deal Information
             </h2>
@@ -739,13 +740,13 @@ export default function CreateDeal() {
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                   <DollarSign size={16} /> Deal Value <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full">
                   <select
                     value={formData.currency}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, currency: e.target.value }))
                     }
-                    className="w-28 border rounded-lg px-2 text-sm h-11 focus:ring-2 focus:ring-green-500 focus:outline-none"
+                    className="w-1/3 md:w-24 border rounded-lg px-2 text-sm h-11 focus:ring-2 focus:ring-green-500 focus:outline-none flex-shrink-0"
                   >
                     {currencyOptions.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -767,15 +768,15 @@ export default function CreateDeal() {
                       }
                     }}
                     placeholder="Enter deal value"
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm h-11 focus:ring-2 focus:ring-green-500 focus:outline-none"
+                    className="w-2/3 flex-1 border rounded-lg px-3 py-2 text-sm h-11 focus:ring-2 focus:ring-green-500 focus:outline-none min-w-0"
                   />
                 </div>
                 {errors.dealValue && (
                   <p className="text-red-500 text-sm mt-1">Deal Value is required</p>
                 )}
-                <div className="h-5 mt-1">
+                <div className="min-h-[20px] mt-1">
                   {formData.dealValue && userCurrency && (
-                    <p className="flex items-center gap-1 text-sm text-gray-500">
+                    <p className="flex flex-wrap items-center gap-x-1 text-sm text-gray-500">
                       Your currency ({userCurrency}):
                       {isConverting ? (
                         <span className="text-gray-400 animate-pulse">Converting...</span>
@@ -799,23 +800,55 @@ export default function CreateDeal() {
                     )}
                   </label>
                   {field.type === "select" ? (
-                    <select
-                      name={field.name}
-                      value={formData[field.name] || ""}
-                      onChange={handleChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
-                    >
-                      <option value="">Select {field.label}</option>
-                      {field.options.map((opt) =>
-                        typeof opt === "string" ? (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ) : (
-                          <option key={opt.value || opt} value={opt.value || opt}>
-                            {opt.label || opt}
-                          </option>
-                        )
-                      )}
-                    </select>
+                    field.name === "country" ? (
+                      <Select
+                        options={field.options.map((opt) =>
+                          typeof opt === "string" ? { value: opt, label: opt } : { value: opt.value || opt, label: opt.label || opt }
+                        )}
+                        value={formData[field.name] ? { value: formData[field.name], label: formData[field.name] } : null}
+                        onChange={(selected) => handleChange({ target: { name: field.name, value: selected ? selected.value : "" } })}
+                        placeholder={`Select ${field.label}`}
+                        isClearable
+                        menuPortalTarget={document.body}
+                        styles={{
+                          control: (base, state) => ({
+                            ...base,
+                            minHeight: '44px',
+                            borderRadius: '0.5rem',
+                            borderColor: state.isFocused ? '#60a5fa' : '#e5e7eb',
+                            boxShadow: state.isFocused ? '0 0 0 2px #bfdbfe' : 'none',
+                            fontSize: '0.875rem',
+                            '&:hover': { borderColor: state.isFocused ? '#60a5fa' : '#d1d5db' }
+                          }),
+                          menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                          menu: (base) => ({ ...base, fontSize: '0.875rem' }),
+                          option: (base, state) => ({
+                            ...base,
+                            whiteSpace: 'normal',
+                            backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : 'white',
+                            color: state.isSelected ? 'white' : '#1f2937'
+                          })
+                        }}
+                      />
+                    ) : (
+                      <select
+                        name={field.name}
+                        value={formData[field.name] || ""}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11 truncate"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options.map((opt) =>
+                          typeof opt === "string" ? (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ) : (
+                            <option key={opt.value || opt} value={opt.value || opt}>
+                              {opt.label || opt}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    )
                   ) : (
                     <>
                       <input
@@ -845,7 +878,7 @@ export default function CreateDeal() {
           </div>
 
           {/* Follow-up Section */}
-          <div className="p-6 border border-gray-200 rounded-xl shadow-sm">
+          <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold border-b pb-2 text-purple-600 flex items-center gap-2">
               <Clock size={18} /> Follow-up
             </h2>
@@ -910,7 +943,7 @@ export default function CreateDeal() {
 
           {/* Management */}
           {showAssignToField && (
-            <div className="p-6 border border-gray-200 rounded-xl shadow-sm">
+            <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
               <h2 className="text-lg font-semibold border-b pb-2 text-yellow-600">
                 Management
               </h2>

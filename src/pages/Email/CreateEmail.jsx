@@ -558,10 +558,10 @@ const CreateEmail = () => {
                   {existingAttachments.map((attachment, index) => (
                     <div
                       key={index}
-                      className="flex justify-between items-center bg-blue-50 border border-blue-200 rounded-lg px-3 py-2"
+                      className="flex justify-between items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2"
                     >
-                      <div className="flex items-center gap-2">
-                        <Paperclip size={16} className="text-blue-500" />
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Paperclip size={16} className="text-blue-500 flex-shrink-0" />
                         <span className="text-sm truncate">
                           {attachment.filename || attachment.originalName || `Attachment ${index + 1}`}
                         </span>
@@ -569,7 +569,7 @@ const CreateEmail = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveExistingAttachment(index)}
-                        className="text-red-500 text-sm hover:text-red-700"
+                        className="text-red-500 text-sm hover:text-red-700 flex-shrink-0"
                       >
                         Remove
                       </button>
@@ -611,9 +611,9 @@ const CreateEmail = () => {
                   {attachments.map((file, index) => (
                     <div
                       key={index}
-                      className="flex justify-between items-center bg-white border rounded-lg px-3 py-2"
+                      className="flex justify-between items-center gap-2 bg-white border rounded-lg px-3 py-2"
                     >
-                      <span className="text-sm truncate">{file.name}</span>
+                      <span className="text-sm truncate min-w-0 flex-1">{file.name}</span>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -622,7 +622,7 @@ const CreateEmail = () => {
                             prev.filter((_, i) => i !== index)
                           );
                         }}
-                        className="text-red-500 text-sm"
+                        className="text-red-500 text-sm flex-shrink-0"
                       >
                         Remove
                       </button>

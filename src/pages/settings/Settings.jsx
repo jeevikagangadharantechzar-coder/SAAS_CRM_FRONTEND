@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText } from "react-feather";
+import { INDIAN_STATES } from "../../constants/indianStates";
 
 const authHeader = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -38,7 +39,7 @@ export default function Settings() {
 
   // Business details shown on invoices
   const [businessDetails, setBusinessDetails] = useState({
-    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "",
+    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "", state: "",
   });
 
   // Bank details shown on invoices
@@ -154,6 +155,7 @@ export default function Settings() {
         email: data?.email || "",
         taxIdLabel: data?.taxIdLabel || "Tax ID",
         taxId: data?.taxId || "",
+        state: data?.state || "",
       });
       setBankDetails({
         accountName: data?.bankDetails?.accountName || "",
@@ -774,6 +776,22 @@ export default function Settings() {
                     className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">State (for GST)</label>
+                <select
+                  value={businessDetails.state}
+                  onChange={(e) => setBusinessDetails((p) => ({ ...p, state: e.target.value }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500">
+                  Used to decide CGST+SGST vs IGST on Indian invoices.
+                </p>
               </div>
             </div>
 

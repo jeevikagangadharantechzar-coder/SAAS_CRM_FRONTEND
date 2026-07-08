@@ -486,7 +486,7 @@ export default function ChatWidget() {
   // ── Minimized bar ─────────────────────────────────────────────────────────
   if (isMinimized) {
     return (
-      <div className="fixed bottom-6 right-6 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-slide-up">
+      <div className="fixed bottom-2 right-2 left-2 sm:bottom-6 sm:right-6 sm:left-auto w-[calc(100vw-16px)] sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-slide-up">
         <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white cursor-pointer" onClick={() => setIsMinimized(false)}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -519,7 +519,7 @@ export default function ChatWidget() {
 
   // ── Expanded chat window ──────────────────────────────────────────────────
   return (
-    <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 animate-slide-up">
+    <div className="fixed bottom-2 right-2 left-2 sm:bottom-6 sm:right-6 sm:left-auto w-[calc(100vw-16px)] sm:w-96 h-[85vh] sm:h-[600px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50 animate-slide-up">
 
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-xl">
@@ -719,8 +719,7 @@ export default function ChatWidget() {
               }}
               className="text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors border border-blue-100 flex items-center space-x-1"
             >
-              <span>{action.label.split(' ')[0]}</span>
-              <span className="hidden sm:inline">{action.label.split(' ').slice(1).join(' ')}</span>
+              <span>{action.label.trim()}</span>
             </button>
           ))}
         </div>

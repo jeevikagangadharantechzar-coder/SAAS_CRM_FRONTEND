@@ -218,8 +218,18 @@ const UpgradeRequests = () => {
                             <span className="text-xs text-slate-500 font-mono">Slug: {req.tenant_id?.slug}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 font-bold text-slate-900 uppercase">
-                          {req.plan_id?.plan_name || "N/A"}
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-900 uppercase">{req.plan_id?.plan_name || "N/A"}</div>
+                          {req.billing_cycle && (
+                            <div className="text-xs text-[#008ecc] font-semibold mt-0.5">
+                              {{ monthly: "Monthly", half_yearly: "Half Year", yearly: "Yearly" }[req.billing_cycle] || req.billing_cycle}
+                            </div>
+                          )}
+                          {req.description && (
+                            <div className="text-xs text-slate-400 mt-1 max-w-[200px] truncate" title={req.description}>
+                              "{req.description}"
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 font-semibold text-slate-800">
                           {req.wanted_users} Seats
@@ -239,11 +249,27 @@ const UpgradeRequests = () => {
                               ? "bg-blue-50 text-blue-700 border-blue-100"
                               : "bg-amber-50 text-amber-700 border-amber-100"
                           }`}>
-                            {req.type === "mid_cycle" ? "Mid-Cycle" : "Expired"}
+                            {req.type === "mid_cycle" ? "Mid-Cycle" : "Limit Over"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 font-extrabold text-[#008ecc] text-base">
-                          {req.final_price === 0 ? "Free / Custom" : `$${req.final_price.toFixed(2)}`}
+                        <td className="px-6 py-4">
+                          {(() => {
+                            const tier = req.plan_id?.tiers?.find(t => t.billing_cycle === req.billing_cycle);
+                            const planPrice = tier?.price ?? req.base_price ?? req.plan_id?.price_monthly ?? 0;
+                            const toCharge  = req.final_price ?? 0;
+                            return (
+                              <div className="space-y-1">
+                                <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Plan Price</div>
+                                <div className="font-extrabold text-slate-800 text-base">${planPrice.toLocaleString()}</div>
+                                {req.prorated_discount > 0 && (
+                                  <div className="text-xs text-emerald-600 font-semibold">− ${req.prorated_discount.toFixed(2)} credit</div>
+                                )}
+                                <div className={`text-xs font-bold ${toCharge === 0 ? "text-emerald-600" : "text-[#008ecc]"}`}>
+                                  Charge: {toCharge === 0 ? "Covered by credit" : `$${toCharge.toLocaleString()}`}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end space-x-2">

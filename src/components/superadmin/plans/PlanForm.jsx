@@ -1,9 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
-  ArrowLeft,
   Loader2,
-  ShieldAlert,
   AlertTriangle,
   HelpCircle,
   LayoutGrid,
@@ -35,6 +33,11 @@ import {
   Calendar,
   Video,
   Bot,
+  Link2,
+  Facebook,
+  Linkedin,
+  Webhook,
+  Globe,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -63,6 +66,12 @@ const DEFAULT_FEATURES = {
   zoom_meetings: true,
   messages: true,
   chatbot: true,
+  integration_facebook: true,
+  integration_linkedin: true,
+  integration_justdial: true,
+  integration_indiamart: true,
+  integration_99acres: true,
+  integration_sulekha: true,
 };
 
 const FEATURE_GROUPS = [
@@ -124,6 +133,18 @@ const FEATURE_GROUPS = [
     ],
   },
   {
+    title: "Lead Source Integrations",
+    icon: Link2,
+    features: [
+      { key: "integration_facebook", label: "Facebook & Instagram", icon: Facebook },
+      { key: "integration_linkedin", label: "LinkedIn", icon: Linkedin },
+      { key: "integration_justdial", label: "Justdial", icon: Webhook },
+      { key: "integration_indiamart", label: "IndiaMART", icon: Globe },
+      { key: "integration_99acres", label: "99acres", icon: Webhook },
+      { key: "integration_sulekha", label: "Sulekha", icon: Webhook },
+    ],
+  },
+  {
     title: "Administration",
     icon: ShieldCheck,
     features: [
@@ -136,6 +157,29 @@ const FEATURE_GROUPS = [
 
 const TOTAL_FEATURE_COUNT = Object.keys(DEFAULT_FEATURES).length;
 
+const DEFAULT_TIERS = [
+  { billing_cycle: "monthly",     label: "Monthly",   price: "", grace_days: "", duration_months: 1,  enabled: false },
+  { billing_cycle: "half_yearly", label: "Half Year", price: "", grace_days: "", duration_months: 6,  enabled: false },
+  { billing_cycle: "yearly",      label: "Yearly",    price: "", grace_days: "", duration_months: 12, enabled: false },
+];
+
+function buildInitialTiers(savedTiers) {
+  if (!savedTiers || savedTiers.length === 0) return DEFAULT_TIERS;
+  const map = {};
+  savedTiers.forEach((t) => { map[t.billing_cycle] = t; });
+  return DEFAULT_TIERS.map((d) =>
+    map[d.billing_cycle]
+      ? {
+          ...d,
+          price:          String(map[d.billing_cycle].price ?? ""),
+          grace_days:     String(map[d.billing_cycle].grace_days ?? ""),
+          duration_months: map[d.billing_cycle].duration_months ?? d.duration_months,
+          enabled: true,
+        }
+      : d
+  );
+}
+
 export const PlanForm = ({
   initialData,
   onSubmit,
@@ -145,7 +189,8 @@ export const PlanForm = ({
   hasRecommendedPlan = false,
 }) => {
   const navigate = useNavigate();
-  const isFirstRender = useRef(true);
+
+  const [tiers, setTiers] = React.useState(() => buildInitialTiers(initialData?.tiers));
 
   const {
     register,
@@ -174,6 +219,12 @@ export const PlanForm = ({
     },
   });
 
+  const updateTier = (billing_cycle, field, value) => {
+    setTiers((prev) =>
+      prev.map((t) => (t.billing_cycle === billing_cycle ? { ...t, [field]: value } : t))
+    );
+  };
+
   const planName = watch("plan_name");
   const planFeatures = watch("features") || {};
   const allFeaturesSelected = Object.keys(DEFAULT_FEATURES).every((key) => planFeatures[key]);
@@ -186,8 +237,6 @@ export const PlanForm = ({
     });
   };
   const planType = watch("plan_type");
-  const priceMonthly = watch("price_monthly");
-  const priceYearly = watch("price_yearly");
   const isRecommended = watch("is_recommended");
   const planCode = watch("plan_code");
 
@@ -202,23 +251,6 @@ export const PlanForm = ({
     }
   }, [planName, dirtyFields.plan_code, setValue, isEditMode]);
 
-  // Auto-calculate yearly price (Monthly * 12) for Paid plan.
-  // Skip the initial render so a saved yearly price is never overwritten on load.
-  // shouldDirty: false keeps price_yearly clean so the sync runs on every subsequent
-  // monthly change, until the user manually edits the yearly field.
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (planType === "paid" && priceMonthly !== undefined && priceMonthly !== "") {
-      const pm = parseFloat(priceMonthly);
-      if (!isNaN(pm) && !dirtyFields.price_yearly) {
-        setValue("price_yearly", pm * 12, { shouldValidate: true, shouldDirty: false });
-      }
-    }
-  }, [priceMonthly, planType, setValue, dirtyFields.price_yearly]);
-
   // Lock Max Users to Unlimited (0) for Enterprise plan
   useEffect(() => {
     if (planType === "enterprise") {
@@ -226,21 +258,29 @@ export const PlanForm = ({
     }
   }, [planType, setValue]);
 
-  // Calculate yearly savings percentage
-  const calculateSavings = () => {
-    const pm = parseFloat(priceMonthly);
-    const py = parseFloat(priceYearly);
-    if (pm > 0 && py > 0) {
-      const savings = Math.round((1 - py / (pm * 12)) * 100);
-      return savings > 0 ? savings : null;
-    }
-    return null;
+  const handleFormSubmit = (data) => {
+    const enabledTiers = tiers
+      .filter((t) => t.enabled)
+      .map(({ enabled, label, price, grace_days, ...rest }) => ({
+        ...rest,
+        price:      Math.max(0, parseFloat(price)  || 0),
+        grace_days: Math.max(0, parseInt(grace_days) || 0),
+      }));
+
+    const monthlyTier = enabledTiers.find((t) => t.billing_cycle === "monthly");
+    const yearlyTier  = enabledTiers.find((t) => t.billing_cycle === "yearly");
+
+    onSubmit({
+      ...data,
+      tiers: enabledTiers,
+      price_monthly: monthlyTier?.price ?? data.price_monthly ?? 0,
+      price_yearly:  yearlyTier?.price  ?? data.price_yearly  ?? 0,
+      billing_cycle: enabledTiers[0]?.billing_cycle ?? data.billing_cycle ?? "monthly",
+    });
   };
 
-  const savings = calculateSavings();
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       
       {/* Left Column (2/3 width) - Identity and Pricing */}
       <div className="lg:col-span-2 space-y-6">
@@ -359,123 +399,133 @@ export const PlanForm = ({
           </div>
         </div>
 
-        {/* SECTION 2 — Pricing & Billing */}
+        {/* SECTION 2 — Pricing Tiers */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
-            <h3 className="text-md font-bold tracking-tight">SECTION 2 — Pricing & Billing</h3>
+            <h3 className="text-md font-bold tracking-tight">SECTION 2 — Pricing Tiers</h3>
           </div>
-          <div className="p-6 space-y-6">
-            {planType !== "free" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Price (Monthly) *
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    {...register("price_monthly", {
-                      required: { value: planType !== "free", message: "Monthly price is required" },
-                      min: { value: 0, message: "Price must be greater than or equal to 0" },
-                      valueAsNumber: true,
-                    })}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner ${
-                      errors.price_monthly ? "border-red-300 focus:ring-red-500" : "border-slate-300"
-                    }`}
-                  />
-                  {errors.price_monthly && (
-                    <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.price_monthly.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Price (Yearly)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    {...register("price_yearly", {
-                      min: { value: 0, message: "Price must be greater than or equal to 0" },
-                      valueAsNumber: true,
-                    })}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner ${
-                      errors.price_yearly ? "border-red-300 focus:ring-red-500" : "border-slate-300"
-                    }`}
-                  />
-                  {savings !== null && (
-                    <p className="text-emerald-600 text-xs mt-1.5 font-semibold">
-                      🔥 Save {savings}% vs monthly billing
-                    </p>
-                  )}
-                  {errors.price_yearly && (
-                    <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.price_yearly.message}</p>
-                  )}
-                </div>
+          <div className="p-6 space-y-4">
+            {planType === "free" ? (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs font-medium">
+                Pricing is disabled for Free plans.
               </div>
             ) : (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-650 text-xs font-medium">
-                Pricing is disabled for Free plans. Monthly and yearly price values default to 0.00.
-              </div>
+              <>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Enable the billing periods this plan supports. Each enabled tier will be available when assigning the plan to a tenant.
+                </p>
+                <div className="space-y-3">
+                  {tiers.map((tier) => {
+                    const currSym = watch("currency") === "INR" ? "₹" : watch("currency") === "EUR" ? "€" : watch("currency") === "GBP" ? "£" : "$";
+                    return (
+                      <div
+                        key={tier.billing_cycle}
+                        className={`rounded-xl border transition-all ${
+                          tier.enabled
+                            ? "border-[#008ecc]/30 bg-blue-50/40 ring-1 ring-[#008ecc]/10"
+                            : "border-slate-200 bg-slate-50/60"
+                        }`}
+                      >
+                        {/* Row 1: toggle + label + price */}
+                        <div className="flex items-center gap-4 px-4 py-3">
+                          {/* Enable toggle */}
+                          <label className="relative inline-flex items-center shrink-0 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={tier.enabled}
+                              onChange={(e) => updateTier(tier.billing_cycle, "enabled", e.target.checked)}
+                            />
+                            <span className={`block w-9 h-5 rounded-full transition-colors duration-200 ${tier.enabled ? "bg-[#008ecc]" : "bg-slate-300"}`}>
+                              <span className={`block w-4 h-4 mt-0.5 ml-0.5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${tier.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                            </span>
+                          </label>
+
+                          {/* Label + duration */}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold ${tier.enabled ? "text-slate-800" : "text-slate-400"}`}>
+                              {tier.label}
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-medium">
+                              {tier.duration_months} {tier.duration_months === 1 ? "month" : "months"} validity
+                            </p>
+                          </div>
+
+                          {/* Price input */}
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-sm font-semibold shrink-0 ${tier.enabled ? "text-slate-500" : "text-slate-300"}`}>
+                              {currSym}
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0"
+                              disabled={!tier.enabled}
+                              value={tier.price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^\d*\.?\d*$/.test(val)) {
+                                  updateTier(tier.billing_cycle, "price", val);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value === "") updateTier(tier.billing_cycle, "price", "0");
+                              }}
+                              className={`w-28 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all text-right font-mono ${
+                                tier.enabled
+                                  ? "border-slate-300 bg-white"
+                                  : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 2: grace days (visible when enabled) */}
+                        {tier.enabled && (
+                          <div className="flex items-center justify-between px-4 pb-3 pt-0 gap-4">
+                            <div className="flex-1">
+                              <p className="text-[11px] text-slate-500 font-semibold">Grace Days</p>
+                              <p className="text-[10px] text-slate-400">Extra days after plan expires before access is cut off</p>
+                            </div>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={tier.grace_days}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^\d*$/.test(val)) {
+                                  updateTier(tier.billing_cycle, "grace_days", val);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value === "") updateTier(tier.billing_cycle, "grace_days", "0");
+                              }}
+                              className="w-20 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all text-right font-mono bg-white"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Currency
-                </label>
-                <select
-                  {...register("currency")}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="INR">INR (₹)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Billing Cycle *
-                </label>
-                <select
-                  {...register("billing_cycle", { required: "Billing cycle is required" })}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
-                >
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                  <option value="one_time">One-time</option>
-                </select>
-                {errors.billing_cycle && (
-                  <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.billing_cycle.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Validity Period (Days)
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g. 30"
-                  {...register("trial_days", {
-                    min: { value: 0, message: "Validity period must be >= 0" },
-                    valueAsNumber: true,
-                  })}
-                  className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner ${
-                    errors.trial_days ? "border-red-300 focus:ring-red-500" : "border-slate-300"
-                  }`}
-                />
-                <p className="text-slate-400 text-[10px] mt-1.5 leading-relaxed">Active duration in days before plan expires.</p>
-                {errors.trial_days && (
-                  <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.trial_days.message}</p>
-                )}
-              </div>
+            {/* Currency */}
+            <div className="pt-2 border-t border-slate-100">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Currency
+              </label>
+              <select
+                {...register("currency")}
+                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+              >
+                <option value="USD">USD ($)</option>
+                <option value="INR">INR (₹)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -526,12 +576,21 @@ export const PlanForm = ({
                   Max Users Per Tenant
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="0 = unlimited"
                   {...register("max_users_per_tenant", {
-                    min: { value: 0, message: "Value must be greater than or equal to 0" },
-                    valueAsNumber: true,
+                    min: { value: 0, message: "Value must be 0 or greater" },
+                    setValueAs: (v) => Math.max(0, parseInt(v) || 0),
                   })}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === ".") e.preventDefault();
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setValue("max_users_per_tenant", parseInt(val) || 0, { shouldValidate: true });
+                    e.target.value = val;
+                  }}
                   className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner ${
                     errors.max_users_per_tenant ? "border-red-300 focus:ring-red-500" : "border-slate-300"
                   }`}

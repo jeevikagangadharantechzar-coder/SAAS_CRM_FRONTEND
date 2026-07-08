@@ -195,7 +195,7 @@ export default function RejectedLeads() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6 overflow-hidden">
       <ToastContainer position="top-right" autoClose={3000} newestOnTop closeOnClick draggable pauseOnHover theme="light" />
 
       {/* Header */}
@@ -226,7 +226,7 @@ export default function RejectedLeads() {
 
       {/* Search & Filters */}
       <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 max-w-[95vw] mx-auto">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -234,7 +234,7 @@ export default function RejectedLeads() {
               placeholder="Search by name, email, phone, company, reason..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="w-11/12 md:w-full mx-auto pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-400 block"
             />
           </div>
 
@@ -242,11 +242,13 @@ export default function RejectedLeads() {
             <select
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
             >
               <option value="">All Assignees</option>
               {usersList.map((user) => (
-                <option key={user._id} value={user._id}>{user.firstName} {user.lastName}</option>
+                <option key={user._id} value={user._id}>
+                  {user.firstName} {user.lastName}
+                </option>
               ))}
             </select>
           </div>
@@ -255,7 +257,7 @@ export default function RejectedLeads() {
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
             >
               <option value="">All Sources</option>
               <option value="Website">Website</option>
@@ -268,35 +270,37 @@ export default function RejectedLeads() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-[95vw] mx-auto items-end">
+          <div className="col-span-1">
             <select
               value={clientTypeFilter}
               onChange={(e) => setClientTypeFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
             >
               <option value="">All Client Types</option>
               <option value="B2B">B2B</option>
               <option value="B2C">B2C</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Rejected from</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Rejected to</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
-            />
+          <div className="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Rejected from</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Rejected to</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+              />
+            </div>
           </div>
         </div>
       </div>

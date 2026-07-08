@@ -10,7 +10,7 @@ import MeetingModal from "./MeetingModal";
 function AlarmBanner({ meeting, onDismiss }) {
   if (!meeting) return null;
   return (
-    <div className="fixed top-4 right-4 z-50 bg-white border-2 border-blue-500 rounded-2xl shadow-2xl p-4 w-80 animate-bounce">
+    <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 bg-white border-2 border-blue-500 rounded-2xl shadow-2xl p-4 w-auto sm:w-80 animate-bounce">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="bg-blue-100 p-2 rounded-lg">
@@ -45,14 +45,16 @@ function AlarmBanner({ meeting, onDismiss }) {
 // Banner shown when user hasn't connected Google account
 function GoogleConnectBanner({ onConnect }) {
   return (
-    <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-      <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-      <p className="text-sm text-amber-700 flex-1">
-        Connect your Google account to auto-generate Meet links when creating meetings.
-      </p>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
+        <p className="text-sm text-amber-700 flex-1 min-w-0">
+          Connect your Google account to auto-generate Meet links when creating meetings.
+        </p>
+      </div>
       <button
         onClick={onConnect}
-        className="text-sm font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors shrink-0"
+        className="text-sm font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors shrink-0 w-full sm:w-auto"
       >
         Connect Google
       </button>
@@ -131,7 +133,7 @@ export function Meetings() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Alarm Banner */}
       <AlarmBanner meeting={alarmFired} onDismiss={() => setAlarmFired(null)} />
 
@@ -141,7 +143,7 @@ export function Meetings() {
       )}
 
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Meetings</h1>
         </div>
@@ -172,7 +174,7 @@ export function Meetings() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {[
             { key: "all",       label: "All",       count: null },
             { key: "scheduled", label: "Scheduled", count: counts.scheduled },
@@ -182,7 +184,7 @@ export function Meetings() {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors whitespace-nowrap ${
                 filter === key
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"

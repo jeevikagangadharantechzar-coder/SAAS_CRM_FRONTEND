@@ -18,6 +18,11 @@ import {
   Calendar,
   Bell,
   MessageSquarePlus,
+  Upload,
+  Trash2,
+  Loader2,
+  Download,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import { initSocket, getSocket } from "../../utils/socket";
@@ -27,8 +32,52 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import { exportRowsToExcel, downloadExcelTemplate, parseExcelFile } from "../../utils/excelImportExport";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// Kept in sync with the backend's extension maps (middlewares/upload.js,
+// routes/files.routes.js). Browsers don't reliably report audio mimetypes for
+// every extension — e.g. a WhatsApp "*.mpeg" voice note comes back as
+// "video/mpeg" — so extension is used as the source of truth for voice notes.
+const AUDIO_EXT_MIME_MAP = {
+  mp3: "audio/mpeg", mpeg: "audio/mpeg", mpga: "audio/mpeg",
+  wav: "audio/wav", ogg: "audio/ogg", webm: "audio/webm",
+  m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac",
+  opus: "audio/opus", amr: "audio/amr", caf: "audio/x-caf", "3gp": "audio/3gpp",
+};
+
+const guessAudioMime = (filename = "") => {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  return AUDIO_EXT_MIME_MAP[ext] || "application/octet-stream";
+};
+
+/* ── Import/Export column definitions — shared between Export, Template,
+   and Import so a downloaded template always re-uploads successfully. ── */
+// Mirrors the Create Lead form's own field groups/order (CreateLeads.jsx
+// `fieldGroups`) exactly, so the template reads like the form itself.
+const LEAD_COLUMNS = [
+  // Basic Information
+  { key: "leadName",     label: "Lead Name" },
+  { key: "companyName",  label: "Company Name" },
+  { key: "phoneNumber",  label: "Phone Number" },
+  { key: "email",        label: "Email" },
+  { key: "address",      label: "Address", wrap: true },
+  { key: "country",      label: "Country" },
+  // Business Details
+  { key: "clientType",   label: "Client Type (B2B/B2C)" },
+  { key: "industry",     label: "Industry" },
+  { key: "source",       label: "Source" },
+  { key: "requirement",  label: "Requirement", wrap: true },
+  // Lead Management
+  { key: "status",       label: "Status" },
+  { key: "assignTo",     label: "Assign To (Email)" },
+  { key: "followUpDate", label: "Follow-up Date (YYYY-MM-DD)", type: "date" },
+  // Additional Information
+  { key: "notes",        label: "Notes", wrap: true },
+  // Read-only, export only
+  { key: "createdAt",    label: "Created At", type: "date", exportOnly: true },
+];
 
 /* ── Tour Steps (i18n-aware) ─────────────────────── */
 const getTourSteps = (t) => [
@@ -41,6 +90,61 @@ const getTourSteps = (t) => [
   { selector: ".tour-finish",        content: t("leads.tour.finish") },
 ];
 
+/* ── Follow-up voice note player ─────────────────────── */
+// Fetches the recording through the authenticated /files/preview endpoint
+// (a plain <audio src> can't carry the Authorization header) and hands the
+// browser a blob URL to play.
+function FollowUpAudioPlayer({ audioPath }) {
+  const [status, setStatus] = useState("loading"); // loading | done | error
+  const [src, setSrc] = useState(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let live = true;
+    setStatus("loading");
+
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+          `${API_URL}/files/preview?filePath=${encodeURIComponent(audioPath)}`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal }
+        );
+        if (!res.ok) throw new Error("Failed to load recording");
+        const mime = res.headers.get("Content-Type") || "application/octet-stream";
+        const buf = await res.arrayBuffer();
+        if (!live) return;
+        setSrc(URL.createObjectURL(new Blob([buf], { type: mime })));
+        setStatus("done");
+      } catch (err) {
+        if (!live || err.name === "AbortError") return;
+        setStatus("error");
+      }
+    })();
+
+    return () => {
+      live = false;
+      ctrl.abort();
+      setSrc((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [audioPath]);
+
+  if (status === "loading") {
+    return (
+      <p className="text-xs text-gray-400 flex items-center gap-1 mt-2">
+        <Loader2 className="w-3 h-3 animate-spin" /> Loading recording…
+      </p>
+    );
+  }
+  if (status === "error") {
+    return <p className="text-xs text-red-400 mt-2">Could not load recording</p>;
+  }
+  return <audio controls src={src} className="w-full mt-2 h-9" />;
+}
+
 /* ── Lead Table Component ─────────────────────── */
 function LeadTableComponent() {
   const navigate = useNavigate();
@@ -50,6 +154,14 @@ function LeadTableComponent() {
   const { t } = useTranslation();
 
   const [leads, setLeads] = useState([]);
+
+  // Import / Export
+  const importFileInputRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [leadToReject, setLeadToReject] = useState(null); // { id, name }
@@ -124,6 +236,11 @@ function LeadTableComponent() {
   const [noteLead, setNoteLead] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+
+  // Voice note upload for follow-up note
+  const [audioFile, setAudioFile] = useState(null);
+  const [audioFileUrl, setAudioFileUrl] = useState(null);
+  const [audioFileError, setAudioFileError] = useState("");
 
   // Follow-up History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -289,6 +406,80 @@ function LeadTableComponent() {
     fetchLeads();
   }, [fetchLeads]);
 
+/* ── Export Leads to Excel ─────────────────────── */
+  const handleExportLeads = async ({ startDate, endDate } = {}) => {
+    try {
+      setExporting(true);
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      const { data } = await axios.get(`${API_URL}/leads/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!data?.data?.length) {
+        toast.info("No data found for the selected criteria. There is nothing to export.");
+        return;
+      }
+      await exportRowsToExcel(data.data, LEAD_COLUMNS, `leads_${new Date().toISOString().slice(0, 10)}.xlsx`, "Leads");
+      toast.success(`Exported ${data.data.length} lead(s)`);
+      setShowExportModal(false);
+      setExportStartDate("");
+      setExportEndDate("");
+    } catch (err) {
+      console.error("Export leads error:", err);
+      toast.error("Failed to export leads");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+/* ── Download Leads Import Template ─────────────────────── */
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(LEAD_COLUMNS, "leads_import_template.xlsx", "Leads Template");
+  };
+
+/* ── Import Leads from Excel ─────────────────────── */
+  const handleImportButtonClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const rows = await parseExcelFile(file, LEAD_COLUMNS);
+      if (!rows.length) {
+        toast.error("No rows found in the uploaded file");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        `${API_URL}/leads/bulk-import`,
+        { leads: rows },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.created > 0) {
+        toast.success(`Imported ${data.created} lead(s)${data.failed ? `, ${data.failed} failed` : ""}`);
+      }
+      if (data.failed > 0) {
+        console.warn("Lead import errors:", data.errors);
+        toast.error(`${data.failed} row(s) failed — see console for details`);
+      }
+      fetchLeads();
+    } catch (err) {
+      console.error("Import leads error:", err);
+      toast.error(err.response?.data?.message || "Failed to import leads");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // Fetch target-linked lead IDs for sales users
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -334,12 +525,15 @@ function LeadTableComponent() {
     const menuHeight = 120;
     const viewportHeight = window.innerHeight;
 
-    let top = rect.bottom + window.scrollY + 4;
-    let left = rect.right + window.scrollX - 160;
+    let top = rect.bottom + 4; // Use fixed positioning instead of absolute for portal
+    let left = rect.right - 208; // 208px is w-52. Align right edge of menu with right edge of button.
 
-    if (rect.bottom + menuHeight > viewportHeight) {
-      top = rect.top + window.scrollY - menuHeight - 4;
+    if (top + menuHeight > viewportHeight) {
+      top = rect.top - menuHeight - 4;
     }
+    
+    // Ensure it doesn't go off the left side of screen
+    if (left < 10) left = 10;
 
     setMenuPosition({ top, left });
     setMenuOpen(menuOpen === leadId ? null : leadId);
@@ -515,11 +709,53 @@ function LeadTableComponent() {
     }, 0);
   };
 
+  const discardAudioFile = () => {
+    setAudioFileUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setAudioFile(null);
+    setAudioFileError("");
+  };
+
   const openAddNoteModal = (lead) => {
     setNoteLead(lead);
     setNoteText("");
+    discardAudioFile();
     setAddNoteModalOpen(true);
     setMenuOpen(null);
+  };
+
+  const closeAddNoteModal = () => {
+    setAddNoteModalOpen(false);
+    setNoteLead(null);
+    setNoteText("");
+    discardAudioFile();
+  };
+
+  const handleAudioFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setAudioFileError("");
+    const mime = guessAudioMime(file.name);
+    if (!file.type.startsWith("audio/") && mime === "application/octet-stream") {
+      setAudioFileError("Please choose an audio file");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setAudioFileError("Audio file must be under 20MB");
+      return;
+    }
+
+    setAudioFileUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      // Re-wrap with the extension-derived mime so the preview player isn't
+      // stuck with a wrong/generic type the browser guessed from the name.
+      return URL.createObjectURL(new Blob([file], { type: mime || file.type }));
+    });
+    setAudioFile(file);
   };
 
   const handleAddFollowUpNote = async () => {
@@ -529,9 +765,18 @@ function LeadTableComponent() {
       setSavingNote(true);
       const token = localStorage.getItem("token");
 
+      let payload;
+      if (audioFile) {
+        payload = new FormData();
+        payload.append("note", noteText.trim());
+        payload.append("audio", audioFile);
+      } else {
+        payload = { note: noteText.trim() };
+      }
+
       const res = await axios.post(
         `${API_URL}/leads/${noteLead._id}/followup-notes`,
-        { note: noteText.trim() },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -542,9 +787,7 @@ function LeadTableComponent() {
       );
 
       toast.success("Follow-up note added");
-      setAddNoteModalOpen(false);
-      setNoteLead(null);
-      setNoteText("");
+      closeAddNoteModal();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add follow-up note");
     } finally {
@@ -657,6 +900,39 @@ function LeadTableComponent() {
           )}
 
           {userRole === "Admin" && (
+            <>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={handleDownloadTemplate}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                title="Download an Excel template with all required columns"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Download Template
+              </button>
+              <button
+                onClick={handleImportButtonClick}
+                disabled={importing}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Upload className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+              </button>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={exporting}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+              </button>
+            </>
+          )}
+
+          {userRole === "Admin" && (
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow flex items-center gap-2 tour-create-lead"
               onClick={() => navigate(`/${tenantSlug}/createleads`)}
@@ -677,7 +953,7 @@ function LeadTableComponent() {
               placeholder={t("leads.filters.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-11/12 md:w-full mx-auto pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 block"
             />
           </div>
 
@@ -686,7 +962,7 @@ function LeadTableComponent() {
               <select
                 value={assigneeFilter}
                 onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
               >
                 <option value="">{t("leads.filters.allAssignees")}</option>
                 {usersList.map((user) => (
@@ -702,7 +978,7 @@ function LeadTableComponent() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="">{t("leads.filters.allStatus")}</option>
               <option value="Hot">{t("leads.status.hot")}</option>
@@ -717,7 +993,7 @@ function LeadTableComponent() {
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="">{t("leads.filters.allSources")}</option>
               <option value="Website">{t("leads.source.website")}</option>
@@ -733,7 +1009,7 @@ function LeadTableComponent() {
             <select
               value={clientTypeFilter}
               onChange={(e) => setClientTypeFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="">{t("leads.filters.allClientTypes")}</option>
               <option value="B2B">B2B</option>
@@ -745,7 +1021,7 @@ function LeadTableComponent() {
             <select
               value={followUpFilter}
               onChange={(e) => setFollowUpFilter(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="all">All Follow-ups</option>
               <option value="completed">Completed Follow-ups</option>
@@ -963,10 +1239,11 @@ function LeadTableComponent() {
                       </button>
                     </div>
 
-                    {menuOpen === lead._id && (
+                    {menuOpen === lead._id && ReactDOM.createPortal(
                       <div
-                        className="fixed z-50 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
+                        className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
                         style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <button
                           onClick={(e) => {
@@ -1013,7 +1290,8 @@ function LeadTableComponent() {
                             <Ban className="w-4 h-4 mr-2" /> Reject
                           </button>
                         )}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </td>
                 </tr>
@@ -1096,6 +1374,66 @@ function LeadTableComponent() {
         </div>,
         document.body
       )}
+
+      {/* Export Modal */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-gray-800">
+              <Download className="w-5 h-5" />
+              Export Leads
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-gray-500 mb-3">
+            Optionally filter by date range. Leave both blank to export all leads.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+                max={exportEndDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+                min={exportStartDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setShowExportModal(false);
+                setExportStartDate("");
+                setExportEndDate("");
+              }}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleExportLeads({ startDate: exportStartDate, endDate: exportEndDate })}
+              disabled={exporting}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
@@ -1237,7 +1575,7 @@ function LeadTableComponent() {
       </Dialog>
 
       {/* Add Follow-up Note Modal */}
-      <Dialog open={addNoteModalOpen} onOpenChange={setAddNoteModalOpen}>
+      <Dialog open={addNoteModalOpen} onOpenChange={(open) => (open ? setAddNoteModalOpen(true) : closeAddNoteModal())}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600">
@@ -1261,9 +1599,51 @@ function LeadTableComponent() {
             className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
           />
 
+          {/* Voice note upload */}
+          <div className="mt-3">
+            <div className="flex items-center gap-3">
+              <label
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm cursor-pointer ${savingNote ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                <Upload className="w-4 h-4" />
+                {audioFile ? "Replace audio file" : "Upload audio file"}
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioFileChange}
+                  disabled={savingNote}
+                  className="hidden"
+                />
+              </label>
+
+              {audioFile && (
+                <button
+                  type="button"
+                  onClick={discardAudioFile}
+                  className="text-gray-400 hover:text-red-500"
+                  title="Remove audio file"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {audioFileError && (
+              <p className="text-xs text-red-500 mt-2">{audioFileError}</p>
+            )}
+
+            {audioFile && (
+              <p className="text-xs text-gray-500 mt-2 truncate">{audioFile.name}</p>
+            )}
+
+            {audioFileUrl && (
+              <audio controls src={audioFileUrl} className="w-full mt-2 h-9" />
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 mt-4">
             <button
-              onClick={() => setAddNoteModalOpen(false)}
+              onClick={closeAddNoteModal}
               className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
               disabled={savingNote}
             >
@@ -1306,6 +1686,7 @@ function LeadTableComponent() {
                 .map((n, i) => (
                   <div key={n._id || i} className="border border-gray-200 rounded-lg p-3">
                     <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.note}</p>
+                    {n.audioPath && <FollowUpAudioPlayer audioPath={n.audioPath} />}
                     <p className="text-xs text-gray-400 mt-2">
                       {new Date(n.createdAt).toLocaleDateString("en-US", {
                         month: "short",

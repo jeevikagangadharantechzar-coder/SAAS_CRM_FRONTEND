@@ -632,7 +632,7 @@ const MassEmail = () => {
             </div>
 
             {/* Pagination Component */}
-            {totalPages > 1 && (
+            {filteredContacts.length > 0 && (
               <div className="border-t border-gray-200">
                 <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between bg-white gap-4">
                   {/* Rows per page selector */}
@@ -649,7 +649,7 @@ const MassEmail = () => {
                       <option value={50}>50</option>
                     </select>
                   </div>
-                  
+
                   {/* Page info */}
                   <div className="text-sm text-gray-700">
                     Showing <span className="font-medium">{indexOfFirstRow + 1}</span> to{' '}
@@ -658,55 +658,57 @@ const MassEmail = () => {
                     </span>{' '}
                     of <span className="font-medium">{filteredContacts.length}</span> contacts
                   </div>
-                  
+
                   {/* Page navigation */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handlePrevPage}
-                      disabled={currentPage === 1}
-                      className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-1 ${
-                        currentPage === 1
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <ChevronLeft size={16} />
-                      Previous
-                    </button>
-                    
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {getPageNumbers().map((page, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handlePageChange(page)}
-                          className={`min-w-[36px] h-9 flex items-center justify-center rounded-md text-sm ${
-                            page === currentPage
-                              ? 'bg-blue-600 text-white'
-                              : page === '...'
-                              ? 'text-gray-500 cursor-default'
-                              : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
-                          }`}
-                          disabled={page === '...'}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                  {totalPages > 1 && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-1 ${
+                          currentPage === 1
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <ChevronLeft size={16} />
+                        Previous
+                      </button>
+
+                      {/* Page numbers */}
+                      <div className="flex items-center space-x-1">
+                        {getPageNumbers().map((page, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handlePageChange(page)}
+                            className={`min-w-[36px] h-9 flex items-center justify-center rounded-md text-sm ${
+                              page === currentPage
+                                ? 'bg-blue-600 text-white'
+                                : page === '...'
+                                ? 'text-gray-500 cursor-default'
+                                : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
+                            }`}
+                            disabled={page === '...'}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-1 ${
+                          currentPage === totalPages
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        Next
+                        <ChevronRight size={16} />
+                      </button>
                     </div>
-                    
-                    <button
-                      onClick={handleNextPage}
-                      disabled={currentPage === totalPages}
-                      className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-1 ${
-                        currentPage === totalPages
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Next
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
             )}

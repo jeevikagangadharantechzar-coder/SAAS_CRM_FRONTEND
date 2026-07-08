@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Send, Paperclip, X, Pin, Smile, Users, LogOut, UserMinus, Shield, MoreVertical, Trash2, Lock, UserPlus, Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Send, Paperclip, X, Pin, Smile, Users, LogOut, UserMinus, Shield, MoreVertical, Trash2, Lock, UserPlus, Search, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
 import axios from "axios";
 import { useChat } from "../../context/ChatContext";
 import MessageBubble, { DateDivider, SystemMessage } from "./MessageBubble";
@@ -49,7 +49,7 @@ const groupByDate = (messages) => {
 const ChatWindow = () => {
   const {
     activeContact, messages, typing, loadingMsgs,
-    sendMessage, emitTyping, uploadFile, currentUser, onlineUsers,
+    sendMessage, emitTyping, uploadFile, currentUser, onlineUsers, clearActiveChat,
     activeGroup, groupMessages, groupTyping, sendGroupMessage, emitGroupTyping,
     deleteMessage, reactToMessage, reactToGroupMessage, deleteGroupMessage,
     leaveGroup, removeMember, clearChat, clearGroupChat,
@@ -272,9 +272,16 @@ const ChatWindow = () => {
     <div className="flex-1 flex flex-col h-full bg-gray-50">
 
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-5 py-3 bg-white border-b border-gray-100 shadow-sm">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Back to contact list — mobile only */}
+          <button
+            onClick={clearActiveChat}
+            className="md:hidden -ml-1 p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition shrink-0"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="relative shrink-0">
             <Avatar
               name={isGroupActive ? activeGroup.name : activeContact.name}
               image={isGroupActive ? null : activeContact.profileImage}
@@ -284,8 +291,8 @@ const ChatWindow = () => {
               <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${isOnline ? "bg-green-500" : "bg-gray-300"}`} />
             )}
           </div>
-          <div>
-            <p className="font-semibold text-gray-800 text-sm">
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-800 text-sm truncate">
               {isGroupActive ? activeGroup.name : activeContact.name}
             </p>
             <p className="text-xs">
@@ -293,7 +300,7 @@ const ChatWindow = () => {
                 // Click member count to toggle panel; click outside closes it
                 <button
                   onClick={() => setShowMembers((v) => !v)}
-                  className="text-[#008ecc] hover:underline inline-flex items-center gap-1.5"
+                  className="text-[#008ecc] hover:underline inline-flex items-center gap-1.5 flex-wrap"
                 >
                   {activeGroup.memberCount} members
                   {currentIsAdmin && (
@@ -308,7 +315,7 @@ const ChatWindow = () => {
                   )}
                 </button>
               ) : (
-                <span className={isOnline ? "text-green-500" : "text-gray-400"}>
+                <span className={`truncate block ${isOnline ? "text-green-500" : "text-gray-400"}`}>
                   {isOnline ? "● Online" : "● Offline"}
                   <span className="text-gray-400"> · {activeContact.role}</span>
                 </span>
@@ -317,14 +324,14 @@ const ChatWindow = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {!isGroupActive && (
             <button
               onClick={() => setPinnedView((v) => !v)}
-              className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition
+              className={`flex items-center gap-1 text-xs px-2 sm:px-3 py-1.5 rounded-full border transition
                 ${pinnedView ? "bg-[#008ecc] text-white border-[#008ecc]" : "border-gray-200 text-gray-500 hover:border-[#008ecc] hover:text-[#008ecc]"}`}
             >
-              <Pin size={12} /> Pinned
+              <Pin size={12} /> <span className="hidden sm:inline">Pinned</span>
             </button>
           )}
 
@@ -332,9 +339,9 @@ const ChatWindow = () => {
           {isGroupActive && currentIsAdmin && (
             <button
               onClick={() => setShowAddMember(true)}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-[#008ecc]/40 text-[#008ecc] hover:bg-[#e8f7ff] transition"
+              className="flex items-center gap-1.5 text-xs font-medium px-2 sm:px-3 py-1.5 rounded-full border border-[#008ecc]/40 text-[#008ecc] hover:bg-[#e8f7ff] transition"
             >
-              <UserPlus size={13} /> Add Member
+              <UserPlus size={13} /> <span className="hidden sm:inline">Add Member</span>
             </button>
           )}
 

@@ -111,7 +111,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 flex flex-col gap-4">
           {/* Title */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -187,7 +187,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
           </div>
 
           {/* Date/Time row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Start <span className="text-red-500">*</span>

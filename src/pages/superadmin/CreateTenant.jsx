@@ -4,7 +4,6 @@ import { Building2, User, Mail, ShieldAlert, ArrowLeft, Loader2, MailCheck } fro
 import { superApi } from "../../services/api";
 import { useGetAllPlans } from "../../hooks/useSubscriptionPlans";
 import { format } from "date-fns";
-import { assignPlanToTenant } from "../../api/services/subscriptionPlan.service";
 
 const CreateTenant = () => {
   const navigate = useNavigate();
@@ -14,6 +13,7 @@ const CreateTenant = () => {
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [selectedBillingCycle, setSelectedBillingCycle] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -84,34 +84,25 @@ const CreateTenant = () => {
     setEmailError("");
     setSubmitting(true);
     try {
-      // 1. Provision new tenant organization
+      // Determine the effective billing cycle
+      const selectedPlan = plans.find((p) => p._id === selectedPlanId);
+      const hasTiers = selectedPlan?.tiers?.length > 0;
+      const effectiveCycle = selectedPlanId
+        ? (hasTiers ? selectedBillingCycle : selectedPlan?.billing_cycle) || "monthly"
+        : "";
+
+      // Provision new tenant — backend handles plan assignment, dates, and plan email
       const res = await superApi.post("/tenants/create", {
         name,
         slug,
         adminEmail,
         adminName,
         planId: selectedPlanId,
+        billing_cycle: effectiveCycle,
         currency,
       });
 
       const newTenant = res.data?.tenant || res.data?.data || res.data;
-
-      // 2. If plan is selected, assign subscription plan to tenant
-      if (newTenant && newTenant._id && selectedPlanId) {
-        const selectedPlan = plans.find((p) => p._id === selectedPlanId);
-        if (selectedPlan) {
-          let cycle = "monthly";
-          if (selectedPlan.billing_cycle) {
-            cycle = selectedPlan.billing_cycle.toLowerCase().replace("-", "_");
-          }
-
-          await assignPlanToTenant({
-            tenantId: newTenant._id,
-            planId: selectedPlanId,
-            billing_cycle: cycle,
-          });
-        }
-      }
 
       // Clear fields & navigate
       setName("");
@@ -119,6 +110,7 @@ const CreateTenant = () => {
       setAdminName("");
       setAdminEmail("");
       setSelectedPlanId("");
+      setSelectedBillingCycle("");
       setCurrency("USD");
       navigate("/superadmin/tenants");
     } catch (err) {
@@ -338,32 +330,72 @@ const CreateTenant = () => {
 
         {/* Right Column (1/3 width) - Subscription Selection & Preview */}
         <div className="space-y-6">
+          {/* Step 1 — Plan selection */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-850 uppercase tracking-wider">Subscription Plan</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Subscription Plan</h3>
               <p className="text-slate-400 text-xs mt-1">Assign a pricing plan to this tenant.</p>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Select Pricing Tier
-                </label>
-                <select
-                  value={selectedPlanId}
-                  onChange={(e) => setSelectedPlanId(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
-                  disabled={loadingPlans}
-                >
-                  <option value="">No Plan (Default Trial)</option>
-                  {plans.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.plan_name} ({p.plan_type.toUpperCase()} - {p.price_monthly > 0 ? `$${p.price_monthly.toFixed(2)}/mo` : "Free"})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Step 1 — Select Plan
+              </label>
+              <select
+                value={selectedPlanId}
+                onChange={(e) => {
+                  setSelectedPlanId(e.target.value);
+                  setSelectedBillingCycle("");
+                }}
+                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                disabled={loadingPlans}
+              >
+                <option value="">No Plan (Default Trial)</option>
+                {plans.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.plan_name} — {p.plan_type.toUpperCase()}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Step 2 — Billing period (only when plan has tiers) */}
+            {(() => {
+              const selPlan = plans.find((p) => p._id === selectedPlanId);
+              const hasTiers = selPlan?.tiers?.length > 0;
+              if (!selPlan || !hasTiers) return null;
+
+              const TIER_LABELS = { monthly: "Monthly", half_yearly: "Half Year", yearly: "Yearly" };
+              const getCurrencySymbol = (c) => c === "INR" ? "₹" : c === "EUR" ? "€" : c === "GBP" ? "£" : "$";
+              const sym = getCurrencySymbol(selPlan.currency);
+
+              return (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Step 2 — Billing Period
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {selPlan.tiers.map((tier) => (
+                      <button
+                        key={tier.billing_cycle}
+                        type="button"
+                        onClick={() => setSelectedBillingCycle(tier.billing_cycle)}
+                        className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                          selectedBillingCycle === tier.billing_cycle
+                            ? "bg-[#008ecc] text-white border-[#008ecc] shadow-md"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-[#008ecc]/50 hover:bg-blue-50/30"
+                        }`}
+                      >
+                        <span>{TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}</span>
+                        <span className={`text-xs font-bold ${selectedBillingCycle === tier.billing_cycle ? "text-white" : "text-slate-500"}`}>
+                          {sym}{parseFloat(tier.price || 0).toFixed(2)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Preview panel */}
@@ -378,7 +410,7 @@ const CreateTenant = () => {
             <div className="p-6">
               {(() => {
                 const selectedPlan = plans.find((p) => p._id === selectedPlanId);
-                
+
                 if (!selectedPlan) {
                   const start = new Date();
                   const end = new Date();
@@ -390,67 +422,101 @@ const CreateTenant = () => {
                         <span className="font-bold text-slate-800 uppercase">Trial</span>
                       </div>
                       <div className="flex justify-between py-2.5 border-b border-slate-100">
-                        <span className="text-slate-400">Pricing Cycle</span>
+                        <span className="text-slate-400">Billing Period</span>
                         <span className="font-bold text-slate-800">Free Trial</span>
                       </div>
                       <div className="flex justify-between py-2.5 border-b border-slate-100">
-                        <span className="text-slate-400">Seat Limits</span>
+                        <span className="text-slate-400">Seat Limit</span>
                         <span className="font-bold text-slate-800">5 Users</span>
                       </div>
                       <div className="py-2">
-                        <span className="text-slate-400 block mb-1">Validity Period</span>
-                        <span className="font-bold text-slate-800 block">
-                          {format(start, "MMM dd, yyyy")}
-                        </span>
+                        <span className="text-slate-400 block mb-1">Validity</span>
+                        <span className="font-bold text-slate-800 block">{format(start, "MMM dd, yyyy")}</span>
                         <span className="text-[10px] text-slate-400 mt-0.5 block">to {format(end, "MMM dd, yyyy")} (30 days)</span>
                       </div>
                     </div>
                   );
                 }
 
-                const symbol = selectedPlan.currency === "INR" ? "₹" : selectedPlan.currency === "EUR" ? "€" : selectedPlan.currency === "GBP" ? "£" : "$";
+                const sym = selectedPlan.currency === "INR" ? "₹" : selectedPlan.currency === "EUR" ? "€" : selectedPlan.currency === "GBP" ? "£" : "$";
+                const hasTiers = selectedPlan.tiers?.length > 0;
+                const activeTier = hasTiers ? selectedPlan.tiers.find((t) => t.billing_cycle === selectedBillingCycle) : null;
+                const effectiveCycle = activeTier?.billing_cycle ?? selectedPlan.billing_cycle ?? "monthly";
+                const effectivePrice = activeTier?.price ?? selectedPlan.price_monthly ?? 0;
+
+                const TIER_LABELS = { monthly: "Monthly", half_yearly: "Half Year", yearly: "Yearly", one_time: "One-time" };
+
                 const start = new Date();
-                let endText = "Lifetime / Unlimited";
-                
-                if (selectedPlan.billing_cycle === "monthly") {
-                  const end = new Date();
-                  end.setMonth(end.getMonth() + 1);
-                  endText = format(end, "MMM dd, yyyy");
-                } else if (selectedPlan.billing_cycle === "yearly") {
-                  const end = new Date();
-                  end.setFullYear(end.getFullYear() + 1);
-                  endText = format(end, "MMM dd, yyyy");
-                } else if (selectedPlan.trial_days > 0) {
-                  const end = new Date();
-                  end.setDate(end.getDate() + selectedPlan.trial_days);
-                  endText = format(end, "MMM dd, yyyy");
-                }
+                let endDate = null;
+                if (effectiveCycle === "monthly") { endDate = new Date(start); endDate.setMonth(endDate.getMonth() + 1); }
+                else if (effectiveCycle === "half_yearly") { endDate = new Date(start); endDate.setMonth(endDate.getMonth() + 6); }
+                else if (effectiveCycle === "yearly") { endDate = new Date(start); endDate.setFullYear(endDate.getFullYear() + 1); }
+                else if (selectedPlan.trial_days > 0) { endDate = new Date(start); endDate.setDate(endDate.getDate() + selectedPlan.trial_days); }
+
+                // Features
+                const FEATURE_LABELS = {
+                  dashboard: "Dashboard", leads: "Leads", create_lead: "Create Lead",
+                  deals_all: "Deals", create_deal: "Create Deal", deals_pipeline: "Pipeline View",
+                  invoices: "Invoices", proposal: "Proposal", users_roles: "Users & Roles",
+                  admin_access: "Admin Access", email_chat: "Email Chat",
+                  email_campaigns: "Email Campaigns", whatsapp_chat: "WhatsApp Chat",
+                  analytics: "Analytics", settings: "Settings",
+                  streak_leaderboard: "Streak Leaderboard", assigned_tasks: "Assigned Tasks",
+                  task_management: "Task Management", target_management: "Target Management",
+                  meetings: "Meetings", google_meet_sync: "Google Meet",
+                  zoom_meetings: "Zoom Meetings", messages: "Messages", chatbot: "AI Chatbot",
+                };
+                const enabledFeatures = selectedPlan.features
+                  ? Object.entries(selectedPlan.features).filter(([, v]) => v === true).map(([k]) => k)
+                  : [];
 
                 return (
-                  <div className="space-y-4 text-xs">
+                  <div className="space-y-3 text-xs">
                     <div className="flex justify-between py-2.5 border-b border-slate-100">
-                      <span className="text-slate-400">Plan Type</span>
-                      <span className="font-bold text-slate-800 uppercase">{selectedPlan.plan_type}</span>
+                      <span className="text-slate-400">Plan</span>
+                      <span className="font-bold text-slate-800 uppercase">{selectedPlan.plan_name}</span>
                     </div>
                     <div className="flex justify-between py-2.5 border-b border-slate-100">
-                      <span className="text-slate-400">Pricing Cycle</span>
+                      <span className="text-slate-400">Billing</span>
                       <span className="font-bold text-slate-800">
-                        {selectedPlan.plan_type === "free" ? "Free" : `${symbol}${selectedPlan.price_monthly.toFixed(2)} / ${selectedPlan.billing_cycle}`}
+                        {selectedPlan.plan_type === "free"
+                          ? "Free"
+                          : activeTier || !hasTiers
+                            ? `${sym}${parseFloat(effectivePrice).toFixed(2)} / ${TIER_LABELS[effectiveCycle] || effectiveCycle}`
+                            : <span className="text-amber-600 italic font-medium">Select billing period</span>}
                       </span>
                     </div>
                     <div className="flex justify-between py-2.5 border-b border-slate-100">
-                      <span className="text-slate-400">Seat Limits</span>
+                      <span className="text-slate-400">Seat Limit</span>
                       <span className="font-bold text-slate-800">
-                        {selectedPlan.max_users_per_tenant === 0 ? "Unlimited Seats" : `${selectedPlan.max_users_per_tenant} Users`}
+                        {selectedPlan.max_users_per_tenant === 0 ? "Unlimited" : `${selectedPlan.max_users_per_tenant} Users`}
                       </span>
                     </div>
-                    <div className="py-2">
-                      <span className="text-slate-400 block mb-1">Validity Period</span>
-                      <span className="font-bold text-slate-800 block">
-                        {format(start, "MMM dd, yyyy")}
+                    <div className="py-2 border-b border-slate-100">
+                      <span className="text-slate-400 block mb-1">Validity</span>
+                      <span className="font-bold text-slate-800 block">{format(start, "MMM dd, yyyy")}</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">
+                        {endDate ? `to ${format(endDate, "MMM dd, yyyy")}` : "Lifetime / Unlimited"}
                       </span>
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">to {endText}</span>
                     </div>
+                    {enabledFeatures.length > 0 && (
+                      <div className="pt-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-400">Features</span>
+                          <span className="text-[10px] font-bold text-[#008ecc] bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
+                            {enabledFeatures.length} enabled
+                          </span>
+                        </div>
+                        <div className="max-h-40 overflow-y-auto pr-1 space-y-1 rounded-lg">
+                          {enabledFeatures.map((k) => (
+                            <div key={k} className="flex items-center gap-1.5 text-[11px] text-slate-700 py-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                              {FEATURE_LABELS[k] || k}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}

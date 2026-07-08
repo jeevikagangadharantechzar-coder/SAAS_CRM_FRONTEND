@@ -406,7 +406,7 @@ const ReportsPage = () => {
             <div className="flex flex-wrap items-center gap-3">
 
               {/* Filter mode tabs */}
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+              <div className="flex gap-0.5 sm:gap-1 bg-gray-100 rounded-lg p-1 shrink-0 max-w-full overflow-x-auto">
                 {[
                   { id: "single", label: "Single Day" },
                   { id: "range",  label: "Date Range" },
@@ -415,7 +415,7 @@ const ReportsPage = () => {
                   <button
                     key={id}
                     onClick={() => setFilterMode(id)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                    className={`px-2 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
                       filterMode === id
                         ? "bg-white text-blue-700 shadow-sm"
                         : "text-gray-500 hover:text-gray-700"
@@ -426,36 +426,36 @@ const ReportsPage = () => {
                 ))}
               </div>
 
-              {/* Fixed-width filter input area */}
-              <div className="flex items-center gap-2" style={{ width: "340px" }}>
+              {/* Filter input area — full width on mobile, fixed width from sm breakpoint up */}
+              <div className="flex items-center gap-2 w-full sm:w-[340px] min-w-0">
                 {filterMode === "single" && (
                   <input
                     type="date"
                     value={selectedDate}
                     max={getTodayDate()}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full min-w-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 )}
                 {filterMode === "range" && (
-                  <>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full min-w-0">
                     <input
                       type="date"
                       value={startDate}
                       max={endDate || getTodayDate()}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full sm:flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
-                    <span className="text-gray-400 text-xs shrink-0">→</span>
+                    <span className="text-gray-400 text-xs shrink-0 text-center sm:mx-0">→</span>
                     <input
                       type="date"
                       value={endDate}
                       min={startDate}
                       max={getTodayDate()}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full sm:flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
-                  </>
+                  </div>
                 )}
                 {filterMode === "month" && (
                   <div className="relative w-full">

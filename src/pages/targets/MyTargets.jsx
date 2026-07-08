@@ -8,7 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
 import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
-  Activity, Trophy, ArrowRight, Award, Clock, ChevronDown,
+  Trophy, ArrowRight, Award, Clock, ChevronDown,
   ChevronUp, Briefcase, Mail, Building2, Send, MessageSquare,
   Bell, AlertCircle, Check, XCircle, X, Trash2,
 } from "lucide-react";
@@ -40,6 +40,15 @@ function ProgressBar({ value, color = "bg-[#008ecc]" }) {
     <div className="w-full bg-gray-100 rounded-full h-2.5">
       <div className={`h-2.5 rounded-full transition-all duration-700 ease-out ${color}`}
         style={{ width: `${width}%` }} />
+    </div>
+  );
+}
+function StatCard({ label, value, icon, color, bg }) {
+  return (
+    <div className={`rounded-xl border p-4 ${bg}`}>
+      <div className={`mb-1 ${color}`}>{icon}</div>
+      <p className="text-xs text-gray-500 font-medium">{label}</p>
+      <p className={`text-2xl font-bold ${color}`}>{value}</p>
     </div>
   );
 }
@@ -350,16 +359,16 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
     };
   };
 
-  const wonDeals    = linkedDeals.filter(d => d.stage === "Closed Won").map(withConversionInfo);
-  const liveDeals   = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
+  const wonDeals = linkedDeals.filter(d => d.stage === "Closed Won").map(withConversionInfo);
+  const liveDeals = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",  countOnly: false },
-    { label: "Deals Won",                target: percentages.effTargetDeals ?? t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100", countOnly: false },
-    { label: "Leads to Deals Won",       target: null,              actual: actuals.leadDealWon || 0,     pct: null, icon: <Trophy size={13} className="text-amber-500" />,  bg: "bg-amber-50",  border: "border-amber-100",  countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
-    { label: "Deals Lost",      target: null,              actual: actuals.dealsLost || 0,       pct: null, icon: <XCircle size={13} className="text-red-500" />,   bg: "bg-red-50",    border: "border-red-100",    countOnly: true, badgeText: "closed lost",  badgeClass: "text-red-600 bg-red-100"   },
-    { label: "Calls Made",      target: t.targetCalls,    actual: actuals.calls || 0,           pct: percentages.callsPercent || 0,    icon: <Phone size={13} className="text-orange-500" />,     bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
-    { label: "Meetings Done",   target: t.targetMeetings, actual: actuals.meetings || 0,        pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />,  bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
+    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
+    { label: "Deals Won", target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Leads to Deals Won", target: null, actual: actuals.leadDealWon || 0, pct: null, icon: <Trophy size={13} className="text-amber-500" />, bg: "bg-amber-50", border: "border-amber-100", countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
+    { label: "Deals Lost", target: null, actual: actuals.dealsLost || 0, pct: null, icon: <XCircle size={13} className="text-red-500" />, bg: "bg-red-50", border: "border-red-100", countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Calls Made", target: t.targetCalls, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
+    { label: "Meetings Done", target: t.targetMeetings, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
   ];
 
   return (
@@ -487,9 +496,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                 <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={12} className="text-emerald-500" /> Won Deals — Full Details</p>
                 <div className="space-y-2">
                   {wonDeals.map((d, i) => {
-                    const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
-                    const wonDate      = d.wonAt ? new Date(d.wonAt) : null;
-                    const totalDays    = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
+                    const createdDate = d.createdAt ? new Date(d.createdAt) : null;
+                    const wonDate = d.wonAt ? new Date(d.wonAt) : null;
+                    const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
                     const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                     const isOpen = expandedItems.has(`won-${i}`);
                     const adminBadge = getAdminActionBadge(d);
@@ -503,7 +512,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                             className="flex-1 min-w-0 text-left"
                           >
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i + 1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <CheckCircle size={13} className="text-emerald-500 shrink-0" />
                               {isOpen ? <ChevronUp size={13} className="text-emerald-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
@@ -598,9 +607,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                   <p className="text-[11px] font-bold text-red-700 mb-2 flex items-center gap-1.5"><XCircle size={12} className="text-red-500" /> Lost Deals ({lostDeals.length})</p>
                   <div className="space-y-2">
                     {lostDeals.map((d, i) => {
-                      const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
-                      const lostDate     = d.stageLostAt ? new Date(d.stageLostAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
-                      const totalDays    = lostDate && createdDate ? Math.max(0, Math.round((lostDate - createdDate) / 86400000)) : null;
+                      const createdDate = d.createdAt ? new Date(d.createdAt) : null;
+                      const lostDate = d.stageLostAt ? new Date(d.stageLostAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
+                      const totalDays = lostDate && createdDate ? Math.max(0, Math.round((lostDate - createdDate) / 86400000)) : null;
                       const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                       const isOpen = expandedItems.has(`lost-${i}`);
                       const adminBadge = getAdminActionBadge(d);
@@ -609,7 +618,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           <div className="w-full px-3 pt-3 pb-2.5 flex items-start gap-1.5">
                             <button type="button" onClick={() => toggleExpand(`lost-${i}`)} className="flex-1 min-w-0 text-left">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                                <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i + 1}</span>
                                 <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                                 <XCircle size={13} className="text-red-500 shrink-0" />
                                 {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
@@ -814,7 +823,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                 {history.map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-0.5 pl-1">
                                     <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEAD_STATUS_COLOR[h.status] ? "bg-current" : "bg-gray-300"}`} style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEAD_STATUS_COLOR[h.status] ? "bg-current" : "bg-gray-300"}`} style={{ backgroundColor: h.status === "Hot" ? "#ef4444" : h.status === "Warm" ? "#f97316" : h.status === "Cold" ? "#6b7280" : h.status === "Junk" ? "#a855f7" : "#10b981" }} />
                                     <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
                                     <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                   </div>
@@ -860,74 +869,71 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         </div>
                         {/* Lead status journey before conversion */}
                         {isOpen && (
-                        <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
-                          <div className="flex items-center gap-0.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
-                          </div>
-                          {history.map((h, hi) => (
-                            <div key={hi} className="flex items-center gap-0.5 pl-1">
-                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                              <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                          <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
+                            <div className="flex items-center gap-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                              <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
+                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
                             </div>
-                          ))}
-                          <div className="flex items-center gap-0.5 pl-1 flex-wrap">
-                            <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                            <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
-                            {!d.salesPersonConverted && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
-                                Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
-                              </span>
+                            {history.map((h, hi) => (
+                              <div key={hi} className="flex items-center gap-0.5 pl-1">
+                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: h.status === "Hot" ? "#ef4444" : h.status === "Warm" ? "#f97316" : h.status === "Cold" ? "#6b7280" : h.status === "Junk" ? "#a855f7" : "#10b981" }} />
+                                <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
+                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                              </div>
+                            ))}
+                            <div className="flex items-center gap-0.5 pl-1 flex-wrap">
+                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
+                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                              {!d.salesPersonConverted && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
+                                  Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
+                                </span>
+                              )}
+                            </div>
+                            {/* Deal stage start */}
+                            <div className="flex items-center gap-0.5 pl-1 mt-0.5">
+                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                              <span className="text-[10px] text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
+                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            </div>
+                            {/* Subsequent deal stage moves — live tracking */}
+                            {(d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt)).map((h, hi) => (
+                              <div key={hi} className="flex items-center gap-0.5 pl-1">
+                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${h.stage === "Closed Won" ? "bg-emerald-500"
+                                    : h.stage === "Closed Lost" ? "bg-red-400"
+                                      : h.stage === "Invoice Sent" ? "bg-orange-400"
+                                        : h.stage === "Proposal Sent-Negotiation" ? "bg-yellow-400"
+                                          : "bg-blue-400"
+                                  }`} />
+                                <span className={`text-[10px] font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700"
+                                    : h.stage === "Closed Lost" ? "text-red-600"
+                                      : "text-gray-800"
+                                  }`}>{h.stage}</span>
+                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                              </div>
+                            ))}
+                            {/* Fallback: show current stage when not already in stageHistory */}
+                            {d.stage && d.stage !== "Qualification" && !(d.stageHistory || []).some(h => h.stage === d.stage) && (
+                              <div className="flex items-center gap-0.5 pl-1">
+                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.stage === "Closed Won" ? "bg-emerald-500"
+                                    : d.stage === "Closed Lost" ? "bg-red-400"
+                                      : d.stage === "Invoice Sent" ? "bg-orange-400"
+                                        : d.stage === "Proposal Sent-Negotiation" ? "bg-yellow-400"
+                                          : "bg-blue-400"
+                                  }`} />
+                                <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
+                                {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-0.5">● Live</span>}
+                              </div>
                             )}
                           </div>
-                          {/* Deal stage start */}
-                          <div className="flex items-center gap-0.5 pl-1 mt-0.5">
-                            <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[10px] text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
-                          </div>
-                          {/* Subsequent deal stage moves — live tracking */}
-                          {(d.stageHistory || []).sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
-                            <div key={hi} className="flex items-center gap-0.5 pl-1">
-                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                h.stage === "Closed Won" ? "bg-emerald-500"
-                                : h.stage === "Closed Lost" ? "bg-red-400"
-                                : h.stage === "Invoice Sent" ? "bg-orange-400"
-                                : h.stage === "Proposal Sent-Negotiation" ? "bg-yellow-400"
-                                : "bg-blue-400"
-                              }`} />
-                              <span className={`text-[10px] font-bold ml-1 ${
-                                h.stage === "Closed Won" ? "text-emerald-700"
-                                : h.stage === "Closed Lost" ? "text-red-600"
-                                : "text-gray-800"
-                              }`}>{h.stage}</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
-                            </div>
-                          ))}
-                          {/* Fallback: show current stage when not already in stageHistory */}
-                          {d.stage && d.stage !== "Qualification" && !(d.stageHistory || []).some(h => h.stage === d.stage) && (
-                            <div className="flex items-center gap-0.5 pl-1">
-                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                d.stage === "Closed Won" ? "bg-emerald-500"
-                                : d.stage === "Closed Lost" ? "bg-red-400"
-                                : d.stage === "Invoice Sent" ? "bg-orange-400"
-                                : d.stage === "Proposal Sent-Negotiation" ? "bg-yellow-400"
-                                : "bg-blue-400"
-                              }`} />
-                              <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
-                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-0.5">● Live</span>}
-                            </div>
-                          )}
-                        </div>
                         )}
                       </div>
                     );
@@ -957,6 +963,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
 export default function MyTargets() {
   const [targets, setTargets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myDashStats, setMyDashStats] = useState(null);
   const [periodFilter, setPeriodFilter] = useState("all");
   const [myView, setMyView] = useState("targets"); // "targets" | "notifications"
   const { notifications, setNotifications, fetchNotifications } = useNotifications();
@@ -973,8 +980,17 @@ export default function MyTargets() {
   const fetchTargets = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${baseUrl}/targets/my`, { headers });
+      const [{ data }, dashStatsRes] = await Promise.all([
+        axios.get(`${baseUrl}/targets/my`, { headers }),
+        // "My Monthly Overview" header — self-scoped, so it always shows real
+        // numbers even when you have zero active Targets.
+        axios.get(`${baseUrl}/targets/my-dashboard-stats`, { headers }).catch((err) => {
+          console.error("Failed to load my dashboard stats", err);
+          return null;
+        }),
+      ]);
       setTargets(data);
+      if (dashStatsRes) setMyDashStats(dashStatsRes.data);
     } catch {
       toast.error("Failed to load targets");
     } finally {
@@ -1080,7 +1096,7 @@ export default function MyTargets() {
   // "reason_note" notifications are admin-only (sent to admins when a sales
   // person reports an issue) and belong exclusively in admin's Reason Notes
   // tab — never in a sales person's own Notifications & Reminders feed.
-  const TARGET_NOTIF_TYPES = ["target","target_reminder","target_due_today","target_expired","target_reassign"];
+  const TARGET_NOTIF_TYPES = ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign"];
   const isTargetTabNotif = (n) => TARGET_NOTIF_TYPES.includes(n.type);
 
   const switchToNotifications = () => {
@@ -1089,7 +1105,7 @@ export default function MyTargets() {
       // Mark all target notifications as read when opening the tab
       setNotifications(prev => {
         const unread = prev.filter(n => isTargetTabNotif(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
-        unread.forEach(n => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
+        unread.forEach(n => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { }));
         return prev.map(n => isTargetTabNotif(n) ? { ...n, read: true, isRead: true } : n);
       });
       return "notifications";
@@ -1120,6 +1136,18 @@ export default function MyTargets() {
         </h1>
         <p className="text-gray-400 text-sm mt-0.5">Targets assigned to you by your admin</p>
       </div>
+
+      {myDashStats && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-600 mb-3">My Monthly Overview</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Total Leads" value={myDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Total Deals" value={myDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Deals Won"   value={myDashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deals Lost"  value={myDashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 mb-5 text-xs text-blue-700">
         <span className="font-semibold">Flow:</span>

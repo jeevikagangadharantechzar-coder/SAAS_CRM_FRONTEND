@@ -273,12 +273,12 @@ const handleLogout = async () => {
 
   return (
     <>
-      <div className="w-full bg-white dark:bg-gray-900 dark:text-white p-3 flex justify-between items-center shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="w-full bg-white dark:bg-gray-900 dark:text-white p-2 sm:p-3 flex justify-between items-center shadow-sm border-b border-gray-200 dark:border-gray-700">
         {/* Sidebar Toggle */}
-        <div className="relative group">
+        <div className="relative group shrink-0">
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <Menu size={24} className="text-gray-600 dark:text-gray-300" />
         </button>
@@ -292,7 +292,7 @@ const handleLogout = async () => {
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center space-x-4 relative">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4 relative min-w-0">
           {/* Language Dropdown */}
           <div className="relative" ref={langRef}>
             {/* <button
@@ -326,10 +326,10 @@ const handleLogout = async () => {
           </div>
 
           {/* Fullscreen Toggle */}
-          <div className="relative group">
+          <div className="relative group hidden sm:block">
           <button
             onClick={toggleFullscreen}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             {isFullscreen ? (
               <Minimize size={22} className="text-gray-600 dark:text-gray-300" />
@@ -354,7 +354,7 @@ const handleLogout = async () => {
 
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative transition-colors"
             >
               <Bell size={22} className="text-gray-600 dark:text-gray-300" />
               {notifications.filter((n) => !n.read).length > 0 && (
@@ -372,7 +372,7 @@ const handleLogout = async () => {
               </div>
             </div>
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+              <div className="fixed sm:absolute left-2 right-2 top-16 sm:left-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 sm:max-w-[92vw] max-h-[80vh] sm:max-h-none bg-white dark:bg-gray-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
                   <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">Notifications</span>
@@ -410,11 +410,18 @@ const handleLogout = async () => {
                         }`}
                       >
                         <div className="flex-shrink-0 relative">
-                          <img
-                            src={getProfileImageUrl(n.profileImage)}
-                            alt="avatar"
-                            className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
-                          />
+                          {n.profileImage ? (
+                            <img
+                              src={getProfileImageUrl(n.profileImage)}
+                              alt="avatar"
+                              className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                            />
+                          ) : (
+                            <FaUserCircle
+                              size={40}
+                              className="text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-full"
+                            />
+                          )}
                           {!n.read && !n.isRead && (
                             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
                           )}
@@ -476,7 +483,7 @@ const handleLogout = async () => {
             <div className="relative group">
               <button
                 onClick={() => navigate("integrations")}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <Plug size={22} className="text-gray-600 dark:text-gray-300" />
               </button>
@@ -495,7 +502,7 @@ const handleLogout = async () => {
             <div className="relative group">
               <button
                 onClick={() => navigate("/settings")}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <Settings size={22} className="text-gray-600 dark:text-gray-300" />
               </button>
@@ -511,19 +518,19 @@ const handleLogout = async () => {
           )}
 
           {/* User Dropdown */}
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative shrink-0" ref={dropdownRef}>
             <div className="relative group">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center space-x-3 bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex items-center space-x-1.5 sm:space-x-3 bg-white dark:bg-gray-800 rounded-xl px-1.5 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {/* User Avatar */}
-              <div className="relative">
+              <div className="relative shrink-0">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt="User Avatar"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.style.display = "none";
@@ -542,7 +549,7 @@ const handleLogout = async () => {
               </div>
 
               {/* User Info */}
-              <div className="flex flex-col text-left hidden md:flex">
+              <div className="flex-col text-left hidden md:flex">
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                   {user?.name || "Guest"}
                 </p>
@@ -554,7 +561,7 @@ const handleLogout = async () => {
               {/* Dropdown Icon */}
               <ChevronDown
                 size={20}
-                className={`text-gray-500 dark:text-gray-400 transition-transform duration-200 ${
+                className={`hidden sm:block text-gray-500 dark:text-gray-400 transition-transform duration-200 shrink-0 ${
                   showDropdown ? "rotate-180" : ""
                 }`}
               />
