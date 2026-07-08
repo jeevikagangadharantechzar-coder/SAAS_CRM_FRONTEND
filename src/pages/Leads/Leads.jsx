@@ -23,6 +23,7 @@ import {
   Loader2,
   Download,
   FileSpreadsheet,
+  X,
 } from "lucide-react";
 
 import { initSocket, getSocket } from "../../utils/socket";
@@ -210,6 +211,10 @@ function LeadTableComponent() {
   const [followUpFilter, setFollowUpFilter] = useState(
     location.state?.followUpFilter === "missed" ? "missed" : "all"
   );
+  // General Start/End Date filter — plain createdAt range; leaving either
+  // blank (or both) shows every record, same as every other filter here.
+  const [dateFilterFrom, setDateFilterFrom] = useState("");
+  const [dateFilterTo, setDateFilterTo] = useState("");
   
   // Store users with their IDs for assignee filter
   const [usersList, setUsersList] = useState([]);
@@ -378,6 +383,10 @@ function LeadTableComponent() {
       params.append("followUpStatus", followUpFilter);
     }
 
+    // General date range filter
+    if (dateFilterFrom) params.append("startDate", dateFilterFrom);
+    if (dateFilterTo) params.append("endDate", dateFilterTo);
+
       console.log("Fetching leads with params:", Object.fromEntries(params));
 
       const { data } = await axios.get(
@@ -400,7 +409,7 @@ function LeadTableComponent() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter,followUpFilter, itemsPerPage, t]);
+  }, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, followUpFilter, dateFilterFrom, dateFilterTo, itemsPerPage, t]);
 
   useEffect(() => {
     fetchLeads();
@@ -1027,6 +1036,38 @@ function LeadTableComponent() {
               <option value="completed">Completed Follow-ups</option>
               <option value="missed">Missed Follow-ups</option>
             </select>
+          </div>
+
+          {/* General Date Range filter — plain createdAt range; leaving
+              either side blank shows all records. */}
+          <div className="flex items-center gap-2 w-11/12 md:w-auto mx-auto">
+            <input
+              type="date"
+              value={dateFilterFrom}
+              onChange={(e) => setDateFilterFrom(e.target.value)}
+              max={dateFilterTo || undefined}
+              title="Start Date"
+              className="border rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              value={dateFilterTo}
+              onChange={(e) => setDateFilterTo(e.target.value)}
+              min={dateFilterFrom || undefined}
+              title="End Date"
+              className="border rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {(dateFilterFrom || dateFilterTo) && (
+              <button
+                type="button"
+                onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                className="text-gray-400 hover:text-gray-600"
+                title="Clear date filter"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         </div>
       </div>
