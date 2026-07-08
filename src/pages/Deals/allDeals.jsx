@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban } from "lucide-react";
@@ -19,6 +19,16 @@ const CURRENCY_SYMBOLS = {
   USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
   AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
   SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
+// Colorful pill styling per deal stage (mirrors the Rejected badge already
+// on this page) so every stage in the table reads the same way.
+const STAGE_BADGE_STYLES = {
+  "Qualification": "bg-blue-50 text-blue-700 border-blue-200",
+  "Proposal Sent-Negotiation": "bg-purple-50 text-purple-700 border-purple-200",
+  "Invoice Sent": "bg-amber-50 text-amber-700 border-amber-200",
+  "Closed Won": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Closed Lost": "bg-red-50 text-red-700 border-red-200",
 };
 
 const dealTourSteps = [
@@ -59,6 +69,20 @@ function AllDealsComponent() {
   const [tooltipCoords, setTooltipCoords] = useState(null);
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
   const [targetLinkedDealIds, setTargetLinkedDealIds] = useState(new Map());
+
+  // Sales-only custom date-range filter — folded into the existing filter bar
+  // below (no separate card). "Custom Range" toggles the two date inputs +
+  // the Deal Won/Deal Lost/Pending Deal tick-box dropdown; once From, To, and
+  // at least one type are set, it fetches matching deals from the backend
+  // (getAll with start/end/dealType) since the default fetch no longer
+  // returns previous-day Closed Won/Lost deals — those only come back into
+  // view through this search.
+  const [showCustomRange, setShowCustomRange] = useState(false);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [dealTypeFilter, setDealTypeFilter] = useState({ won: false, lost: false, pending: false });
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [customRangeDeals, setCustomRangeDeals] = useState([]);
 
   // Reject modal
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -104,19 +128,32 @@ function AllDealsComponent() {
     initSocket();
   }, []);
 
-  // Keep the list live via socket instead of polling: refresh on stage
-  // changes, and drop a deal immediately for the sales person it was
-  // rejected from. Admins also need this — they receive both events too
-  // (see notifyUser calls in deals.controller.js) but were previously
-  // skipped here, so their list only ever updated on a manual reload.
+  // This page never polls — it only ever refreshes off these socket events,
+  // for both roles. Sales gets the fuller treatment (optimistic removal +
+  // toast when Admin rejects one of theirs); Admin just gets a silent refetch
+  // so their own list stays live too, without a "removed from your list"
+  // toast that wouldn't make sense for their own action.
   useEffect(() => {
-    if (!userRole) return;
     const socket = getSocket();
-    if (!socket) return;
+    if (!socket || !userRole) return;
+
+    if (userRole === "Admin") {
+      const refresh = () => fetchDeals();
+      socket.on("deal_stage_updated", refresh);
+      socket.on("deal_rejected", refresh);
+      return () => {
+        socket.off("deal_stage_updated", refresh);
+        socket.off("deal_rejected", refresh);
+      };
+    }
+
     const rejectedHandler = ({ dealId, dealName }) => {
       setDeals((prev) => prev.filter((d) => d._id !== dealId));
       toast.info(`Deal "${dealName}" was rejected by Admin and removed from your list.`);
     };
+    // Any stage change (e.g. moving to Closed Won) should refresh immediately
+    // so the card's new stage — and the Deals Snapshot below — show up right
+    // away instead of looking stale.
     const stageHandler = () => fetchDeals();
     socket.on("deal_rejected", rejectedHandler);
     socket.on("deal_stage_updated", stageHandler);
@@ -148,10 +185,13 @@ function AllDealsComponent() {
         setOpenDropdownId(null);
         setDropdownCoords(null);
       }
+      if (typeDropdownOpen && !e.target.closest(".deal-type-dropdown")) {
+        setTypeDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdownId]);
+  }, [openDropdownId, typeDropdownOpen]);
 
   // Close tooltip on scroll
   useEffect(() => {
@@ -266,7 +306,6 @@ function AllDealsComponent() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDeals(res.data || []);
-      setTotalPages(Math.ceil((res.data?.length || 0) / itemsPerPage));
     } catch (err) {
       console.error("Fetch deals error:", err);
       toast.error("Failed to fetch deals");
@@ -274,6 +313,35 @@ function AllDealsComponent() {
       setLoading(false);
     }
   };
+
+/* ── Fetch Custom Range Deals Function ─────────────────────── */
+  // Sales-only: the default getAll fetch above excludes previous-day Closed
+  // Won/Lost deals, so once From, To, and at least one type are set, hit the
+  // backend again with start/end/dealType to pull in whatever matches that
+  // search specifically (backend matches Won/Lost by wonAt/lostDate, Pending
+  // by createdAt).
+  const fetchCustomRangeDeals = async (from, to, types) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}/deals/getAll`, {
+        params: { start: from, end: to, dealType: types.join(",") },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCustomRangeDeals(res.data || []);
+    } catch (err) {
+      console.error("Fetch custom range deals error:", err);
+      toast.error("Failed to fetch custom range deals");
+    }
+  };
+
+  useEffect(() => {
+    const types = [dealTypeFilter.won && "won", dealTypeFilter.lost && "lost", dealTypeFilter.pending && "pending"].filter(Boolean);
+    if (!customFrom || !customTo || types.length === 0) {
+      setCustomRangeDeals([]);
+      return;
+    }
+    fetchCustomRangeDeals(customFrom, customTo, types);
+  }, [customFrom, customTo, dealTypeFilter]);
 
 /* ── Fetch Users Function ─────────────────────── */
   const fetchUsers = async () => {
@@ -327,7 +395,26 @@ function AllDealsComponent() {
     if (newPage > 0 && newPage <= totalPages) setCurrentPage(newPage);
   };
 
-  const filteredDeals = deals
+  // Sales-only custom range + Deal Won/Deal Lost/Pending Deal tick-box filter —
+  // active as soon as From, To, and at least one type are ticked. The backend
+  // (fetchCustomRangeDeals above) already applies the right date field per
+  // type, so this just marks which fetched ids should be shown.
+  const customRangeIds = useMemo(() => {
+    if (!customFrom || !customTo || (!dealTypeFilter.won && !dealTypeFilter.lost && !dealTypeFilter.pending)) return null;
+    return new Set(customRangeDeals.map((d) => d._id));
+  }, [customRangeDeals, customFrom, customTo, dealTypeFilter]);
+
+  // While a Custom Range search is active, the table needs to include deals
+  // fetched by that search even if they're not in the default `deals` list
+  // (e.g. a previous-day Closed Won deal the default fetch excludes).
+  const baseDeals = useMemo(() => {
+    if (!customRangeIds) return deals;
+    const merged = new Map(deals.map((d) => [d._id, d]));
+    customRangeDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
+    return Array.from(merged.values());
+  }, [deals, customRangeDeals, customRangeIds]);
+
+  const filteredDeals = baseDeals
     .filter((d) => d.dealName?.toLowerCase().includes(searchTerm.toLowerCase()))
     .filter((d) => (clientTypeFilter ? d.clientType === clientTypeFilter : true))
     .filter((d) => (filters.stage ? d.stage === filters.stage : true))
@@ -345,7 +432,38 @@ function AllDealsComponent() {
       const today = new Date();
       const followUp = new Date(d.followUpDate);
       return followUp.toDateString() === today.toDateString();
-    });
+    })
+    .filter((d) => {
+      // Sales-only: a Closed Won deal from a previous day stays out of the
+      // default view — only today's wins show at initial render. Older wins
+      // are still reachable through the Custom Range search (Deal Won +
+      // date range), which is why this check steps aside once that search
+      // is active (customRangeIds set) instead of hiding them there too.
+      if (userRole === "Admin" || customRangeIds) return true;
+      if (d.stage !== "Closed Won") return true;
+      if (!d.wonAt) return true;
+      return new Date(d.wonAt).toDateString() === new Date().toDateString();
+    })
+    .filter((d) => {
+      // Sales-only: a Closed Lost deal from a previous day stays out of the
+      // default view — only today's losses show at initial render. Older
+      // losses are still reachable through the Custom Range search (Deal
+      // Lost + date range), which is why this check steps aside once that
+      // search is active (customRangeIds set) instead of hiding them there too.
+      if (userRole === "Admin" || customRangeIds) return true;
+      if (d.stage !== "Closed Lost") return true;
+      if (!d.lostDate) return true;
+      return new Date(d.lostDate).toDateString() === new Date().toDateString();
+    })
+    .filter((d) => !customRangeIds || customRangeIds.has(d._id));
+
+  // Derived from the actually-filtered list rather than the raw fetch count —
+  // matters once Custom Range merges in deals the default fetch didn't return.
+  useEffect(() => {
+    const pages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage));
+    setTotalPages(pages);
+    if (currentPage > pages) setCurrentPage(pages);
+  }, [filteredDeals.length]);
 
   const paginatedDeals = filteredDeals.slice(
     (currentPage - 1) * itemsPerPage,
@@ -451,8 +569,8 @@ function AllDealsComponent() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-filters">
-        <div className="flex flex-wrap gap-6 items-center">
+      <div className="mb-4 tour-filters">
+        <div className="flex flex-wrap gap-3 items-center">
           <select
             value={filters.stage}
             onChange={(e) =>
@@ -503,9 +621,9 @@ function AllDealsComponent() {
             <Calendar size={16} />
             Today's Follow-up
             {showTodayOnly && (
-              <X 
-                size={14} 
-                className="ml-1 cursor-pointer hover:text-white" 
+              <X
+                size={14}
+                className="ml-1 cursor-pointer hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTodayOnly(false);
@@ -514,14 +632,117 @@ function AllDealsComponent() {
             )}
           </button>
 
+          {/* Custom Range toggle — sales person only, never on Admin's page. */}
+          {userRole && userRole !== "Admin" && (
+            <button
+              onClick={() => {
+                setShowCustomRange((v) => {
+                  const next = !v;
+                  if (!next) { setCustomFrom(""); setCustomTo(""); setDealTypeFilter({ won: false, lost: false, pending: false }); }
+                  return next;
+                });
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition ${
+                showCustomRange ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <Calendar size={16} />
+              Custom Range
+            </button>
+          )}
+
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search Deal Name..."
-            className="border rounded-full px-4 py-2 bg-white text-sm"
+            className="border rounded-full px-4 py-2 bg-white text-sm ml-auto"
           />
         </div>
+
+        {/* Custom Range panel — its own clearly-separated row, not mixed in
+            with the filters above, so From/To/Type read as one group. */}
+        {userRole && userRole !== "Admin" && showCustomRange && (
+          <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-200">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-500">From</label>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="border rounded-md px-3 py-2 bg-white text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-500">To</label>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="border rounded-md px-3 py-2 bg-white text-sm"
+              />
+            </div>
+
+            {/* Deal Won / Deal Lost — tick-box multi-select dropdown */}
+            <div className="relative deal-type-dropdown">
+              <button
+                type="button"
+                onClick={() => setTypeDropdownOpen((v) => !v)}
+                className="border rounded-md bg-white px-4 py-2 text-sm flex items-center gap-2 min-w-[160px] justify-between"
+              >
+                <span className="text-gray-700">
+                  {[dealTypeFilter.won && "Deal Won", dealTypeFilter.lost && "Deal Lost", dealTypeFilter.pending && "Pending Deal"].filter(Boolean).join(", ") || "Select Type"}
+                </span>
+                <span className="text-gray-400">▾</span>
+              </button>
+              {typeDropdownOpen && (
+                <div className="absolute z-20 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1">
+                  <label className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={dealTypeFilter.won}
+                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, won: e.target.checked }))}
+                      className="accent-green-600"
+                    />
+                    Deal Won
+                  </label>
+                  <label className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={dealTypeFilter.lost}
+                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, lost: e.target.checked }))}
+                      className="accent-red-600"
+                    />
+                    Deal Lost
+                  </label>
+                  <label className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={dealTypeFilter.pending}
+                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, pending: e.target.checked }))}
+                      className="accent-blue-600"
+                    />
+                    Pending Deal
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Clear — resets From/To/Type and closes the custom range panel */}
+            <button
+              type="button"
+              onClick={() => {
+                setCustomFrom("");
+                setCustomTo("");
+                setDealTypeFilter({ won: false, lost: false, pending: false });
+                setShowCustomRange(false);
+              }}
+              className="px-4 py-2 rounded-md text-sm font-medium text-gray-600 border border-gray-300 bg-white hover:bg-gray-100"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
       {showTodayOnly && (
         <div className="mb-3 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
@@ -657,8 +878,16 @@ function AllDealsComponent() {
                         >
                           Rejected
                         </span>
+                      ) : deal.stage ? (
+                        <span
+                          className={`text-xs px-3 py-1.5 rounded-full font-medium border cursor-default inline-block ${
+                            STAGE_BADGE_STYLES[deal.stage] || "bg-gray-50 text-gray-700 border-gray-200"
+                          }`}
+                        >
+                          {deal.stage}
+                        </span>
                       ) : (
-                        deal.stage || "-"
+                        "-"
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -828,7 +1057,7 @@ function AllDealsComponent() {
             }}
           >
             {(() => {
-              const activeDeal = deals.find((d) => d._id === openDropdownId);
+              const activeDeal = baseDeals.find((d) => d._id === openDropdownId);
               const activeIsTerminal = activeDeal?.stage === "Rejected" || activeDeal?.stage === "Closed Won";
               const editDisabled = (activeDeal?.isActive === false && userRole !== "Admin") || activeIsTerminal;
               return (

@@ -270,13 +270,14 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true, 
 };
 
 /* ── Messages Sidebar Item with unread badge ─ */
-const MessagesItem = ({ to, sidebarOpen = true }) => {
+const MessagesItem = ({ to, sidebarOpen = true, hasPermission = true }) => {
   const [unread, setUnread] = useState(0);
   const { t } = useTranslation();
   const { tenantSlug } = useParams();
   const location = useLocation();
 
   useEffect(() => {
+    if (!hasPermission) return;
     const API_URL = import.meta.env.VITE_API_URL;
     const activeSlug = localStorage.getItem("tenantSlug") || tenantSlug;
     const token = localStorage.getItem("token");
@@ -308,7 +309,9 @@ const MessagesItem = ({ to, sidebarOpen = true }) => {
     return () => {
       window.removeEventListener("crm:chat_unread", handleLive);
     };
-  }, [tenantSlug]);
+  }, [tenantSlug, hasPermission]);
+
+  if (!hasPermission) return null;
 
   const resolvedTo =
     tenantSlug && !to.startsWith(`/${tenantSlug}`) && !to.startsWith("http")
@@ -422,9 +425,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         task_management: true,
         target_management: true,
         assigned_tasks: true,
-        Meetings: true,
+        meetings: true,
         streak_leaderboard: true,
         email_campaigns: true,
+        deal_analysis: true,
+        won_analysis: true,
+        loss_analysis: true,
+        messages: true,
       });
     } else if (_user?.role?.permissions) {
       setUserPermissions(_user.role.permissions);
@@ -680,22 +687,28 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onToggle={() => setShowAnalysis((s) => !s)}
           sidebarOpen={isOpen}
           activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
-          hasPermission={hasPlanFeature("analytics")}
+          hasPermission={
+            (isAdmin || userPermissions.deal_analysis || userPermissions.won_analysis || userPermissions.loss_analysis) &&
+            hasPlanFeature("analytics")
+          }
         >
           <SmallLink
             to="DealAnalysis"
             icon={<BarChart3 />}
             label={t("sidebar.dealAnalysis")}
+            hasPermission={isAdmin || userPermissions.deal_analysis}
           />
           <SmallLink
             to="cltv/dashboard"
             icon={<TrendingUp />}
             label={t("sidebar.wonAnalysis")}
+            hasPermission={isAdmin || userPermissions.won_analysis}
           />
           <SmallLink
             to="LossAnalysis"
             icon={<TrendingDown />}
             label={t("sidebar.lossAnalysis")}
+            hasPermission={isAdmin || userPermissions.loss_analysis}
           />
         </Collapsible>
 
@@ -736,7 +749,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Internal Messages */}
         {hasPlanFeature("messages") && (
-          <MessagesItem to="messages" sidebarOpen={isOpen} />
+         <MessagesItem to="messages" sidebarOpen={isOpen} hasPermission={isAdmin || userPermissions.messages} />
+
         )}
 
         {/* Meetings */}

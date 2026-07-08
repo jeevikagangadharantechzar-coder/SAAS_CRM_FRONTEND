@@ -8,7 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
 import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
-  Activity, Trophy, ArrowRight, Award, Clock, ChevronDown,
+  Trophy, ArrowRight, Award, Clock, ChevronDown,
   ChevronUp, Briefcase, Mail, Building2, Send, MessageSquare,
   Bell, AlertCircle, Check, XCircle, X, Trash2,
 } from "lucide-react";
@@ -40,6 +40,15 @@ function ProgressBar({ value, color = "bg-[#008ecc]" }) {
     <div className="w-full bg-gray-100 rounded-full h-2.5">
       <div className={`h-2.5 rounded-full transition-all duration-700 ease-out ${color}`}
         style={{ width: `${width}%` }} />
+    </div>
+  );
+}
+function StatCard({ label, value, icon, color, bg }) {
+  return (
+    <div className={`rounded-xl border p-4 ${bg}`}>
+      <div className={`mb-1 ${color}`}>{icon}</div>
+      <p className="text-xs text-gray-500 font-medium">{label}</p>
+      <p className={`text-2xl font-bold ${color}`}>{value}</p>
     </div>
   );
 }
@@ -354,12 +363,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
   const liveDeals   = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads,    actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0,    icon: <Users size={13} className="text-blue-500" />,      bg: "bg-blue-50",   border: "border-blue-100",  countOnly: false },
-    { label: "Deals Won",                target: percentages.effTargetDeals ?? t.targetDeals,    actual: actuals.dealsWon || 0,        pct: percentages.dealsPercent || 0,    icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50",  border: "border-green-100", countOnly: false },
-    { label: "Leads to Deals Won",       target: null,              actual: actuals.leadDealWon || 0,     pct: null, icon: <Trophy size={13} className="text-amber-500" />,  bg: "bg-amber-50",  border: "border-amber-100",  countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
-    { label: "Deals Lost",      target: null,              actual: actuals.dealsLost || 0,       pct: null, icon: <XCircle size={13} className="text-red-500" />,   bg: "bg-red-50",    border: "border-red-100",    countOnly: true, badgeText: "closed lost",  badgeClass: "text-red-600 bg-red-100"   },
-    { label: "Calls Made",      target: t.targetCalls,    actual: actuals.calls || 0,           pct: percentages.callsPercent || 0,    icon: <Phone size={13} className="text-orange-500" />,     bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
-    { label: "Meetings Done",   target: t.targetMeetings, actual: actuals.meetings || 0,        pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />,  bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
+    { label: "Deals Won",  target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Deals Lost", target: null,                                       actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
   ];
 
   return (
@@ -957,6 +962,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
 export default function MyTargets() {
   const [targets, setTargets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myDashStats, setMyDashStats] = useState(null);
   const [periodFilter, setPeriodFilter] = useState("all");
   const [myView, setMyView] = useState("targets"); // "targets" | "notifications"
   const { notifications, setNotifications, fetchNotifications } = useNotifications();
@@ -973,8 +979,17 @@ export default function MyTargets() {
   const fetchTargets = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${baseUrl}/targets/my`, { headers });
+      const [{ data }, dashStatsRes] = await Promise.all([
+        axios.get(`${baseUrl}/targets/my`, { headers }),
+        // "My Monthly Overview" header — self-scoped, so it always shows real
+        // numbers even when you have zero active Targets.
+        axios.get(`${baseUrl}/targets/my-dashboard-stats`, { headers }).catch((err) => {
+          console.error("Failed to load my dashboard stats", err);
+          return null;
+        }),
+      ]);
       setTargets(data);
+      if (dashStatsRes) setMyDashStats(dashStatsRes.data);
     } catch {
       toast.error("Failed to load targets");
     } finally {
@@ -1120,6 +1135,18 @@ export default function MyTargets() {
         </h1>
         <p className="text-gray-400 text-sm mt-0.5">Targets assigned to you by your admin</p>
       </div>
+
+      {myDashStats && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-600 mb-3">My Monthly Overview</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Total Leads" value={myDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Total Deals" value={myDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Deals Won"   value={myDashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deals Lost"  value={myDashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 mb-5 text-xs text-blue-700">
         <span className="font-semibold">Flow:</span>

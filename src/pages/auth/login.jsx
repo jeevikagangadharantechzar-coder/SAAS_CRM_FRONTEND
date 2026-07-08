@@ -60,6 +60,15 @@ const Login = () => {
     }
   }, []);
 
+  // A token is only worth honoring/blocking on if it hasn't expired yet.
+  // A dead token (expired, or left over from a deleted tenant) should never
+  // be able to permanently lock the login page.
+  const isTokenLive = (token) => {
+    if (!token) return false;
+    const decoded = decodeToken(token);
+    return !!decoded?.exp && decoded.exp * 1000 > Date.now();
+  };
+
   useEffect(() => {
     axios
       .get(`${SI_URI}/superadmin/api/public/branding`)
@@ -116,20 +125,21 @@ const Login = () => {
       }
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [tenantSlug, navigate]);
+    evaluateSession();
+
+    window.addEventListener("storage", evaluateSession);
+    return () => window.removeEventListener("storage", evaluateSession);
+  }, [tenantSlug, navigate, dispatch]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
-    setShowUpgradeButton(false);
 
-    // 1. Check if another tenant is already logged in
+    // 1. Check if another tenant is already logged in (ignore dead/expired tokens)
     const activeToken = localStorage.getItem("token");
     const activeSlug = localStorage.getItem("tenantSlug");
-    if (activeToken && activeSlug && tenantSlug && activeSlug !== tenantSlug) {
+    if (activeToken && activeSlug && tenantSlug && activeSlug !== tenantSlug && isTokenLive(activeToken)) {
       setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
       setIsError(true);
       setIsLoading(false);
@@ -214,10 +224,17 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login Error:", error);
-      setMessage(error.response?.data?.message || "Authentication failed. Check details.");
-      setIsError(true);
       if (error.response?.data?.planExpired) {
-        setShowUpgradeButton(true);
+        // Reuse the same polished popup shown after a mid-session expiry
+        // redirect, so a fresh blocked login attempt looks identical.
+        setExpiredNotice({
+          message: error.response.data.message,
+          trialExpired: !!error.response.data.trialExpired,
+          expiryDate: error.response.data.expiryDate || null,
+        });
+      } else {
+        setMessage(error.response?.data?.message || "Authentication failed. Check details.");
+        setIsError(true);
       }
     } finally {
       setIsLoading(false);
@@ -401,6 +418,11 @@ const Login = () => {
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               {expiredNotice.trialExpired ? "Your Free Trial Has Ended" : "Subscription Expired"}
             </h3>
+            {expiredNotice.expiryDate && (
+              <span className="inline-block px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-semibold mb-3">
+                {expiredNotice.trialExpired ? "Trial ended on" : "Expired on"} {expiredNotice.expiryDate}
+              </span>
+            )}
             <p className="text-gray-600 mb-6">{expiredNotice.message}</p>
             <div className="flex flex-col gap-3">
               {expiredNotice.trialExpired && tenantSlug && (
