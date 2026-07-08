@@ -87,6 +87,7 @@ const Login = () => {
       .catch(() => {});
   }, []);
 
+  
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("inactive") === "true") {
@@ -124,7 +125,23 @@ const Login = () => {
         setIsError(false);
       }
     };
+   const evaluateSession = () => {
+      const activeToken = localStorage.getItem("token");
+      const activeSlug = localStorage.getItem("tenantSlug");
 
+      if (activeToken && activeSlug && isTokenLive(activeToken)) {
+        if (!tenantSlug || activeSlug === tenantSlug) {
+          navigate(`/${activeSlug}/dashboard`, { replace: true });
+        } else {
+          setMessage(`Another tenant session (${activeSlug}) is already active. Please log out of that session first.`);
+          setIsError(true);
+        }
+      } else {
+        if (activeToken || activeSlug) dispatch(clearCredentials());
+        setMessage("");
+        setIsError(false);
+      }
+    };
     evaluateSession();
 
     window.addEventListener("storage", evaluateSession);
