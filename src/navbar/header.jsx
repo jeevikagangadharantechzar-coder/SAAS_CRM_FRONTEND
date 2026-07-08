@@ -411,11 +411,18 @@ const handleLogout = async () => {
                         }`}
                       >
                         <div className="flex-shrink-0 relative">
-                          <img
-                            src={getProfileImageUrl(n.profileImage)}
-                            alt="avatar"
-                            className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
-                          />
+                          {n.profileImage ? (
+                            <img
+                              src={getProfileImageUrl(n.profileImage)}
+                              alt="avatar"
+                              className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                            />
+                          ) : (
+                            <FaUserCircle
+                              size={40}
+                              className="text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-full"
+                            />
+                          )}
                           {!n.read && !n.isRead && (
                             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
                           )}
