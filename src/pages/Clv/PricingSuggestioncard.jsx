@@ -11,7 +11,6 @@ const PricingSuggestionCard = ({ dealValue, onClose }) => {
   const [pricingData, setPricingData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [applying, setApplying] = useState(false);
   const [clientData, setClientData] = useState(null);
 
   useEffect(() => {
@@ -211,20 +210,6 @@ const PricingSuggestionCard = ({ dealValue, onClose }) => {
     }
   };
 
-/* ── Handle Apply Recommendation Function ─────────────────────── */
-  const handleApplyRecommendation = async () => {
-    if (!pricingData) return;
-    
-    try {
-      setApplying(true);
-      toast.success(`Discount of ${pricingData.recommendedDiscount}% applied successfully`);
-      onClose();
-    } catch (err) {
-      toast.error("Failed to apply discount. Please try again.");
-    } finally {
-      setApplying(false);
-    }
-  };
 
 /* ── Get Confidence Color Function ─────────────────────── */
   const getConfidenceColor = (score) => {
@@ -368,13 +353,6 @@ const PricingSuggestionCard = ({ dealValue, onClose }) => {
         <div className="text-xs text-gray-500">
           Based on {clientData ? "client health metrics" : "deal value"}
         </div>
-        <button 
-          onClick={handleApplyRecommendation}
-          disabled={applying}
-          className="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 flex items-center gap-1"
-        >
-          {applying ? "Applying..." : "Apply Discount"}
-        </button>
       </div>
     </div>
   );

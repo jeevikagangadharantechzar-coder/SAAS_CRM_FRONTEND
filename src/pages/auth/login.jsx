@@ -38,7 +38,7 @@ const Login = () => {
   const [showUpgradeButton, setShowUpgradeButton] = useState(false);
   const [platformLogo, setPlatformLogo] = useState("");
   const [platformName, setPlatformName] = useState(""); 
-   const [expiredNotice, setExpiredNotice] = useState(null);
+  const [expiredNotice, setExpiredNotice] = useState(null);
 
 
   const navigate = useNavigate();
@@ -185,9 +185,8 @@ const Login = () => {
           console.error("Streak tracker failed:", streakErr);
         }
 
-        // Initialize Activity Timer and mark tab session active immediately
+        // Initialize Activity Timer
         localStorage.setItem("lastActivity", Date.now().toString());
-        sessionStorage.setItem("sessionActive", "true");
 
         // 5. Store session to Redux and LocalStorage
         dispatch(
