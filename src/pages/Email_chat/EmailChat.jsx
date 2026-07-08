@@ -1262,11 +1262,6 @@ const EmailChat = () => {
 
       {/* LAYOUT */}
       <div className="flex h-full overflow-hidden">
-        <button onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-          className="lg:hidden fixed top-4 left-4 z-50 bg-white p-2.5 rounded-xl shadow-lg border border-gray-200">
-          <FaBars size={16} color="#5f6368" />
-        </button>
-
         {/* SIDEBAR */}
         <div
           className={`${sidebarCollapsed ? "w-16" : "w-60"} bg-white flex flex-col transition-all duration-300 ease-in-out ${showMobileSidebar ? "fixed inset-y-0 left-0 z-40 shadow-xl" : "hidden lg:flex"}`}
@@ -1351,8 +1346,14 @@ const EmailChat = () => {
         <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#f6f8fc" }}>
           {/* HEADER */}
           <div className="bg-white px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid #e8eaed" }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                  className="lg:hidden p-2 rounded-full hover:bg-gray-100 text-gray-500 transition flex-shrink-0"
+                >
+                  <FaBars size={16} />
+                </button>
                 {selectedThread && (
                   <button
                     onClick={() => {
@@ -1360,16 +1361,16 @@ const EmailChat = () => {
                       openingRef.current = null;
                       if (abortThreadRef.current) abortThreadRef.current.abort();
                     }}
-                    className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition"
+                    className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition flex-shrink-0"
                   >
                     <FaArrowLeft size={15} />
                   </button>
                 )}
-                <h1 className="text-base font-medium flex items-center gap-2" style={{ color: "#202124" }}>
+                <h1 className="text-base font-medium flex items-center gap-2 min-w-0" style={{ color: "#202124" }}>
                   {selectedThread ? (
                     threadLoading
                       ? <span className="text-gray-400 text-sm animate-pulse">Loading email…</span>
-                      : <span className="truncate max-w-md">{messages[0]?.subject || "Email"}</span>
+                      : <span className="truncate max-w-[60vw] sm:max-w-md">{messages[0]?.subject || "Email"}</span>
                   ) : (
                     <>
                       <span style={{ color: "#5f6368" }}>{labelOptions.find((l) => l.id === activeLabel)?.icon}</span>
@@ -1471,7 +1472,7 @@ const EmailChat = () => {
                       return (
                         <div
                           key={thread.id}
-                          className="group flex items-center px-4 py-2.5 border-b last:border-0 transition-colors duration-100"
+                          className="group flex items-center px-2.5 sm:px-4 py-2.5 border-b last:border-0 transition-colors duration-100"
                           style={{ borderColor: "#f1f3f4", background: thread.unread ? "#f8f9ff" : "white" }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = "#f0f4ff"; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = thread.unread ? "#f8f9ff" : "white"; }}
@@ -1484,37 +1485,37 @@ const EmailChat = () => {
                               setSelectedThreads(s); setShowBulkActions(s.size > 0);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="h-4 w-4 rounded border-gray-300 mr-3 flex-shrink-0"
+                            className="h-4 w-4 rounded border-gray-300 mr-2 sm:mr-3 flex-shrink-0"
                             style={{ accentColor: "#1a73e8" }}
                           />
                           <button
                             onClick={(e) => { e.stopPropagation(); markThreadAs(thread.id, "star", !thread.starred); }}
-                            className={`mr-3 flex-shrink-0 transition-opacity ${thread.starred ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                            className={`mr-2 sm:mr-3 flex-shrink-0 transition-opacity ${thread.starred ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                             style={{ color: thread.starred ? "#f4b400" : "#dadce0" }}
                           >
                             <FaStar size={15} />
                           </button>
                           <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 mr-3 select-none"
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 mr-2 sm:mr-3 select-none"
                             style={{ background: `hsl(${(thread.from?.charCodeAt(0) || 65) * 17 % 360},50%,45%)` }}
                           >
                             {extractName(thread.from).charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0 cursor-pointer py-1 select-none" onClick={() => loadThread(thread.id)}>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <span
-                                className="text-sm truncate w-40 flex-shrink-0"
+                                className="text-sm truncate min-w-0 max-w-[38%] shrink sm:w-40 sm:max-w-none sm:flex-shrink-0"
                                 style={{ color: thread.unread ? "#202124" : "#5f6368", fontWeight: thread.unread ? 600 : 400 }}
                               >
                                 {extractName(thread.from)}
                               </span>
-                              <span className="text-sm truncate" style={{ color: thread.unread ? "#202124" : "#5f6368" }}>
+                              <span className="text-sm truncate flex-1 min-w-0" style={{ color: thread.unread ? "#202124" : "#5f6368" }}>
                                 {thread.subject || "(No Subject)"}
                                 <span className="font-normal ml-1.5" style={{ color: "#80868b" }}>{thread.snippet}</span>
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 ml-2 sm:ml-3 flex-shrink-0">
                             {isThisOpening
                               ? <FaSpinner className="animate-spin" size={12} style={{ color: "#1a73e8" }} />
                               : thread.unread && <div className="w-2 h-2 rounded-full" style={{ background: "#1a73e8" }} />}
@@ -1561,22 +1562,22 @@ const EmailChat = () => {
                 ) : (
                   <div>
                     {messages.map((msg) => (
-                      <div key={msg.id} className="p-6" style={{ borderBottom: "1px solid #f1f3f4" }}>
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
+                      <div key={msg.id} className="p-4 sm:p-6" style={{ borderBottom: "1px solid #f1f3f4" }}>
+                        <div className="flex items-start justify-between flex-wrap gap-2 mb-4">
+                          <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                               style={{ background: `hsl(${(msg.from?.charCodeAt(0) || 65) * 17 % 360},50%,45%)` }}
                             >
                               {extractName(msg.from).charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                              <h4 className="font-medium text-sm" style={{ color: "#202124" }}>{extractName(msg.from)}</h4>
-                              <p className="text-xs" style={{ color: "#5f6368" }}>{extractEmail(msg.from)}</p>
+                            <div className="min-w-0">
+                              <h4 className="font-medium text-sm truncate" style={{ color: "#202124" }}>{extractName(msg.from)}</h4>
+                              <p className="text-xs truncate" style={{ color: "#5f6368" }}>{extractEmail(msg.from)}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs" style={{ color: "#5f6368" }}>{new Date(msg.date).toLocaleString()}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-xs whitespace-nowrap" style={{ color: "#5f6368" }}>{new Date(msg.date).toLocaleString()}</span>
                             <button
                               onClick={() => markThreadAs(selectedThread, "star", !msg.starred)}
                               className="p-1.5 rounded-full hover:bg-gray-100"
@@ -1631,7 +1632,7 @@ const EmailChat = () => {
                             ? <div className="text-sm leading-relaxed" style={{ color: "#202124" }} dangerouslySetInnerHTML={{ __html: msg.htmlBody }} />
                             : <pre className="text-sm whitespace-pre-wrap font-sans" style={{ color: "#202124" }}>{msg.body || "No content"}</pre>}
                         </div>
-                        <div className="mt-5 flex items-center gap-2 pt-4" style={{ borderTop: "1px solid #f1f3f4" }}>
+                        <div className="mt-5 flex items-center flex-wrap gap-2 pt-4" style={{ borderTop: "1px solid #f1f3f4" }}>
                           <button onClick={() => openReply(msg, "reply")}
                             className="text-sm px-4 py-1.5 rounded-full flex items-center gap-1.5"
                             style={{ background: "#c2e7ff", color: "#001d35" }}>
@@ -1659,7 +1660,7 @@ const EmailChat = () => {
       </div>
 
       {showMobileSidebar && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-30 lg:hidden"
+        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden"
           onClick={() => setShowMobileSidebar(false)} />
       )}
     </div>

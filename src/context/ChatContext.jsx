@@ -190,6 +190,11 @@ export const ChatProvider = ({ children }) => {
     finally { setLoadingMsgs(false); }
   }, [GROUP_BASE, token, dbName]);
 
+  const clearActiveChat = useCallback(() => {
+    setActiveContact(null);
+    setActiveGroup(null);
+  }, []);
+
   const selectGroup = useCallback((group) => {
     setActiveGroup(group);
     setActiveContact(null);
@@ -474,7 +479,7 @@ export const ChatProvider = ({ children }) => {
     <ChatContext.Provider value={{
       contacts, activeContact, messages, onlineUsers,
       totalUnread, typing, loadingMsgs,
-      selectContact, sendMessage, emitTyping,
+      selectContact, clearActiveChat, sendMessage, emitTyping,
       uploadFile, loadContacts, currentUser,
       deleteMessage, reactToMessage, clearChat, deleteChat,
       groups, activeGroup, groupMessages, groupTyping,
