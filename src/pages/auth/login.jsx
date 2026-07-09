@@ -7,6 +7,36 @@ import { setCredentials, clearCredentials } from "../../store/authSlice";
 import { initSocket } from "../../utils/socket";
 import ForgotPassword from "../password/ForgotPassword";
 
+// Stable per-browser device id, persisted so re-logging in on the same
+// browser is always recognized as "the same device" and never needs
+// re-approval. One id per browser profile, not per tab/session.
+const getWebDeviceId = () => {
+  let id = localStorage.getItem("webDeviceId");
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : `web-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    localStorage.setItem("webDeviceId", id);
+  }
+  return id;
+};
+
+// Best-effort human-readable label for the Admin approval UI — doesn't need
+// to be precise, just enough for an admin to recognize "which browser".
+const getWebDeviceLabel = () => {
+  const ua = navigator.userAgent || "";
+  const browser =
+    /Edg\//.test(ua) ? "Edge" :
+    /Chrome\//.test(ua) ? "Chrome" :
+    /Firefox\//.test(ua) ? "Firefox" :
+    /Safari\//.test(ua) ? "Safari" : "Browser";
+  const os =
+    /Windows/.test(ua) ? "Windows" :
+    /Mac OS/.test(ua) ? "Mac" :
+    /Android/.test(ua) ? "Android" :
+    /iPhone|iPad/.test(ua) ? "iOS" :
+    /Linux/.test(ua) ? "Linux" : "";
+  return os ? `${browser} on ${os}` : browser;
+};
+
 // Pure JavaScript JWT Decode Helper
 const decodeToken = (token) => {
   try {
@@ -37,8 +67,9 @@ const Login = () => {
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [showUpgradeButton, setShowUpgradeButton] = useState(false);
   const [platformLogo, setPlatformLogo] = useState("");
-  const [platformName, setPlatformName] = useState(""); 
+  const [platformName, setPlatformName] = useState("");
   const [expiredNotice, setExpiredNotice] = useState(null);
+  const [deviceRequestId, setDeviceRequestId] = useState(null);
 
 
   const navigate = useNavigate();
@@ -148,10 +179,55 @@ const Login = () => {
     return () => window.removeEventListener("storage", evaluateSession);
   }, [tenantSlug, navigate, dispatch]);
 
+  // Shared by both the direct-login-success path and the device-approval
+  // polling path below — everything after "we have a valid token" is
+  // identical either way.
+  const completeLoginWithToken = async (token, successMessage) => {
+    const cleanAxios = axios.create();
+
+    const decoded = decodeToken(token);
+    const resolvedSlug = decoded?.slug;
+
+    if (!resolvedSlug) {
+      setMessage("Tenant slug missing from authentication response.");
+      setIsError(true);
+      return;
+    }
+
+    const profileRes = await cleanAxios.get(`${SI_URI}/${resolvedSlug}/api/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const fullUser = profileRes.data;
+
+    initSocket(fullUser._id || fullUser.id);
+
+    try {
+      await cleanAxios.post(
+        `${SI_URI}/${resolvedSlug}/api/streak/update/${fullUser._id || fullUser.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (streakErr) {
+      console.error("Streak tracker failed:", streakErr);
+    }
+
+    localStorage.setItem("lastActivity", Date.now().toString());
+
+    dispatch(setCredentials({ token, slug: resolvedSlug, user: fullUser }));
+
+    setMessage(successMessage || "Logged in successfully!");
+    setIsError(false);
+
+    setTimeout(() => {
+      navigate(`/${resolvedSlug}/dashboard`);
+    }, 1500);
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
+    setDeviceRequestId(null);
 
     // 1. Check if another tenant is already logged in (ignore dead/expired tokens)
     const activeToken = localStorage.getItem("token");
@@ -176,64 +252,26 @@ const Login = () => {
       const response = await cleanAxios.post(loginUrl, {
         email,
         password,
+        deviceType: "web",
+        deviceId: getWebDeviceId(),
+        deviceLabel: getWebDeviceLabel(),
       });
 
+      if (response.data.requiresApproval) {
+        // A device slot of this type is already in use elsewhere — wait for
+        // an Admin to approve this device (see the polling effect below).
+        setMessage(response.data.message || "Waiting for admin approval to log in on this device...");
+        setIsError(false);
+        setDeviceRequestId(response.data.requestId);
+        setIsLoading(false);
+        return;
+      }
+
       if (response.data.token) {
-        const token = response.data.token;
-        
-        // Decode token to verify parameters
-        const decoded = decodeToken(token);
-        const resolvedSlug = decoded?.slug;
-
-        if (!resolvedSlug) {
-          setMessage("Tenant slug missing from authentication response.");
-          setIsError(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // 2. Fetch full profile (role + permissions object) using cleanAxios
-        const profileRes = await cleanAxios.get(`${SI_URI}/${resolvedSlug}/api/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const fullUser = profileRes.data;
-
-        // 3. Connect real-time socket immediately
-        initSocket(fullUser._id || fullUser.id);
-
-        // 4. Update login streak leaderboard automatically using cleanAxios
-        try {
-          await cleanAxios.post(
-            `${SI_URI}/${resolvedSlug}/api/streak/update/${fullUser._id || fullUser.id}`,
-            {},
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-        } catch (streakErr) {
-          console.error("Streak tracker failed:", streakErr);
-        }
-
-        // Initialize Activity Timer
-        localStorage.setItem("lastActivity", Date.now().toString());
-
-        // 5. Store session to Redux and LocalStorage
-        dispatch(
-          setCredentials({
-            token,
-            slug: resolvedSlug,
-            user: fullUser,
-          })
-        );
-
+        await completeLoginWithToken(response.data.token, response.data.message);
         if (response.data.isDbRefreshed) {
           localStorage.setItem("db_refreshed_toast", "true");
         }
-
-        setMessage(response.data.message || "Logged in successfully!");
-        setIsError(false);
-
-        setTimeout(() => {
-          navigate(`/${resolvedSlug}/dashboard`);
-        }, 1500);
       } else {
         setMessage("Token missing in authentication response");
         setIsError(true);
@@ -256,6 +294,36 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  // Poll for the Admin's decision while a device login request is pending.
+  useEffect(() => {
+    if (!deviceRequestId) return;
+
+    const pollUrl = tenantSlug
+      ? `${SI_URI}/${tenantSlug}/api/users/device-request/${deviceRequestId}/status`
+      : `${API_URL}/users/device-request/${deviceRequestId}/status`;
+
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await axios.get(pollUrl);
+        if (data.status === "active" && data.token) {
+          clearInterval(interval);
+          setDeviceRequestId(null);
+          await completeLoginWithToken(data.token, "Device approved — logging you in...");
+        } else if (data.status === "rejected") {
+          clearInterval(interval);
+          setDeviceRequestId(null);
+          setMessage("The admin declined this device login request.");
+          setIsError(true);
+        }
+        // status === "pending" → keep polling
+      } catch (err) {
+        console.error("Device request poll error:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [deviceRequestId, tenantSlug]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -302,8 +370,16 @@ const Login = () => {
                 isError ? "bg-red-50 text-red-700 border border-red-150" : "bg-green-50 text-green-700 border border-green-150"
               }`}
             >
-              <span className="font-semibold text-sm leading-relaxed">{message}</span>
-              
+              <span className="font-semibold text-sm leading-relaxed flex items-center gap-2 justify-center">
+                {deviceRequestId && (
+                  <svg className="animate-spin h-4 w-4 text-current shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
+                {message}
+              </span>
+
               {isError && showUpgradeButton && (
                 <button
                   type="button"
@@ -374,7 +450,7 @@ const Login = () => {
             {/* Login Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!deviceRequestId}
               className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer"
               style={{ backgroundColor: "#008ECC" }}
             >
