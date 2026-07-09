@@ -1751,7 +1751,7 @@ function DealIntelligenceDashboard() {
         
        {/* Pipeline Stage Dashboard */}
 {showStageIntelligence && (
-    <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 mb-8 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 hide-scrollbar">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8 pb-4">
     {[
       { stage: 'Qualification', label: 'Need Attention', sub: 'Qualification', count: pipelineInsights.qualificationDeals, color: 'amber', icon: HelpCircle },
       { stage: 'Proposal', label: 'Follow-up Needed', sub: 'Proposal', count: pipelineInsights.proposalDeals, color: 'blue', icon: Send },
@@ -1761,7 +1761,7 @@ function DealIntelligenceDashboard() {
     ].map(({ stage, label, sub, count, color, icon: Icon }) => (
       <div
         key={stage}
-        className={`relative bg-gradient-to-br from-${color}-50 to-white rounded-2xl border border-${color}-200 p-5 shadow-lg hover:shadow-xl transition-all cursor-pointer flex-shrink-0 min-w-[260px] sm:min-w-0 snap-center`}
+        className={`relative bg-gradient-to-br from-${color}-50 to-white rounded-2xl border border-${color}-200 p-5 shadow-lg hover:shadow-xl transition-all cursor-pointer`}
         onClick={() => handleStageFilter(stage)}
         onMouseEnter={() => {
           setHoveredStage(stage);

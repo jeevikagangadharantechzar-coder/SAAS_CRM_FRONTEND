@@ -77,6 +77,10 @@ const DEFAULTS = {
                         <td style="padding:6px 0;color:#666;font-size:14px;">Password</td>
                         <td style="padding:6px 0;"><span style="background:#fff;border:1px solid #d0dcff;border-radius:4px;padding:4px 12px;font-family:monospace;font-size:15px;color:#1a73e8;font-weight:700;letter-spacing:1px;">{{password}}</span></td>
                       </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#666;font-size:14px;">Slug</td>
+                        <td style="padding:6px 0;color:#111;font-size:14px;font-weight:600;">{{slug}}</td>
+                      </tr>
                     </table>
                   </td>
                 </tr>
@@ -720,7 +724,7 @@ const SuperAdminSettings = () => {
                   <p className="text-xs text-slate-400">
                     Variables:{" "}
                     <code className="bg-slate-100 px-1 rounded">
-                      {"{{adminName}} {{email}} {{password}} {{loginUrl}} {{platformName}}"}
+                      {"{{adminName}} {{email}} {{password}} {{slug}} {{loginUrl}} {{platformName}}"}
                     </code>
                   </p>
                   <div>

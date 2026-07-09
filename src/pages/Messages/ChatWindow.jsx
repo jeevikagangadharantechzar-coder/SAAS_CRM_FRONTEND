@@ -10,7 +10,16 @@ import AddMemberModal from "./AddMemberModal";
 const API_BASE = import.meta.env.VITE_SI_URI || "";
 const API_URL  = import.meta.env.VITE_API_URL;
 
+const buildImgUrl = (img) => {
+  if (!img) return null;
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const base = API_BASE.replace(/\/+$/, "");
+  const name = img.replace(/^\/+/, "").replace(/^uploads\/users\//, "").replace(/^uploads\//, "");
+  return `${base}/uploads/users/${name}`;
+};
+
 const Avatar = ({ name, image, size = 9, isGroup }) => {
+  const [imgFailed, setImgFailed] = React.useState(false);
   const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const colors   = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-orange-500", "bg-pink-500"];
   const color    = colors[(name?.charCodeAt(0) || 0) % colors.length];
@@ -21,8 +30,9 @@ const Avatar = ({ name, image, size = 9, isGroup }) => {
       </div>
     );
   }
-  if (image)
-    return <img src={`${API_BASE}/${image}`} alt={name} className={`w-${size} h-${size} rounded-full object-cover`} />;
+  const url = buildImgUrl(image);
+  if (url && !imgFailed)
+    return <img src={url} alt={name} className={`w-${size} h-${size} rounded-full object-cover`} onError={() => setImgFailed(true)} />;
   return (
     <div className={`w-${size} h-${size} rounded-full ${color} flex items-center justify-center text-white font-semibold text-sm`}>
       {initials}

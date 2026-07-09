@@ -783,7 +783,7 @@ const STAGES = [
         />
 
         {/* Toolbar */}
-        <div className="mx-auto mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between max-w-[1600px]">
+        <div className="mx-auto mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between max-w-[1600px] px-2 sm:px-0">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
                Pipeline View - Deal Stages
@@ -794,14 +794,14 @@ const STAGES = [
                 : "Viewing deals assigned to you"}
             </p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full md:w-auto">
             <input
-              className="search-input w-72 border border-gray-200 bg-white px-4 py-2 mr-12 rounded-full outline-none focus:ring-2 focus:ring-indigo-200"
+              className="search-input w-full sm:w-64 md:w-72 border border-gray-200 bg-white px-4 py-2 rounded-full outline-none focus:ring-2 focus:ring-indigo-200"
               placeholder="Search deals…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-2 items-center justify-center sm:justify-start">
               <button
                 onClick={startTour}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
@@ -821,22 +821,26 @@ const STAGES = [
         </div>
 
         {/* Filters: created-date range + stage checkboxes */}
-        <div className="mx-auto mb-4 flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap max-w-[1600px] bg-white border border-gray-200 rounded-xl p-3">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-500">From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
-            />
-            <label className="text-xs font-medium text-gray-500">To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
-            />
+        <div className="mx-auto mb-4 flex flex-col gap-4 max-w-[1600px] bg-white border border-gray-200 rounded-xl p-3 md:flex-row md:items-center md:flex-wrap">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="border border-gray-200 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-200 bg-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="border border-gray-200 rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-indigo-200 bg-white"
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">

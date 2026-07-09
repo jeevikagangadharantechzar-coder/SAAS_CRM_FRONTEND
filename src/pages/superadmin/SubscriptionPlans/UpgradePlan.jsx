@@ -57,7 +57,12 @@ const UpgradePlan = () => {
 
   const handlePlanChange = (planId) => {
     setSelectedPlanId(planId);
-    setSelectedBillingCycle("");
+    const plan = plans.find((p) => p._id === planId);
+    if (plan?.tiers?.length === 1) {
+      setSelectedBillingCycle(plan.tiers[0].billing_cycle);
+    } else {
+      setSelectedBillingCycle("");
+    }
   };
 
   const selectedPlan = plans.find((p) => p._id === selectedPlanId);
