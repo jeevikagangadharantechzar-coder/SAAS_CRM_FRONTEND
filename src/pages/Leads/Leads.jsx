@@ -1040,29 +1040,29 @@ function LeadTableComponent() {
 
           {/* General Date Range filter — plain createdAt range; leaving
               either side blank shows all records. */}
-          <div className="flex items-center gap-2 w-11/12 md:w-auto mx-auto">
+          <div className="col-span-1 md:col-span-2 flex items-center gap-2 w-full">
             <input
               type="date"
               value={dateFilterFrom}
               onChange={(e) => setDateFilterFrom(e.target.value)}
               max={dateFilterTo || undefined}
               title="Start Date"
-              className="border rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span className="text-gray-400 text-sm">to</span>
+            <span className="text-gray-400 text-sm flex-shrink-0">to</span>
             <input
               type="date"
               value={dateFilterTo}
               onChange={(e) => setDateFilterTo(e.target.value)}
               min={dateFilterFrom || undefined}
               title="End Date"
-              className="border rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {(dateFilterFrom || dateFilterTo) && (
               <button
                 type="button"
                 onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                 title="Clear date filter"
               >
                 <X size={16} />
