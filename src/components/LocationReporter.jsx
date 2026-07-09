@@ -15,6 +15,13 @@ export default function LocationReporter() {
   useEffect(() => {
     if (!("geolocation" in navigator)) return;
 
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      if (user?.planFeatures?.live_tracking === false) return;
+    } catch {
+      // Malformed localStorage — fall through and report as usual.
+    }
+
     const report = () => {
       if (deniedRef.current) return;
       navigator.geolocation.getCurrentPosition(

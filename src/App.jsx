@@ -292,11 +292,12 @@ function App() {
                     <Route path="user&roles" element={<UserManagement />} />
                   </Route>
 
-                  {/* Device login approval + live location tracking — core
-                      account security, always available to Admins (not a
-                      togglable plan feature). */}
-                  <Route element={<PrivateRoute permission="users_roles" />}>
+                  {/* Device login approval + live location tracking — each
+                      togglable per subscription plan by the superadmin. */}
+                  <Route element={<PrivateRoute permission="users_roles" planFeature="device_login_requests" />}>
                     <Route path="device-requests" element={<DeviceRequests />} />
+                  </Route>
+                  <Route element={<PrivateRoute permission="users_roles" planFeature="live_tracking" />}>
                     <Route path="live-locations" element={<LiveLocations />} />
                   </Route>
 
