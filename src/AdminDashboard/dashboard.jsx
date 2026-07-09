@@ -15,7 +15,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import { Badge } from "../components/ui/badge";
 import {
   Users, Trophy, FileText, TrendingUp, Globe,
-  Receipt, BarChart3, Target, ArrowUpRight, ArrowDownRight,
+  Receipt, BarChart3, Target, ArrowUpRight, ArrowDownRight, X,
 } from "lucide-react";
 import axios from "axios";
 import { cn } from "../lib/utils";
@@ -423,32 +423,51 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
 /* ── Sales Pipeline ───────────────────────────────────────────────────────── */
 const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) => {
   const { t } = useTranslation();
-  const [hoveredBar, setHoveredBar] = useState(null);
+  // Pinned via tap/click — Recharts' built-in hover tooltip vanishes the
+  // instant a touch ends (mobile browsers fire a synthetic mouseleave on
+  // release), so touch users need something that stays open until dismissed.
+  const [activePoint, setActivePoint] = useState(null); // { label, payload } | null
+
+  const PipelineTooltipBody = ({ label, payload, onClose }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white p-4 rounded-lg shadow-xl border border-gray-200/80 backdrop-blur-sm min-w-48"
+    >
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="text-sm font-semibold text-gray-800">{label}</div>
+        {onClose && (
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 -m-1 shrink-0">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {payload.map((p, i) => (
+        <div key={i} className="text-sm text-gray-600 mt-2 flex items-center justify-between">
+          <div className="flex items-center">
+            <span style={{ display: "inline-block", width: 10, height: 10, background: p.color, marginRight: 8, borderRadius: "50%" }} />
+            {p.name}
+          </div>
+          <strong className="ml-2">{p.value} {t("dashboard.salesPipeline.deals")}</strong>
+        </div>
+      ))}
+      <div className="mt-3 pt-2 border-t border-gray-200">
+        <div className="text-sm font-medium text-gray-700">
+          {t("dashboard.salesPipeline.total")}: {payload.reduce((sum, p) => sum + p.value, 0)} {t("dashboard.salesPipeline.deals")}
+        </div>
+      </div>
+    </motion.div>
+  );
 
   const CustomPipelineTooltip = ({ active, payload, label }) => {
     if (!active || !payload || payload.length === 0) return null;
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-4 rounded-lg shadow-xl border border-gray-200/80 backdrop-blur-sm min-w-48"
-      >
-        <div className="text-sm font-semibold text-gray-800 mb-3">{label}</div>
-        {payload.map((p, i) => (
-          <div key={i} className="text-sm text-gray-600 mt-2 flex items-center justify-between">
-            <div className="flex items-center">
-              <span style={{ display: "inline-block", width: 10, height: 10, background: p.color, marginRight: 8, borderRadius: "50%" }} />
-              {p.name}
-            </div>
-            <strong className="ml-2">{p.value} {t("dashboard.salesPipeline.deals")}</strong>
-          </div>
-        ))}
-        <div className="mt-3 pt-2 border-t border-gray-200">
-          <div className="text-sm font-medium text-gray-700">
-            {t("dashboard.salesPipeline.total")}: {payload.reduce((sum, p) => sum + p.value, 0)} {t("dashboard.salesPipeline.deals")}
-          </div>
-        </div>
-      </motion.div>
+    return <PipelineTooltipBody label={label} payload={payload} />;
+  };
+
+  const handleBarTap = (data) => {
+    if (!data || !data.activePayload || data.activePayload.length === 0) return;
+    setActivePoint((prev) =>
+      prev && prev.label === data.activeLabel ? null : { label: data.activeLabel, payload: data.activePayload }
     );
   };
 
@@ -459,7 +478,7 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
       transition={{ duration: 0.45 }}
       whileHover={{ y: -2 }}
     >
-      <Card className="shadow-lg border-0 overflow-hidden relative bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+      <Card className="shadow-lg border-0 rounded-xl relative bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
         <CardHeader className="pb-4 border-b border-gray-200/50">
           <div className="flex justify-between items-center">
             <CardTitle className="text-xl text-gray-800 flex items-center gap-2">
@@ -482,13 +501,21 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
             </div>
           ) : (
             <motion.div layout initial={{ opacity: 0.6 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+              {activePoint && (
+                <div className="absolute top-4 right-4 sm:right-6 z-20 max-w-[calc(100%-2rem)]">
+                  <PipelineTooltipBody
+                    label={activePoint.label}
+                    payload={activePoint.payload}
+                    onClose={() => setActivePoint(null)}
+                  />
+                </div>
+              )}
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={pipelineBarData}
                     margin={{ top: 20, right: 12, left: 0, bottom: 20 }}
-                    onMouseMove={(data) => { if (data.activePayload) setHoveredBar(data.activeLabel); }}
-                    onMouseLeave={() => setHoveredBar(null)}
+                    onClick={handleBarTap}
                   >
                     <defs>
                       <linearGradient id="gOpen" x1="0" x2="0" y1="0" y2="1">
@@ -588,9 +615,9 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
           </div>
         ) : (
           <>
-            <div className="h-56 relative">
+            <div className="h-64 sm:h-72 relative">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 24, right: 8, bottom: 24, left: 8 }}>
                   <Pie
                     data={pieData}
                     cx="50%"

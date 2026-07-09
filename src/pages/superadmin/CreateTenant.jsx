@@ -4,6 +4,7 @@ import { Building2, User, Mail, ShieldAlert, ArrowLeft, Loader2, MailCheck } fro
 import { superApi } from "../../services/api";
 import { useGetAllPlans } from "../../hooks/useSubscriptionPlans";
 import { format } from "date-fns";
+import { toast } from "react-toastify";
 
 const CreateTenant = () => {
   const navigate = useNavigate();
@@ -80,13 +81,20 @@ const CreateTenant = () => {
       return;
     }
 
+    // Determine the effective billing cycle
+    const selectedPlan = plans.find((p) => p._id === selectedPlanId);
+    const hasTiers = selectedPlan?.tiers?.length > 0;
+
+    if (hasTiers && !selectedBillingCycle) {
+      toast.warn("Please select a billing period (Step 2) before creating the tenant.");
+      setError("Please select a billing period before creating the tenant.");
+      return;
+    }
+
     setError("");
     setEmailError("");
     setSubmitting(true);
     try {
-      // Determine the effective billing cycle
-      const selectedPlan = plans.find((p) => p._id === selectedPlanId);
-      const hasTiers = selectedPlan?.tiers?.length > 0;
       const effectiveCycle = selectedPlanId
         ? (hasTiers ? selectedBillingCycle : selectedPlan?.billing_cycle) || "monthly"
         : "";
