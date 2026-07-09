@@ -302,7 +302,7 @@ const SendProposal = () => {
           <label className="block text-gray-700 font-medium mb-2">
             Proposal Content
           </label>
-          <div className="border border-gray-300 rounded-lg shadow-sm bg-white w-full">
+          <div className="border border-gray-300 rounded-lg shadow-sm bg-white w-full overflow-hidden">
             <SuperEditor
               style={{ height: "500px", width: "100%" }}
               value={editorContent}
