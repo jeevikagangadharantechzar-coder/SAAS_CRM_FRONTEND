@@ -6,6 +6,14 @@ import DeleteModal from "./DeleteModal";
 
 const API_BASE = import.meta.env.VITE_SI_URI || "";
 
+const buildImgUrl = (img) => {
+  if (!img) return null;
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  const base = API_BASE.replace(/\/+$/, "");
+  const name = img.replace(/^\/+/, "").replace(/^uploads\/users\//, "").replace(/^uploads\//, "");
+  return `${base}/uploads/users/${name}`;
+};
+
 const PINNED_KEY = "crm_pinned_contacts";
 const getPinnedIds = () => { try { return JSON.parse(localStorage.getItem(PINNED_KEY) || "[]"); } catch { return []; } };
 const savePinnedIds = (ids) => localStorage.setItem(PINNED_KEY, JSON.stringify(ids));
@@ -20,11 +28,13 @@ const formatTime = (date) => {
 };
 
 const ContactAvatar = ({ name, image, size = 10 }) => {
+  const [imgFailed, setImgFailed] = React.useState(false);
   const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const colors   = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-orange-500", "bg-pink-500"];
   const color    = colors[(name?.charCodeAt(0) || 0) % colors.length];
-  if (image)
-    return <img src={`${API_BASE}/${image}`} alt={name} className={`w-${size} h-${size} rounded-full object-cover flex-shrink-0`} onError={(e) => { e.target.style.display = "none"; }} />;
+  const url      = buildImgUrl(image);
+  if (url && !imgFailed)
+    return <img src={url} alt={name} className={`w-${size} h-${size} rounded-full object-cover flex-shrink-0`} onError={() => setImgFailed(true)} />;
   return (
     <div className={`w-${size} h-${size} rounded-full ${color} flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}>
       {initials}
