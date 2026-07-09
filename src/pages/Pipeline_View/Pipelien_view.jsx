@@ -344,6 +344,8 @@ const STAGES = [
 
     // Check if user can edit/delete a deal
     const canEditDeleteDeal = (deal) => {
+      // Closed Won deals are locked from edit/delete for everyone
+      if (deal.stage === "Closed Won") return false;
       if (userRole === "Admin") return true;
       return deal.assignedTo && deal.assignedTo._id === userId;
     };
@@ -560,7 +562,11 @@ const STAGES = [
     // Handle delete confirmation
     const handleDeleteClick = (deal) => {
       if (!canEditDeleteDeal(deal)) {
-        toast.error("You don't have permission to delete this deal");
+        toast.error(
+          deal.stage === "Closed Won"
+            ? "Closed Won deals cannot be deleted"
+            : "You don't have permission to delete this deal"
+        );
         return;
       }
       setDealToDelete(deal);
@@ -616,7 +622,11 @@ const STAGES = [
     // Handle edit click - navigate to create deal page with deal data
     const handleEditClick = (deal) => {
       if (!canEditDeleteDeal(deal)) {
-        toast.error("You don't have permission to edit this deal");
+        toast.error(
+          deal.stage === "Closed Won"
+            ? "Closed Won deals cannot be edited"
+            : "You don't have permission to edit this deal"
+        );
         return;
       }
       navigate(`/${tenantSlug}/createDeal`, { state: { deal } });
@@ -1047,9 +1057,13 @@ const STAGES = [
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
 
+    // Closed Won deals are locked from edit/delete for everyone
+    const isTerminal = deal.stage === "Closed Won";
+
     // Check if user can edit/delete this deal
     const canEditDelete =
-      userRole === "Admin" || (deal.assignedTo && deal.assignedTo._id === userId);
+      !isTerminal &&
+      (userRole === "Admin" || (deal.assignedTo && deal.assignedTo._id === userId));
 
     // Close menu when clicking outside
     useEffect(() => {

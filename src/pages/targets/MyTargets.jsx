@@ -10,7 +10,7 @@ import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
   Trophy, ArrowRight, Award, Clock, ChevronDown,
   ChevronUp, Briefcase, Mail, Building2, Send, MessageSquare,
-  Bell, AlertCircle, Check, XCircle, X, Trash2,
+  Bell, AlertCircle, Check, XCircle, X, Trash2, Activity,
 } from "lucide-react";
 
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";

@@ -84,6 +84,8 @@ import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
 import MessagesPage from "./pages/Messages/MessagesPage";
+import DeviceRequests from "./pages/security/DeviceRequests";
+import LiveLocations from "./pages/security/LiveLocations";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -288,6 +290,15 @@ function App() {
 
                   <Route element={<PrivateRoute permission="users_roles" planFeature="users_roles" />}>
                     <Route path="user&roles" element={<UserManagement />} />
+                  </Route>
+
+                  {/* Device login approval + live location tracking — each
+                      togglable per subscription plan by the superadmin. */}
+                  <Route element={<PrivateRoute permission="users_roles" planFeature="device_login_requests" />}>
+                    <Route path="device-requests" element={<DeviceRequests />} />
+                  </Route>
+                  <Route element={<PrivateRoute permission="users_roles" planFeature="live_tracking" />}>
+                    <Route path="live-locations" element={<LiveLocations />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="reports" />}>

@@ -312,8 +312,20 @@ export default function AddUserModal({ onUserCreated, disabled }) {
         error:   (err) => err.response?.data?.message || "Failed to create user",
       });
     } catch (err) {
-      if (err.response?.data?.errors) setErrors(err.response.data.errors);
-      
+      const message = err.response?.data?.message?.toLowerCase() || "";
+
+      if (message.includes("email") && message.includes("already")) {
+        setErrors((prev) => ({ ...prev, email: "Email already exists" }));
+        if (formRef.current) {
+          setTimeout(() => {
+            const emailErr = formRef.current.querySelector('input[name="email"]');
+            emailErr?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 100);
+        }
+      } else if (err.response?.data?.errors) {
+        setErrors(err.response.data.errors);
+      }
+
       const isLimitErr = err.response?.data?.limitExceeded;
       if (isLimitErr) {
         toast((t) => (

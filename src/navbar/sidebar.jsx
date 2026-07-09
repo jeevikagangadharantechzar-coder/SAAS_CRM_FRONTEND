@@ -23,6 +23,8 @@ import {
   Receipt,
   Send,
   ArrowUpCircle,
+  ShieldAlert,
+  MapPin,
 } from "lucide-react";
 
 import { NavLink, useLocation, useParams } from "react-router-dom";
@@ -779,6 +781,26 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           hasPermission={(isAdmin || userPermissions.users_roles) && hasPlanFeature("users_roles")}
           sidebarOpen={isOpen}
         />
+
+        {/* Device Login Requests — Admin-only, and togglable per subscription plan. */}
+        {isAdmin && hasPlanFeature("device_login_requests") && (
+          <SidebarItem
+            to="device-requests"
+            icon={<ShieldAlert />}
+            label={t("sidebar.deviceRequests", "Device Requests")}
+            sidebarOpen={isOpen}
+          />
+        )}
+
+        {/* Live Team Locations — Admin-only, and togglable per subscription plan. */}
+        {isAdmin && hasPlanFeature("live_tracking") && (
+          <SidebarItem
+            to="live-locations"
+            icon={<MapPin />}
+            label={t("sidebar.liveLocations", "Live Locations")}
+            sidebarOpen={isOpen}
+          />
+        )}
 
         {/* Upgrade Plan */}
         {isAdmin && (

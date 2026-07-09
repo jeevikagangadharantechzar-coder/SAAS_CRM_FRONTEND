@@ -714,14 +714,14 @@ function AllDealsComponent() {
                 disabled={importing}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
               >
-                <Upload className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+                <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
               </button>
               <button
                 onClick={() => setShowExportModal(true)}
                 disabled={exporting}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
               >
-                <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
               </button>
             </>
           )}

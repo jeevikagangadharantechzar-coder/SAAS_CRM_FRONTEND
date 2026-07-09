@@ -20,6 +20,11 @@ export const initSocket = (userId) => {
     const token = localStorage.getItem("token");
     if (token) dbName = JSON.parse(atob(token.split(".")[1])).dbName || null;
   } catch {}
+  // Fallback: derive from tenantSlug stored at login
+  if (!dbName) {
+    const slug = localStorage.getItem("tenantSlug");
+    if (slug) dbName = `crm_${slug}`;
+  }
 
   socket = io(API_URL, {
     auth: { userId, name, dbName },
