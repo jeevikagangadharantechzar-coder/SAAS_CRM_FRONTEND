@@ -119,6 +119,15 @@ function AllDealsComponent() {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
 
+  // General-purpose Start/End Date filter — available to every role (unlike
+  // the sales-only Custom Range panel above). Plain createdAt range, no deal
+  // type involved; reuses the same backend start/end params the Custom Range
+  // search already uses, just without a dealType so the backend takes its
+  // plain-createdAt branch.
+  const [dateFilterFrom, setDateFilterFrom] = useState("");
+  const [dateFilterTo, setDateFilterTo] = useState("");
+  const [dateFilterDeals, setDateFilterDeals] = useState([]);
+
   // Reject modal
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [dealToReject, setDealToReject] = useState(null); // { id, name }
@@ -378,6 +387,33 @@ function AllDealsComponent() {
     fetchCustomRangeDeals(customFrom, customTo, types);
   }, [customFrom, customTo, dealTypeFilter]);
 
+/* ── Fetch Date Range Deals Function ─────────────────────── */
+  // General Start/End Date filter (any role). No dealType is sent, so the
+  // backend matches plain createdAt — this also correctly reaches deals a
+  // sales user's default fetch would otherwise hide (e.g. an older Closed
+  // Won/Lost deal), same as the Custom Range search already does.
+  const fetchDateRangeDeals = async (from, to) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}/deals/getAll`, {
+        params: { start: from, end: to },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDateFilterDeals(res.data || []);
+    } catch (err) {
+      console.error("Fetch date range deals error:", err);
+      toast.error("Failed to fetch deals for the selected date range");
+    }
+  };
+
+  useEffect(() => {
+    if (!dateFilterFrom || !dateFilterTo) {
+      setDateFilterDeals([]);
+      return;
+    }
+    fetchDateRangeDeals(dateFilterFrom, dateFilterTo);
+  }, [dateFilterFrom, dateFilterTo]);
+
 /* ── Export Deals to Excel ─────────────────────── */
   const handleExportDeals = async ({ startDate, endDate } = {}) => {
     try {
@@ -513,15 +549,22 @@ function AllDealsComponent() {
     return new Set(customRangeDeals.map((d) => d._id));
   }, [customRangeDeals, customFrom, customTo, dealTypeFilter]);
 
-  // While a Custom Range search is active, the table needs to include deals
-  // fetched by that search even if they're not in the default `deals` list
-  // (e.g. a previous-day Closed Won deal the default fetch excludes).
+  // General Start/End Date filter — active once both dates are set, regardless of role.
+  const dateFilterIds = useMemo(() => {
+    if (!dateFilterFrom || !dateFilterTo) return null;
+    return new Set(dateFilterDeals.map((d) => d._id));
+  }, [dateFilterDeals, dateFilterFrom, dateFilterTo]);
+
+  // While a Custom Range or Date Range search is active, the table needs to
+  // include deals fetched by that search even if they're not in the default
+  // `deals` list (e.g. a previous-day Closed Won deal the default fetch excludes).
   const baseDeals = useMemo(() => {
-    if (!customRangeIds) return deals;
+    if (!customRangeIds && !dateFilterIds) return deals;
     const merged = new Map(deals.map((d) => [d._id, d]));
-    customRangeDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
+    if (customRangeIds) customRangeDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
+    if (dateFilterIds) dateFilterDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
     return Array.from(merged.values());
-  }, [deals, customRangeDeals, customRangeIds]);
+  }, [deals, customRangeDeals, customRangeIds, dateFilterDeals, dateFilterIds]);
 
   const filteredDeals = baseDeals
     .filter((d) => d.dealName?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -546,9 +589,9 @@ function AllDealsComponent() {
       // Sales-only: a Closed Won deal from a previous day stays out of the
       // default view — only today's wins show at initial render. Older wins
       // are still reachable through the Custom Range search (Deal Won +
-      // date range), which is why this check steps aside once that search
-      // is active (customRangeIds set) instead of hiding them there too.
-      if (userRole === "Admin" || customRangeIds) return true;
+      // date range) or the general Date Range filter, which is why this
+      // check steps aside once either is active.
+      if (userRole === "Admin" || customRangeIds || dateFilterIds) return true;
       if (d.stage !== "Closed Won") return true;
       if (!d.wonAt) return true;
       return new Date(d.wonAt).toDateString() === new Date().toDateString();
@@ -557,14 +600,15 @@ function AllDealsComponent() {
       // Sales-only: a Closed Lost deal from a previous day stays out of the
       // default view — only today's losses show at initial render. Older
       // losses are still reachable through the Custom Range search (Deal
-      // Lost + date range), which is why this check steps aside once that
-      // search is active (customRangeIds set) instead of hiding them there too.
-      if (userRole === "Admin" || customRangeIds) return true;
+      // Lost + date range) or the general Date Range filter, which is why
+      // this check steps aside once either is active.
+      if (userRole === "Admin" || customRangeIds || dateFilterIds) return true;
       if (d.stage !== "Closed Lost") return true;
       if (!d.lostDate) return true;
       return new Date(d.lostDate).toDateString() === new Date().toDateString();
     })
-    .filter((d) => !customRangeIds || customRangeIds.has(d._id));
+    .filter((d) => !customRangeIds || customRangeIds.has(d._id))
+    .filter((d) => !dateFilterIds || dateFilterIds.has(d._id));
 
   // Derived from the actually-filtered list rather than the raw fetch count —
   // matters once Custom Range merges in deals the default fetch didn't return.
@@ -772,6 +816,38 @@ function AllDealsComponent() {
               />
             )}
           </button>
+
+          {/* General Date Range filter — available to every role. Plain
+              createdAt range; leaving either side blank shows all records. */}
+          <div className="flex items-center gap-2 w-11/12 md:w-auto mx-auto">
+            <input
+              type="date"
+              value={dateFilterFrom}
+              onChange={(e) => setDateFilterFrom(e.target.value)}
+              max={dateFilterTo || undefined}
+              title="Start Date"
+              className="border rounded-md px-3 py-2 bg-white text-sm"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              value={dateFilterTo}
+              onChange={(e) => setDateFilterTo(e.target.value)}
+              min={dateFilterFrom || undefined}
+              title="End Date"
+              className="border rounded-md px-3 py-2 bg-white text-sm"
+            />
+            {(dateFilterFrom || dateFilterTo) && (
+              <button
+                type="button"
+                onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                className="text-gray-400 hover:text-gray-600"
+                title="Clear date filter"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
 
           {/* Custom Range toggle — sales person only, never on Admin's page. */}
           {userRole && userRole !== "Admin" && (

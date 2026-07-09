@@ -136,7 +136,6 @@ const handleLogout = async () => {
     localStorage.removeItem("tenantSlug");
     localStorage.removeItem("user");
     localStorage.removeItem("lastActivity");
-    sessionStorage.removeItem("sessionActive");
 
     //  Redirect to tenant-specific login page
     if (tenantSlug) {

@@ -554,26 +554,8 @@ const STAGES = [
     // Handle confirm in modal – UPDATED to pass previousStage
     const handleConfirmLostDeal = useCallback(async () => {
       console.log("handleConfirmLostDeal called");
-      if (!validateLostDealForm()) {
-        console.log("Validation failed");
-        return;
-      }
-
-      if (!lostDealId) {
-        console.error("No deal ID found");
-        toast.error("Deal ID not found. Please try again.");
-        return;
-      }
-
-      console.log("Calling markDealAsLost with:", {
-        dealId: lostDealId,
-        reason: lossReason,
-        notes: lossNotes,
-        prevStage: previousStage
-      });
-
-      await markDealAsLost(lostDealId, lossReason, lossNotes, previousStage);
-    }, [validateLostDealForm, markDealAsLost, lossReason, lossNotes, lostDealId, previousStage]);
+      await validateLostDealForm();
+    }, [validateLostDealForm]);
 
     // Handle delete confirmation
     const handleDeleteClick = (deal) => {
