@@ -4,6 +4,7 @@ import Navbar from "./header";
 import { Outlet } from "react-router-dom";
 import ChatWidget from "../components/chatwidget";
 import MissedFollowUpModal from "../components/MissedFollowUpModal";
+import LocationReporter from "../components/LocationReporter";
 
 const Layout = ({ isModalOpen }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -16,6 +17,15 @@ const Layout = ({ isModalOpen }) => {
       return user?.planFeatures?.chatbot !== false;
     } catch {
       return true;
+    }
+  })();
+
+  const isSales = (() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user?.role?.name?.toLowerCase() === "sales";
+    } catch {
+      return false;
     }
   })();
 
@@ -41,6 +51,7 @@ const Layout = ({ isModalOpen }) => {
 
       {hasChatbot && <ChatWidget />}
       <MissedFollowUpModal />
+      {isSales && <LocationReporter />}
     </>
   );
 };
