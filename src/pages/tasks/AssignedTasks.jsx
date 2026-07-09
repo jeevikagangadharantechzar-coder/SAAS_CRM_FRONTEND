@@ -490,27 +490,21 @@ function LeadStatusJourney({ lead }) {
 // Deals Won / Active Deals / Linked Leads sections, but entirely task-scoped
 // (no Target lookup) so it always renders fully regardless of whether the
 // sales person has a target set.
-function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh }) {
+// One linked deal's card (read-only besides the "dismiss won" trash icon).
+function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, onRefresh }) {
   const [expanded, setExpanded] = useState(true);
   const [dismissConfirm, setDismissConfirm] = useState(false);
   const [dismissing, setDismissing] = useState(false);
-  const deal = task.dealRef;
-  const lead = task.leadRef;
-  // A converted lead has no pipeline of its own — the real stage journey now
-  // lives on the deal it became. task.convertedDealRef is attached
-  // server-side by attachConvertedDealJourney on every task fetch (see
-  // taskNotificationService.js), independent of any target.
-  const resolvedFromLead = !deal && lead?.status === "Converted" ? task.convertedDealRef : null;
-  const effectiveDeal = deal || resolvedFromLead;
-  const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
 
-  // Arrow lives inside the card's own header row (top-right), not as a
-  // separate label bar floating above it.
-  const CardArrow = () => (
-    <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 shrink-0" title={expanded ? "Collapse" : "Expand"}>
-      {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-    </button>
-  );
+  const stage = deal.stage;
+  const isWon = stage === "Closed Won";
+  const isLost = stage === "Closed Lost";
+  const dealName = deal.dealName || deal.dealTitle;
+  const bucketBg = isWon ? "bg-emerald-50 border-emerald-200" : isLost ? "bg-red-50 border-red-200" : "bg-white border-gray-200";
+  const icon = isWon ? <Award size={11} className="text-emerald-500" /> : isLost ? <XCircle size={11} className="text-red-500" /> : <Briefcase size={11} />;
+  const wonDate = deal.wonAt ? new Date(deal.wonAt) : null;
+  const createdDate = deal.createdAt ? new Date(deal.createdAt) : null;
+  const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
 
   // A deal Admin (or anyone other than you) closed Won stays fully visible
   // here — only its Stage Journey timeline is hidden below, since that
@@ -519,7 +513,7 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh }
   const handleDismissWon = async () => {
     setDismissing(true);
     try {
-      await axios.put(`${baseUrl}/tasks/${task._id}`, { dismissWonDeal: true }, { headers });
+      await axios.put(`${baseUrl}/tasks/${taskId}`, { dismissWonDeal: true, dealId: deal._id }, { headers });
       toast.success("Removed from this task");
       setDismissConfirm(false);
       onRefresh?.();
@@ -530,121 +524,181 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh }
     }
   };
 
-  if (effectiveDeal) {
-    const deal = effectiveDeal;
-    const stage = deal.stage;
-    const isWon = stage === "Closed Won";
-    const isLost = stage === "Closed Lost";
-    const dealName = deal.dealName || deal.dealTitle;
-    const bucketBg = isWon ? "bg-emerald-50 border-emerald-200" : isLost ? "bg-red-50 border-red-200" : "bg-white border-gray-200";
-    const icon = isWon ? <Award size={11} className="text-emerald-500" /> : isLost ? <XCircle size={11} className="text-red-500" /> : <Briefcase size={11} />;
-    const wonDate = deal.wonAt ? new Date(deal.wonAt) : null;
-    const createdDate = deal.createdAt ? new Date(deal.createdAt) : null;
-    const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
-    // A deal won by someone other than you never reaches this component at
-    // all — AssignedTaskCard drops the entire Linked Deal/Lead card for that
-    // case (that record now lives in Admin's own Completed activity).
-
-    return (
-      <div className={`rounded-2xl overflow-hidden border ${bucketBg}`}>
-        <div className="px-3 pt-3 pb-2.5">
-          <div className="flex items-start justify-between gap-1.5 mb-1">
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-bold text-gray-800 truncate flex-1">{dealName}</p>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {isWon && (
-                <button onClick={() => setDismissConfirm(true)} className="p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500" title="Remove this card">
-                  <Trash2 size={13} />
-                </button>
-              )}
-              <CardArrow />
+  return (
+    <div className={`rounded-2xl overflow-hidden border ${bucketBg}`}>
+      <div className="px-3 pt-3 pb-2.5">
+        <div className="flex items-start justify-between gap-1.5 mb-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-800 truncate flex-1">{dealName}</p>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
             </div>
           </div>
-          {linkedBadgeText && (
-            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
-          )}
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-            {deal.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
-            {deal.value && <span className={`text-[10px] font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
-            {deal.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
-            {deal.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
-            {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+          <div className="flex items-center gap-1 shrink-0">
+            {isWon && (
+              <button onClick={() => setDismissConfirm(true)} className="p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500" title="Remove this card">
+                <Trash2 size={13} />
+              </button>
+            )}
+            <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 shrink-0" title={expanded ? "Collapse" : "Expand"}>
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
           </div>
-          {/* Report Issue only makes sense while the deal is still live —
-              posts against the task itself (no Target dependency), so it's
-              always available regardless of whether a target is set. */}
-          {!isWon && !isLost && (
-            <ReportBox
-              mode="task" taskId={task._id} itemType="deal" itemName={dealName}
-              itemDetails={{ companyName: deal.companyName, value: deal.value, currency: deal.currency, phoneNumber: deal.phoneNumber, email: deal.email, statusLabel: stage, statusColor: STAGE_COLOR[stage] }}
-              baseUrl={baseUrl} headers={headers}
-              isReported={hasPendingIssue}
-            />
-          )}
         </div>
-
-        {expanded && <DealStageJourney deal={deal} />}
-
-        {expanded && totalDays !== null && (
-          <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
-            <Clock size={11} className="text-emerald-600 shrink-0" />
-            <p className="text-[11px] font-bold text-emerald-700">
-              {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
-            </p>
-          </div>
+        {linkedBadgeText && (
+          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
         )}
-        <ConfirmModal
-          open={dismissConfirm}
-          title="Remove Won Deal Card"
-          message={`Remove "${dealName}" from this task? It won't be deleted — your deal stays exactly as-is, this just clears it off this task.`}
-          onConfirm={handleDismissWon}
-          onClose={() => !dismissing && setDismissConfirm(false)}
-        />
-      </div>
-    );
-  }
-
-  if (lead) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="p-3">
-          <div className="flex items-start justify-between gap-1.5 mb-1">
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-bold text-gray-800 truncate flex-1">{lead.leadName}</p>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
-              </div>
-            </div>
-            <CardArrow />
-          </div>
-          {linkedBadgeText && (
-            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
-          )}
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-            {lead.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
-            {lead.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
-            {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
-            {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
-          </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+          {deal.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
+          {deal.value && <span className={`text-[10px] font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
+          {deal.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
+          {deal.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
+          {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+        </div>
+        {/* Report Issue only makes sense while the deal is still live —
+            posts against the task itself (no Target dependency), so it's
+            always available regardless of whether a target is set. */}
+        {!isWon && !isLost && (
           <ReportBox
-            mode="task" taskId={task._id} itemType="lead" itemName={lead.leadName}
-            itemDetails={{ companyName: lead.companyName, phoneNumber: lead.phoneNumber, email: lead.email, statusLabel: lead.status, statusColor: LEAD_STATUS_COLOR[lead.status] }}
+            mode="task" taskId={taskId} itemType="deal" itemName={dealName}
+            itemDetails={{ companyName: deal.companyName, value: deal.value, currency: deal.currency, phoneNumber: deal.phoneNumber, email: deal.email, statusLabel: stage, statusColor: STAGE_COLOR[stage] }}
             baseUrl={baseUrl} headers={headers}
             isReported={hasPendingIssue}
           />
-        </div>
-        {expanded && <LeadStatusJourney lead={lead} />}
+        )}
       </div>
-    );
-  }
 
-  return null;
+      {expanded && <DealStageJourney deal={deal} />}
+
+      {expanded && totalDays !== null && (
+        <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
+          <Clock size={11} className="text-emerald-600 shrink-0" />
+          <p className="text-[11px] font-bold text-emerald-700">
+            {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
+          </p>
+        </div>
+      )}
+      <ConfirmModal
+        open={dismissConfirm}
+        title="Remove Won Deal Card"
+        message={`Remove "${dealName}" from this task? It won't be deleted — your deal stays exactly as-is, this just clears it off this task.`}
+        onConfirm={handleDismissWon}
+        onClose={() => !dismissing && setDismissConfirm(false)}
+      />
+    </div>
+  );
+}
+
+// One linked lead's card (read-only, sales can't unlink leads).
+function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId }) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-1.5 mb-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-800 truncate flex-1">{lead.leadName}</p>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
+            </div>
+          </div>
+          <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 shrink-0" title={expanded ? "Collapse" : "Expand"}>
+            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+        </div>
+        {linkedBadgeText && (
+          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
+        )}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+          {lead.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
+          {lead.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
+          {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
+          {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
+        </div>
+        <ReportBox
+          mode="task" taskId={taskId} itemType="lead" itemName={lead.leadName}
+          itemDetails={{ companyName: lead.companyName, phoneNumber: lead.phoneNumber, email: lead.email, statusLabel: lead.status, statusColor: LEAD_STATUS_COLOR[lead.status] }}
+          baseUrl={baseUrl} headers={headers}
+          isReported={hasPendingIssue}
+        />
+      </div>
+      {expanded && <LeadStatusJourney lead={lead} />}
+    </div>
+  );
+}
+
+// Renders every linked lead/deal on this task (read-only besides dismissing a
+// Closed-Won deal) — backward-compat-derived from leadRefs/dealRefs, falling
+// back to the singular leadRef/dealRef for tasks created before this
+// multi-link feature. The deal-stage/lead-status "journey" timeline is only
+// shown on the current primary item.
+function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh }) {
+  const dealItems = task.dealRefs?.length ? task.dealRefs : (task.dealRef ? [task.dealRef] : []);
+  const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
+  const primaryDealId = task.dealRef?._id || task.dealRef || null;
+  const primaryLeadId = task.leadRef?._id || task.leadRef || null;
+  const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
+
+  if (!dealItems.length && !leadItems.length) return null;
+
+  return (
+    <div className="space-y-2">
+      {dealItems.map((deal) => (
+        <DealLinkCard
+          key={deal._id}
+          deal={deal}
+          linkedBadgeText={String(deal._id) === String(primaryDealId) ? linkedBadgeText : null}
+          hasPendingIssue={hasPendingIssue}
+          baseUrl={baseUrl}
+          headers={headers}
+          taskId={task._id}
+          onRefresh={onRefresh}
+        />
+      ))}
+      {leadItems.map((lead) => {
+        const isPrimary = String(lead._id) === String(primaryLeadId);
+        // A converted lead has no pipeline of its own — the real stage
+        // journey now lives on the deal it became. task.convertedDealRefsByLeadId
+        // is attached server-side (attachConvertedDealJourney) and covers
+        // EVERY converted lead on this task, not just the current primary one
+        // — otherwise adding another lead/deal during an edit (which re-points
+        // task.leadRef to the newest addition) demoted an already-won lead to
+        // non-primary and silently dropped its Won/Stage journey.
+        const resolvedFromLead = lead.status === "Converted"
+          ? (task.convertedDealRefsByLeadId?.[String(lead._id)] || (isPrimary && !task.dealRef ? task.convertedDealRef : null))
+          : null;
+        if (resolvedFromLead) {
+          return (
+            <DealLinkCard
+              key={lead._id}
+              deal={resolvedFromLead}
+              resolvedFromLead
+              linkedBadgeText={linkedBadgeText}
+              hasPendingIssue={hasPendingIssue}
+              baseUrl={baseUrl}
+              headers={headers}
+              taskId={task._id}
+              onRefresh={onRefresh}
+            />
+          );
+        }
+        return (
+          <LeadLinkCard
+            key={lead._id}
+            lead={lead}
+            linkedBadgeText={isPrimary ? linkedBadgeText : null}
+            hasPendingIssue={hasPendingIssue}
+            baseUrl={baseUrl}
+            headers={headers}
+            taskId={task._id}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 /* ── Notes Modal (add/edit delay notes) ─────────────────────── */
@@ -850,7 +904,8 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
     if (!dismissConfirm) return;
     setDismissing(true);
     try {
-      await axios.put(`${baseUrl}/tasks/${dismissConfirm._id}`, { dismissWonDeal: true }, { headers });
+      const dealId = dismissConfirm.dealRef?._id || dismissConfirm.dealRef;
+      await axios.put(`${baseUrl}/tasks/${dismissConfirm._id}`, { dismissWonDeal: true, dealId }, { headers });
       toast.success("Removed from this task");
       setDismissConfirm(null);
       onRefresh?.();
@@ -1024,8 +1079,9 @@ export default function AssignedTasks() {
   const [mainView, setMainView] = useState("tasks"); // "tasks" | "notifications"
   const [viewMode, setViewMode] = useState("card"); // "card" | "table"
   const [targets, setTargets] = useState([]);
-  // Fallback Progress-card snapshots for tasks where you have no Target
-  // covering it yet — keyed by taskId, see GET /targets/my-progress-fallback.
+  // Task's own Progress-card ratio snapshots for tasks where you have no real
+  // Target covering it yet — keyed by taskId, see GET /tasks/progress/mine
+  // (services/taskProgressService.js, independent of Target Management).
   const [progressFallback, setProgressFallback] = useState({});
   const [myDashStats, setMyDashStats] = useState(null);
   const socket = useSocket();
@@ -1077,7 +1133,7 @@ export default function AssignedTasks() {
       // so it always shows real numbers even when you have zero active
       // Targets (a Target-derived sum would show nothing at all in that case).
       axios.get(`${baseUrl}/targets/my-dashboard-stats`, { headers }),
-      axios.get(`${baseUrl}/targets/my-progress-fallback`, { headers }),
+      axios.get(`${baseUrl}/tasks/progress/mine`, { headers }),
     ]);
 
     if (reqId !== targetsReqId.current) return;
@@ -1304,10 +1360,10 @@ export default function AssignedTasks() {
         {/* Notifications & Reminders tab */}
         <button
           onClick={() => setMainView(mainView === "notifications" ? "tasks" : "notifications")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
             mainView === "notifications"
-              ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-              : "bg-white text-amber-600 border-amber-300 hover:bg-amber-50"
+              ? "bg-[#008ecc] text-white"
+              : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
           }`}
         >
           <Bell size={13} /> Notifications & Reminders

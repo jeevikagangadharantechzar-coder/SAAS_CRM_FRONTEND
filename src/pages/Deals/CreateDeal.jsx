@@ -882,48 +882,63 @@ export default function CreateDeal() {
             <h2 className="text-lg font-semibold border-b pb-2 text-purple-600 flex items-center gap-2">
               <Clock size={18} /> Follow-up
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <Calendar size={16} /> Follow-up Date & Time
-                </label>
-                <div className="relative">
-                  <DatePicker
-                    selected={formData.followUpDate}
-                    onChange={(date) =>
-                      setFormData((prev) => ({ ...prev, followUpDate: date }))
-                    }
-                    showTimeSelect
-                    timeFormat="HH:mm"
-                    timeIntervals={15}
-                    timeCaption="Time"
-                    dateFormat="MMMM d, yyyy h:mm aa"
-                    placeholderText="Select date and time"
-                    className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition h-11 pl-10"
-                    minDate={new Date()}
-                    isClearable
-                    calendarClassName="font-sans"
-                  />
-                  <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Optional: Set a reminder for follow-up
+            {isEditMode ? (
+              <div className="mt-6 flex flex-col items-center justify-center p-6 bg-purple-50 rounded-xl border border-purple-100">
+                <p className="text-sm text-purple-800 mb-4 text-center max-w-md">
+                  Follow-ups for this deal are now managed entirely through the Deal Details view.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/${tenantSlug}/Pipelineview/${existingDeal._id}`)}
+                  className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm text-sm font-medium transition flex items-center gap-2"
+                >
+                  <Clock size={16} /> Manage Follow-ups & History
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <StickyNote size={16} /> Follow-up Comment
-                </label>
-                <textarea
-                  name="followUpComment"
-                  rows={3}
-                  value={formData.followUpComment}
-                  onChange={handleChange}
-                  placeholder="Enter follow-up notes..."
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none"
-                />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Calendar size={16} /> Follow-up Date & Time
+                  </label>
+                  <div className="relative">
+                    <DatePicker
+                      selected={formData.followUpDate}
+                      onChange={(date) =>
+                        setFormData((prev) => ({ ...prev, followUpDate: date }))
+                      }
+                      showTimeSelect
+                      timeFormat="HH:mm"
+                      timeIntervals={15}
+                      timeCaption="Time"
+                      dateFormat="MMMM d, yyyy h:mm aa"
+                      placeholderText="Select date and time"
+                      className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition h-11 pl-10"
+                      minDate={new Date()}
+                      isClearable
+                      calendarClassName="font-sans"
+                    />
+                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optional: Set a reminder for follow-up
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <StickyNote size={16} /> Follow-up Comment
+                  </label>
+                  <textarea
+                    name="followUpComment"
+                    rows={3}
+                    value={formData.followUpComment}
+                    onChange={handleChange}
+                    placeholder="Enter follow-up notes..."
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Management */}

@@ -111,7 +111,7 @@ const STAGE_BASE_SCORES = {
 
 const STAGE_ACTIONS = {
   "Qualification": {
-    actions: ["Do Negotiation", "Send Proposal"],
+    actions: ["Manage Follow-ups & History", "Send Proposal"],
     icon: HelpCircle,
     color: "text-amber-600",
     bgColor: "bg-amber-50",
@@ -119,12 +119,12 @@ const STAGE_ACTIONS = {
     nextStep: "Move to Proposal Sent",
     label: "Need Attention",
     actionIcons: {
-      "Do Negotiation": TrendingUp,
+      "Manage Follow-ups & History": Clock,
       "Send Proposal": Send
     }
   },
   "Proposal Sent-Negotiation": {
-    actions: ["Do Follow-up", "Send Invoice"],
+    actions: ["Manage Follow-ups & History", "Send Invoice"],
     icon: Send,
     color: "text-blue-600",
     bgColor: "bg-blue-50",
@@ -132,12 +132,12 @@ const STAGE_ACTIONS = {
     nextStep: "Move to Invoice Sent",
     label: "Follow-up Needed",
     actionIcons: {
-      "Do Follow-up": Phone,
+      "Manage Follow-ups & History": Clock,
       "Send Invoice": FileText
     }
   },
   "Invoice Sent": {
-    actions: ["Make Payment Follow-up", "Convert to Won"],
+    actions: ["Manage Follow-ups & History", "Convert to Won"],
     icon: FileText,
     color: "text-purple-600",
     bgColor: "bg-purple-50",
@@ -145,7 +145,7 @@ const STAGE_ACTIONS = {
     nextStep: "Mark as Won",
     label: "Payment Pending",
     actionIcons: {
-      "Make Payment Follow-up": DollarSign,
+      "Manage Follow-ups & History": Clock,
       "Convert to Won": CheckCircle
     }
   },
@@ -1551,8 +1551,9 @@ function DealIntelligenceDashboard() {
         navigate(`/${tenantSlug}/invoices`);
         setTimeout(() => setSelectedDeal(null), 100);
       } 
-      else if (action === "Do Follow-up" || action === "Make Payment Follow-up" || action === "Do Negotiation") {
-        setModalState(prev => ({ ...prev, followUp: true }));
+      else if (action === "Manage Follow-ups & History") {
+        navigate(`/${tenantSlug}/Pipelineview/${selectedDeal._id}`);
+        setTimeout(() => setSelectedDeal(null), 100);
       } 
       else if (action === "Convert to Won") {
         setLoading(true);

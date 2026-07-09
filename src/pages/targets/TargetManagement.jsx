@@ -13,7 +13,7 @@ import {
   Calendar, CheckCircle, Briefcase, Mail,
   Clock, Award, ChevronDown, ChevronUp, Building2, Check, MessageSquare, Pencil,
   LayoutGrid, List, Bell, Flag, ArrowRightLeft, AlertCircle, UserCheck,
-  ChevronLeft, ChevronRight, Trophy, XCircle,
+  ChevronLeft, ChevronRight, Trophy, XCircle, Activity,
 } from "lucide-react";
 
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";

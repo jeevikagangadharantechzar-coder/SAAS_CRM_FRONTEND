@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,35 @@ import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
 import { initSocket, getSocket } from "../../utils/socket";
+import { exportRowsToExcel, downloadExcelTemplate, parseExcelFile } from "../../utils/excelImportExport";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+/* ── Import/Export column definitions — shared between Export, Template,
+   and Import so a downloaded template always re-uploads successfully. ── */
+const DEAL_COLUMNS = [
+  { key: "dealName",        label: "Deal Name" },
+  { key: "companyName",     label: "Company Name" },
+  { key: "phoneNumber",     label: "Phone Number" },
+  { key: "dealTitle",       label: "Deal Title" },
+  { key: "assignedTo",      label: "Assigned To (Email)" },
+  { key: "value",           label: "Value" },
+  { key: "currency",        label: "Currency" },
+  { key: "clientType",      label: "Client Type (B2B/B2C)" },
+  { key: "discountGiven",   label: "Discount Given (%)", type: "number" },
+  { key: "stage",           label: "Stage" },
+  { key: "email",           label: "Email" },
+  { key: "source",          label: "Source" },
+  { key: "companySize",     label: "Company Size" },
+  { key: "industry",        label: "Industry" },
+  { key: "requirement",     label: "Requirement", wrap: true },
+  { key: "address",         label: "Address", wrap: true },
+  { key: "country",         label: "Country" },
+  { key: "notes",           label: "Notes", wrap: true },
+  { key: "followUpDate",    label: "Follow Up Date (YYYY-MM-DD)", type: "date" },
+  { key: "followUpComment", label: "Follow Up Comment", wrap: true },
+  { key: "createdAt",       label: "Created At", type: "date", exportOnly: true },
+];
 
 const CURRENCY_SYMBOLS = {
   USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
@@ -56,6 +83,14 @@ function AllDealsComponent() {
 
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Import / Export
+  const importFileInputRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -83,6 +118,15 @@ function AllDealsComponent() {
   const [dealTypeFilter, setDealTypeFilter] = useState({ won: false, lost: false, pending: false });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
+
+  // General-purpose Start/End Date filter — available to every role (unlike
+  // the sales-only Custom Range panel above). Plain createdAt range, no deal
+  // type involved; reuses the same backend start/end params the Custom Range
+  // search already uses, just without a dealType so the backend takes its
+  // plain-createdAt branch.
+  const [dateFilterFrom, setDateFilterFrom] = useState("");
+  const [dateFilterTo, setDateFilterTo] = useState("");
+  const [dateFilterDeals, setDateFilterDeals] = useState([]);
 
   // Reject modal
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -343,6 +387,107 @@ function AllDealsComponent() {
     fetchCustomRangeDeals(customFrom, customTo, types);
   }, [customFrom, customTo, dealTypeFilter]);
 
+/* ── Fetch Date Range Deals Function ─────────────────────── */
+  // General Start/End Date filter (any role). No dealType is sent, so the
+  // backend matches plain createdAt — this also correctly reaches deals a
+  // sales user's default fetch would otherwise hide (e.g. an older Closed
+  // Won/Lost deal), same as the Custom Range search already does.
+  const fetchDateRangeDeals = async (from, to) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}/deals/getAll`, {
+        params: { start: from, end: to },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDateFilterDeals(res.data || []);
+    } catch (err) {
+      console.error("Fetch date range deals error:", err);
+      toast.error("Failed to fetch deals for the selected date range");
+    }
+  };
+
+  useEffect(() => {
+    if (!dateFilterFrom || !dateFilterTo) {
+      setDateFilterDeals([]);
+      return;
+    }
+    fetchDateRangeDeals(dateFilterFrom, dateFilterTo);
+  }, [dateFilterFrom, dateFilterTo]);
+
+/* ── Export Deals to Excel ─────────────────────── */
+  const handleExportDeals = async ({ startDate, endDate } = {}) => {
+    try {
+      setExporting(true);
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+      const { data } = await axios.get(`${API_URL}/deals/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!data?.data?.length) {
+        toast.info("No data found for the selected criteria. There is nothing to export.");
+        return;
+      }
+      await exportRowsToExcel(data.data, DEAL_COLUMNS, `deals_${new Date().toISOString().slice(0, 10)}.xlsx`, "Deals");
+      toast.success(`Exported ${data.data.length} deal(s)`);
+      setShowExportModal(false);
+      setExportStartDate("");
+      setExportEndDate("");
+    } catch (err) {
+      console.error("Export deals error:", err);
+      toast.error("Failed to export deals");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+/* ── Download Deals Import Template ─────────────────────── */
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(DEAL_COLUMNS, "deals_import_template.xlsx", "Deals Template");
+  };
+
+/* ── Import Deals from Excel ─────────────────────── */
+  const handleImportButtonClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const rows = await parseExcelFile(file, DEAL_COLUMNS);
+      if (!rows.length) {
+        toast.error("No rows found in the uploaded file");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        `${API_URL}/deals/bulk-import`,
+        { deals: rows },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.created > 0) {
+        toast.success(`Imported ${data.created} deal(s)${data.failed ? `, ${data.failed} failed` : ""}`);
+      }
+      if (data.failed > 0) {
+        console.warn("Deal import errors:", data.errors);
+        toast.error(`${data.failed} row(s) failed — see console for details`);
+      }
+      fetchDeals();
+    } catch (err) {
+      console.error("Import deals error:", err);
+      toast.error(err.response?.data?.message || "Failed to import deals");
+    } finally {
+      setImporting(false);
+    }
+  };
+
 /* ── Fetch Users Function ─────────────────────── */
   const fetchUsers = async () => {
     try {
@@ -404,15 +549,22 @@ function AllDealsComponent() {
     return new Set(customRangeDeals.map((d) => d._id));
   }, [customRangeDeals, customFrom, customTo, dealTypeFilter]);
 
-  // While a Custom Range search is active, the table needs to include deals
-  // fetched by that search even if they're not in the default `deals` list
-  // (e.g. a previous-day Closed Won deal the default fetch excludes).
+  // General Start/End Date filter — active once both dates are set, regardless of role.
+  const dateFilterIds = useMemo(() => {
+    if (!dateFilterFrom || !dateFilterTo) return null;
+    return new Set(dateFilterDeals.map((d) => d._id));
+  }, [dateFilterDeals, dateFilterFrom, dateFilterTo]);
+
+  // While a Custom Range or Date Range search is active, the table needs to
+  // include deals fetched by that search even if they're not in the default
+  // `deals` list (e.g. a previous-day Closed Won deal the default fetch excludes).
   const baseDeals = useMemo(() => {
-    if (!customRangeIds) return deals;
+    if (!customRangeIds && !dateFilterIds) return deals;
     const merged = new Map(deals.map((d) => [d._id, d]));
-    customRangeDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
+    if (customRangeIds) customRangeDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
+    if (dateFilterIds) dateFilterDeals.forEach((d) => { if (!merged.has(d._id)) merged.set(d._id, d); });
     return Array.from(merged.values());
-  }, [deals, customRangeDeals, customRangeIds]);
+  }, [deals, customRangeDeals, customRangeIds, dateFilterDeals, dateFilterIds]);
 
   const filteredDeals = baseDeals
     .filter((d) => d.dealName?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -437,9 +589,9 @@ function AllDealsComponent() {
       // Sales-only: a Closed Won deal from a previous day stays out of the
       // default view — only today's wins show at initial render. Older wins
       // are still reachable through the Custom Range search (Deal Won +
-      // date range), which is why this check steps aside once that search
-      // is active (customRangeIds set) instead of hiding them there too.
-      if (userRole === "Admin" || customRangeIds) return true;
+      // date range) or the general Date Range filter, which is why this
+      // check steps aside once either is active.
+      if (userRole === "Admin" || customRangeIds || dateFilterIds) return true;
       if (d.stage !== "Closed Won") return true;
       if (!d.wonAt) return true;
       return new Date(d.wonAt).toDateString() === new Date().toDateString();
@@ -448,14 +600,15 @@ function AllDealsComponent() {
       // Sales-only: a Closed Lost deal from a previous day stays out of the
       // default view — only today's losses show at initial render. Older
       // losses are still reachable through the Custom Range search (Deal
-      // Lost + date range), which is why this check steps aside once that
-      // search is active (customRangeIds set) instead of hiding them there too.
-      if (userRole === "Admin" || customRangeIds) return true;
+      // Lost + date range) or the general Date Range filter, which is why
+      // this check steps aside once either is active.
+      if (userRole === "Admin" || customRangeIds || dateFilterIds) return true;
       if (d.stage !== "Closed Lost") return true;
       if (!d.lostDate) return true;
       return new Date(d.lostDate).toDateString() === new Date().toDateString();
     })
-    .filter((d) => !customRangeIds || customRangeIds.has(d._id));
+    .filter((d) => !customRangeIds || customRangeIds.has(d._id))
+    .filter((d) => !dateFilterIds || dateFilterIds.has(d._id));
 
   // Derived from the actually-filtered list rather than the raw fetch count —
   // matters once Custom Range merges in deals the default fetch didn't return.
@@ -539,6 +692,38 @@ function AllDealsComponent() {
             >
               <Ban className="w-4 h-4" /> Reject Deals
             </button>
+          )}
+          {userRole === "Admin" && (
+            <>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={handleDownloadTemplate}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                title="Download an Excel template with all required columns"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Download Template
+              </button>
+              <button
+                onClick={handleImportButtonClick}
+                disabled={importing}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Upload className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+              </button>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={exporting}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                <Download className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+              </button>
+            </>
           )}
           {userRole === "Admin" && (
             <button
@@ -631,6 +816,38 @@ function AllDealsComponent() {
               />
             )}
           </button>
+
+          {/* General Date Range filter — available to every role. Plain
+              createdAt range; leaving either side blank shows all records. */}
+          <div className="flex items-center gap-2 w-11/12 md:w-auto mx-auto">
+            <input
+              type="date"
+              value={dateFilterFrom}
+              onChange={(e) => setDateFilterFrom(e.target.value)}
+              max={dateFilterTo || undefined}
+              title="Start Date"
+              className="border rounded-md px-3 py-2 bg-white text-sm"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              value={dateFilterTo}
+              onChange={(e) => setDateFilterTo(e.target.value)}
+              min={dateFilterFrom || undefined}
+              title="End Date"
+              className="border rounded-md px-3 py-2 bg-white text-sm"
+            />
+            {(dateFilterFrom || dateFilterTo) && (
+              <button
+                type="button"
+                onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                className="text-gray-400 hover:text-gray-600"
+                title="Clear date filter"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
 
           {/* Custom Range toggle — sales person only, never on Admin's page. */}
           {userRole && userRole !== "Admin" && (
@@ -1107,6 +1324,66 @@ function AllDealsComponent() {
         </div>,
         document.body
       )}
+
+      {/* Export Modal */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-gray-800">
+              <Download className="w-5 h-5" />
+              Export Deals
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-gray-500 mb-3">
+            Optionally filter by date range. Leave both blank to export all deals.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+                max={exportEndDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+                min={exportStartDate || undefined}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setShowExportModal(false);
+                setExportStartDate("");
+                setExportEndDate("");
+              }}
+              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleExportDeals({ startDate: exportStartDate, endDate: exportEndDate })}
+              disabled={exporting}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>

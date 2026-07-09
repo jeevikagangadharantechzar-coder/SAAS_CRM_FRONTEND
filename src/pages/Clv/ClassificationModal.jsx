@@ -13,17 +13,17 @@ const ClassificationModal = ({ isOpen, onClose, title, data, type }) => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = data.slice(startIndex, startIndex + itemsPerPage);
 
-  const getTypeColor = () => {
+  const getTypeColors = () => {
     switch(type) {
-      case "Upsell": return "purple";
-      case "Top Value": return "green";
-      case "At Risk": return "red";
-      case "Dormant": return "gray";
-      default: return "blue";
+      case "Upsell": return { bg: "bg-purple-100", text: "text-purple-600", activeBg: "bg-purple-600" };
+      case "Top Value": return { bg: "bg-green-100", text: "text-green-600", activeBg: "bg-green-600" };
+      case "At Risk": return { bg: "bg-red-100", text: "text-red-600", activeBg: "bg-red-600" };
+      case "Dormant": return { bg: "bg-gray-100", text: "text-gray-600", activeBg: "bg-gray-600" };
+      default: return { bg: "bg-blue-100", text: "text-blue-600", activeBg: "bg-blue-600" };
     }
   };
 
-  const color = getTypeColor();
+  const colors = getTypeColors();
 
 /* ── Get Status Badge ─────────────────────── */
   const getStatusBadge = (client) => {
@@ -106,7 +106,7 @@ const ClassificationModal = ({ isOpen, onClose, title, data, type }) => {
                   onClick={() => navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`w-10 h-10 rounded-full bg-${color}-100 text-${color}-600 flex items-center justify-center font-medium flex-shrink-0`}>
+                    <div className={`w-10 h-10 rounded-full ${colors.bg} ${colors.text} flex items-center justify-center font-medium flex-shrink-0`}>
                       {client.companyName?.charAt(0) || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -168,7 +168,7 @@ const ClassificationModal = ({ isOpen, onClose, title, data, type }) => {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-8 h-8 rounded-lg text-sm ${
                         currentPage === pageNum
-                          ? `bg-${color}-600 text-white`
+                          ? `${colors.activeBg} text-white`
                           : 'hover:bg-gray-100'
                       }`}
                     >

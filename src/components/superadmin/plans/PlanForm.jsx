@@ -33,6 +33,11 @@ import {
   Calendar,
   Video,
   Bot,
+  Link2,
+  Facebook,
+  Linkedin,
+  Webhook,
+  Globe,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -61,6 +66,12 @@ const DEFAULT_FEATURES = {
   zoom_meetings: true,
   messages: true,
   chatbot: true,
+  integration_facebook: true,
+  integration_linkedin: true,
+  integration_justdial: true,
+  integration_indiamart: true,
+  integration_99acres: true,
+  integration_sulekha: true,
 };
 
 const FEATURE_GROUPS = [
@@ -119,6 +130,18 @@ const FEATURE_GROUPS = [
       { key: "meetings", label: "Meetings Scheduler", icon: Calendar },
       { key: "google_meet_sync", label: "Google Meet Sync", icon: Video },
       { key: "zoom_meetings", label: "Zoom Meetings", icon: Video },
+    ],
+  },
+  {
+    title: "Lead Source Integrations",
+    icon: Link2,
+    features: [
+      { key: "integration_facebook", label: "Facebook & Instagram", icon: Facebook },
+      { key: "integration_linkedin", label: "LinkedIn", icon: Linkedin },
+      { key: "integration_justdial", label: "Justdial", icon: Webhook },
+      { key: "integration_indiamart", label: "IndiaMART", icon: Globe },
+      { key: "integration_99acres", label: "99acres", icon: Webhook },
+      { key: "integration_sulekha", label: "Sulekha", icon: Webhook },
     ],
   },
   {

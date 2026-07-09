@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { clearCredentials } from "./store/authSlice";
 import "./App.css";
 import { applyTenantBranding } from "./utils/applyTenantBranding";
 
@@ -91,55 +92,10 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const { token, slug } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    if (token && slug) {
-      applyTenantBranding();
-    }
-  }, [token, slug]);
-
-  useEffect(() => {
-    // 1. Browser Close Session Tracker (using BroadcastChannel and sessionStorage)
-    const sessionActive = sessionStorage.getItem("sessionActive");
-    if (!sessionActive) {
-      const channel = new BroadcastChannel("crm_tab_keepalive");
-      let responded = false;
-
-      const handleMessage = (e) => {
-        if (e.data.type === "PONG") {
-          responded = true;
-          sessionStorage.setItem("sessionActive", "true");
-        }
-      };
-      channel.addEventListener("message", handleMessage);
-
-      // Ping other tabs
-      channel.postMessage({ type: "PING" });
-
-      // If no response in 300ms, this is a fresh browser session with no other tabs open
-      setTimeout(() => {
-        if (!responded) {
-          // No other tabs are open and sessionStorage is fresh -> clear old localStorage session
-          localStorage.removeItem("token");
-          localStorage.removeItem("tenantSlug");
-          localStorage.removeItem("user");
-          localStorage.removeItem("lastActivity");
-        }
-        channel.removeEventListener("message", handleMessage);
-        channel.close();
-      }, 300);
-    }
-
-    // Set up responder for other new tabs
-    const responderChannel = new BroadcastChannel("crm_tab_keepalive");
-    const handlePing = (e) => {
-      if (e.data.type === "PING" && localStorage.getItem("token")) {
-        responderChannel.postMessage({ type: "PONG" });
-      }
-    };
-    responderChannel.addEventListener("message", handlePing);
-
-    // 2. Inactivity Auto-Logout (30 Minutes)
+    // 1. Inactivity Auto-Logout (30 Minutes)
     let lastUpdate = 0;
     const updateActivity = () => {
       const token = localStorage.getItem("token");
@@ -167,12 +123,20 @@ function App() {
       
       const lastActivity = parseInt(localStorage.getItem("lastActivity") || "0");
       if (lastActivity > 0 && Date.now() - lastActivity > 30 * 60 * 1000) {
+        axios.post(
+          `${API_URL}/users/logout`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        ).catch((err) => {
+          console.error("Inactivity auto-logout error:", err);
+        });
+
         // Logout user
         localStorage.removeItem("token");
         localStorage.removeItem("tenantSlug");
         localStorage.removeItem("user");
         localStorage.removeItem("lastActivity");
-        sessionStorage.removeItem("sessionActive");
+        dispatch(clearCredentials());
 
         const pathSegments = window.location.pathname.split("/");
         const slug = pathSegments[1];
@@ -184,10 +148,9 @@ function App() {
       }
     }, 10000);
 
-    // 3. Storage Change sync listener (logs out other tabs instantly if logged out)
+    // 2. Storage Change sync listener (logs out other tabs instantly if logged out)
     const handleStorageChange = () => {
       if (!localStorage.getItem("token") && !window.location.pathname.startsWith("/superadmin")) {
-        sessionStorage.removeItem("sessionActive");
         const pathSegments = window.location.pathname.split("/");
         const slug = pathSegments[1];
         if (slug && slug !== "login") {
@@ -201,8 +164,6 @@ function App() {
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
-      responderChannel.removeEventListener("message", handlePing);
-      responderChannel.close();
       activityEvents.forEach(event => window.removeEventListener(event, updateActivity));
       clearInterval(interval);
       window.removeEventListener("storage", handleStorageChange);
