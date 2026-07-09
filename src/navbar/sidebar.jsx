@@ -782,9 +782,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           sidebarOpen={isOpen}
         />
 
-        {/* Device Login Requests — hard Admin-only, not RBAC-gated, since it
-            controls other users' account security regardless of role permissions. */}
-        {isAdmin && (
+        {/* Device Login Requests — Admin-only, and togglable per subscription plan. */}
+        {isAdmin && hasPlanFeature("device_login_requests") && (
           <SidebarItem
             to="device-requests"
             icon={<ShieldAlert />}
@@ -793,8 +792,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         )}
 
-        {/* Live Team Locations — hard Admin-only, same reasoning. */}
-        {isAdmin && (
+        {/* Live Team Locations — Admin-only, and togglable per subscription plan. */}
+        {isAdmin && hasPlanFeature("live_tracking") && (
           <SidebarItem
             to="live-locations"
             icon={<MapPin />}

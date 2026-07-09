@@ -38,6 +38,8 @@ import {
   Linkedin,
   Webhook,
   Globe,
+  ShieldAlert,
+  MapPin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -72,6 +74,8 @@ const DEFAULT_FEATURES = {
   integration_indiamart: true,
   integration_99acres: true,
   integration_sulekha: true,
+  live_tracking: true,
+  device_login_requests: true,
 };
 
 const FEATURE_GROUPS = [
@@ -151,6 +155,14 @@ const FEATURE_GROUPS = [
       { key: "users_roles", label: "Users & Roles", icon: Shield },
       { key: "admin_access", label: "Admin Access", icon: Lock },
       { key: "settings", label: "Settings", icon: SettingsIcon },
+    ],
+  },
+  {
+    title: "Security & Tracking",
+    icon: ShieldAlert,
+    features: [
+      { key: "device_login_requests", label: "Device Login Requests", icon: ShieldAlert },
+      { key: "live_tracking", label: "Live Location Tracking", icon: MapPin },
     ],
   },
 ];
