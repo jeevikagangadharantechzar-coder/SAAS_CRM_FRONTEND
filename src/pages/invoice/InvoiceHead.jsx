@@ -849,12 +849,14 @@ const InvoiceHead = () => {
                         >
                           Download
                         </button>
-                        <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                          onClick={() => handleEdit(invoice)}
-                        >
-                          Edit
-                        </button>
+                        {invoice.status !== "paid" && (
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                            onClick={() => handleEdit(invoice)}
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                           onClick={() => confirmDelete(invoice)}
