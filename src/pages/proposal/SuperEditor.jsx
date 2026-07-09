@@ -10,7 +10,7 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import CodeBlock from "@tiptap/extension-code-block";
 
-const SuperEditor = ({ value, setValue, style }) => {
+const SuperEditor = ({ value, setValue, style, className }) => {
   //  UI STATE (ONLY FOR BUTTON ON/OFF COLOR)
   const [activeButtons, setActiveButtons] = useState({
     bold: false,
@@ -57,16 +57,16 @@ const SuperEditor = ({ value, setValue, style }) => {
   };
 
   const btnClass = (isActive) =>
-    `px-2 py-1 border rounded transition ${
+    `px-2 py-1 border rounded transition text-xs sm:text-sm ${
       isActive
         ? "bg-blue-500 text-white"
         : "bg-white hover:bg-gray-100"
     }`;
 
   return (
-    <div style={style}>
+    <div style={style} className={`flex flex-col ${className || ""}`}>
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 p-2 border-b bg-gray-50 rounded-t-md">
+      <div className="flex flex-wrap gap-1.5 p-2 border-b bg-gray-50 rounded-t-md shrink-0">
         {/* Bold */}
         <button
           onClick={() => toggleButton("bold", "toggleBold")}
@@ -178,23 +178,25 @@ const SuperEditor = ({ value, setValue, style }) => {
         {/* Variables */}
         <button
           onClick={() => insertVar("{{App_Name}}")}
-          className="px-2 py-1 border rounded bg-blue-500 text-white"
+          className="px-2 py-1 border rounded bg-blue-500 text-white text-xs sm:text-sm"
         >
           App_Name
         </button>
         <button
           onClick={() => insertVar("{{App_Logo}}")}
-          className="px-2 py-1 border rounded bg-blue-500 text-white"
+          className="px-2 py-1 border rounded bg-blue-500 text-white text-xs sm:text-sm"
         >
           App_Logo
         </button>
       </div>
 
-      {/* Editor */}
-      <EditorContent
-        editor={editor}
-        className="p-3 border rounded-b-md min-h-[180px]"
-      />
+      {/* Editor Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 bg-white rounded-b-md">
+        <EditorContent
+          editor={editor}
+          className="p-3 outline-none min-h-full flex flex-col [&_.ProseMirror]:flex-1 [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[150px]"
+        />
+      </div>
     </div>
   );
 };

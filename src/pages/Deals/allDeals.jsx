@@ -678,7 +678,7 @@ function AllDealsComponent() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-deals-header">
         <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={startTour}
             className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
@@ -754,14 +754,14 @@ function AllDealsComponent() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-filters">
-        <div className="grid grid-cols-1 md:flex md:flex-wrap gap-4 md:gap-6 w-full md:w-auto items-center">
+      <div className="mb-4 tour-filters">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
           <select
             value={filters.stage}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, stage: e.target.value }))
             }
-            className="w-11/12 md:w-full mx-auto border rounded-md px-4 py-2 bg-white text-sm block"
+            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Stages</option>
             <option value="Qualification">Qualification</option>
@@ -776,7 +776,7 @@ function AllDealsComponent() {
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, assignedTo: e.target.value }))
             }
-            className="w-11/12 md:w-full mx-auto border rounded-md bg-white px-4 py-2 text-sm block"
+            className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Assigned</option>
             {users.map((u) => (
@@ -788,7 +788,7 @@ function AllDealsComponent() {
           <select
             value={clientTypeFilter}
             onChange={(e) => setClientTypeFilter(e.target.value)}
-            className="w-11/12 md:w-full mx-auto border rounded-md bg-white px-4 py-2 text-sm block"
+            className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Client Types</option>
             <option value="B2B">B2B</option>
@@ -797,7 +797,7 @@ function AllDealsComponent() {
           {/* Today's Follow-up Button */}
           <button
             onClick={() => setShowTodayOnly(!showTodayOnly)}
-            className={`w-11/12 md:w-auto mx-auto px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition ${
+            className={`w-full px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition h-10 ${
               showTodayOnly
                 ? "bg-orange-500 text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -859,7 +859,7 @@ function AllDealsComponent() {
                   return next;
                 });
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition ${
+              className={`w-full px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition h-10 ${
                 showCustomRange ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
@@ -873,7 +873,7 @@ function AllDealsComponent() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search Deal Name..."
-            className="w-11/12 md:w-64 mx-auto border rounded-full px-4 py-2 bg-white text-sm block"
+            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
