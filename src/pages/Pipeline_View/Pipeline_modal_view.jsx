@@ -7,10 +7,73 @@ import {
   ArrowLeft, Calendar, FileText, Mail, Paperclip, Tag, Clock,
   User, Building, Building2, DollarSign, CheckCircle, XCircle, AlertCircle,
   Download, Eye, ChevronRight, ChevronLeft, Phone, MapPin, Globe, Briefcase,
-  BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive
+  BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive, Save
 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import useLostDealModal from "../LostDealModal/LossDeal";
+import LostDealModal from "../LostDealModal/ModalLoss";
+
+// Email validation function
+const validateEmail = (email) => {
+  if (!email) return true; // Empty is allowed (not required)
+  const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Phone number validation function - stricter validation
+const validatePhoneNumber = (phone) => {
+  if (!phone) return true; // Empty is allowed (not required)
+  const cleaned = phone.replace(/[\s\-().]/g, "");
+  if (!/^[+]?[0-9]/.test(cleaned)) return false;
+  const withoutPlus = cleaned.startsWith("+") ? cleaned.slice(1) : cleaned;
+  if (withoutPlus.length < 7 || withoutPlus.length > 15) return false;
+  if (!/^\d+$/.test(withoutPlus)) return false;
+  if (/^(\d)\1+$/.test(withoutPlus)) return false;
+  if (withoutPlus.length < 10 && withoutPlus.startsWith("0")) return false;
+  return true;
+};
+
+// True when the phone value is just a dial code with no subscriber digits typed yet
+const isEffectivelyEmptyPhone = (phone) => {
+  if (!phone) return true;
+  return phone.replace(/\D/g, "").length <= 3;
+};
+
+const currencyOptions = [
+  { code: "USD", label: "🇺🇸 USD" },
+  { code: "EUR", label: "🇪🇺 EUR" },
+  { code: "INR", label: "🇮🇳 INR" },
+  { code: "GBP", label: "🇬🇧 GBP" },
+  { code: "JPY", label: "🇯🇵 JPY" },
+  { code: "AUD", label: "🇦🇺 AUD" },
+  { code: "CAD", label: "🇨🇦 CAD" },
+  { code: "CHF", label: "🇨🇭 CHF" },
+  { code: "MYR", label: "🇲🇾 MYR" },
+  { code: "AED", label: "🇦🇪 AED" },
+  { code: "SGD", label: "🇸🇬 SGD" },
+  { code: "ZAR", label: "🇿🇦 ZAR" },
+  { code: "SAR", label: "🇸🇦 SAR" },
+];
+
+const phoneInputStyle = {
+  width: "100%",
+  height: "42px",
+  fontSize: "14px",
+  paddingLeft: "55px",
+  borderRadius: "0.5rem",
+  border: "none",
+};
+
+const phoneButtonStyle = {
+  borderRadius: "0.5rem 0 0 0.5rem",
+  height: "42px",
+  background: "white",
+  border: "none",
+  borderRight: "1px solid #e5e7eb",
+};
 
 // ─────────────────────────────────────────────
 // File helper utilities
@@ -146,6 +209,67 @@ const PreviewModal = ({ file, onClose }) => {
 };
 
 // ─────────────────────────────────────────────
+// Notes meta helper + popup
+// ─────────────────────────────────────────────
+const formatNotesMeta = (deal) => {
+  const authorName = deal?.notesUpdatedBy
+    ? `${deal.notesUpdatedBy.firstName || ""} ${deal.notesUpdatedBy.lastName || ""}`.trim()
+    : "";
+  const dateLabel = deal?.notesUpdatedAt
+    ? new Date(deal.notesUpdatedAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+  if (authorName && dateLabel) return `by ${authorName} · ${dateLabel}`;
+  if (authorName) return `by ${authorName}`;
+  if (dateLabel) return dateLabel;
+  return "Tap to view full note";
+};
+
+const NotesPopup = ({ deal, onClose }) => {
+  useEffect(() => {
+    const handler = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
+        style={{ maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <BookOpen size={20} className="text-slate-500 flex-shrink-0" />
+            <div className="min-w-0">
+              <span className="font-medium text-slate-900 text-sm block">Notes</span>
+              <span className="text-xs text-slate-500">{formatNotesMeta(deal)}</span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-4 p-2 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0"
+            title="Close (Esc)"
+          >
+            <X size={20} className="text-slate-600" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-5">
+          <p className="text-slate-800 whitespace-pre-wrap break-words">{deal.notes}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
 function Pipeline_modal_view() {
@@ -155,6 +279,23 @@ function Pipeline_modal_view() {
 
   const [deal, setDeal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Use Lost Deal Modal hook — same one CreateDeal.jsx uses, so switching a
+  // deal to Closed Lost always captures a reason regardless of which screen
+  // the edit happens from.
+  const {
+    modalOpen: lostModalOpen,
+    lossReason,
+    lossNotes,
+    validationError,
+    LOSS_REASONS,
+    isLoading: lostModalLoading,
+    setLossReason,
+    setLossNotes,
+    openModal: openLostDealModal,
+    closeModal: closeLostDealModal,
+    validateAndExecute: validateLostDeal,
+  } = useLostDealModal();
   const [activeTab, setActiveTab] = useState("details");
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [followUpData, setFollowUpData] = useState({
@@ -170,6 +311,13 @@ function Pipeline_modal_view() {
   // Preview state
   const [previewFile, setPreviewFile] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(null); // index of loading file
+  const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
+
+  // Deal details edit state
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editFormData, setEditFormData] = useState(null);
+  const [editErrors, setEditErrors] = useState({});
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
 
   // Helper function to get auth token
   const getAuthToken = () => {
@@ -403,6 +551,137 @@ function Pipeline_modal_view() {
     setPreviewFile(null);
   }, [previewFile]);
 
+  // ── Deal details edit handlers ────────────────────────────────
+  const parseDealValue = (val) => {
+    if (!val) return { amount: "", currency: "INR" };
+    const match = String(val).match(/^([\d,]+)\s*([A-Za-z]+)$/);
+    if (!match) return { amount: String(val).replace(/,/g, ""), currency: "INR" };
+    return { amount: match[1].replace(/,/g, ""), currency: match[2].toUpperCase() };
+  };
+
+  const DEAL_STAGES = ["Qualification", "Proposal Sent-Negotiation", "Invoice Sent", "Closed Won", "Closed Lost"];
+
+  const startEditDetails = () => {
+    const { amount, currency } = parseDealValue(deal.value);
+    setEditFormData({
+      dealName: deal.dealName || "",
+      dealValue: amount,
+      currency: currency || deal.currency || "INR",
+      stage: deal.stage || "Qualification",
+      notes: deal.notes || "",
+      companyName: deal.companyName || "",
+      email: deal.email || "",
+      phoneNumber: deal.phoneNumber || "",
+      alternativeEmail: deal.alternativeEmail || "",
+      alternativeNumber: deal.alternativeNumber || "",
+      clientType: deal.clientType || "",
+    });
+    setEditErrors({});
+    setIsEditingDetails(true);
+  };
+
+  const cancelEditDetails = () => {
+    setIsEditingDetails(false);
+    setEditFormData(null);
+    setEditErrors({});
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "email" || name === "alternativeEmail") {
+      setEditErrors((prev) => ({ ...prev, [name]: !!value && !validateEmail(value) }));
+    }
+    if (name === "phoneNumber" || name === "alternativeNumber") {
+      setEditErrors((prev) => ({
+        ...prev,
+        [name]: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
+      }));
+    }
+  };
+
+  const performSaveDetails = async (extraFields = {}) => {
+    try {
+      setIsSavingDetails(true);
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+
+      const payload = {
+        dealName: editFormData.dealName.trim(),
+        dealValue: editFormData.dealValue,
+        currency: editFormData.currency,
+        stage: editFormData.stage,
+        notes: editFormData.notes,
+        companyName: editFormData.companyName.trim(),
+        email: editFormData.email,
+        phoneNumber: editFormData.phoneNumber,
+        alternativeEmail: editFormData.alternativeEmail,
+        alternativeNumber: editFormData.alternativeNumber,
+        clientType: editFormData.clientType,
+        ...extraFields,
+      };
+
+      const response = await axios.patch(
+        `${API_URL}/deals/update-deal/${dealId}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setDeal(response.data.deal);
+      setIsEditingDetails(false);
+      setEditFormData(null);
+      toast.success(response.data.message || "Deal updated successfully");
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Failed to update deal:", err);
+        toast.error(err.response?.data?.message || "Failed to update deal");
+      }
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+  const handleLostDealConfirm = useCallback(async (lossData) => {
+    if (lossData?.reason) {
+      await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+    }
+  }, [editFormData]);
+
+  const saveDetails = async () => {
+    if (!editFormData.dealName.trim()) return toast.error("Deal Name is required");
+    if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
+    if (editFormData.email && !validateEmail(editFormData.email))
+      return toast.error("Please enter a valid email address");
+    if (editFormData.alternativeEmail && !validateEmail(editFormData.alternativeEmail))
+      return toast.error("Please enter a valid alternative email address");
+    if (
+      editFormData.phoneNumber &&
+      !isEffectivelyEmptyPhone(editFormData.phoneNumber) &&
+      !validatePhoneNumber(editFormData.phoneNumber)
+    )
+      return toast.error("Please enter a valid phone number");
+    if (
+      editFormData.alternativeNumber &&
+      !isEffectivelyEmptyPhone(editFormData.alternativeNumber) &&
+      !validatePhoneNumber(editFormData.alternativeNumber)
+    )
+      return toast.error("Please enter a valid alternative phone number");
+
+    // Moving into Closed Lost always needs a reason, same as the Create/Edit
+    // Deal form — intercept the save and collect it before writing anything.
+    if (editFormData.stage === "Closed Lost" && deal.stage !== "Closed Lost") {
+      openLostDealModal(deal._id, handleLostDealConfirm);
+      return;
+    }
+
+    await performSaveDetails();
+  };
+
   // ── Format helpers ──────────────────────────────────────────
   const formatCurrencyValue = (val) => {
     if (!val) return "-";
@@ -514,6 +793,26 @@ function Pipeline_modal_view() {
       {previewFile && (
         <PreviewModal file={previewFile} onClose={closePreview} />
       )}
+
+      {/* Notes Popup */}
+      {isNotesPopupOpen && (
+        <NotesPopup deal={deal} onClose={() => setIsNotesPopupOpen(false)} />
+      )}
+
+      <LostDealModal
+        isOpen={lostModalOpen}
+        onClose={closeLostDealModal}
+        lossReason={lossReason}
+        lossNotes={lossNotes}
+        validationError={validationError}
+        LOSS_REASONS={LOSS_REASONS}
+        onReasonChange={setLossReason}
+        onNotesChange={setLossNotes}
+        onConfirm={validateLostDeal}
+        title="Update Loss Reason"
+        dealName={deal.dealName}
+        isLoading={lostModalLoading}
+      />
 
       {/* Follow-up Modal */}
       {isFollowUpModalOpen && (
@@ -775,167 +1074,441 @@ function Pipeline_modal_view() {
             {/* Details Card */}
             {activeTab === "details" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
-                <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    Deal Details
-                  </h2>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Comprehensive information about this deal
-                  </p>
+                <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Deal Details
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Comprehensive information about this deal
+                    </p>
+                  </div>
+                  {!isEditingDetails && (
+                    <button
+                      onClick={startEditDetails}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                    >
+                      <Edit size={15} />
+                      Edit
+                    </button>
+                  )}
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Deal Information */}
-                    <div className="space-y-5">
-                      <div>
-                        <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
-                          Deal Information
-                        </h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center text-slate-700">
-                            <Tag size={18} className="mr-3 text-slate-500" />
-                            <div>
-                              <p className="text-sm font-medium">Deal Name</p>
-                              <p className="text-slate-900">{deal.dealName}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center text-slate-700">
-                            <DollarSign
-                              size={18}
-                              className="mr-3 text-slate-500"
-                            />
-                            <div>
-                              <p className="text-sm font-medium">Value</p>
-                              <p className="text-slate-900">
-                                {formatCurrencyValue(deal.value)}
-                              </p>
-                            </div>
-                          </div>
-                          {deal.notes && (
+                  {!isEditingDetails ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Deal Information */}
+                      <div className="space-y-5">
+                        <div>
+                          <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                            Deal Information
+                          </h3>
+                          <div className="space-y-4">
                             <div className="flex items-center text-slate-700">
-                              <BookOpen
-                                size={18}
-                                className="mr-3 text-slate-500"
-                              />
+                              <Tag size={18} className="mr-3 text-slate-500" />
                               <div>
-                                <p className="text-sm font-medium">Notes</p>
-                                <p className="text-slate-900">{deal.notes}</p>
+                                <p className="text-sm font-medium">Deal Name</p>
+                                <p className="text-slate-900">{deal.dealName}</p>
                               </div>
                             </div>
-                          )}
-                          {deal.followUpDate && (
                             <div className="flex items-center text-slate-700">
-                              <Clock
+                              <DollarSign
                                 size={18}
                                 className="mr-3 text-slate-500"
                               />
                               <div>
-                                <p className="text-sm font-medium">
-                                  Follow-up Date
-                                </p>
+                                <p className="text-sm font-medium">Value</p>
                                 <p className="text-slate-900">
-                                  {deal.followUpDate ? (
-                                    <>
-                                      {new Date(
-                                        deal.followUpDate
-                                      ).toLocaleDateString("en-US", {
-                                        weekday: "short",
-                                        year: "numeric",
-                                        month: "short",
-                                        day: "numeric",
-                                      })}
-                                      <span className="text-slate-500 ml-2">
-                                        •{" "}
+                                  {formatCurrencyValue(deal.value)}
+                                </p>
+                              </div>
+                            </div>
+                            {deal.notes && (
+                              <button
+                                type="button"
+                                onClick={() => setIsNotesPopupOpen(true)}
+                                className="w-full flex items-start text-left text-slate-700 hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1 transition-colors group"
+                              >
+                                <BookOpen
+                                  size={18}
+                                  className="mr-3 mt-0.5 text-slate-500 flex-shrink-0 group-hover:text-blue-600 transition-colors"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium group-hover:text-blue-600 transition-colors">
+                                    Notes
+                                  </p>
+                                  <p className="text-slate-900 truncate">{deal.notes}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">
+                                    {formatNotesMeta(deal)}
+                                  </p>
+                                </div>
+                              </button>
+                            )}
+                            {deal.followUpDate && (
+                              <div className="flex items-center text-slate-700">
+                                <Clock
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Follow-up Date
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.followUpDate ? (
+                                      <>
                                         {new Date(
                                           deal.followUpDate
-                                        ).toLocaleTimeString("en-US", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          hour12: true,
+                                        ).toLocaleDateString("en-US", {
+                                          weekday: "short",
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
                                         })}
+                                        <span className="text-slate-500 ml-2">
+                                          •{" "}
+                                          {new Date(
+                                            deal.followUpDate
+                                          ).toLocaleTimeString("en-US", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            hour12: true,
+                                          })}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-slate-400">
+                                        Not set
                                       </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-slate-400">
-                                      Not set
-                                    </span>
-                                  )}
-                                </p>
-                                {deal.followUpComment && (
-                                  <p className="text-sm text-slate-600 mt-2">
-                                    <span className="font-medium">Notes:</span>{" "}
-                                    {deal.followUpComment}
+                                    )}
                                   </p>
-                                )}
+                                  {deal.followUpComment && (
+                                    <p className="text-sm text-slate-600 mt-2">
+                                      <span className="font-medium">Notes:</span>{" "}
+                                      {deal.followUpComment}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Company Information */}
-                    <div className="space-y-5">
-                      <div>
-                        <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
-                          Company Information
-                        </h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center text-slate-700">
-                            <Building
-                              size={18}
-                              className="mr-3 text-slate-500"
-                            />
-                            <div>
-                              <p className="text-sm font-medium">
-                                Company Name
-                              </p>
-                              <p className="text-slate-900">
-                                {deal.companyName || "Not specified"}
-                              </p>
-                            </div>
-                          </div>
-                          {deal.email && (
+                      {/* Company Information */}
+                      <div className="space-y-5">
+                        <div>
+                          <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                            Company Information
+                          </h3>
+                          <div className="space-y-4">
                             <div className="flex items-center text-slate-700">
-                              <Mail size={18} className="mr-3 text-slate-500" />
-                              <div>
-                                <p className="text-sm font-medium">Email</p>
-                                <a
-                                  href={`mailto:${deal.email}`}
-                                  className="text-blue-600 hover:underline text-slate-900"
-                                >
-                                  {deal.email}
-                                </a>
-                              </div>
-                            </div>
-                          )}
-                          {deal.phoneNumber && (
-                            <div className="flex items-center text-slate-700">
-                              <Phone
+                              <Building
                                 size={18}
                                 className="mr-3 text-slate-500"
                               />
                               <div>
                                 <p className="text-sm font-medium">
-                                  Phone Number
+                                  Company Name
                                 </p>
                                 <p className="text-slate-900">
-                                  {deal.phoneNumber}
+                                  {deal.companyName || "Not specified"}
                                 </p>
                               </div>
                             </div>
-                          )}
-                          <div className="flex items-center text-slate-700">
-                            <Building2 size={18} className="mr-3 text-slate-500" />
-                            <div>
-                              <p className="text-sm font-medium">Client Type</p>
-                              <p className="text-slate-900">{deal.clientType || "Not specified"}</p>
+                            {deal.email && (
+                              <div className="flex items-center text-slate-700">
+                                <Mail size={18} className="mr-3 text-slate-500" />
+                                <div>
+                                  <p className="text-sm font-medium">Email</p>
+                                  <a
+                                    href={`mailto:${deal.email}`}
+                                    className="text-blue-600 hover:underline text-slate-900"
+                                  >
+                                    {deal.email}
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                            {deal.phoneNumber && (
+                              <div className="flex items-center text-slate-700">
+                                <Phone
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Phone Number
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.phoneNumber}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {deal.alternativeEmail && (
+                              <div className="flex items-center text-slate-700">
+                                <Mail size={18} className="mr-3 text-slate-500" />
+                                <div>
+                                  <p className="text-sm font-medium">Alternative Email</p>
+                                  <a
+                                    href={`mailto:${deal.alternativeEmail}`}
+                                    className="text-blue-600 hover:underline text-slate-900"
+                                  >
+                                    {deal.alternativeEmail}
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                            {deal.alternativeNumber && (
+                              <div className="flex items-center text-slate-700">
+                                <Phone
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Alternative Number
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.alternativeNumber}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-center text-slate-700">
+                              <Building2 size={18} className="mr-3 text-slate-500" />
+                              <div>
+                                <p className="text-sm font-medium">Client Type</p>
+                                <p className="text-slate-900">{deal.clientType || "Not specified"}</p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Deal Information (edit) */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                            Deal Information
+                          </h3>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Deal Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              name="dealName"
+                              value={editFormData.dealName}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Value
+                            </label>
+                            <div className="flex gap-2">
+                              <select
+                                name="currency"
+                                value={editFormData.currency}
+                                onChange={handleEditChange}
+                                className="border border-slate-300 rounded-lg px-2 py-2 text-sm bg-white w-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                {currencyOptions.map((c) => (
+                                  <option key={c.code} value={c.code}>{c.label}</option>
+                                ))}
+                              </select>
+                              <input
+                                value={editFormData.dealValue}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === "" || /^[0-9]+$/.test(val)) {
+                                    handleEditChange({ target: { name: "dealValue", value: val } });
+                                  }
+                                }}
+                                placeholder="Enter deal value"
+                                className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition min-w-0"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Stage
+                            </label>
+                            <select
+                              name="stage"
+                              value={editFormData.stage}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            >
+                              {DEAL_STAGES.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Notes
+                            </label>
+                            <textarea
+                              name="notes"
+                              rows={4}
+                              value={editFormData.notes}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Company Information (edit) */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                            Company Information
+                          </h3>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Company Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              name="companyName"
+                              value={editFormData.companyName}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Email
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              value={editFormData.email}
+                              onChange={handleEditChange}
+                              placeholder="name@example.com"
+                              className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                                editErrors.email ? "border-red-500" : "border-slate-300"
+                              }`}
+                            />
+                            {editErrors.email && (
+                              <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Phone Number
+                            </label>
+                            <div
+                              className={`border rounded-lg ${
+                                editErrors.phoneNumber ? "border-red-500" : "border-slate-300"
+                              }`}
+                            >
+                              <PhoneInput
+                                country={"in"}
+                                preferredCountries={["in"]}
+                                countryCodeEditable={false}
+                                value={editFormData.phoneNumber}
+                                onChange={(phone) =>
+                                  handleEditChange({ target: { name: "phoneNumber", value: phone } })
+                                }
+                                specialLabel=""
+                                inputStyle={phoneInputStyle}
+                                buttonStyle={phoneButtonStyle}
+                              />
+                            </div>
+                            {editErrors.phoneNumber && (
+                              <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Alternative Email
+                            </label>
+                            <input
+                              type="email"
+                              name="alternativeEmail"
+                              value={editFormData.alternativeEmail}
+                              onChange={handleEditChange}
+                              placeholder="alt@example.com"
+                              className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                                editErrors.alternativeEmail ? "border-red-500" : "border-slate-300"
+                              }`}
+                            />
+                            {editErrors.alternativeEmail && (
+                              <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Alternative Number
+                            </label>
+                            <div
+                              className={`border rounded-lg ${
+                                editErrors.alternativeNumber ? "border-red-500" : "border-slate-300"
+                              }`}
+                            >
+                              <PhoneInput
+                                country={"in"}
+                                preferredCountries={["in"]}
+                                countryCodeEditable={false}
+                                value={editFormData.alternativeNumber}
+                                onChange={(phone) =>
+                                  handleEditChange({ target: { name: "alternativeNumber", value: phone } })
+                                }
+                                specialLabel=""
+                                inputStyle={phoneInputStyle}
+                                buttonStyle={phoneButtonStyle}
+                              />
+                            </div>
+                            {editErrors.alternativeNumber && (
+                              <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Client Type
+                            </label>
+                            <select
+                              name="clientType"
+                              value={editFormData.clientType}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            >
+                              <option value="">Select Client Type</option>
+                              <option value="B2B">B2B</option>
+                              <option value="B2C">B2C</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={cancelEditDetails}
+                          disabled={isSavingDetails}
+                          className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveDetails}
+                          disabled={isSavingDetails}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isSavingDetails ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
+                          ) : (
+                            <Save size={16} />
+                          )}
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1630,6 +2203,23 @@ function Pipeline_modal_view() {
                   <div className="flex items-center text-sm text-slate-600">
                     <Phone size={14} className="mr-2" />
                     {deal.phoneNumber}
+                  </div>
+                )}
+                {deal.alternativeEmail && (
+                  <a
+                    href={`mailto:${deal.alternativeEmail}`}
+                    className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <Mail size={14} className="mr-2" />
+                    {deal.alternativeEmail}
+                    <span className="ml-1 text-xs text-slate-400">(alt)</span>
+                  </a>
+                )}
+                {deal.alternativeNumber && (
+                  <div className="flex items-center text-sm text-slate-600">
+                    <Phone size={14} className="mr-2" />
+                    {deal.alternativeNumber}
+                    <span className="ml-1 text-xs text-slate-400">(alt)</span>
                   </div>
                 )}
               </div>
