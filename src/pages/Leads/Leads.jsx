@@ -1080,11 +1080,9 @@ function LeadTableComponent() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.lead")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.clientType")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.source")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.status")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.assignee")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
@@ -1127,9 +1125,15 @@ function LeadTableComponent() {
                         <div className="flex items-center gap-1.5">
                           <span
                             onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}`)}
-                            className="font-medium text-blue-600 text-sm cursor-pointer hover:underline"
+                            className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline"
                           >
                             {lead.leadName || t("leads.table.unnamedLead")}
+                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-normal shadow-lg z-50 pointer-events-none">
+                              <Calendar size={12} className="text-gray-300 shrink-0" />
+                              {lead.followUpDate
+                                ? `Follow-up: ${formatDate(lead.followUpDate)}`
+                                : "No follow-up scheduled"}
+                            </div>
                           </span>
                           {lead.status === "Rejected" ? (
                             <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
@@ -1177,7 +1181,6 @@ function LeadTableComponent() {
 
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.phoneNumber || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.clientType || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
 
@@ -1211,13 +1214,7 @@ function LeadTableComponent() {
                     )}
                   </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {lead.assignTo
-                      ? typeof lead.assignTo === "object"
-                        ? `${lead.assignTo.firstName} ${lead.assignTo.lastName}`
-                        : t("leads.table.assignedUser")
-                      : "-"}
-                  </td>
+           
 
                   <td className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>
 

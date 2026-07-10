@@ -6,6 +6,8 @@ import { getNames } from "country-list";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import {
   ArrowLeft,
   DollarSign,
@@ -61,6 +63,13 @@ const validatePhoneNumber = (phone) => {
   if (withoutPlus.length < 10 && withoutPlus.startsWith('0')) return false;
   
   return true;
+};
+
+// True when the phone value is just a dial code with no subscriber digits typed yet
+// (react-phone-input-2 fires onChange with only the dial code as soon as a country is picked)
+const isEffectivelyEmptyPhone = (phone) => {
+  if (!phone) return true;
+  return phone.replace(/\D/g, '').length <= 3;
 };
 
 // Currency options with symbol and label
@@ -177,6 +186,8 @@ export default function CreateDeal() {
     notes: "",
     phoneNumber: "",
     email: "",
+    alternativeNumber: "",
+    alternativeEmail: "",
     source: "",
     companyName: "",
     industry: "",
@@ -281,6 +292,8 @@ export default function CreateDeal() {
         notes: existingDeal.notes || "",
         phoneNumber: existingDeal.phoneNumber || "",
         email: existingDeal.email || "",
+        alternativeNumber: existingDeal.alternativeNumber || "",
+        alternativeEmail: existingDeal.alternativeEmail || "",
         source: existingDeal.source || "",
         companyName: existingDeal.companyName || "",
         industry: existingDeal.industry || "",
@@ -337,12 +350,26 @@ export default function CreateDeal() {
     }
     
     // Real-time validation for phone
-    if (name === "phoneNumber" && value && !validatePhoneNumber(value)) {
+    if (name === "phoneNumber" && value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value)) {
       setErrors((prev) => ({ ...prev, phoneNumber: true }));
     } else if (name === "phoneNumber") {
       setErrors((prev) => ({ ...prev, phoneNumber: false }));
     }
-    
+
+    // Real-time validation for alternative email
+    if (name === "alternativeEmail" && value && !validateEmail(value)) {
+      setErrors((prev) => ({ ...prev, alternativeEmail: true }));
+    } else if (name === "alternativeEmail") {
+      setErrors((prev) => ({ ...prev, alternativeEmail: false }));
+    }
+
+    // Real-time validation for alternative phone
+    if (name === "alternativeNumber" && value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value)) {
+      setErrors((prev) => ({ ...prev, alternativeNumber: true }));
+    } else if (name === "alternativeNumber") {
+      setErrors((prev) => ({ ...prev, alternativeNumber: false }));
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
@@ -459,14 +486,30 @@ export default function CreateDeal() {
       phoneNumber: false,
       companyName: formDataToSubmit.companyName.trim() === "",
       email: false,
+      alternativeNumber: false,
+      alternativeEmail: false,
     };
 
     // Clear phone and email errors if they are valid
-    if (formDataToSubmit.phoneNumber && !validatePhoneNumber(formDataToSubmit.phoneNumber)) {
+    if (
+      formDataToSubmit.phoneNumber &&
+      !isEffectivelyEmptyPhone(formDataToSubmit.phoneNumber) &&
+      !validatePhoneNumber(formDataToSubmit.phoneNumber)
+    ) {
       newErrors.phoneNumber = true;
     }
     if (formDataToSubmit.email && !validateEmail(formDataToSubmit.email)) {
       newErrors.email = true;
+    }
+    if (
+      formDataToSubmit.alternativeNumber &&
+      !isEffectivelyEmptyPhone(formDataToSubmit.alternativeNumber) &&
+      !validatePhoneNumber(formDataToSubmit.alternativeNumber)
+    ) {
+      newErrors.alternativeNumber = true;
+    }
+    if (formDataToSubmit.alternativeEmail && !validateEmail(formDataToSubmit.alternativeEmail)) {
+      newErrors.alternativeEmail = true;
     }
 
     setErrors(newErrors);
@@ -542,7 +585,11 @@ export default function CreateDeal() {
     e.preventDefault();
 
     // Phone number validation
-    if (formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber)) {
+    if (
+      formData.phoneNumber &&
+      !isEffectivelyEmptyPhone(formData.phoneNumber) &&
+      !validatePhoneNumber(formData.phoneNumber)
+    ) {
       toast.error("Please enter a valid phone number (e.g., +91 1234567890, 1234567890, or +1 234567890)");
       setErrors((prev) => ({ ...prev, phoneNumber: true }));
       return;
@@ -555,12 +602,32 @@ export default function CreateDeal() {
       return;
     }
 
+    // Alternative phone number validation
+    if (
+      formData.alternativeNumber &&
+      !isEffectivelyEmptyPhone(formData.alternativeNumber) &&
+      !validatePhoneNumber(formData.alternativeNumber)
+    ) {
+      toast.error("Please enter a valid alternative phone number (e.g., +91 1234567890, 1234567890, or +1 234567890)");
+      setErrors((prev) => ({ ...prev, alternativeNumber: true }));
+      return;
+    }
+
+    // Alternative email validation
+    if (formData.alternativeEmail && !validateEmail(formData.alternativeEmail)) {
+      toast.error("Please enter a valid alternative email address (e.g., name@example.com)");
+      setErrors((prev) => ({ ...prev, alternativeEmail: true }));
+      return;
+    }
+
     const newErrors = {
       dealName: formData.dealName.trim() === "",
       dealValue: formData.dealValue.trim() === "",
       phoneNumber: false,
       companyName: formData.companyName.trim() === "",
       email: false,
+      alternativeNumber: false,
+      alternativeEmail: false,
     };
 
     setErrors(newErrors);
@@ -604,14 +671,29 @@ export default function CreateDeal() {
       label: "Phone Number", 
       icon: <Phone size={16} />,
       type: "tel",
-      placeholder: "e.g., +91 1234567890 or 1234567890"
+      placeholder: "Add a valid phone number"
     },
-    { 
-      name: "email", 
-      label: "Email", 
+        {
+      name: "alternativeNumber",
+      label: "Alternative Number",
+      icon: <Phone size={16} />,
+      type: "tel",
+      placeholder: "Add an alternative phone number"
+    },
+    {
+      name: "email",
+      label: "Email",
       icon: <Mail size={16} />,
       type: "email",
       placeholder: "name@example.com"
+    },
+
+    {
+      name: "alternativeEmail",
+      label: "Alternative Email",
+      icon: <Mail size={16} />,
+      type: "email",
+      placeholder: "alt@example.com"
     },
     { name: "companyName", label: "Company Name", icon: <Building2 size={16} /> },
     {
@@ -849,6 +931,44 @@ export default function CreateDeal() {
                         )}
                       </select>
                     )
+                  ) : field.name === "phoneNumber" || field.name === "alternativeNumber" ? (
+                    <>
+                      <div
+                        className={`border rounded-lg ${
+                          errors[field.name] ? "border-red-500" : "border-gray-300"
+                        }`}
+                      >
+                        <PhoneInput
+                          country={"in"}
+                          preferredCountries={["in"]}
+                          countryCodeEditable={false}
+                          value={formData[field.name]}
+                          onChange={(phone) =>
+                            handleChange({ target: { name: field.name, value: phone } })
+                          }
+                          placeholder="Select code and enter number"
+                          specialLabel=""
+                          inputStyle={{
+                            width: "100%",
+                            height: "42px",
+                            fontSize: "14px",
+                            paddingLeft: "55px",
+                            borderRadius: "0.5rem",
+                            border: "none",
+                          }}
+                          buttonStyle={{
+                            borderRadius: "0.5rem 0 0 0.5rem",
+                            height: "42px",
+                            background: "white",
+                            border: "none",
+                            borderRight: "1px solid #e5e7eb",
+                          }}
+                        />
+                      </div>
+                      {errors[field.name] && (
+                        <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
+                      )}
+                    </>
                   ) : (
                     <>
                       <input
@@ -861,17 +981,15 @@ export default function CreateDeal() {
                           errors[field.name] ? "border-red-500" : ""
                         }`}
                       />
-                      {errors[field.name] && field.name === "phoneNumber" && (
-                        <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
-                      )}
-                      {errors[field.name] && field.name === "email" && (
+                      {errors[field.name] && (field.name === "email" || field.name === "alternativeEmail") && (
                         <p className="text-red-500 text-xs mt-1">Invalid email format</p>
                       )}
                     </>
                   )}
-                  {errors[field.name] && field.name !== "phoneNumber" && field.name !== "email" && (
-                    <p className="text-red-500 text-sm mt-1">{field.label} is required</p>
-                  )}
+                  {errors[field.name] &&
+                    !["phoneNumber", "email", "alternativeNumber", "alternativeEmail"].includes(field.name) && (
+                      <p className="text-red-500 text-sm mt-1">{field.label} is required</p>
+                    )}
                 </div>
               ))}
             </div>
