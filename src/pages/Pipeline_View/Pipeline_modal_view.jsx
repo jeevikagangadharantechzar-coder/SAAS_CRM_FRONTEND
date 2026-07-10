@@ -326,7 +326,7 @@ function Pipeline_modal_view() {
 
   // Handle authentication errors
   const handleAuthError = (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if (error.response?.status === 401) {
       toast.error("Session expired. Please login again.");
       localStorage.removeItem("token");
       navigate("/login");
