@@ -973,12 +973,14 @@ function AllDealsComponent() {
         <table className="min-w-full text-sm text-gray-700">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left">Deal Name</th>
+              <th className="px-6 py-3 text-left sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">Deal Name</th>
               <th className="px-6 py-3 text-left">Client Type</th>
-              <th className="px-6 py-3 text-left">Assigned To</th>
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
               <th className="px-6 py-3 text-left">Value ({userCurrency})</th>
+              {userRole === "Admin" && (
+                <th className="px-6 py-3 text-left">Assigned To</th>
+              )}
               <th className="px-6 py-3 text-left">Created At</th>
               <th className="px-6 py-3 text-left tour-deal-actions">Actions</th>
             </tr>
@@ -1008,30 +1010,32 @@ function AllDealsComponent() {
                   <tr
                     key={deal._id}
                     title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
-                    className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                    className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50 ${
                       isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
                       : isTerminal ? "pointer-events-none select-none"
                       : ""
                     }`}
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className={`px-6 py-4 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
+                      idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                    }`}>
+                      <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2 min-w-0">
                         <button
                           onClick={() => handleDealNameClick(deal._id)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium tour-deal-name"
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium tour-deal-name truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none text-left"
                         >
                           {deal.dealName || "-"}
                         </button>
                         {deal.stage === "Rejected" ? (
-                          <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
+                          <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {rejectedBadgeText}
                           </span>
                         ) : deal.stage === "Closed Won" ? (
-                          <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto">
+                          <span title={wonBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {wonBadgeText}
                           </span>
                         ) : deal.convertedBy ? (
-                          <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto">
+                          <span title={convertedBadgeText} className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {convertedBadgeText}
                           </span>
                         ) : isActiveDisabled ? (
@@ -1082,11 +1086,6 @@ function AllDealsComponent() {
                     </td>
                     <td className="px-6 py-4">{deal.clientType || "-"}</td>
                     <td className="px-6 py-4">
-                      {deal.assignedTo
-                        ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}`
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4">
                       {deal.stage === "Rejected" ? (
                         <span
                           className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
@@ -1115,6 +1114,13 @@ function AllDealsComponent() {
                         ? `${userCurrencySymbol} ${Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}`
                         : "-"}
                     </td>
+                    {userRole === "Admin" && (
+                      <td className="px-6 py-4">
+                        {deal.assignedTo
+                          ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}`
+                          : "-"}
+                      </td>
+                    )}
                     <td className="px-6 py-4">{formatDate(deal.createdAt)}</td>
                     <td className="px-6 py-4">
                       <button

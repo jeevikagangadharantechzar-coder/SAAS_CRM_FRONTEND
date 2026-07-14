@@ -1077,12 +1077,15 @@ function LeadTableComponent() {
         <table className="min-w-max w-full table-auto divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr className="whitespace-nowrap">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.lead")}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky left-0 z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">{t("leads.table.lead")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.source")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.status")}</th>
+              {userRole === "Admin" && (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
@@ -1095,7 +1098,7 @@ function LeadTableComponent() {
           <tbody className="divide-y divide-gray-200">
             {leads.length > 0 ? (
               leads.map((lead, idx) => {
-                const isTerminal = lead.status === "Rejected" || lead.status === "Converted";
+                const isTerminal = lead.status === "Rejected";
                 const isActiveDisabled = lead.isActive === false && userRole !== "Admin";
                 const isDisabled = isTerminal || isActiveDisabled;
                 const rejectedByName = lead.rejectedBy ? `${lead.rejectedBy.firstName || ""} ${lead.rejectedBy.lastName || ""}`.trim() : "";
@@ -1108,24 +1111,26 @@ function LeadTableComponent() {
                 <tr
                   key={lead._id}
                   title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
-                  className={`hover:bg-gray-50 ${
+                  className={`group ${
                     idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } whitespace-nowrap ${
+                  } hover:bg-gray-50 whitespace-nowrap ${
                     isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
                     : isTerminal ? "pointer-events-none select-none"
                     : ""
                   }`}
                 >
-                  <td className="px-4 py-3">
+                  <td className={`px-4 py-3 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
+                    idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
                         {lead.leadName?.charAt(0) || "L"}
                       </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5 min-w-0">
                           <span
                             onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}`)}
-                            className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline"
+                            className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none"
                           >
                             {lead.leadName || t("leads.table.unnamedLead")}
                             <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-normal shadow-lg z-50 pointer-events-none">
@@ -1136,11 +1141,11 @@ function LeadTableComponent() {
                             </div>
                           </span>
                           {lead.status === "Rejected" ? (
-                            <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
+                            <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                               {rejectedBadgeText}
                             </span>
                           ) : lead.status === "Converted" ? (
-                            <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto">
+                            <span title={convertedBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                               {convertedBadgeText}
                             </span>
                           ) : isActiveDisabled ? (
@@ -1174,7 +1179,7 @@ function LeadTableComponent() {
                             );
                           })()}
                         </div>
-                        <span className="text-gray-400 text-xs">{lead.email || "-"}</span>
+                        <span className="text-gray-400 text-xs truncate max-w-[100px] sm:max-w-[180px] lg:max-w-none">{lead.email || "-"}</span>
                       </div>
                     </div>
                   </td>
@@ -1214,6 +1219,11 @@ function LeadTableComponent() {
                     )}
                   </td>
 
+                  {userRole === "Admin" && (
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {lead.assignTo ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim() : "-"}
+                    </td>
+                  )}
            
 
                   <td className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>
