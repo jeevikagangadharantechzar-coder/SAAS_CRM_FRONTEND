@@ -53,6 +53,12 @@ ChartJS.register(
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+const CURRENCY_SYMBOLS = {
+  USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+  AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+  SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
 // Custom debounce function
 const debounce = (func, wait) => {
   let timeout;
@@ -118,6 +124,10 @@ const CLVDashboard = () => {
       setUserId(userData._id || "");
     }
   }, []);
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userCurrency = user?.currency || "USD";
+  const currencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
 
   useEffect(() => {
     fetchDashboardData();
@@ -263,8 +273,8 @@ const CLVDashboard = () => {
 
 /* ── Format Currency Function ─────────────────────── */
   const formatCurrency = (value) => {
-    if (!value && value !== 0) return "₹0";
-    return `₹${value.toLocaleString()}`;
+    if (!value && value !== 0) return `${currencySymbol}0`;
+    return `${currencySymbol}${value.toLocaleString()}`;
   };
 
 /* ── Format Number Function ─────────────────────── */
@@ -425,7 +435,7 @@ const CLVDashboard = () => {
           label: function(context) {
             let label = context.dataset.label || '';
             let value = context.raw;
-            return `${label}: ₹${value.toLocaleString()}`;
+            return `${label}: ${currencySymbol}${value.toLocaleString()}`;
           }
         }
       },
@@ -435,7 +445,7 @@ const CLVDashboard = () => {
         beginAtZero: true,
         ticks: {
           callback: function(value) {
-            return '₹' + value.toLocaleString();
+            return currencySymbol + value.toLocaleString();
           },
         },
         grid: {
@@ -900,13 +910,13 @@ const CLVDashboard = () => {
             <div>
               <p className="text-[10px] sm:text-xs text-gray-500">Total</p>
               <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">
-                ₹{(monthlyData.values.reduce((a, b) => a + b, 0) / 100000).toFixed(1)}L
+                {currencySymbol}{(monthlyData.values.reduce((a, b) => a + b, 0) / 100000).toFixed(1)}L
               </p>
             </div>
             <div>
               <p className="text-[10px] sm:text-xs text-gray-500">Avg</p>
               <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">
-                ₹{Math.round(monthlyData.values.reduce((a, b) => a + b, 0) / 6 / 1000)}K
+                {currencySymbol}{Math.round(monthlyData.values.reduce((a, b) => a + b, 0) / 6 / 1000)}K
               </p>
             </div>
             <div>
