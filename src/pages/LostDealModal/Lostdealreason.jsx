@@ -144,6 +144,12 @@ const COLORS = [
   "#06b6d4","#3b82f6","#8b5cf6","#ec4899","#6b7280",
 ];
 
+const CURRENCY_SYMBOLS = {
+  USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+  AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+  SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
 // ----------------------------------------------------------------------
 // Helper Functions
 // ----------------------------------------------------------------------
@@ -230,6 +236,25 @@ const getStageRecoveryRate = (stage) => {
 export default function LostDealAnalytics() {
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
   const navigate = useNavigate();
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userCurrency = user?.currency || "USD";
+  const currencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
+
+  const formatPreferredCurrency = (value) => {
+    if (!value || isNaN(value)) return `${currencySymbol}0`;
+    return `${currencySymbol}${Math.round(value).toLocaleString()}`;
+  };
+
+  // A deal's frozen preferredCurrencyValue is only valid if it was actually
+  // converted into the currency the current user has set — otherwise it's a
+  // stale conversion into some other currency and must not be shown as-is.
+  const getDealPreferredValue = (deal) =>
+    deal.preferredValueForUser ??
+    (deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null
+      ? deal.preferredCurrencyValue
+      : deal.parsedValue) ??
+    0;
 
   // --------------------------------------------------------------------
   // State
@@ -433,22 +458,31 @@ export default function LostDealAnalytics() {
     return parsedRecentDeals.reduce((sum, deal) => sum + deal.parsedValue, 0);
   }, [parsedRecentDeals]);
 
+  const totalLostValuePreferred = useMemo(() => {
+    return parsedRecentDeals.reduce(
+      (sum, deal) => sum + getDealPreferredValue(deal),
+      0
+    );
+  }, [parsedRecentDeals]);
+
   const stageCounts = useMemo(() => {
     const counts = {
-      "Qualification": { count: 0, totalValue: 0 },
-      "Proposal Sent-Negotiation": { count: 0, totalValue: 0 },
-      "Invoice Sent": { count: 0, totalValue: 0 },
-      "Closed Won": { count: 0, totalValue: 0 },
-      "Closed Lost": { count: 0, totalValue: 0 },
+      "Qualification": { count: 0, totalValue: 0, preferredTotalValue: 0 },
+      "Proposal Sent-Negotiation": { count: 0, totalValue: 0, preferredTotalValue: 0 },
+      "Invoice Sent": { count: 0, totalValue: 0, preferredTotalValue: 0 },
+      "Closed Won": { count: 0, totalValue: 0, preferredTotalValue: 0 },
+      "Closed Lost": { count: 0, totalValue: 0, preferredTotalValue: 0 },
     };
 
     parsedRecentDeals.forEach((deal) => {
       const stage = deal.stageLostAt || "Unknown";
+      const preferredValue = getDealPreferredValue(deal);
       if (counts[stage]) {
         counts[stage].count += 1;
         counts[stage].totalValue += deal.parsedValue;
+        counts[stage].preferredTotalValue += preferredValue;
       } else if (stage !== "Unknown") {
-        counts[stage] = { count: 1, totalValue: deal.parsedValue };
+        counts[stage] = { count: 1, totalValue: deal.parsedValue, preferredTotalValue: preferredValue };
       }
     });
 
@@ -458,6 +492,7 @@ export default function LostDealAnalytics() {
         stage,
         count: data.count,
         totalValue: data.totalValue,
+        preferredTotalValue: data.preferredTotalValue,
         percentage:
           parsedRecentDeals.length > 0
             ? Math.round((data.count / parsedRecentDeals.length) * 100)
@@ -822,11 +857,15 @@ export default function LostDealAnalytics() {
     );
     const count = deals.length;
     const value = deals.reduce((sum, deal) => sum + deal.parsedValue, 0);
+    const preferredValue = deals.reduce(
+      (sum, deal) => sum + getDealPreferredValue(deal),
+      0
+    );
     const percentage =
       parsedRecentDeals.length > 0
         ? Math.round((count / parsedRecentDeals.length) * 100)
         : 0;
-    return { count, value, percentage };
+    return { count, value, preferredValue, percentage };
   }, [parsedRecentDeals]);
 
   // Helper: label for date range button
@@ -907,9 +946,9 @@ export default function LostDealAnalytics() {
           </div>
           <div className="text-2xl font-bold mb-1">
             <Counter
-              value={totalLostValueCorrect}
+              value={totalLostValuePreferred}
               duration={1500}
-              formatter={(val) => formatCurrency(val)}
+              formatter={(val) => formatPreferredCurrency(val)}
             />
           </div>
           <div className="text-sm text-rose-100">Total Lost Value</div>
@@ -977,7 +1016,7 @@ export default function LostDealAnalytics() {
             {invoiceSentDeals.count} out of {parsedRecentDeals.length} deals
           </div>
           <div className="text-base font-semibold mt-2 pt-2 border-t border-white/20">
-            Total Value: {formatCurrency(invoiceSentDeals.value)}
+            Total Value: {formatPreferredCurrency(invoiceSentDeals.preferredValue)}
           </div>
         </div>
       </div>
@@ -1296,6 +1335,7 @@ export default function LostDealAnalytics() {
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Deal Name</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Stage Lost At</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Value</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">{userCurrency} Value</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Loss Reason</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Owner</th>
                     </tr>
@@ -1333,6 +1373,9 @@ export default function LostDealAnalytics() {
                             </td>
                             <td className="py-3 px-4 font-medium text-gray-800">
                               {formatCurrency(deal.parsedValue)}
+                            </td>
+                            <td className="py-3 px-4 font-medium text-gray-800">
+                              {formatPreferredCurrency(getDealPreferredValue(deal))}
                             </td>
                             <td className="py-3 px-4">
                               <span
@@ -1373,7 +1416,7 @@ export default function LostDealAnalytics() {
                     ) : (
                       <tr>
                         <td
-                          colSpan="6"
+                          colSpan="7"
                           className="py-8 text-center text-gray-500"
                         >
                           No deals found
@@ -1537,6 +1580,7 @@ export default function LostDealAnalytics() {
                         <th className="py-3 px-4 font-medium text-gray-600">Stage</th>
                         <th className="py-3 px-4 font-medium text-gray-600">Deals Count</th>
                         <th className="py-3 px-4 font-medium text-gray-600">Total Value</th>
+                        <th className="py-3 px-4 font-medium text-gray-600">{userCurrency} Value</th>
                         <th className="py-3 px-4 font-medium text-gray-600">Percentage</th>
                       </tr>
                     </thead>
@@ -1566,6 +1610,9 @@ export default function LostDealAnalytics() {
                             <td className="py-3.5 px-4 font-medium text-gray-800">
                               {formatCurrency(stage.totalValue)}
                             </td>
+                            <td className="py-3.5 px-4 font-medium text-gray-800">
+                              {formatPreferredCurrency(stage.preferredTotalValue)}
+                            </td>
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
                                 <span className="font-bold text-indigo-600 w-10 text-right">
@@ -1592,7 +1639,7 @@ export default function LostDealAnalytics() {
                       ) : (
                         <tr>
                           <td
-                            colSpan="4"
+                            colSpan="5"
                             className="py-8 text-center text-gray-500"
                           >
                             No stages found
@@ -1689,7 +1736,7 @@ export default function LostDealAnalytics() {
                 map[m._id] = { deals: 0, value: 0 };
               }
               map[m._id].deals += m.count;
-              map[m._id].value += m.value;
+              map[m._id].value += m.preferredValue ?? m.value;
             });
 
             const result = [];
@@ -1734,7 +1781,7 @@ export default function LostDealAnalytics() {
             }}
             formatter={(value, name) =>
               name === "Value"
-                ? [`₹${value.toLocaleString()}`, "Value"]
+                ? [formatPreferredCurrency(value), "Value"]
                 : [value, "Deals"]
             }
           />
@@ -1791,11 +1838,11 @@ export default function LostDealAnalytics() {
                   <div className="text-right">
                     <div className="text-xs text-gray-500">Total Value</div>
                     <div className="text-lg font-bold text-emerald-700">
-                      {formatCurrency(invoiceSentDeals.value)}
+                      {formatPreferredCurrency(invoiceSentDeals.preferredValue)}
                     </div>
                     <div className="text-xs text-green-600 mt-1">
                       Recovery:{" "}
-                      {formatCurrency(invoiceSentDeals.value * 0.45)}
+                      {formatPreferredCurrency(invoiceSentDeals.preferredValue * 0.45)}
                     </div>
                   </div>
                 </div>
@@ -1820,7 +1867,8 @@ export default function LostDealAnalytics() {
                   {parsedRecentDeals
                     .filter((deal) => deal.stageLostAt === "Invoice Sent")
                     .map((deal) => {
-                      const recoveryAmount = deal.parsedValue * 0.45;
+                      const preferredValue = getDealPreferredValue(deal);
+                      const recoveryAmount = preferredValue * 0.45;
                       return (
                         <div
                           key={deal._id}
@@ -1838,7 +1886,7 @@ export default function LostDealAnalytics() {
                             </div>
                             <div className="text-right">
                               <div className="text-sm font-bold text-red-600">
-                                {formatCurrency(deal.parsedValue)}
+                                {formatPreferredCurrency(preferredValue)}
                               </div>
                             </div>
                           </div>
@@ -1860,7 +1908,7 @@ export default function LostDealAnalytics() {
                             </div>
                             <div className="text-right">
                               <div className="text-xs text-emerald-600 font-medium">
-                                Recoverable: {formatCurrency(recoveryAmount)}
+                                Recoverable: {formatPreferredCurrency(recoveryAmount)}
                               </div>
                               <div className="text-xs text-gray-400">
                                 45% recovery rate
@@ -1893,13 +1941,13 @@ export default function LostDealAnalytics() {
                 <div className="bg-white rounded-lg p-2 text-center border-l-4 border-rose-500">
                   <div className="text-xs text-gray-500">Total Lost Value</div>
                   <div className="text-sm font-bold text-rose-600">
-                    {formatCurrency(totalLostValueCorrect)}
+                    {formatPreferredCurrency(totalLostValuePreferred)}
                   </div>
                 </div>
                 <div className="bg-white rounded-lg p-2 text-center border-l-4 border-emerald-500">
                   <div className="text-xs text-gray-500">Recoverable Total</div>
                   <div className="text-sm font-bold text-emerald-600">
-                    {formatCurrency(invoiceSentDeals.value * 0.45)}
+                    {formatPreferredCurrency(invoiceSentDeals.preferredValue * 0.45)}
                   </div>
                 </div>
                 <div className="bg-white rounded-lg p-2 text-center border-l-4 border-amber-500">
@@ -1922,13 +1970,18 @@ export default function LostDealAnalytics() {
           </div>
 
           {/* Top Loss Contributors */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 min-h-[250px]">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <Users size={18} className="text-orange-500" />
               Top Contributors
             </h3>
 
             <div className="space-y-3">
+              {topLostUsersCorrect.length === 0 && (
+                <div className="text-center text-gray-400 text-sm py-16">
+                  No one available
+                </div>
+              )}
               {topLostUsersCorrect.slice(0, 4).map((user, index) => (
                 <div
                   key={user._id || user.id || index}
@@ -1975,7 +2028,7 @@ export default function LostDealAnalytics() {
       {/* Full Width Sections */}
       <div className="mt-6 space-y-6">
         {/* High Value Lost Deals */}
-        <div
+        {/* <div
           id="high-value-deals"
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-5"
         >
@@ -2065,7 +2118,7 @@ export default function LostDealAnalytics() {
               No high-value lost deals found
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Stage Intelligence Summary */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -2085,7 +2138,7 @@ export default function LostDealAnalytics() {
               <div className="text-xs text-purple-600 mt-1">
                 {getHighestLossStage?.count || 0} deal
                 {getHighestLossStage?.count !== 1 ? "s" : ""} (
-                {formatCurrency(getHighestLossStage?.totalValue || 0)})
+                {formatPreferredCurrency(getHighestLossStage?.preferredTotalValue || 0)})
               </div>
             </div>
 
@@ -2110,7 +2163,7 @@ export default function LostDealAnalytics() {
                 {getHighestValueIndustry?._id || "N/A"}
               </div>
               <div className="text-xs text-emerald-600 mt-1">
-                {formatCurrency(getHighestValueIndustry?.value || 0)}
+                {formatPreferredCurrency(getHighestValueIndustry?.preferredValue || 0)}
               </div>
             </div>
 

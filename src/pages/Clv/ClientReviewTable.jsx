@@ -26,6 +26,12 @@ import PricingSuggestionCard from "./PricingSuggestioncard";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+const CURRENCY_SYMBOLS = {
+  USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
+  AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
+  SGD: "S$", ZAR: "R", SAR: "﷼",
+};
+
 const ClientReviewTable = () => {
   const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
@@ -43,6 +49,7 @@ const ClientReviewTable = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [userRole, setUserRole] = useState("");
   const [userId, setUserId] = useState("");
+  const [userCurrency, setUserCurrency] = useState("USD");
   const [isPageChanging, setIsPageChanging] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -129,8 +136,11 @@ const ClientReviewTable = () => {
     if (userData) {
       setUserRole(userData.role?.name || "");
       setUserId(userData._id || "");
+      setUserCurrency(userData.currency || "USD");
     }
   }, []);
+
+  const currencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
 
   // Listen for CLV updates
   useEffect(() => {
@@ -438,13 +448,25 @@ const ClientReviewTable = () => {
   };
 
 /* ── Format Currency Function ─────────────────────── */
-  const formatCurrency = (value) => {
-    if (!value) return "₹0";
+  const formatCurrency = (value, currency) => {
+    const symbol = CURRENCY_SYMBOLS[currency] || currency || "₹";
+    if (!value) return `${symbol}0`;
+    try {
+      const numericValue = parseFloat(value.toString().replace(/[₹$€£¥,\s]/g, ''));
+      return `${symbol}${numericValue.toLocaleString()}`;
+    } catch {
+      return `${symbol}0`;
+    }
+  };
+
+/* ── Format Preferred Currency Function ─────────────────────── */
+  const formatPreferredCurrency = (value) => {
+    if (!value) return `${currencySymbol}0`;
     try {
       const numericValue = parseFloat(value.toString().replace(/[₹,\s]/g, ''));
-      return `₹${numericValue.toLocaleString()}`;
+      return `${currencySymbol}${numericValue.toLocaleString()}`;
     } catch {
-      return "₹0";
+      return `${currencySymbol}0`;
     }
   };
 
@@ -626,6 +648,9 @@ const ClientReviewTable = () => {
                     Deal Value
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {userCurrency} Value
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Delivered
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -696,7 +721,10 @@ const ClientReviewTable = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formatCurrency(deal.dealValue)}
+                        {formatCurrency(deal.dealValue, deal.currency)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {formatPreferredCurrency(deal.preferredCurrencyValue)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {deal.delivered ? (
@@ -775,7 +803,7 @@ const ClientReviewTable = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="11" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan="12" className="px-6 py-8 text-center text-gray-500">
                       {debouncedSearch ? (
                         <div className="flex flex-col items-center gap-2">
                           <Search size={24} className="text-gray-300" />
@@ -892,7 +920,7 @@ const ClientReviewTable = () => {
                   </div>
                   <div>
                     <p className="text-blue-600">Deal Value:</p>
-                    <p className="font-medium">{formatCurrency(selectedDeal.dealValue)}</p>
+                    <p className="font-medium">{formatCurrency(selectedDeal.dealValue, selectedDeal.currency)}</p>
                   </div>
                   <div>
                     <p className="text-blue-600">Assigned To:</p>
