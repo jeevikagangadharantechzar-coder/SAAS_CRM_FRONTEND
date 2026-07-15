@@ -461,8 +461,8 @@ export default function ChatWidget() {
   /* ── Quick Actions ─────────────────────── */
   const quickActions = [
     { label: " CALL",       query: "call " },
-    { label: " Deals Won",  query: "deals won" },
-    { label: " Deals Lost", query: "deals lost" },
+    { label: " Deal Closed",  query: "deals won" },
+    { label: " Deal Lost", query: "deals lost" },
     { label: " Open Deals", query: "open deals" },
     { label: " Hot Leads",  query: "hot leads" },
     { label: " Warm Leads", query: "warm leads" },
@@ -579,7 +579,7 @@ export default function ChatWidget() {
                 </span>
               </div>
 
-              <p className="whitespace-pre-wrap mb-2">{message.text}</p>
+              <p className="whitespace-pre-wrap mb-2">{message.text ? message.text.replace(/won deals/gi, 'deal closed').replace(/lost deals/gi, 'deal lost').replace(/closed won/gi, 'deal closed').replace(/closed lost/gi, 'deal lost') : message.text}</p>
 
               {/* Intent badges */}
               {message.intent === 'deals-by-salesperson' && <div className="text-xs mb-2 p-1 rounded bg-purple-100 text-purple-800 inline-block"> Deals by salesperson</div>}
@@ -588,8 +588,8 @@ export default function ChatWidget() {
               {message.intent === 'lead-search'           && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Specific lead search</div>}
               {message.intent === 'deals-by-company'      && <div className="text-xs mb-2 p-1 rounded bg-indigo-100 text-indigo-800 inline-block"> Deals by company</div>}
               {message.intent === 'leads-by-company'      && <div className="text-xs mb-2 p-1 rounded bg-indigo-100 text-indigo-800 inline-block"> Leads by company</div>}
-              {message.intent === 'deals-won'             && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> Won deals</div>}
-              {message.intent === 'deals-lost'            && <div className="text-xs mb-2 p-1 rounded bg-red-100 text-red-800 inline-block"> Lost deals</div>}
+              {message.intent === 'deals-won'             && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> Deal closed</div>}
+              {message.intent === 'deals-lost'            && <div className="text-xs mb-2 p-1 rounded bg-red-100 text-red-800 inline-block"> Deal lost</div>}
               {message.intent === 'deals-open'            && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Open deals</div>}
               {message.intent === 'my-deals'              && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> My deals</div>}
               {message.intent === 'leads-hot'             && <div className="text-xs mb-2 p-1 rounded bg-orange-100 text-orange-800 inline-block"> Hot leads</div>}
@@ -658,7 +658,7 @@ export default function ChatWidget() {
                         <div key={item._id || idx} className="text-xs p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors">
                           <div className="font-semibold truncate mb-1 flex items-center justify-between">
                             <span>{item.name || item.leadName || item.dealName || `Record ${idx + 1}`}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${badgeColor}`}>{statusText}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${badgeColor}`}>{statusText === "Closed Won" ? "Deal Closed" : statusText === "Closed Lost" ? "Deal Lost" : statusText}</span>
                           </div>
                           {(item.company || item.companyName) && <div className="text-gray-600 mb-1"> {item.company || item.companyName}</div>}
                           {(item.phone  || item.phoneNumber)  && <div className="text-gray-600 mb-1"> {item.phone  || item.phoneNumber}</div>}

@@ -662,8 +662,8 @@ export default function CreateDeal() {
         "Qualification",
         "Proposal Sent-Negotiation",
         "Invoice Sent",
-        "Closed Won",
-        "Closed Lost",
+        { value: "Closed Won", label: "Deal Closed" },
+        { value: "Closed Lost", label: "Deal Lost" },
       ],
     },
     { 

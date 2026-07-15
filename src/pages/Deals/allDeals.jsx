@@ -767,8 +767,8 @@ function AllDealsComponent() {
             <option value="Qualification">Qualification</option>
             <option value="Proposal Sent-Negotiation">Proposal Sent-Negotiation</option>
             <option value="Invoice Sent">Invoice Sent</option>
-            <option value="Closed Won">Closed Won</option>
-            <option value="Closed Lost">Closed Lost</option>
+            <option value="Closed Won">Deal Closed</option>
+            <option value="Closed Lost">Deal Lost</option>
           </select>
 
           <select
@@ -974,7 +974,7 @@ function AllDealsComponent() {
           <thead className="bg-gray-100">
             <tr>
               <th className="px-6 py-3 text-left sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">Deal Name</th>
-              <th className="px-6 py-3 text-left">Client Type</th>
+
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
               <th className="px-6 py-3 text-left">Value ({userCurrency})</th>
@@ -1084,7 +1084,7 @@ function AllDealsComponent() {
                         })()}
                       </div>
                     </td>
-                    <td className="px-6 py-4">{deal.clientType || "-"}</td>
+
                     <td className="px-6 py-4">
                       {deal.stage === "Rejected" ? (
                         <span
@@ -1100,7 +1100,7 @@ function AllDealsComponent() {
                             STAGE_BADGE_STYLES[deal.stage] || "bg-gray-50 text-gray-700 border-gray-200"
                           }`}
                         >
-                          {deal.stage}
+                          {deal.stage === "Closed Won" ? "Deal Closed" : deal.stage === "Closed Lost" ? "Deal Lost" : deal.stage}
                         </span>
                       ) : (
                         "-"

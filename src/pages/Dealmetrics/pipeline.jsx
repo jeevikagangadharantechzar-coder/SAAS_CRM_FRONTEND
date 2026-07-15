@@ -156,7 +156,7 @@ const STAGE_ACTIONS = {
     bgColor: "bg-emerald-50",
     borderColor: "border-emerald-200",
     nextStep: "Track in CLV",
-    label: "Won",
+    label: "Deal Closed",
     actionIcons: {
       "View in CLV Dashboard": BarChart
     }
@@ -168,7 +168,7 @@ const STAGE_ACTIONS = {
     bgColor: "bg-rose-50",
     borderColor: "border-rose-200",
     nextStep: "Analyze Loss",
-    label: "Lost",
+    label: "Deal Lost",
     actionIcons: {
       "Review Loss Reasons": AlertTriangle
     }
@@ -462,7 +462,7 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
           pointRadius: 4,
         },
         {
-          label: "Deals Won",
+          label: "Deal Closed",
           data: sortedMonths.map(m => monthlyMap[m].won),
           borderColor: "#10b981",
           backgroundColor: "rgba(16,185,129,0.15)",
@@ -578,7 +578,7 @@ const StageCardPopup = ({ stage, deals, onClose, onFilterClick }) => {
   return (
     <div className="absolute z-50 w-60 bg-white rounded-lg shadow-lg border border-gray-200 p-3 mt-2">
       <div className="flex justify-between items-center mb-2">
-        <h4 className="font-semibold text-sm text-gray-800 truncate">{stage} Stage</h4>
+        <h4 className="font-semibold text-sm text-gray-800 truncate">{stage === 'Won' ? 'Deal Closed' : stage === 'Lost' ? 'Deal Lost' : `${stage} Stage`}</h4>
         <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
           <X size={14} className="text-gray-400" />
         </button>
@@ -1756,8 +1756,8 @@ function DealIntelligenceDashboard() {
       { stage: 'Qualification', label: 'Need Attention', sub: 'Qualification', count: pipelineInsights.qualificationDeals, color: 'amber', icon: HelpCircle },
       { stage: 'Proposal', label: 'Follow-up Needed', sub: 'Proposal', count: pipelineInsights.proposalDeals, color: 'blue', icon: Send },
       { stage: 'Invoice', label: 'Payment Pending', sub: 'Invoice', count: pipelineInsights.invoiceDeals, color: 'purple', icon: FileText },
-      { stage: 'Won', label: 'Converted', sub: 'Won', count: pipelineInsights.wonDeals, color: 'emerald', icon: CheckCircle },
-      { stage: 'Lost', label: 'Analysis needed', sub: 'Lost', count: pipelineInsights.lostDeals, color: 'rose', icon: XCircle }
+      { stage: 'Won', label: 'Converted', sub: 'Deal Closed', count: pipelineInsights.wonDeals, color: 'emerald', icon: CheckCircle },
+      { stage: 'Lost', label: 'Analysis needed', sub: 'Deal Lost', count: pipelineInsights.lostDeals, color: 'rose', icon: XCircle }
     ].map(({ stage, label, sub, count, color, icon: Icon }) => (
       <div
         key={stage}
@@ -1831,8 +1831,8 @@ function DealIntelligenceDashboard() {
                         <option value="Qualification"> Qualification ({pipelineInsights.qualificationDeals})</option>
                         <option value="Proposal Sent-Negotiation"> Proposal ({pipelineInsights.proposalDeals})</option>
                         <option value="Invoice Sent"> Invoice ({pipelineInsights.invoiceDeals})</option>
-                        <option value="Closed Won"> Won ({pipelineInsights.wonDeals})</option>
-                        <option value="Closed Lost"> Lost ({pipelineInsights.lostDeals})</option>
+                        <option value="Closed Won"> Deal Closed ({pipelineInsights.wonDeals})</option>
+                        <option value="Closed Lost"> Deal Lost ({pipelineInsights.lostDeals})</option>
                       </select>
                     </div>
                     <button onClick={() => { setSortByScore(sortByScore === "desc" ? "asc" : "desc"); setCurrentPage(1); }} 
@@ -1916,7 +1916,7 @@ function DealIntelligenceDashboard() {
                                     deal.stage === "Proposal Sent-Negotiation" ? "bg-blue-100 text-blue-800" :
                                     deal.stage === "Invoice Sent" ? "bg-purple-100 text-purple-800" :
                                     "bg-gray-100 text-gray-800"
-                                  }`}>{deal.stage?.replace('-', ' ') || "No stage"}</span>
+                                  }`}>{deal.stage === "Closed Won" ? "Deal Closed" : deal.stage === "Closed Lost" ? "Deal Lost" : deal.stage?.replace('-', ' ') || "No stage"}</span>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                                   <Clock size={10} />
@@ -2125,9 +2125,9 @@ function DealIntelligenceDashboard() {
                   <XCircle size={20} className="text-rose-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Lost Deals</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Deal Lost</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {pipelineInsights.lostDeals} {pipelineInsights.lostDeals === 1 ? 'deal' : 'deals'} lost
+                    {pipelineInsights.lostDeals} {pipelineInsights.lostDeals === 1 ? 'deal lost' : 'deals lost'}
                   </p>
                 </div>
               </div>
@@ -2162,12 +2162,12 @@ function DealIntelligenceDashboard() {
                   </div>
                 ))}
                 {pipelineInsights.lostDeals === 0 && (
-                  <p className="text-sm text-rose-500 italic">No lost deals found</p>
+                  <p className="text-sm text-rose-500 italic">No deal lost found</p>
                 )}
               </div>
               <button onClick={() => { setStageFilter("Closed Lost"); setCurrentPage(1); }} 
                 className="w-full mt-4 px-4 py-3 bg-gradient-to-r from-rose-600 to-rose-700 text-white font-medium rounded-xl hover:from-rose-700 hover:to-rose-800 transition-all">
-                View All Lost Deals ({pipelineInsights.lostDeals})
+                View All Deal Lost ({pipelineInsights.lostDeals})
               </button>
             </div>
 
@@ -2178,9 +2178,9 @@ function DealIntelligenceDashboard() {
                   <CheckCircle size={20} className="text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Won Deals</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Deal Closed</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {pipelineInsights.wonDeals} {pipelineInsights.wonDeals === 1 ? 'deal' : 'deals'} won
+                    {pipelineInsights.wonDeals} {pipelineInsights.wonDeals === 1 ? 'deal closed' : 'deals closed'}
                   </p>
                 </div>
               </div>
@@ -2221,12 +2221,12 @@ function DealIntelligenceDashboard() {
                   </div>
                 ))}
                 {pipelineInsights.wonDeals === 0 && (
-                  <p className="text-sm text-emerald-500 italic">No won deals found</p>
+                  <p className="text-sm text-emerald-500 italic">No deal closed found</p>
                 )}
               </div>
               <button onClick={() => { setStageFilter("Closed Won"); setCurrentPage(1); }} 
                 className="w-full mt-4 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-medium rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all">
-                View All Won Deals ({pipelineInsights.wonDeals})
+                View All Deal Closed ({pipelineInsights.wonDeals})
               </button>
             </div>
 
