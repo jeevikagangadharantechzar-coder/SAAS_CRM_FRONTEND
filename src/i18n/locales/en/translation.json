@@ -157,7 +157,7 @@
     },
     "cards": {
       "totalLeads": "Total Leads",
-      "dealsWon": "Deals Won",
+      "dealsWon": "Deal Closed",
       "totalRevenue": "Total Revenue",
       "pendingInvoices": "Pending Invoices",
       "vsPrevious": "vs previous"

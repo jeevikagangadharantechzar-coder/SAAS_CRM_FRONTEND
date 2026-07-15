@@ -707,7 +707,7 @@ function Pipeline_modal_view() {
           color: "text-emerald-700",
           bgColor: "bg-emerald-50",
           borderColor: "border-emerald-200",
-          label: "Closed Won",
+          label: "Deal Closed",
         };
       case "Closed Lost":
         return {
@@ -715,7 +715,7 @@ function Pipeline_modal_view() {
           color: "text-rose-700",
           bgColor: "bg-rose-50",
           borderColor: "border-rose-200",
-          label: "Closed Lost",
+          label: "Deal Lost",
         };
       case "Qualification":
         return {

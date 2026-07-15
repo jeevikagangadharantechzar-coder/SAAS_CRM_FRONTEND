@@ -621,7 +621,7 @@ const MassEmail = () => {
                         <div className="flex flex-col space-y-2">
                           {getContactTypeBadge(contact.type)}
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(contact.type, contact.status)}`}>
-                            {contact.status || 'N/A'}
+                            {contact.status === 'Closed Won' ? 'Deal Closed' : contact.status === 'Closed Lost' ? 'Deal Lost' : (contact.status || 'N/A')}
                           </span>
                         </div>
                       </td>

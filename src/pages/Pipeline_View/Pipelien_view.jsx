@@ -42,14 +42,14 @@ const STAGES = [
     },
     {
       id: "Closed Won",
-      title: "Closed Won",
+      title: "Deal Closed",
       color: "text-emerald-600",
       bgColor: "bg-gray-100",
       borderColor: "border-gray-300",
     },
     {
       id: "Closed Lost",
-      title: "Closed Lost",
+      title: "Deal Lost",
       color: "text-rose-600",
       bgColor: "bg-gray-100",
       borderColor: "border-gray-300",
