@@ -5,12 +5,15 @@ import {
   ArrowLeft, ChevronRight, User, Mail, Phone, Building, Building2,
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
-  Handshake, Ban,
+  Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import { getNames } from "country-list";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+
+const countryNames = getNames();
 
 const allowedCurrencies = [
   { code: "USD", symbol: "$", name: "US Dollar" },
@@ -129,6 +132,72 @@ const NotesPopup = ({ record, onClose }) => {
       </div>
     </div>
   );
+};
+
+// ─── Follow-up note voice attachment ─────────
+// Kept in sync with the backend's extension maps (middlewares/upload.js,
+// routes/files.routes.js) — this upload only accepts audio files.
+const AUDIO_EXT_MIME_MAP = {
+  mp3: "audio/mpeg", mpeg: "audio/mpeg", mpga: "audio/mpeg",
+  wav: "audio/wav", ogg: "audio/ogg", webm: "audio/webm",
+  m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac",
+  opus: "audio/opus", amr: "audio/amr", caf: "audio/x-caf", "3gp": "audio/3gpp",
+};
+
+const guessAudioMime = (filename = "") => {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  return AUDIO_EXT_MIME_MAP[ext] || "application/octet-stream";
+};
+
+const FollowUpAudioPlayer = ({ audioPath }) => {
+  const [status, setStatus] = useState("loading"); // loading | done | error
+  const [src, setSrc] = useState(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let live = true;
+    setStatus("loading");
+
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+          `${API_URL}/files/preview?filePath=${encodeURIComponent(audioPath)}`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal }
+        );
+        if (!res.ok) throw new Error("Failed to load recording");
+        const mime = res.headers.get("Content-Type") || "application/octet-stream";
+        const buf = await res.arrayBuffer();
+        if (!live) return;
+        setSrc(URL.createObjectURL(new Blob([buf], { type: mime })));
+        setStatus("done");
+      } catch (err) {
+        if (!live || err.name === "AbortError") return;
+        setStatus("error");
+      }
+    })();
+
+    return () => {
+      live = false;
+      ctrl.abort();
+      setSrc((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [audioPath]);
+
+  if (status === "loading") {
+    return (
+      <p className="text-xs text-slate-400 flex items-center gap-1 mt-2">
+        <Loader2 className="w-3 h-3 animate-spin" /> Loading recording…
+      </p>
+    );
+  }
+  if (status === "error") {
+    return <p className="text-xs text-red-400 mt-2">Could not load recording</p>;
+  }
+  return <audio controls src={src} className="w-full mt-2 h-9" />;
 };
 
 // ─── MIME map ────────────────────────────────
@@ -432,6 +501,14 @@ const ViewLead = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
 
+  // Follow-up notes state
+  const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [audioFile, setAudioFile] = useState(null);
+  const [audioFileUrl, setAudioFileUrl] = useState(null);
+  const [audioFileError, setAudioFileError] = useState("");
+
   // Convert-to-deal state
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -464,6 +541,8 @@ const ViewLead = () => {
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
       notes: lead.notes || "",
+      address: lead.address || "",
+      country: lead.country || "",
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -514,6 +593,8 @@ const ViewLead = () => {
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
         notes: editFormData.notes,
+        address: editFormData.address,
+        country: editFormData.country,
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
@@ -532,6 +613,85 @@ const ViewLead = () => {
       toast.error(err.response?.data?.message || "Failed to update lead");
     } finally {
       setIsSavingDetails(false);
+    }
+  };
+
+  // ── Follow-up Notes ─────────────────────────
+  const openAddNoteModal = () => {
+    setNoteText("");
+    setAudioFileError("");
+    setAudioFile(null);
+    setAudioFileUrl(null);
+    setAddNoteModalOpen(true);
+  };
+
+  const discardAudioFile = () => {
+    setAudioFileUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setAudioFile(null);
+    setAudioFileError("");
+  };
+
+  const closeAddNoteModal = () => {
+    setAddNoteModalOpen(false);
+    setNoteText("");
+    discardAudioFile();
+  };
+
+  const handleAudioFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setAudioFileError("");
+    const mime = guessAudioMime(file.name);
+    if (!file.type.startsWith("audio/") && mime === "application/octet-stream") {
+      setAudioFileError("Please choose an audio file");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setAudioFileError("Audio file must be under 20MB");
+      return;
+    }
+
+    setAudioFileUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(new Blob([file], { type: mime || file.type }));
+    });
+    setAudioFile(file);
+  };
+
+  const handleAddFollowUpNote = async () => {
+    if (!noteText.trim()) return;
+
+    try {
+      setSavingNote(true);
+      const token = localStorage.getItem("token");
+
+      let payload;
+      if (audioFile) {
+        payload = new FormData();
+        payload.append("note", noteText.trim());
+        payload.append("audio", audioFile);
+      } else {
+        payload = { note: noteText.trim() };
+      }
+
+      const res = await axios.post(
+        `${API_URL}/leads/${id}/followup-notes`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setLead((prev) => ({ ...prev, followUpNotes: res.data.lead.followUpNotes }));
+      toast.success("Follow-up note added");
+      closeAddNoteModal();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add follow-up note");
+    } finally {
+      setSavingNote(false);
     }
   };
 
@@ -761,6 +921,8 @@ const ViewLead = () => {
                         <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">Lead Information</h3>
                         <div className="space-y-4">
                           <InfoRow icon={<FileText size={18}/>} label="Requirement" value={lead.requirement || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="Address"     value={lead.address || "Not specified"} />
+                          <InfoRow icon={<Globe size={18}/>}    label="Country"     value={lead.country || "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Created"     value={new Date(lead.createdAt).toLocaleDateString()} />
                           {lead.assignTo && (
                             <InfoRow icon={<User size={18}/>}   label="Assigned To"
@@ -788,6 +950,41 @@ const ViewLead = () => {
                         </button>
                       </div>
                     )}
+
+                    <div className="mt-2 pt-6 border-t border-slate-200 p-6">
+                      {(() => {
+                        const latestNote = Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0
+                          ? [...lead.followUpNotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+                          : null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={openAddNoteModal}
+                            disabled={isTerminal}
+                            className={`w-full flex items-start text-left text-slate-700 rounded-lg -mx-2 px-2 py-1 transition-colors group ${isTerminal ? "cursor-not-allowed opacity-60" : "hover:bg-slate-50"}`}
+                          >
+                            <MessageSquarePlus size={18} className="mr-3 mt-0.5 text-slate-500 flex-shrink-0 group-hover:text-blue-600 transition-colors" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium group-hover:text-blue-600 transition-colors uppercase tracking-wide">
+                                Follow-up Notes
+                              </p>
+                              {latestNote ? (
+                                <>
+                                  <p className="text-slate-900 truncate mt-1">{latestNote.note}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">
+                                    Updated {new Date(latestNote.createdAt).toLocaleDateString("en-US", {
+                                      month: "short", day: "numeric", year: "numeric",
+                                    })}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-slate-500 mt-1">Tap to add a follow-up note</p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })()}
+                    </div>
                   </>
                 ) : (
                   <div className="p-6">
@@ -896,6 +1093,29 @@ const ViewLead = () => {
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                           />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                          <input
+                            name="address"
+                            value={editFormData.address}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Country</label>
+                          <select
+                            name="country"
+                            value={editFormData.country}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="">Select Country</option>
+                            {countryNames.map((name) => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -1032,6 +1252,134 @@ const ViewLead = () => {
 
       {previewFile && <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
       {isNotesPopupOpen && <NotesPopup record={lead} onClose={() => setIsNotesPopupOpen(false)} />}
+
+      {/* Add Follow-up Note Modal */}
+      <Dialog open={addNoteModalOpen} onOpenChange={(open) => (open ? setAddNoteModalOpen(true) : closeAddNoteModal())}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <MessageSquarePlus className="w-5 h-5" />
+              Follow-up Notes
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-slate-500 mb-1">
+            {lead.leadName}
+            {lead.companyName && ` · ${lead.companyName}`}
+          </p>
+
+          {(() => {
+            const latestNote = Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0
+              ? [...lead.followUpNotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+              : null;
+            if (!latestNote) return null;
+            return (
+              <p className="text-xs text-slate-400 mb-3">
+                Last updated {new Date(latestNote.createdAt).toLocaleDateString("en-US", {
+                  month: "short", day: "numeric", year: "numeric",
+                })}{" at "}
+                {new Date(latestNote.createdAt).toLocaleTimeString("en-US", {
+                  hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+            );
+          })()}
+
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={4}
+            placeholder="What happened during this follow-up?"
+            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+          />
+
+          {/* Voice note upload */}
+          <div className="mt-3">
+            <div className="flex items-center gap-3">
+              <label
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm cursor-pointer ${savingNote ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                <Upload className="w-4 h-4" />
+                {audioFile ? "Replace audio file" : "Upload audio file"}
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioFileChange}
+                  disabled={savingNote}
+                  className="hidden"
+                />
+              </label>
+
+              {audioFile && (
+                <button
+                  type="button"
+                  onClick={discardAudioFile}
+                  className="text-slate-400 hover:text-red-500"
+                  title="Remove audio file"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {audioFileError && (
+              <p className="text-xs text-red-500 mt-2">{audioFileError}</p>
+            )}
+
+            {audioFile && (
+              <p className="text-xs text-slate-500 mt-2 truncate">{audioFile.name}</p>
+            )}
+
+            {audioFileUrl && (
+              <audio controls src={audioFileUrl} className="w-full mt-2 h-9" />
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 mt-4">
+            <button
+              onClick={closeAddNoteModal}
+              className="px-4 py-2 rounded-lg border hover:bg-slate-100 text-slate-700"
+              disabled={savingNote}
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleAddFollowUpNote}
+              disabled={!noteText.trim() || savingNote}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {savingNote ? "Saving..." : "Save Note"}
+            </button>
+          </div>
+
+          {Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-slate-200">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                Previous Notes
+              </p>
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {[...lead.followUpNotes]
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map((n, i) => (
+                    <div key={n._id || i} className="border border-slate-200 rounded-lg p-2.5">
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{n.note}</p>
+                      {n.audioPath && <FollowUpAudioPlayer audioPath={n.audioPath} />}
+                      <p className="text-xs text-slate-400 mt-1.5">
+                        {new Date(n.createdAt).toLocaleDateString("en-US", {
+                          month: "short", day: "numeric", year: "numeric",
+                        })}{" at "}
+                        {new Date(n.createdAt).toLocaleTimeString("en-US", {
+                          hour: "2-digit", minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>

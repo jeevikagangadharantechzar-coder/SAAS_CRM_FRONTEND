@@ -395,9 +395,25 @@ function LeadTableComponent() {
       );
 
       const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
-      const leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
-      const total = isNew ? data.totalLeads : leadsArr.length;
-      const pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
+      let leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
+      let total = isNew ? data.totalLeads : leadsArr.length;
+      let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
+
+      // "Today's Follow-ups" isn't a backend filter, so narrow the fetched
+      // page down to leads whose follow-up date is today's calendar day.
+      // (Only filters within the current server-side page, not globally.)
+      if (followUpFilter === "today") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        leadsArr = leadsArr.filter((lead) => {
+          if (!lead.followUpDate) return false;
+          const followUpDay = new Date(lead.followUpDate);
+          followUpDay.setHours(0, 0, 0, 0);
+          return followUpDay.getTime() === today.getTime();
+        });
+        total = leadsArr.length;
+        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
+      }
 
       setLeads(leadsArr);
       setTotalLeads(total);
@@ -420,18 +436,56 @@ function LeadTableComponent() {
     try {
       setExporting(true);
       const token = localStorage.getItem("token");
-      const params = new URLSearchParams();
-      if (startDate) params.append("startDate", startDate);
-      if (endDate) params.append("endDate", endDate);
-      const { data } = await axios.get(`${API_URL}/leads/export?${params.toString()}`, {
+
+      // The /leads/export endpoint only honors startDate/endDate — it ignores
+      // status/source/assignee/etc. So instead of using it, pull the filtered
+      // set from /leads/getAllLead (same endpoint the table uses, which does
+      // honor all the filters), just without pagination.
+      const params = new URLSearchParams({ page: 1, limit: 100000 });
+      if (debouncedSearch && debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
+      if (statusFilter) params.append("status", statusFilter);
+      if (sourceFilter) params.append("source", sourceFilter);
+      if (clientTypeFilter) params.append("clientType", clientTypeFilter);
+      if (assigneeFilter) params.append("assignee", assigneeFilter);
+      if (followUpFilter === "missed" || followUpFilter === "completed") {
+        params.append("followUpStatus", followUpFilter);
+      }
+      if (startDate || dateFilterFrom) params.append("startDate", startDate || dateFilterFrom);
+      if (endDate || dateFilterTo) params.append("endDate", endDate || dateFilterTo);
+
+      const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!data?.data?.length) {
+      const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
+      let exportRows = isNew ? data.leads : (Array.isArray(data) ? data : []);
+
+      // "today" has no backend filter (see fetchLeads), so narrow client-side.
+      if (followUpFilter === "today") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        exportRows = exportRows.filter((lead) => {
+          if (!lead.followUpDate) return false;
+          const followUpDay = new Date(lead.followUpDate);
+          followUpDay.setHours(0, 0, 0, 0);
+          return followUpDay.getTime() === today.getTime();
+        });
+      }
+
+      if (!exportRows.length) {
         toast.info("No data found for the selected criteria. There is nothing to export.");
         return;
       }
-      await exportRowsToExcel(data.data, LEAD_COLUMNS, `leads_${new Date().toISOString().slice(0, 10)}.xlsx`, "Leads");
-      toast.success(`Exported ${data.data.length} lead(s)`);
+
+      // getAllLead returns a populated assignTo object ({firstName, lastName,
+      // email, ...}), but the export column expects a plain email string —
+      // flatten it here so the sheet matches what /leads/export used to produce.
+      const flattenedRows = exportRows.map((lead) => ({
+        ...lead,
+        assignTo: lead.assignTo?.email || "",
+      }));
+
+      await exportRowsToExcel(flattenedRows, LEAD_COLUMNS, `leads_${new Date().toISOString().slice(0, 10)}.xlsx`, "Leads");
+      toast.success(`Exported ${exportRows.length} lead(s)`);
       setShowExportModal(false);
       setExportStartDate("");
       setExportEndDate("");
@@ -1033,6 +1087,7 @@ function LeadTableComponent() {
               className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="all">All Follow-ups</option>
+              <option value="today">Today's Follow-ups</option>
               <option value="completed">Completed Follow-ups</option>
               <option value="missed">Missed Follow-ups</option>
             </select>
