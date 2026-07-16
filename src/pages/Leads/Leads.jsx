@@ -80,6 +80,18 @@ const LEAD_COLUMNS = [
   { key: "createdAt",    label: "Created At", type: "date", exportOnly: true },
 ];
 
+// "Export Follow-ups" columns — one row PER follow-up note (same entries as
+// the eye-icon "Follow-up History" modal), so Follow-up Date is that note's
+// own timestamp, not the lead's single next-scheduled-follow-up field.
+// A lead with 3 notes produces 3 rows; a lead with none gets one blank row.
+const FOLLOWUP_EXPORT_COLUMNS = [
+  { key: "leadName",     label: "Lead" },
+  { key: "companyName",  label: "Company" },
+  { key: "assignTo",     label: "Assign To" },
+  { key: "followUpDate", label: "Follow-up Date" },
+  { key: "followUpNote", label: "Follow-up Note", wrap: true },
+];
+
 /* ── Tour Steps (i18n-aware) ─────────────────────── */
 const getTourSteps = (t) => [
   { selector: ".tour-lead-header",   content: t("leads.tour.welcome") },
@@ -163,6 +175,9 @@ function LeadTableComponent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStartDate, setExportStartDate] = useState("");
   const [exportEndDate, setExportEndDate] = useState("");
+  const [exportMode, setExportMode] = useState("all"); // "all" | "followups"
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [leadToReject, setLeadToReject] = useState(null); // { id, name }
@@ -479,16 +494,64 @@ function LeadTableComponent() {
       // getAllLead returns a populated assignTo object ({firstName, lastName,
       // email, ...}), but the export column expects a plain email string —
       // flatten it here so the sheet matches what /leads/export used to produce.
-      const flattenedRows = exportRows.map((lead) => ({
-        ...lead,
-        assignTo: lead.assignTo?.email || "",
-      }));
+      const isFollowUpExport = exportMode === "followups";
 
-      await exportRowsToExcel(flattenedRows, LEAD_COLUMNS, `leads_${new Date().toISOString().slice(0, 10)}.xlsx`, "Leads");
-      toast.success(`Exported ${exportRows.length} lead(s)`);
+      // Same date+time format as the on-screen Follow-up History modal
+      // ("Jul 15, 2026 at 01:12 PM"), so the export matches what the eye
+      // icon shows exactly.
+      const formatNoteStamp = (createdAt) => {
+        const created = createdAt ? new Date(createdAt) : null;
+        if (!created || isNaN(created.getTime())) return "";
+        const datePart = created.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        const timePart = created.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+        return `${datePart} at ${timePart}`;
+      };
+
+      const flattenedRows = isFollowUpExport
+        ? exportRows.flatMap((lead) => {
+            const assignee = lead.assignTo
+              ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim()
+              : "";
+            const notes = Array.isArray(lead.followUpNotes) ? lead.followUpNotes : [];
+
+            if (!notes.length) {
+              return [{
+                leadName: lead.leadName || "",
+                companyName: lead.companyName || "",
+                assignTo: assignee,
+                followUpDate: "",
+                followUpNote: "",
+              }];
+            }
+
+            return [...notes]
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map((n) => ({
+                leadName: lead.leadName || "",
+                companyName: lead.companyName || "",
+                assignTo: assignee,
+                followUpDate: formatNoteStamp(n.createdAt),
+                followUpNote: n.note || "",
+              }));
+          })
+        : exportRows.map((lead) => ({
+            ...lead,
+            assignTo: lead.assignTo?.email || "",
+          }));
+
+      const columns = isFollowUpExport ? FOLLOWUP_EXPORT_COLUMNS : LEAD_COLUMNS;
+      const filenamePrefix = isFollowUpExport ? "leads_followups" : "leads";
+
+      await exportRowsToExcel(flattenedRows, columns, `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.xlsx`, isFollowUpExport ? "Follow-ups" : "Leads");
+      toast.success(
+        isFollowUpExport
+          ? `Exported ${flattenedRows.length} follow-up entr${flattenedRows.length === 1 ? "y" : "ies"} for ${exportRows.length} lead(s)`
+          : `Exported ${exportRows.length} lead(s)`
+      );
       setShowExportModal(false);
       setExportStartDate("");
       setExportEndDate("");
+      setExportMode("all");
     } catch (err) {
       console.error("Export leads error:", err);
       toast.error("Failed to export leads");
@@ -915,6 +978,16 @@ function LeadTableComponent() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleExportMenuClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleExportMenuClickOutside);
+    return () => document.removeEventListener("mousedown", handleExportMenuClickOutside);
+  }, []);
+
   const firstItem = totalLeads === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const lastItem = Math.min(currentPage * itemsPerPage, totalLeads);
 
@@ -985,13 +1058,40 @@ function LeadTableComponent() {
               >
                 <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
               </button>
-              <button
-                onClick={() => setShowExportModal(true)}
-                disabled={exporting}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
-              </button>
+              <div className="relative inline-block text-left" ref={exportMenuRef}>
+                <button
+                  onClick={() => setExportMenuOpen((prev) => !prev)}
+                  disabled={exporting}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                >
+                  <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                </button>
+
+                {exportMenuOpen && (
+                  <div className="absolute right-0 z-20 mt-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                    <button
+                      onClick={() => {
+                        setExportMode("all");
+                        setExportMenuOpen(false);
+                        setShowExportModal(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4 mr-2" /> Export All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setExportMode("followups");
+                        setExportMenuOpen(false);
+                        setShowExportModal(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <MessageSquarePlus className="w-4 h-4 mr-2" /> Export Follow-ups
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
@@ -1484,12 +1584,14 @@ function LeadTableComponent() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-800">
               <Download className="w-5 h-5" />
-              Export Leads
+              {exportMode === "followups" ? "Export Follow-ups" : "Export Leads"}
             </DialogTitle>
           </DialogHeader>
 
           <p className="text-sm text-gray-500 mb-3">
-            Optionally filter by date range. Leave both blank to export all leads.
+            {exportMode === "followups"
+              ? "Exports Lead, Company, Assign To, Follow-up Date and Follow-up History for leads matching the current filters."
+              : "Optionally filter by date range. Leave both blank to export all leads."}
           </p>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1521,6 +1623,7 @@ function LeadTableComponent() {
                 setShowExportModal(false);
                 setExportStartDate("");
                 setExportEndDate("");
+                setExportMode("all");
               }}
               className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
             >
