@@ -43,6 +43,7 @@ import RejectedLeads from "./pages/Leads/RejectedLeads";
 import CreateLeads from "./pages/Leads/CreateLeads";
 import { AllDeals } from "./pages/Deals/allDeals";
 import RejectedDeals from "./pages/Deals/RejectedDeals";
+import DealsDocument from "./pages/Deals/DealsDocument";
 import CreateDeal from "./pages/Deals/CreateDeal";
 import Pipeline_view from "./pages/Pipeline_View/Pipelien_view";
 import Pipeline_modal_view from "./pages/Pipeline_View/Pipeline_modal_view";
@@ -63,6 +64,7 @@ import EmailHistory from "./pages/Email/EmailHistory";
 import Settings from "./pages/settings/Settings";
 import NotificationsPage from "./pages/notification/NotificationsPage";
 import ViewLead from "./pages/Leads/ViewLead";
+import LeadDocument from "./pages/Leads/LeadDocument";
 import ViewProposal from "./pages/proposal/ViewProposal";
 
 import DealIntelligenceDashboard from "./pages/Dealmetrics/pipeline";
@@ -247,6 +249,7 @@ function App() {
                     <Route path="leads" element={<Leads />} />
                     <Route path="leads/view/:id" element={<ViewLead />} />
                     <Route path="leads/rejected" element={<RejectedLeads />} />
+                    <Route path="lead-document" element={<LeadDocument />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_lead" planFeature="leads" />}>
@@ -256,6 +259,7 @@ function App() {
                   <Route element={<PrivateRoute permission="deals_all" planFeature="deals_all" />}>
                     <Route path="deals" element={<AllDeals />} />
                     <Route path="deals/rejected" element={<RejectedDeals />} />
+                    <Route path="deals-document" element={<DealsDocument />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_deal" planFeature="deals_all" />}>

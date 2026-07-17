@@ -25,6 +25,7 @@ import {
   ArrowUpCircle,
   ShieldAlert,
   MapPin,
+  FileText,
 } from "lucide-react";
 
 import { NavLink, useLocation, useParams } from "react-router-dom";
@@ -379,6 +380,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const [logo, setLogo] = useState(null);
   const [showDeals, setShowDeals] = useState(false);
+  const [showDocument, setShowDocument] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
@@ -602,6 +604,40 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             label={t("sidebar.allDeals")}
             hasPermission={(isAdmin || userPermissions.deals_all) && hasPlanFeature("deals_all")}
           />
+        </Collapsible>
+
+        {/* Document (Collapsible) */}
+        <Collapsible
+          label={t("sidebar.document")}
+          icon={<FileText />}
+          open={showDocument}
+          onToggle={() => setShowDocument((s) => !s)}
+          sidebarOpen={isOpen}
+          activePaths={["/deals-document", "/lead-document"]}
+          hasPermission={
+            (isAdmin ||
+              userPermissions.deals_all ||
+              userPermissions.deals_pipeline ||
+              userPermissions.leads) &&
+            (hasPlanFeature("deals_all") || hasPlanFeature("deals_pipeline") || hasPlanFeature("leads"))
+          }
+        >
+                <SmallLink
+            to="lead-document"
+            icon={<Users />}
+            label={t("sidebar.leads")}
+            hasPermission={(isAdmin || userPermissions.leads) && hasPlanFeature("leads")}
+          />
+          <SmallLink
+            to="deals-document"
+            icon={<Briefcase />}
+            label={t("sidebar.deals")}
+            hasPermission={
+              (isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline) &&
+              (hasPlanFeature("deals_all") || hasPlanFeature("deals_pipeline"))
+            }
+          />
+    
         </Collapsible>
 
         {/* Tasks (Collapsible) — the container itself must also respect plan
