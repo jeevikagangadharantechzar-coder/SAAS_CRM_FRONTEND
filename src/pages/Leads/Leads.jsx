@@ -24,7 +24,13 @@ import {
   Download,
   FileSpreadsheet,
   X,
+  LayoutGrid,
+  List,
+  Filter,
+  ChevronDown
 } from "lucide-react";
+
+import LeadsPipelineView from "./LeadsPipelineView";
 
 import { initSocket, getSocket } from "../../utils/socket";
 import {
@@ -155,6 +161,8 @@ function LeadTableComponent() {
   const { t } = useTranslation();
 
   const [leads, setLeads] = useState([]);
+  const [viewMode, setViewMode] = useState("table"); // 'table' or 'pipeline'
+  const [showFilters, setShowFilters] = useState(false);
 
   // Import / Export
   const importFileInputRef = useRef(null);
@@ -383,9 +391,9 @@ function LeadTableComponent() {
       params.append("followUpStatus", followUpFilter);
     }
 
-    // General date range filter
-    if (dateFilterFrom) params.append("startDate", dateFilterFrom);
-    if (dateFilterTo) params.append("endDate", dateFilterTo);
+    // General date range filter (applied client-side)
+    // Removed backend params for startDate/endDate as they might not map to created date
+
 
       console.log("Fetching leads with params:", Object.fromEntries(params));
 
@@ -410,6 +418,29 @@ function LeadTableComponent() {
           const followUpDay = new Date(lead.followUpDate);
           followUpDay.setHours(0, 0, 0, 0);
           return followUpDay.getTime() === today.getTime();
+        });
+        total = leadsArr.length;
+        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
+      }
+
+      // Filter by Lead Created Date
+      if (dateFilterFrom || dateFilterTo) {
+        leadsArr = leadsArr.filter((lead) => {
+          if (!lead.createdAt) return true;
+          const createdTime = new Date(lead.createdAt).getTime();
+          let fromTime = 0;
+          let toTime = Infinity;
+          if (dateFilterFrom) {
+            const fromDate = new Date(dateFilterFrom);
+            fromDate.setHours(0, 0, 0, 0);
+            fromTime = fromDate.getTime();
+          }
+          if (dateFilterTo) {
+            const toDate = new Date(dateFilterTo);
+            toDate.setHours(23, 59, 59, 999);
+            toTime = toDate.getTime();
+          }
+          return createdTime >= fromTime && createdTime <= toTime;
         });
         total = leadsArr.length;
         pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
@@ -450,8 +481,7 @@ function LeadTableComponent() {
       if (followUpFilter === "missed" || followUpFilter === "completed") {
         params.append("followUpStatus", followUpFilter);
       }
-      if (startDate || dateFilterFrom) params.append("startDate", startDate || dateFilterFrom);
-      if (endDate || dateFilterTo) params.append("endDate", endDate || dateFilterTo);
+      // Date filter applied client-side below
 
       const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -468,6 +498,29 @@ function LeadTableComponent() {
           const followUpDay = new Date(lead.followUpDate);
           followUpDay.setHours(0, 0, 0, 0);
           return followUpDay.getTime() === today.getTime();
+        });
+      }
+
+      // Filter by Lead Created Date for Export
+      if (startDate || dateFilterFrom || endDate || dateFilterTo) {
+        const fromVal = startDate || dateFilterFrom;
+        const toVal = endDate || dateFilterTo;
+        exportRows = exportRows.filter((lead) => {
+          if (!lead.createdAt) return true;
+          const createdTime = new Date(lead.createdAt).getTime();
+          let fromTime = 0;
+          let toTime = Infinity;
+          if (fromVal) {
+            const fromDate = new Date(fromVal);
+            fromDate.setHours(0, 0, 0, 0);
+            fromTime = fromDate.getTime();
+          }
+          if (toVal) {
+            const toDate = new Date(toVal);
+            toDate.setHours(23, 59, 59, 999);
+            toTime = toDate.getTime();
+          }
+          return createdTime >= fromTime && createdTime <= toTime;
         });
       }
 
@@ -938,29 +991,73 @@ function LeadTableComponent() {
         theme="light"
       />
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div className="tour-lead-header">
-          <h2 className="text-2xl font-bold text-gray-800">{t("leads.title")}</h2>
-          <p className="text-sm text-gray-500 mt-1">{t("leads.subtitle")}</p>
+      {/* Page Title */}
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+        <p className="text-sm text-gray-500 mt-1">Manage and track your potential customers</p>
+      </div>
+
+      {/* Compact Toolbar Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg">
+        {/* Left Side: Filter Dropdown Button */}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Leads Filter</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
+        {/* Right Side: Actions */}
+        <div className="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
           <button
             onClick={startTour}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
+            className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+            title="Take Tour"
           >
-            <Eye className="w-4 h-4" /> {t("leads.buttons.takeTour")}
+            <Eye className="w-4 h-4" />
           </button>
 
           {userRole === "Admin" && (
             <button
               onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
-              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+              className="text-red-500 hover:text-red-700 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+              title="View Rejected Leads"
             >
-              <Ban className="w-4 h-4" /> Reject Leads
+              <Ban className="w-4 h-4" />
             </button>
           )}
+
+          {userRole === "Admin" && (
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2"
+              onClick={() => navigate(`/${tenantSlug}/createleads`)}
+            >
+              <Plus className="w-4 h-4" /> {t("leads.buttons.createLead")}
+            </button>
+          )}
+          
+          <div className="flex items-center bg-gray-100 rounded-md p-0.5 border border-gray-200">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1 rounded transition-colors ${viewMode === "table" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Table View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("pipeline")}
+              className={`p-1 rounded transition-colors ${viewMode === "pipeline" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Pipeline View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
 
           {userRole === "Admin" && (
             <>
@@ -971,163 +1068,178 @@ function LeadTableComponent() {
                 onChange={handleImportFileChange}
                 className="hidden"
               />
-              <button
-                onClick={handleDownloadTemplate}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                title="Download an Excel template with all required columns"
-              >
-                <FileSpreadsheet className="w-4 h-4" /> Download Template
-              </button>
-              <button
-                onClick={handleImportButtonClick}
-                disabled={importing}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
-              </button>
-              <button
-                onClick={() => setShowExportModal(true)}
-                disabled={exporting}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
-              </button>
+              <div className="flex items-center gap-1 border-l pl-2 ml-1 border-gray-200">
+                <button
+                  onClick={handleImportButtonClick}
+                  disabled={importing}
+                  className="text-gray-600 hover:bg-gray-100 p-1.5 rounded-md transition-colors bg-white disabled:opacity-60"
+                  title="Import"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  disabled={exporting}
+                  className="text-gray-600 hover:bg-gray-100 p-1.5 rounded-md transition-colors bg-white disabled:opacity-60"
+                  title="Export"
+                >
+                  <Upload className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="text-gray-600 hover:bg-gray-100 p-1.5 rounded-md transition-colors bg-white"
+                  title="Download Template"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                </button>
+              </div>
             </>
           )}
-
-          {userRole === "Admin" && (
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow flex items-center gap-2 tour-create-lead"
-              onClick={() => navigate(`/${tenantSlug}/createleads`)}
-            >
-              <Plus className="w-4 h-4" /> {t("leads.buttons.createLead")}
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 tour-filters">
-          <div className="relative w-full tour-search">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder={t("leads.filters.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-11/12 md:w-full mx-auto pl-10 pr-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 block"
-            />
-          </div>
+      {/* Collapsible Filters */}
+      {showFilters && (
+        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 tour-filters">
+            <div className="relative w-full tour-search">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder={t("leads.filters.searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-11/12 md:w-full mx-auto pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 block text-sm"
+              />
+            </div>
 
-          {userRole === "Admin" && (
+            {userRole === "Admin" && (
+              <div>
+                <select
+                  value={assigneeFilter}
+                  onChange={(e) => setAssigneeFilter(e.target.value)}
+                  className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
+                >
+                  <option value="">{t("leads.filters.allAssignees")}</option>
+                  {usersList.map((user) => (
+                    <option key={user._id} value={user._id}>
+                      {user.firstName} {user.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <select
-                value={assigneeFilter}
-                onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
-                <option value="">{t("leads.filters.allAssignees")}</option>
-                {usersList.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.firstName} {user.lastName}
-                  </option>
-                ))}
+                <option value="">{t("leads.filters.allStatus")}</option>
+                <option value="Hot">{t("leads.status.hot")}</option>
+                <option value="Warm">{t("leads.status.warm")}</option>
+                <option value="Cold">{t("leads.status.cold")}</option>
+                <option value="Junk">{t("leads.status.junk")}</option>
+                <option value="Converted">{t("leads.status.converted")}</option>
               </select>
             </div>
-          )}
 
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
-            >
-              <option value="">{t("leads.filters.allStatus")}</option>
-              <option value="Hot">{t("leads.status.hot")}</option>
-              <option value="Warm">{t("leads.status.warm")}</option>
-              <option value="Cold">{t("leads.status.cold")}</option>
-              <option value="Junk">{t("leads.status.junk")}</option>
-              <option value="Converted">{t("leads.status.converted")}</option>
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
-            >
-              <option value="">{t("leads.filters.allSources")}</option>
-              <option value="Website">{t("leads.source.website")}</option>
-              <option value="Referral">{t("leads.source.referral")}</option>
-              <option value="Social Media">{t("leads.source.socialMedia")}</option>
-              <option value="Email">{t("leads.source.email")}</option>
-              <option value="Cold Call">{t("leads.source.coldCall")}</option>
-              <option value="Other">{t("leads.source.other")}</option>
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={clientTypeFilter}
-              onChange={(e) => setClientTypeFilter(e.target.value)}
-              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
-            >
-              <option value="">{t("leads.filters.allClientTypes")}</option>
-              <option value="B2B">B2B</option>
-              <option value="B2C">B2C</option>
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={followUpFilter}
-              onChange={(e) => setFollowUpFilter(e.target.value)}
-              className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
-            >
-              <option value="all">All Follow-ups</option>
-              <option value="today">Today's Follow-ups</option>
-              <option value="completed">Completed Follow-ups</option>
-              <option value="missed">Missed Follow-ups</option>
-            </select>
-          </div>
-
-          {/* General Date Range filter — plain createdAt range; leaving
-              either side blank shows all records. */}
-          <div className="col-span-1 md:col-span-2 flex items-center gap-2 w-full">
-            <input
-              type="date"
-              value={dateFilterFrom}
-              onChange={(e) => setDateFilterFrom(e.target.value)}
-              max={dateFilterTo || undefined}
-              title="Start Date"
-              className="border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-gray-400 text-sm flex-shrink-0">to</span>
-            <input
-              type="date"
-              value={dateFilterTo}
-              onChange={(e) => setDateFilterTo(e.target.value)}
-              min={dateFilterFrom || undefined}
-              title="End Date"
-              className="border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {(dateFilterFrom || dateFilterTo) && (
-              <button
-                type="button"
-                onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
-                className="text-gray-400 hover:text-gray-600 flex-shrink-0"
-                title="Clear date filter"
+            <div>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
-                <X size={16} />
-              </button>
-            )}
+                <option value="">{t("leads.filters.allSources")}</option>
+                <option value="Website">{t("leads.source.website")}</option>
+                <option value="Referral">{t("leads.source.referral")}</option>
+                <option value="Social Media">{t("leads.source.socialMedia")}</option>
+                <option value="Email">{t("leads.source.email")}</option>
+                <option value="Cold Call">{t("leads.source.coldCall")}</option>
+                <option value="Other">{t("leads.source.other")}</option>
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={clientTypeFilter}
+                onChange={(e) => setClientTypeFilter(e.target.value)}
+                className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
+              >
+                <option value="">{t("leads.filters.allClientTypes")}</option>
+                <option value="B2B">B2B</option>
+                <option value="B2C">B2C</option>
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={followUpFilter}
+                onChange={(e) => setFollowUpFilter(e.target.value)}
+                className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
+              >
+                <option value="all">All Follow-ups</option>
+                <option value="today">Today's Follow-ups</option>
+                <option value="completed">Completed Follow-ups</option>
+                <option value="missed">Missed Follow-ups</option>
+              </select>
+            </div>
+
+            {/* General Date Range filter */}
+            <div className="col-span-1 md:col-span-2 flex items-center gap-2 w-full">
+              <input
+                type="date"
+                value={dateFilterFrom}
+                onChange={(e) => setDateFilterFrom(e.target.value)}
+                max={dateFilterTo || undefined}
+                title="Start Date"
+                className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-gray-400 text-sm flex-shrink-0">to</span>
+              <input
+                type="date"
+                value={dateFilterTo}
+                onChange={(e) => setDateFilterTo(e.target.value)}
+                min={dateFilterFrom || undefined}
+                title="End Date"
+                className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {(dateFilterFrom || dateFilterTo) && (
+                <button
+                  type="button"
+                  onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                  title="Clear date filter"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Table */}
+      {/* Main Content Area: Conditional Table or Pipeline View */}
+      {viewMode === "pipeline" ? (
+        <LeadsPipelineView
+          filters={{
+            search: debouncedSearch,
+            status: statusFilter,
+            source: sourceFilter,
+            clientType: clientTypeFilter,
+            assignee: assigneeFilter,
+            followUpStatus: followUpFilter,
+            startDate: dateFilterFrom,
+            endDate: dateFilterTo
+          }}
+          onRejectClick={handleRejectClick}
+          onConvertClick={openConvertModal}
+          onEditClick={handleEdit}
+          userRole={userRole}
+          userId={currentUserId}
+        />
+      ) : (
       <div className="overflow-x-auto tour-lead-table">
         <table className="min-w-max w-full table-auto divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -1156,10 +1268,12 @@ function LeadTableComponent() {
                 const isTerminal = lead.status === "Rejected";
                 const isActiveDisabled = lead.isActive === false && userRole !== "Admin";
                 const isDisabled = isTerminal || isActiveDisabled;
-                const rejectedByName = lead.rejectedBy ? `${lead.rejectedBy.firstName || ""} ${lead.rejectedBy.lastName || ""}`.trim() : "";
-                const convertedByName = lead.convertedBy ? `${lead.convertedBy.firstName || ""} ${lead.convertedBy.lastName || ""}`.trim() : "";
-                const isSelfRejected = lead.rejectedBy && String(lead.rejectedBy._id) === String(currentUserId);
-                const isSelfConverted = lead.convertedBy && String(lead.convertedBy._id) === String(currentUserId);
+                const rejectedByObj = lead.rejectedBy && typeof lead.rejectedBy === 'object' ? lead.rejectedBy : usersList.find(u => String(u._id) === String(lead.rejectedBy));
+                const convertedByObj = lead.convertedBy && typeof lead.convertedBy === 'object' ? lead.convertedBy : usersList.find(u => String(u._id) === String(lead.convertedBy));
+                const rejectedByName = rejectedByObj ? `${rejectedByObj.firstName || ""} ${rejectedByObj.lastName || ""}`.trim() : "";
+                const convertedByName = convertedByObj ? `${convertedByObj.firstName || ""} ${convertedByObj.lastName || ""}`.trim() : "";
+                const isSelfRejected = rejectedByObj && String(rejectedByObj._id) === String(currentUserId);
+                const isSelfConverted = convertedByObj && String(convertedByObj._id) === String(currentUserId);
                 const rejectedBadgeText = isSelfRejected ? "You rejected the lead" : `${rejectedByName || "Admin"} rejected the lead`;
                 const convertedBadgeText = isSelfConverted ? "You converted lead to deal" : `${convertedByName || "Someone"} converted lead to deal`;
                 return (
@@ -1287,10 +1401,10 @@ function LeadTableComponent() {
                     <div className="relative flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => !isDisabled && openFollowUpPicker(lead._id)}
-                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
-                        title={isDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
-                        disabled={followUpSavingId === lead._id || isDisabled}
+                        onClick={() => !isActiveDisabled && openFollowUpPicker(lead._id)}
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isActiveDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
+                        title={isActiveDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
+                        disabled={followUpSavingId === lead._id || isActiveDisabled}
                       >
                         <Calendar className="w-4 h-4 text-gray-500" />
                         <span className="text-sm">
@@ -1351,11 +1465,11 @@ function LeadTableComponent() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isDisabled) return;
+                            if (isActiveDisabled) return;
                             handleEdit(lead._id);
                           }}
-                          disabled={isDisabled}
-                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                          disabled={isActiveDisabled}
+                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isActiveDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
                         >
                           <Edit className="w-4 h-4 mr-2" /> {t("leads.actions.edit")}
                         </button>
@@ -1363,11 +1477,11 @@ function LeadTableComponent() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isDisabled) return;
+                            if (isActiveDisabled) return;
                             openAddNoteModal(lead);
                           }}
-                          disabled={isDisabled}
-                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-gray-100"}`}
+                          disabled={isActiveDisabled}
+                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isActiveDisabled ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-gray-100"}`}
                         >
                           <MessageSquarePlus className="w-4 h-4 mr-2" /> Add Follow-up Note
                         </button>
@@ -1410,9 +1524,10 @@ function LeadTableComponent() {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {viewMode === "table" && totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
           <p className="text-sm text-gray-500">
             {t("leads.pagination.showing")}{" "}
