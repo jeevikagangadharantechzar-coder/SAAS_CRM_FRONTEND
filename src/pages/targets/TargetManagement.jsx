@@ -7,36 +7,16 @@ import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { validateTargetDates, todayISO, tomorrowISO, toLocalDateString } from "../../utils/dateValidation";
-import Select from "react-select";
 import {
   Plus, Target, Trash2, X, Users, Phone, TrendingUp,
   Calendar, CheckCircle, Briefcase, Mail,
   Clock, Award, ChevronDown, ChevronUp, Building2, Check, MessageSquare, Pencil,
   LayoutGrid, List, Bell, Flag, ArrowRightLeft, AlertCircle, UserCheck,
-  ChevronLeft, ChevronRight, Trophy, XCircle, Activity,
+  ChevronLeft, ChevronRight, Trophy, XCircle,
 } from "lucide-react";
 
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-const customSelectStyles = {
-  control: (base, state) => ({
-    ...base,
-    minHeight: '42px',
-    borderRadius: '0.5rem',
-    borderColor: state.isFocused ? '#008ecc' : '#e5e7eb',
-    boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 142, 204, 0.3)' : 'none',
-    fontSize: '0.875rem',
-    '&:hover': { borderColor: state.isFocused ? '#008ecc' : '#d1d5db' }
-  }),
-  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-  menu: (base) => ({ ...base, fontSize: '0.875rem' }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isSelected ? '#008ecc' : state.isFocused ? '#e0f2fe' : 'white',
-    color: state.isSelected ? 'white' : '#1f2937'
-  })
-};
 
 /* ── Helpers ─────────────────────── */
 // Animates from 0 up to the real value on every mount/update instead of
@@ -145,8 +125,9 @@ function Checkbox({ checked, onChange }) {
     <button
       type="button"
       onClick={e => { e.stopPropagation(); onChange(e); }}
-      className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${checked ? "bg-[#008ecc] border-[#008ecc]" : "border-gray-300 bg-white hover:border-[#008ecc]"
-        }`}
+      className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
+        checked ? "bg-[#008ecc] border-[#008ecc]" : "border-gray-300 bg-white hover:border-[#008ecc]"
+      }`}
     >
       {checked && <Check size={10} className="text-white" strokeWidth={3} />}
     </button>
@@ -273,27 +254,27 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
             : deals.list.map(d => {
               const adminBadge = getAdminActionBadge(d);
               return (
-                <div key={d._id}
-                  onClick={() => onToggleDeal(d._id)}
-                  className={`flex items-start gap-2.5 bg-white border rounded-xl p-2.5 cursor-pointer transition-all ${selectedDeals.has(d._id) ? "border-[#008ecc] bg-blue-50/30 shadow-sm" : "border-gray-100 hover:border-gray-200"}`}>
-                  <Checkbox checked={selectedDeals.has(d._id)} onChange={() => onToggleDeal(d._id)} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-1 mb-1">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
-                    </div>
-                    {adminBadge && (
-                      <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
-                    )}
-                    {d.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{d.companyName}</p>}
-                    <div className="flex flex-wrap gap-2 mb-0.5">
-                      {d.value && <p className="text-[11px] font-bold text-gray-700">{d.currency} {d.value}</p>}
-                      {d.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
-                    </div>
-                    {d.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
-                    <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
+              <div key={d._id}
+                onClick={() => onToggleDeal(d._id)}
+                className={`flex items-start gap-2.5 bg-white border rounded-xl p-2.5 cursor-pointer transition-all ${selectedDeals.has(d._id) ? "border-[#008ecc] bg-blue-50/30 shadow-sm" : "border-gray-100 hover:border-gray-200"}`}>
+                <Checkbox checked={selectedDeals.has(d._id)} onChange={() => onToggleDeal(d._id)} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
                   </div>
+                  {adminBadge && (
+                    <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
+                  )}
+                  {d.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{d.companyName}</p>}
+                  <div className="flex flex-wrap gap-2 mb-0.5">
+                    {d.value && <p className="text-[11px] font-bold text-gray-700">{d.currency} {d.value}</p>}
+                    {d.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
+                  </div>
+                  {d.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
+                  <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
                 </div>
+              </div>
               );
             })
         )}
@@ -311,7 +292,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Table header */}
       <div className="grid grid-cols-[2fr_1fr_1.4fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
-        {["Sales Person", "Period", "Dates", "Overall", "Leads Conv.", "Deals Won", "Lead→Deal Won", "Deals Lost", "Calls", "Meetings", "Actions"].map((h, i) => (
+        {["Sales Person","Period","Dates","Overall","Leads Conv.","Deals Won","Lead→Deal Won","Deals Lost","Calls","Meetings","Actions"].map((h,i) => (
           <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i >= 3 && i <= 9 ? "text-center" : i === 10 ? "text-center" : ""}`}>{h}</div>
         ))}
       </div>
@@ -329,7 +310,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
         const linkedLeads = (t.linkedLeads || []).filter(Boolean).filter(l => l.status !== "Converted");
         const convertedLeadDeals = (t.convertedLeadDeals || []);
         const linkedDeals = (t.linkedDeals || []).filter(Boolean);
-        const wonDeals = linkedDeals.filter(d => d.stage === "Closed Won");
+        const wonDeals  = linkedDeals.filter(d => d.stage === "Closed Won");
         const liveDeals = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost");
 
         return (
@@ -361,7 +342,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
               <div className="flex flex-col items-center justify-center">
                 <span className={`text-base font-bold ${textColor}`}>{overall}%</span>
                 <div className="w-14 bg-gray-200 rounded-full h-1.5 mt-1">
-                  <div className={`h-1.5 rounded-full ${progressColor}`} style={{ width: `${Math.min(100, overall)}%` }} />
+                  <div className={`h-1.5 rounded-full ${progressColor}`} style={{width:`${Math.min(100,overall)}%`}} />
                 </div>
               </div>
               {/* Leads Conv */}
@@ -426,20 +407,20 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
                     <p className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={13} className="text-emerald-500" /> Deals Won ({wonDeals.length})</p>
                     <div className="space-y-2">
                       {wonDeals.map((d, i) => {
-                        const createdDate = d.createdAt ? new Date(d.createdAt) : null;
+                        const createdDate   = d.createdAt   ? new Date(d.createdAt)   : null;
                         const convertedDate = d.convertedAt ? new Date(d.convertedAt) : createdDate;
-                        const wonDate = d.wonAt ? new Date(d.wonAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
-                        const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
-                        const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
+                        const wonDate       = d.wonAt ? new Date(d.wonAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
+                        const totalDays     = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
+                        const stageHistory  = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                         const dealKey = `${t._id}-${i}`;
                         const isOpen = expandedDealIdx[dealKey];
                         const adminBadge = getAdminActionBadge(d);
                         return (
                           <div key={d._id} className="bg-emerald-50 border border-emerald-200 rounded-2xl overflow-hidden">
                             <div className="flex items-start gap-1 px-3 pt-3 pb-0">
-                              <button type="button" onClick={() => setExpandedDealIdx(prev => ({ ...prev, [dealKey]: !isOpen }))} className="flex-1 text-left pb-2.5">
+                              <button type="button" onClick={() => setExpandedDealIdx(prev => ({...prev, [dealKey]: !isOpen}))} className="flex-1 text-left pb-2.5">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i + 1}</span>
+                                  <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                                   <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                                   <CheckCircle size={13} className="text-emerald-500 shrink-0" />
                                   {isOpen ? <ChevronUp size={13} className="text-emerald-600" /> : <ChevronDown size={13} className="text-gray-400" />}
@@ -542,7 +523,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
                             {d.stageHistory?.length > 0 && (
                               <div className="pt-1.5 border-t border-gray-100 space-y-0.5">
                                 <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Stage Trail</p>
-                                {[...d.stageHistory].sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt)).map((h, hi) => (
+                                {[...d.stageHistory].sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-1.5">
                                     <div className={`w-1.5 h-1.5 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-400"} shrink-0`} />
                                     <span className="text-[10px] text-gray-800 font-semibold">{h.stage}</span>
@@ -600,7 +581,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
                                 {history.map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-1 pl-1">
                                     <div className="w-px h-2 bg-gray-300 mr-0.5" />
-                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: h.status === "Hot" ? "#ef4444" : h.status === "Warm" ? "#f97316" : h.status === "Cold" ? "#6b7280" : h.status === "Junk" ? "#a855f7" : "#10b981" }} />
+                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
                                     <span className="text-[10px] text-gray-800 font-semibold ml-1">{h.status}</span>
                                     <span className="text-[10px] text-gray-600 font-medium ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                   </div>
@@ -639,7 +620,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
                               {history.map((h, hi) => (
                                 <div key={hi} className="flex items-center gap-1 pl-1">
                                   <div className="w-px h-2 bg-gray-300 mr-0.5" />
-                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: h.status === "Hot" ? "#ef4444" : h.status === "Warm" ? "#f97316" : h.status === "Cold" ? "#6b7280" : h.status === "Junk" ? "#a855f7" : "#10b981" }} />
+                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
                                   <span className="text-[10px] text-gray-800 font-semibold ml-1">{h.status}</span>
                                   <span className="text-[10px] text-gray-600 font-medium ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                 </div>
@@ -662,7 +643,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
                                 <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                               </div>
                               {/* Subsequent deal stage moves */}
-                              {(d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt)).map((h, hi) => (
+                              {(d.stageHistory || []).sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                                 <div key={hi} className="flex items-center gap-1 pl-1">
                                   <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                   <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STAGE_DOT[h.stage] || "bg-gray-400"}`} />
@@ -761,16 +742,13 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
     };
   };
 
-  const wonDeals = linkedDeals.filter(d => d.stage === "Closed Won").map(withConversionInfo);
+  const wonDeals  = linkedDeals.filter(d => d.stage === "Closed Won").map(withConversionInfo);
   const liveDeals = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
-    { label: "Deals Won", target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Leads to Deals Won", target: null, actual: actuals.leadDealWon || 0, pct: null, icon: <Trophy size={13} className="text-amber-500" />, bg: "bg-amber-50", border: "border-amber-100", countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
-    { label: "Deals Lost", target: null, actual: actuals.dealsLost || 0, pct: null, icon: <XCircle size={13} className="text-red-500" />, bg: "bg-red-50", border: "border-red-100", countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
-    { label: "Calls Made", target: t.targetCalls, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
-    { label: "Meetings Done", target: t.targetMeetings, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
+    { label: "Leads Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <CheckCircle size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
+    { label: "Deals Won",  target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Deals Lost", target: null,                                       actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
   ];
 
   return (
@@ -859,11 +837,11 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                 </p>
                 <div className={`space-y-2 ${wonDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
                   {wonDeals.map((d, i) => {
-                    const createdDate = d.createdAt ? new Date(d.createdAt) : null;
+                    const createdDate   = d.createdAt   ? new Date(d.createdAt)   : null;
                     const convertedDate = d.convertedAt ? new Date(d.convertedAt) : createdDate;
-                    const wonDate = d.wonAt ? new Date(d.wonAt) : null;
-                    const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
-                    const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
+                    const wonDate       = d.wonAt       ? new Date(d.wonAt)       : null;
+                    const totalDays     = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
+                    const stageHistory  = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                     const isOpen = expandedItems.has(`won-${i}`);
                     const adminBadge = getAdminActionBadge(d);
                     return (
@@ -872,7 +850,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                         <div className="flex items-center gap-1 px-3 pt-3 pb-0">
                           <button type="button" onClick={() => toggleExpand(`won-${i}`)} className="flex-1 text-left pb-2.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i + 1}</span>
+                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <CheckCircle size={13} className="text-emerald-500 shrink-0" />
                               {isOpen ? <ChevronUp size={13} className="text-emerald-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
@@ -882,11 +860,11 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                                 {adminBadge.text}
                               </span>
                             )}
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                              {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                              {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
-                              {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
-                            </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                            {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                            {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
+                            {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+                          </div>
                           </button>
                           <button onClick={e => { e.stopPropagation(); onUnlinkItem?.({ targetId: t._id, type: "deal", itemId: d._id, itemName: d.dealName || d.dealTitle }); }} className="p-1 mb-auto mt-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
                         </div>
@@ -996,16 +974,16 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                   </p>
                   <div className={`space-y-2 ${lostDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
                     {lostDeals.map((d, i) => {
-                      const createdDate = d.createdAt ? new Date(d.createdAt) : null;
-                      const lostDate = d.stageLostAt ? new Date(d.stageLostAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
-                      const totalDays = lostDate && createdDate ? Math.max(0, Math.round((lostDate - createdDate) / 86400000)) : null;
+                      const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
+                      const lostDate     = d.stageLostAt ? new Date(d.stageLostAt) : (d.updatedAt ? new Date(d.updatedAt) : null);
+                      const totalDays    = lostDate && createdDate ? Math.max(0, Math.round((lostDate - createdDate) / 86400000)) : null;
                       const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                       const isOpen = expandedItems.has(`lost-${i}`);
                       return (
                         <div key={d._id} className="bg-red-50 border border-red-200 rounded-2xl overflow-hidden">
                           <button type="button" onClick={() => toggleExpand(`lost-${i}`)} className="w-full px-3 pt-3 pb-2.5 text-left">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i + 1}</span>
+                              <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <XCircle size={13} className="text-red-500 shrink-0" />
                               {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
@@ -1118,7 +1096,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                               <div className="pt-1.5 border-t border-gray-100">
                                 <p className="text-[10px] text-gray-400 font-semibold mb-1">Stage trail:</p>
                                 <div className="space-y-0.5">
-                                  {[...d.stageHistory].sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt)).map((h, hi) => (
+                                  {[...d.stageHistory].sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                                     <div key={hi} className="flex items-center gap-1.5">
                                       <div className={`w-1.5 h-1.5 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
                                       <span className="text-[10px] text-gray-600 font-medium">{h.stage}</span>
@@ -1190,7 +1168,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                                 {history.map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-0.5 pl-1">
                                     <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: h.status === "Hot" ? "#ef4444" : h.status === "Warm" ? "#f97316" : h.status === "Cold" ? "#6b7280" : h.status === "Junk" ? "#a855f7" : "#10b981" }} />
+                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
                                     <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
                                     <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                   </div>
@@ -1227,57 +1205,57 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
                           <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "lead", itemId: d.leadId, itemName: d.dealName })} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
                         </div>
                         {isOpen && (
-                          <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
-                            <div className="flex items-center gap-0.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                              <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
-                            </div>
-                            {history.map((h, hi) => (
-                              <div key={hi} className="flex items-center gap-0.5 pl-1">
-                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: h.status === "Hot" ? "#ef4444" : h.status === "Warm" ? "#f97316" : h.status === "Cold" ? "#6b7280" : h.status === "Junk" ? "#a855f7" : "#10b981" }} />
-                                <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
-                              </div>
-                            ))}
-                            <div className="flex items-center gap-0.5 pl-1 flex-wrap">
+                        <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
+                          <div className="flex items-center gap-0.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
+                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
+                          </div>
+                          {history.map((h, hi) => (
+                            <div key={hi} className="flex items-center gap-0.5 pl-1">
                               <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                              <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
-                              {!d.salesPersonConverted && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
-                                  Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
-                                </span>
-                              )}
+                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
+                              <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
+                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                             </div>
-                            <div className="flex items-center gap-0.5 pl-1">
-                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                              <span className="text-[10px] text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
-                            </div>
-                            {/* Subsequent deal stage moves */}
-                            {(d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt)).map((h, hi) => (
-                              <div key={hi} className="flex items-center gap-0.5 pl-1">
-                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STAGE_DOT[h.stage] || "bg-gray-400"}`} />
-                                <span className={`text-[10px] font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700" : h.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{h.stage}</span>
-                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
-                              </div>
-                            ))}
-                            {/* Fallback: show current stage when not yet in stageHistory */}
-                            {d.stage && d.stage !== "Qualification" && !(d.stageHistory || []).some(h => h.stage === d.stage) && (
-                              <div className="flex items-center gap-0.5 pl-1">
-                                <div className="w-px h-2 bg-gray-200 mr-0.5" />
-                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.stage === "Closed Won" ? "bg-emerald-500" : d.stage === "Closed Lost" ? "bg-red-400" : STAGE_DOT[d.stage] || "bg-gray-400"}`} />
-                                <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
-                                {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-1">● Live</span>}
-                              </div>
+                          ))}
+                          <div className="flex items-center gap-0.5 pl-1 flex-wrap">
+                            <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
+                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            {!d.salesPersonConverted && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
+                                Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
+                              </span>
                             )}
                           </div>
+                          <div className="flex items-center gap-0.5 pl-1">
+                            <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="text-[10px] text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
+                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                          </div>
+                          {/* Subsequent deal stage moves */}
+                          {(d.stageHistory || []).sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
+                            <div key={hi} className="flex items-center gap-0.5 pl-1">
+                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STAGE_DOT[h.stage] || "bg-gray-400"}`} />
+                              <span className={`text-[10px] font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700" : h.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{h.stage}</span>
+                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                            </div>
+                          ))}
+                          {/* Fallback: show current stage when not yet in stageHistory */}
+                          {d.stage && d.stage !== "Qualification" && !(d.stageHistory || []).some(h => h.stage === d.stage) && (
+                            <div className="flex items-center gap-0.5 pl-1">
+                              <div className="w-px h-2 bg-gray-200 mr-0.5" />
+                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.stage === "Closed Won" ? "bg-emerald-500" : d.stage === "Closed Lost" ? "bg-red-400" : STAGE_DOT[d.stage] || "bg-gray-400"}`} />
+                              <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
+                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-1">● Live</span>}
+                            </div>
+                          )}
+                        </div>
                         )}
                       </div>
                     );
@@ -1377,6 +1355,10 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (selectedLeads.size === 0 && selectedDeals.size === 0) {
+      toast.error("Please select at least one Lead or Deal to link to this target.");
+      return;
+    }
     const err = validateTargetDates(form.startDate, form.endDate, { isCreate: true });
     if (err) { setDateError(err); toast.error(err); return; }
     setSaving(true);
@@ -1406,28 +1388,17 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={18} className="text-gray-500" /></button>
         </div>
 
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-full lg:w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-100">
+          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sales Person *</label>
-              <Select
-                options={salesUsers.map(u => ({ value: u._id, label: `${u.firstName} ${u.lastName}` }))}
-                value={form.salesPerson ? { value: form.salesPerson, label: (() => {
-                  const u = salesUsers.find(x => x._id === form.salesPerson);
-                  return u ? `${u.firstName} ${u.lastName}` : "";
-                })() } : null}
-                onChange={selected => {
-                  setForm({ ...form, salesPerson: selected ? selected.value : "", targetLeads: "0", targetDeals: "0" });
-                  setSelectedLeads(new Set());
-                  setSelectedDeals(new Set());
-                }}
-                placeholder="Select sales person"
-                isClearable
-                menuPortalTarget={document.body}
-                styles={customSelectStyles}
-              />
+              <select required className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                value={form.salesPerson} onChange={e => { setForm({ ...form, salesPerson: e.target.value, targetLeads: "0", targetDeals: "0" }); setSelectedLeads(new Set()); setSelectedDeals(new Set()); }}>
+                <option value="">Select sales person</option>
+                {salesUsers.map(u => <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>)}
+              </select>
             </div>
 
             <div>
@@ -1461,10 +1432,8 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
               <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key: "targetLeads", label: "Leads", icon: <Users size={12} className="text-blue-500" />, auto: true },
-                  { key: "targetDeals", label: "Deals", icon: <TrendingUp size={12} className="text-green-500" />, auto: true },
-                  { key: "targetCalls", label: "Calls Made", icon: <Phone size={12} className="text-orange-500" />, auto: false },
-                  { key: "targetMeetings", label: "Meetings Done", icon: <Activity size={12} className="text-purple-500" />, auto: false },
+                  { key: "targetLeads",    label: "Leads",        icon: <Users size={12} className="text-blue-500" />,      auto: true },
+                  { key: "targetDeals",    label: "Deals",        icon: <TrendingUp size={12} className="text-green-500" />, auto: true },
                 ].map(({ key, label, icon, auto }) => (
                   <div key={key}>
                     <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-[9px] text-blue-400 font-semibold ml-1">from ticks</span>}</label>
@@ -1507,7 +1476,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
           </form>
 
           {/* RIGHT — preview with checkboxes */}
-          <div className="w-full lg:flex-1 lg:min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
+          <div className="flex-1 min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 shrink-0">
               {form.salesPerson ? "Performance Preview — Check to link leads/deals" : "Sales Person Details"}
             </p>
@@ -1545,12 +1514,12 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
         salesPerson: target.salesPerson?._id || target.salesPerson || "",
         period: target.period || "monthly",
         startDate: target.startDate ? new Date(target.startDate).toISOString().split("T")[0] : "",
-        endDate: target.endDate ? new Date(target.endDate).toISOString().split("T")[0] : "",
+        endDate:   target.endDate   ? new Date(target.endDate).toISOString().split("T")[0]   : "",
         // targetLeads/targetDeals get recomputed from the ticked checkboxes below —
         // these are just placeholders until that effect runs.
-        targetLeads: "0",
-        targetDeals: "0",
-        targetCalls: String(target.targetCalls ?? ""),
+        targetLeads:    "0",
+        targetDeals:    "0",
+        targetCalls:    String(target.targetCalls    ?? ""),
         targetMeetings: String(target.targetMeetings ?? ""),
         description: target.description || "",
       });
@@ -1595,6 +1564,10 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (selectedLeads.size === 0 && selectedDeals.size === 0) {
+      toast.error("Please select at least one Lead or Deal to link to this target.");
+      return;
+    }
     const err0 = validateTargetDates(form.startDate, form.endDate, { isCreate: false });
     if (err0) { setDateError(err0); toast.error(err0); return; }
     setSaving(true);
@@ -1628,9 +1601,9 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={18} className="text-gray-500" /></button>
         </div>
 
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-full lg:w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-100">
+          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
 
             {/* Sales person — read-only */}
             <div>
@@ -1674,10 +1647,8 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
               <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key: "targetLeads", label: "Leads", icon: <Users size={12} className="text-blue-500" />, auto: true },
-                  { key: "targetDeals", label: "Deals", icon: <TrendingUp size={12} className="text-green-500" />, auto: true },
-                  { key: "targetCalls", label: "Calls Made", icon: <Phone size={12} className="text-orange-500" />, auto: false },
-                  { key: "targetMeetings", label: "Meetings Done", icon: <Activity size={12} className="text-purple-500" />, auto: false },
+                  { key: "targetLeads",    label: "Leads",        icon: <Users size={12} className="text-blue-500" />,      auto: true },
+                  { key: "targetDeals",    label: "Deals",        icon: <TrendingUp size={12} className="text-green-500" />, auto: true },
                 ].map(({ key, label, icon, auto }) => (
                   <div key={key}>
                     <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-[9px] text-blue-400 font-semibold ml-1">from ticks</span>}</label>
@@ -1720,7 +1691,7 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
           </form>
 
           {/* RIGHT — preview with checkboxes (pre-selected) */}
-          <div className="w-full lg:flex-1 lg:min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
+          <div className="flex-1 min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 shrink-0">
               Performance Preview — Tick to link / unlink leads & deals
             </p>
@@ -1828,14 +1799,14 @@ export default function TargetManagement() {
   const handleMarkNotifRead = (n) => {
     if (n.read || n.isRead || !n._id || String(n._id).includes("-")) return;
     setGlobalNotifications(prev => prev.map(x => x._id === n._id ? { ...x, read: true, isRead: true } : x));
-    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { });
+    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {});
   };
 
   const handleDismissNotif = (e, n) => {
     e.stopPropagation();
     setGlobalNotifications(prev => prev.filter(x => x._id !== n._id));
     if (n._id && !String(n._id).includes("-")) {
-      axios.delete(`${baseUrl}/notifications/${n._id}`, { headers }).catch(() => { });
+      axios.delete(`${baseUrl}/notifications/${n._id}`, { headers }).catch(() => {});
     }
   };
 
@@ -1922,7 +1893,7 @@ export default function TargetManagement() {
       // Mark all target-related notifications as read when opening the tab
       setGlobalNotifications(prev => {
         const unread = prev.filter(n => TARGET_NOTIF_TYPES.includes(n.type) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
-        unread.forEach(n => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { }));
+        unread.forEach(n => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
         return prev.map(n => TARGET_NOTIF_TYPES.includes(n.type) ? { ...n, read: true, isRead: true } : n);
       });
     }
@@ -2067,17 +2038,11 @@ export default function TargetManagement() {
       {dashStats && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            <StatCard label="Total Leads" value={dashStats.monthly.totalLeads} icon={<Users size={16} />} color="text-blue-600" bg="bg-blue-50 border border-blue-100" />
-            <StatCard label="Leads Converted" value={dashStats.monthly.convertedLeads} icon={<CheckCircle size={16} />} color="text-green-600" bg="bg-green-50 border border-green-100" />
-            <StatCard label="Lead → Deal Rate" value={`${dashStats.monthly.leadToDealRate}%`} icon={<TrendingUp size={16} />} color="text-purple-600" bg="bg-purple-50 border border-purple-100" />
-            <StatCard label="Won Deals" value={dashStats.monthly.wonDeals} icon={<Award size={16} />} color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
-          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard label="Monthly Calls" value={dashStats.monthly.calls} icon={<Phone size={16} />} color="text-orange-600" bg="bg-orange-50 border border-orange-100" />
-            <StatCard label="Monthly Meetings" value={dashStats.monthly.meetings} icon={<Activity size={16} />} color="text-teal-600" bg="bg-teal-50 border border-teal-100" />
-            <StatCard label="Weekly Calls" value={dashStats.weekly.calls} icon={<Phone size={16} />} color="text-cyan-600" bg="bg-cyan-50 border border-cyan-100" />
-            <StatCard label="Weekly Meetings" value={dashStats.weekly.meetings} icon={<Calendar size={16} />} color="text-pink-600" bg="bg-pink-50 border border-pink-100" />
+            <StatCard label="Total Leads" value={dashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Total Deals" value={dashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Deals Won"   value={dashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deals Lost"  value={dashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
           </div>
         </div>
       )}
@@ -2483,18 +2448,11 @@ export default function TargetManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Same Person or Some Other Sales Person *</label>
-              <Select
-                options={salesUsers.map(u => ({ value: u._id, label: `${u.firstName} ${u.lastName}` }))}
-                value={reassignUserId ? { value: reassignUserId, label: (() => {
-                  const u = salesUsers.find(x => x._id === reassignUserId);
-                  return u ? `${u.firstName} ${u.lastName}` : "";
-                })() } : null}
-                onChange={selected => setReassignUserId(selected ? selected.value : "")}
-                placeholder="Select sales person"
-                isClearable
-                menuPortalTarget={document.body}
-                styles={customSelectStyles}
-              />
+              <select className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                value={reassignUserId} onChange={e => setReassignUserId(e.target.value)}>
+                <option value="">Select sales person</option>
+                {salesUsers.map(u => <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Extend Due Date <span className="text-gray-400 font-normal text-xs">(optional — gives new person more time)</span></label>

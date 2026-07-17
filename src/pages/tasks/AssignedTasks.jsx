@@ -110,12 +110,63 @@ function getTextColor(pct) {
 // Target Management/My Targets. Tolerant of `target` being null/undefined
 // (no active target yet) — every field defaults to 0 so all 6 cells still
 // render in full instead of a half-empty placeholder.
+
+function TaskProgressWidget({ task }) {
+  const dealItems = task.dealRefs?.length ? task.dealRefs : (task.dealRef ? [task.dealRef] : []);
+  const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
+  const totalItems = dealItems.length + leadItems.length;
+
+  let overall = 0;
+  let text = "";
+
+  if (task.status === "Completed") {
+    overall = 100;
+    text = "🎉 Task officially completed!";
+  } else if (totalItems > 0) {
+    let completedItems = 0;
+    dealItems.forEach(d => {
+      if (d.stage === "Closed Won") completedItems++;
+    });
+    leadItems.forEach(l => {
+      if (l.status === "Converted") completedItems++;
+    });
+    overall = Math.round((completedItems / totalItems) * 100);
+    
+    if (overall === 100) {
+      text = "🎉 All linked items achieved! (Mark task as Completed when ready)";
+    } else if (overall > 0) {
+      text = `${completedItems} of ${totalItems} linked items achieved.`;
+    } else {
+      text = task.status === "In Progress" ? "Task is in progress." : "Task is pending. Work on the linked items!";
+    }
+  } else {
+    overall = STATUS_PROGRESS[task.status] || 0;
+    text = overall === 100 ? "🎉 Task completed!" : overall >= 50 ? "Task is currently in progress." : "Task is pending.";
+  }
+
+  return (
+    <div className="mb-4">
+      <div className={`rounded-xl p-4 ${overall >= 100 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-blue-50 border border-blue-100" : "bg-gray-50 border border-gray-100"}`}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+            <Trophy size={15} className={getTextColor(overall)} /> Task Progress
+          </span>
+          <span className={`text-2xl font-bold ${getTextColor(overall)}`}>{overall}%</span>
+        </div>
+        <ProgressBar value={overall} color={getProgressColor(overall)} />
+        <p className="text-xs text-gray-400 mt-1.5">{text}</p>
+      </div>
+    </div>
+  );
+}
+
 function TargetSnapshotGrid({ target: t }) {
   const percentages = t?.percentages || {};
   const actuals = t?.actuals || {};
   const overall = percentages.overall || 0;
 
   const metrics = [
+    { label: "Leads Converted", target: percentages.effTargetLeads ?? t?.targetLeads ?? 0, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <CheckCircle size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
     { label: "Deals Won",  target: percentages.effTargetDeals ?? t?.targetDeals ?? 0, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
     { label: "Deals Lost", target: null,                                             actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
   ];
@@ -124,7 +175,7 @@ function TargetSnapshotGrid({ target: t }) {
     <div className="mb-4">
       <div className={`rounded-xl p-4 mb-3 ${overall >= 80 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-amber-50 border border-amber-100" : "bg-red-50 border border-red-100"}`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700"><Trophy size={15} className={getTextColor(overall)} /> Overall Progress</span>
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700"><Trophy size={15} className={getTextColor(overall)} /> Salesperson Target Quota</span>
           <span className={`text-2xl font-bold ${getTextColor(overall)}`}>{overall}%</span>
         </div>
         <ProgressBar value={overall} color={getProgressColor(overall)} />
@@ -492,7 +543,7 @@ function LeadStatusJourney({ lead }) {
 // sales person has a target set.
 // One linked deal's card (read-only besides the "dismiss won" trash icon).
 function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, onRefresh }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [dismissConfirm, setDismissConfirm] = useState(false);
   const [dismissing, setDismissing] = useState(false);
 
@@ -592,7 +643,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
 
 // One linked lead's card (read-only, sales can't unlink leads).
 function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -847,7 +898,7 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
 
         <p className="text-[11px] text-gray-400 mb-2 mt-1">Due {fmt(task.dueDate)}{isOverdue ? " (Overdue)" : ""}</p>
 
-        <TargetSnapshotGrid target={currentTarget} />
+        <TaskProgressWidget task={task} />
 
         {/* Description */}
         {task.description && (
