@@ -1315,7 +1315,7 @@ function TaskTableView({ tasks, onEdit, onDelete }) {
               <div className="flex items-center justify-center">
                 {task.dealRef?.stage ? (
                   <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${task.dealRef.stage === "Closed Won" ? STATUS_STYLES.Completed + " border-transparent" : STAGE_COLOR[task.dealRef.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
-                    {task.dealRef.stage === "Closed Won" ? "Completed" : task.dealRef.stage}
+                    {task.dealRef.stage === "Closed Won" ? "Completed" : task.dealRef.stage === "Closed Lost" ? "Deal Lost" : task.dealRef.stage}
                   </span>
                 ) : (
                   <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${STATUS_STYLES[task.status]}`}>
@@ -2067,7 +2067,7 @@ export default function TaskManagement() {
           })),
           ...deals.map((d) => ({
             key: `deal-${d._id}`, itemType: "deal", itemId: d._id,
-            typeLabel: "Deal Closed Won", typeClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
+            typeLabel: "Deal Closed", typeClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
             name: d.dealName || d.dealTitle, company: d.companyName, salesperson: d.assignedTo ? `${d.assignedTo.firstName} ${d.assignedTo.lastName}` : "—",
             date: d.wonAt, value: d.value ? `${d.currency || "INR"} ${d.value}` : null,
           })),
@@ -2089,7 +2089,7 @@ export default function TaskManagement() {
                 <p className="text-xl font-bold text-purple-700">{leads.length}</p>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                <p className="text-[11px] text-emerald-600 font-semibold">Deals Won by Admin</p>
+                <p className="text-[11px] text-emerald-600 font-semibold">Deal Closed by Admin</p>
                 <p className="text-xl font-bold text-emerald-700">{deals.length}</p>
               </div>
             </div>

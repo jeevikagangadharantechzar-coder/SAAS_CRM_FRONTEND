@@ -24,7 +24,20 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Receipt, CheckCircle, Clock, FileText, Trash2 } from "lucide-react";
+import { Receipt, CheckCircle, Clock, FileText, Trash2, Download } from "lucide-react";
+import { exportRowsToExcel } from "../../utils/excelImportExport";
+
+const INVOICE_EXPORT_COLUMNS = [
+  { key: "invoicenumber", label: "Invoice #" },
+  { key: "deal", label: "Deal" },
+  { key: "status", label: "Status" },
+  { key: "amount", label: "Amount", type: "number" },
+  { key: "currency", label: "Currency" },
+  { key: "paid", label: "Paid", type: "number" },
+  { key: "balance", label: "Balance Due", type: "number" },
+  { key: "assignedTo", label: "Assigned To" },
+  { key: "dueDate", label: "Due Date", type: "date" },
+];
 
 const CustomCalendarInput = React.forwardRef(({ value, onClick, placeholder }, ref) => (
   <div
@@ -75,6 +88,7 @@ const InvoiceHead = () => {
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [dropdownButton, setDropdownButton] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   // Summary stats — always computed from statsInvoices (unaffected by the status dropdown)
   const [summaryStats, setSummaryStats] = useState({
@@ -415,6 +429,70 @@ const InvoiceHead = () => {
     return { paid, balance };
   };
 
+/* ── Export currently filtered invoices to Excel ─────────────────────── */
+  const handleExportInvoices = async () => {
+    if (!filteredInvoices.length) {
+      toast.info("No invoices to export");
+      return;
+    }
+    try {
+      setExporting(true);
+
+      const rows = filteredInvoices.map((invoice) => {
+        const { paid, balance } = getPaymentBreakdown(invoice);
+        return {
+          invoicenumber: invoice.invoicenumber || "-",
+          deal: invoice.items?.[0]?.deal?.dealName || "N/A",
+          status: invoice.status === "partially_paid" ? "Partially Paid" : invoice.status,
+          amount: Number(invoice.total) || 0,
+          currency: invoice.currency || "-",
+          paid,
+          balance,
+          assignedTo: invoice.assignTo
+            ? `${invoice.assignTo.firstName} ${invoice.assignTo.lastName}`
+            : "N/A",
+          dueDate: invoice.dueDate || "",
+        };
+      });
+
+      // Amounts are only comparable within the same currency, so totals are
+      // grouped per currency instead of summed together into one figure.
+      const totalsByCurrency = {};
+      rows.forEach((row) => {
+        const cur = row.currency;
+        if (!totalsByCurrency[cur]) totalsByCurrency[cur] = { amount: 0, paid: 0, balance: 0 };
+        totalsByCurrency[cur].amount += row.amount;
+        totalsByCurrency[cur].paid += row.paid;
+        totalsByCurrency[cur].balance += row.balance;
+      });
+
+      const totalRows = Object.entries(totalsByCurrency).map(([currency, totals]) => ({
+        invoicenumber: `TOTAL (${currency})`,
+        deal: "",
+        status: "",
+        amount: totals.amount,
+        currency,
+        paid: totals.paid,
+        balance: totals.balance,
+        assignedTo: "",
+        dueDate: "",
+      }));
+
+      await exportRowsToExcel(
+        [...rows, ...totalRows],
+        INVOICE_EXPORT_COLUMNS,
+        `invoices_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        "Invoices"
+      );
+      toast.success(`Exported ${rows.length} invoice(s)`);
+    } catch (err) {
+      console.error("Export invoices error:", err);
+      toast.error("Failed to export invoices");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Per-row preferred currency cell
   const PreferredCurrencyCell = ({ invoice }) => {
     const [displayValue, setDisplayValue] = useState(null);
@@ -671,6 +749,14 @@ const InvoiceHead = () => {
             <option value="unpaid">Unpaid</option>
             <option value="partially_paid">Partially Paid</option>
           </select>
+          <button
+            onClick={handleExportInvoices}
+            disabled={exporting}
+            className="px-4 py-2 rounded-md bg-white border text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {exporting ? "Exporting..." : "Export"}
+          </button>
         </div>
 
         <div className="flex items-center border rounded-full bg-white px-3 w-[250px]">

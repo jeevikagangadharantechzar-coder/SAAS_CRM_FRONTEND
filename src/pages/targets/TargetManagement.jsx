@@ -404,7 +404,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem }) {
                 {/* Won Deals accordion */}
                 {wonDeals.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={13} className="text-emerald-500" /> Deals Won ({wonDeals.length})</p>
+                    <p className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={13} className="text-emerald-500" /> Deal Closed ({wonDeals.length})</p>
                     <div className="space-y-2">
                       {wonDeals.map((d, i) => {
                         const createdDate   = d.createdAt   ? new Date(d.createdAt)   : null;
@@ -746,9 +746,12 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
   const liveDeals = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <CheckCircle size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
-    { label: "Deals Won",  target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Deals Lost", target: null,                                       actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
+    { label: "Deal Closed", target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Leads to Deal Closed", target: null, actual: actuals.leadDealWon || 0, pct: null, icon: <Trophy size={13} className="text-amber-500" />, bg: "bg-amber-50", border: "border-amber-100", countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
+    { label: "Deal Lost", target: null, actual: actuals.dealsLost || 0, pct: null, icon: <XCircle size={13} className="text-red-500" />, bg: "bg-red-50", border: "border-red-100", countOnly: true, badgeText: "deal lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Calls Made", target: t.targetCalls, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
+    { label: "Meetings Done", target: t.targetMeetings, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
   ];
 
   return (
@@ -833,7 +836,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
             {wonDeals.length > 0 && (
               <div>
                 <p className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-1.5">
-                  <Award size={13} className="text-emerald-500" /> Deals Won ({wonDeals.length})
+                  <Award size={13} className="text-emerald-500" /> Deal Closed ({wonDeals.length})
                 </p>
                 <div className={`space-y-2 ${wonDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
                   {wonDeals.map((d, i) => {
@@ -970,7 +973,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem }) {
               return lostDeals.length > 0 ? (
                 <div>
                   <p className="text-xs font-bold text-red-700 mb-2 flex items-center gap-1.5">
-                    <XCircle size={13} className="text-red-500" /> Deals Lost ({lostDeals.length})
+                    <XCircle size={13} className="text-red-500" /> Deal Lost ({lostDeals.length})
                   </p>
                   <div className={`space-y-2 ${lostDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
                     {lostDeals.map((d, i) => {
@@ -2339,7 +2342,7 @@ export default function TargetManagement() {
           })),
           ...deals.map((d) => ({
             key: `deal-${d._id}`, itemType: "deal", itemId: d._id,
-            typeLabel: "Deal Closed Won", typeClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
+            typeLabel: "Deal Closed", typeClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
             name: d.dealName || d.dealTitle, company: d.companyName, salesperson: d.assignedTo ? `${d.assignedTo.firstName} ${d.assignedTo.lastName}` : "—",
             date: d.wonAt, value: d.value ? `${d.currency || "INR"} ${d.value}` : null,
           })),
@@ -2362,7 +2365,7 @@ export default function TargetManagement() {
                 <p className="text-xl font-bold text-purple-700">{leads.length}</p>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                <p className="text-[11px] text-emerald-600 font-semibold">Deals Won by Admin</p>
+                <p className="text-[11px] text-emerald-600 font-semibold">Deal Closed by Admin</p>
                 <p className="text-xl font-bold text-emerald-700">{deals.length}</p>
               </div>
             </div>

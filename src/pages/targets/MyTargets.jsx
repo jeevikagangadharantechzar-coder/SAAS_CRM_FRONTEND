@@ -363,9 +363,12 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
   const liveDeals   = linkedDeals.filter(d => d.stage !== "Closed Won" && d.stage !== "Closed Lost").map(withConversionInfo);
 
   const metrics = [
-    { label: "Leads Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <CheckCircle size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
-    { label: "Deals Won",  target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Deals Lost", target: null,                                       actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "closed lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
+    { label: "Deal Closed", target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Leads to Deal Closed", target: null, actual: actuals.leadDealWon || 0, pct: null, icon: <Trophy size={13} className="text-amber-500" />, bg: "bg-amber-50", border: "border-amber-100", countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
+    { label: "Deal Lost", target: null, actual: actuals.dealsLost || 0, pct: null, icon: <XCircle size={13} className="text-red-500" />, bg: "bg-red-50", border: "border-red-100", countOnly: true, badgeText: "deal lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Calls Made", target: t.targetCalls, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
+    { label: "Meetings Done", target: t.targetMeetings, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
   ];
 
   return (
@@ -490,7 +493,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             {/* Won deals — detailed accordion */}
             {wonDeals.length > 0 && (
               <div>
-                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={12} className="text-emerald-500" /> Won Deals — Full Details</p>
+                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={12} className="text-emerald-500" /> Deal Closed — Full Details</p>
                 <div className="space-y-2">
                   {wonDeals.map((d, i) => {
                     const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
@@ -601,7 +604,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
               const lostDeals = [...linkedDeals.filter(d => d.stage === "Closed Lost"), ...convertedLeadDeals.filter(d => d.stage === "Closed Lost")];
               return lostDeals.length > 0 ? (
                 <div>
-                  <p className="text-[11px] font-bold text-red-700 mb-2 flex items-center gap-1.5"><XCircle size={12} className="text-red-500" /> Lost Deals ({lostDeals.length})</p>
+                  <p className="text-[11px] font-bold text-red-700 mb-2 flex items-center gap-1.5"><XCircle size={12} className="text-red-500" /> Deal Lost ({lostDeals.length})</p>
                   <div className="space-y-2">
                     {lostDeals.map((d, i) => {
                       const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
@@ -1143,8 +1146,8 @@ export default function MyTargets() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={myDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={myDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
-            <StatCard label="Deals Won"   value={myDashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
-            <StatCard label="Deals Lost"  value={myDashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
+            <StatCard label="Deal Closed"   value={myDashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deal Lost"  value={myDashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
           </div>
         </div>
       )}

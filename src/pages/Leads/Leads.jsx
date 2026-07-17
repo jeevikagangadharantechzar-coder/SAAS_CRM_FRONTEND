@@ -80,6 +80,18 @@ const LEAD_COLUMNS = [
   { key: "createdAt",    label: "Created At", type: "date", exportOnly: true },
 ];
 
+// "Export Follow-ups" columns — one row PER follow-up note (same entries as
+// the eye-icon "Follow-up History" modal), so Follow-up Date is that note's
+// own timestamp, not the lead's single next-scheduled-follow-up field.
+// A lead with 3 notes produces 3 rows; a lead with none gets one blank row.
+const FOLLOWUP_EXPORT_COLUMNS = [
+  { key: "leadName",     label: "Lead" },
+  { key: "companyName",  label: "Company" },
+  { key: "assignTo",     label: "Assign To" },
+  { key: "followUpDate", label: "Follow-up Date" },
+  { key: "followUpNote", label: "Follow-up Note", wrap: true },
+];
+
 /* ── Tour Steps (i18n-aware) ─────────────────────── */
 const getTourSteps = (t) => [
   { selector: ".tour-lead-header",   content: t("leads.tour.welcome") },
@@ -163,6 +175,9 @@ function LeadTableComponent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStartDate, setExportStartDate] = useState("");
   const [exportEndDate, setExportEndDate] = useState("");
+  const [exportMode, setExportMode] = useState("all"); // "all" | "followups"
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [leadToReject, setLeadToReject] = useState(null); // { id, name }
@@ -395,9 +410,25 @@ function LeadTableComponent() {
       );
 
       const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
-      const leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
-      const total = isNew ? data.totalLeads : leadsArr.length;
-      const pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
+      let leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
+      let total = isNew ? data.totalLeads : leadsArr.length;
+      let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
+
+      // "Today's Follow-ups" isn't a backend filter, so narrow the fetched
+      // page down to leads whose follow-up date is today's calendar day.
+      // (Only filters within the current server-side page, not globally.)
+      if (followUpFilter === "today") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        leadsArr = leadsArr.filter((lead) => {
+          if (!lead.followUpDate) return false;
+          const followUpDay = new Date(lead.followUpDate);
+          followUpDay.setHours(0, 0, 0, 0);
+          return followUpDay.getTime() === today.getTime();
+        });
+        total = leadsArr.length;
+        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
+      }
 
       setLeads(leadsArr);
       setTotalLeads(total);
@@ -420,21 +451,107 @@ function LeadTableComponent() {
     try {
       setExporting(true);
       const token = localStorage.getItem("token");
-      const params = new URLSearchParams();
-      if (startDate) params.append("startDate", startDate);
-      if (endDate) params.append("endDate", endDate);
-      const { data } = await axios.get(`${API_URL}/leads/export?${params.toString()}`, {
+
+      // The /leads/export endpoint only honors startDate/endDate — it ignores
+      // status/source/assignee/etc. So instead of using it, pull the filtered
+      // set from /leads/getAllLead (same endpoint the table uses, which does
+      // honor all the filters), just without pagination.
+      const params = new URLSearchParams({ page: 1, limit: 100000 });
+      if (debouncedSearch && debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
+      if (statusFilter) params.append("status", statusFilter);
+      if (sourceFilter) params.append("source", sourceFilter);
+      if (clientTypeFilter) params.append("clientType", clientTypeFilter);
+      if (assigneeFilter) params.append("assignee", assigneeFilter);
+      if (followUpFilter === "missed" || followUpFilter === "completed") {
+        params.append("followUpStatus", followUpFilter);
+      }
+      if (startDate || dateFilterFrom) params.append("startDate", startDate || dateFilterFrom);
+      if (endDate || dateFilterTo) params.append("endDate", endDate || dateFilterTo);
+
+      const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!data?.data?.length) {
+      const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
+      let exportRows = isNew ? data.leads : (Array.isArray(data) ? data : []);
+
+      // "today" has no backend filter (see fetchLeads), so narrow client-side.
+      if (followUpFilter === "today") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        exportRows = exportRows.filter((lead) => {
+          if (!lead.followUpDate) return false;
+          const followUpDay = new Date(lead.followUpDate);
+          followUpDay.setHours(0, 0, 0, 0);
+          return followUpDay.getTime() === today.getTime();
+        });
+      }
+
+      if (!exportRows.length) {
         toast.info("No data found for the selected criteria. There is nothing to export.");
         return;
       }
-      await exportRowsToExcel(data.data, LEAD_COLUMNS, `leads_${new Date().toISOString().slice(0, 10)}.xlsx`, "Leads");
-      toast.success(`Exported ${data.data.length} lead(s)`);
+
+      // getAllLead returns a populated assignTo object ({firstName, lastName,
+      // email, ...}), but the export column expects a plain email string —
+      // flatten it here so the sheet matches what /leads/export used to produce.
+      const isFollowUpExport = exportMode === "followups";
+
+      // Same date+time format as the on-screen Follow-up History modal
+      // ("Jul 15, 2026 at 01:12 PM"), so the export matches what the eye
+      // icon shows exactly.
+      const formatNoteStamp = (createdAt) => {
+        const created = createdAt ? new Date(createdAt) : null;
+        if (!created || isNaN(created.getTime())) return "";
+        const datePart = created.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        const timePart = created.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+        return `${datePart} at ${timePart}`;
+      };
+
+      const flattenedRows = isFollowUpExport
+        ? exportRows.flatMap((lead) => {
+            const assignee = lead.assignTo
+              ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim()
+              : "";
+            const notes = Array.isArray(lead.followUpNotes) ? lead.followUpNotes : [];
+
+            if (!notes.length) {
+              return [{
+                leadName: lead.leadName || "",
+                companyName: lead.companyName || "",
+                assignTo: assignee,
+                followUpDate: "",
+                followUpNote: "",
+              }];
+            }
+
+            return [...notes]
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map((n) => ({
+                leadName: lead.leadName || "",
+                companyName: lead.companyName || "",
+                assignTo: assignee,
+                followUpDate: formatNoteStamp(n.createdAt),
+                followUpNote: n.note || "",
+              }));
+          })
+        : exportRows.map((lead) => ({
+            ...lead,
+            assignTo: lead.assignTo?.email || "",
+          }));
+
+      const columns = isFollowUpExport ? FOLLOWUP_EXPORT_COLUMNS : LEAD_COLUMNS;
+      const filenamePrefix = isFollowUpExport ? "leads_followups" : "leads";
+
+      await exportRowsToExcel(flattenedRows, columns, `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.xlsx`, isFollowUpExport ? "Follow-ups" : "Leads");
+      toast.success(
+        isFollowUpExport
+          ? `Exported ${flattenedRows.length} follow-up entr${flattenedRows.length === 1 ? "y" : "ies"} for ${exportRows.length} lead(s)`
+          : `Exported ${exportRows.length} lead(s)`
+      );
       setShowExportModal(false);
       setExportStartDate("");
       setExportEndDate("");
+      setExportMode("all");
     } catch (err) {
       console.error("Export leads error:", err);
       toast.error("Failed to export leads");
@@ -861,6 +978,16 @@ function LeadTableComponent() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleExportMenuClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleExportMenuClickOutside);
+    return () => document.removeEventListener("mousedown", handleExportMenuClickOutside);
+  }, []);
+
   const firstItem = totalLeads === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const lastItem = Math.min(currentPage * itemsPerPage, totalLeads);
 
@@ -931,13 +1058,40 @@ function LeadTableComponent() {
               >
                 <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
               </button>
-              <button
-                onClick={() => setShowExportModal(true)}
-                disabled={exporting}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
-              </button>
+              <div className="relative inline-block text-left" ref={exportMenuRef}>
+                <button
+                  onClick={() => setExportMenuOpen((prev) => !prev)}
+                  disabled={exporting}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                >
+                  <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                </button>
+
+                {exportMenuOpen && (
+                  <div className="absolute right-0 z-20 mt-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                    <button
+                      onClick={() => {
+                        setExportMode("all");
+                        setExportMenuOpen(false);
+                        setShowExportModal(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4 mr-2" /> Export All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setExportMode("followups");
+                        setExportMenuOpen(false);
+                        setShowExportModal(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <MessageSquarePlus className="w-4 h-4 mr-2" /> Export Follow-ups
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
@@ -1033,6 +1187,7 @@ function LeadTableComponent() {
               className="w-11/12 md:w-full mx-auto p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block"
             >
               <option value="all">All Follow-ups</option>
+              <option value="today">Today's Follow-ups</option>
               <option value="completed">Completed Follow-ups</option>
               <option value="missed">Missed Follow-ups</option>
             </select>
@@ -1077,14 +1232,15 @@ function LeadTableComponent() {
         <table className="min-w-max w-full table-auto divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr className="whitespace-nowrap">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.lead")}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky left-0 z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">{t("leads.table.lead")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.clientType")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.source")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.status")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.assignee")}</th>
+              {userRole === "Admin" && (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
@@ -1097,7 +1253,7 @@ function LeadTableComponent() {
           <tbody className="divide-y divide-gray-200">
             {leads.length > 0 ? (
               leads.map((lead, idx) => {
-                const isTerminal = lead.status === "Rejected" || lead.status === "Converted";
+                const isTerminal = lead.status === "Rejected";
                 const isActiveDisabled = lead.isActive === false && userRole !== "Admin";
                 const isDisabled = isTerminal || isActiveDisabled;
                 const rejectedByName = lead.rejectedBy ? `${lead.rejectedBy.firstName || ""} ${lead.rejectedBy.lastName || ""}`.trim() : "";
@@ -1110,33 +1266,41 @@ function LeadTableComponent() {
                 <tr
                   key={lead._id}
                   title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
-                  className={`hover:bg-gray-50 ${
+                  className={`group ${
                     idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } whitespace-nowrap ${
+                  } hover:bg-gray-50 whitespace-nowrap ${
                     isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
                     : isTerminal ? "pointer-events-none select-none"
                     : ""
                   }`}
                 >
-                  <td className="px-4 py-3">
+                  <td className={`px-4 py-3 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
+                    idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
                         {lead.leadName?.charAt(0) || "L"}
                       </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5 min-w-0">
                           <span
                             onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}`)}
-                            className="font-medium text-blue-600 text-sm cursor-pointer hover:underline"
+                            className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none"
                           >
                             {lead.leadName || t("leads.table.unnamedLead")}
+                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-normal shadow-lg z-50 pointer-events-none">
+                              <Calendar size={12} className="text-gray-300 shrink-0" />
+                              {lead.followUpDate
+                                ? `Follow-up: ${formatDate(lead.followUpDate)}`
+                                : "No follow-up scheduled"}
+                            </div>
                           </span>
                           {lead.status === "Rejected" ? (
-                            <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
+                            <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                               {rejectedBadgeText}
                             </span>
                           ) : lead.status === "Converted" ? (
-                            <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto">
+                            <span title={convertedBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                               {convertedBadgeText}
                             </span>
                           ) : isActiveDisabled ? (
@@ -1170,14 +1334,13 @@ function LeadTableComponent() {
                             );
                           })()}
                         </div>
-                        <span className="text-gray-400 text-xs">{lead.email || "-"}</span>
+                        <span className="text-gray-400 text-xs truncate max-w-[100px] sm:max-w-[180px] lg:max-w-none">{lead.email || "-"}</span>
                       </div>
                     </div>
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.phoneNumber || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.clientType || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
 
@@ -1211,13 +1374,12 @@ function LeadTableComponent() {
                     )}
                   </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {lead.assignTo
-                      ? typeof lead.assignTo === "object"
-                        ? `${lead.assignTo.firstName} ${lead.assignTo.lastName}`
-                        : t("leads.table.assignedUser")
-                      : "-"}
-                  </td>
+                  {userRole === "Admin" && (
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {lead.assignTo ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim() : "-"}
+                    </td>
+                  )}
+           
 
                   <td className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>
 
@@ -1422,12 +1584,14 @@ function LeadTableComponent() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-800">
               <Download className="w-5 h-5" />
-              Export Leads
+              {exportMode === "followups" ? "Export Follow-ups" : "Export Leads"}
             </DialogTitle>
           </DialogHeader>
 
           <p className="text-sm text-gray-500 mb-3">
-            Optionally filter by date range. Leave both blank to export all leads.
+            {exportMode === "followups"
+              ? "Exports Lead, Company, Assign To, Follow-up Date and Follow-up History for leads matching the current filters."
+              : "Optionally filter by date range. Leave both blank to export all leads."}
           </p>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1459,6 +1623,7 @@ function LeadTableComponent() {
                 setShowExportModal(false);
                 setExportStartDate("");
                 setExportEndDate("");
+                setExportMode("all");
               }}
               className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
             >

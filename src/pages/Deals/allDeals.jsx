@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,21 @@ const DEAL_COLUMNS = [
   { key: "followUpDate",    label: "Follow Up Date (YYYY-MM-DD)", type: "date" },
   { key: "followUpComment", label: "Follow Up Comment", wrap: true },
   { key: "createdAt",       label: "Created At", type: "date", exportOnly: true },
+];
+
+// "Export Follow-ups" columns — one row PER follow-up history entry (each
+// deal's followUpHistory array), so both the scheduled Follow-up Date and
+// the timestamp it was actually logged on are kept as separate columns.
+// A deal with several entries produces several rows; a deal with none gets
+// one blank row so it isn't dropped from the sheet.
+const FOLLOWUP_DEAL_COLUMNS = [
+  { key: "dealName",     label: "Deal" },
+  { key: "companyName",  label: "Company" },
+  { key: "assignedTo",   label: "Assign To" },
+  { key: "followUpDate", label: "Follow-up Date" },
+  { key: "loggedOn",     label: "Logged On" },
+  { key: "outcome",      label: "Outcome" },
+  { key: "note",         label: "Note", wrap: true },
 ];
 
 const CURRENCY_SYMBOLS = {
@@ -91,6 +106,9 @@ function AllDealsComponent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStartDate, setExportStartDate] = useState("");
   const [exportEndDate, setExportEndDate] = useState("");
+  const [exportMode, setExportMode] = useState("all"); // "all" | "followups"
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -232,10 +250,13 @@ function AllDealsComponent() {
       if (typeDropdownOpen && !e.target.closest(".deal-type-dropdown")) {
         setTypeDropdownOpen(false);
       }
+      if (exportMenuOpen && exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdownId, typeDropdownOpen]);
+  }, [openDropdownId, typeDropdownOpen, exportMenuOpen]);
 
   // Close tooltip on scroll
   useEffect(() => {
@@ -414,6 +435,85 @@ function AllDealsComponent() {
     fetchDateRangeDeals(dateFilterFrom, dateFilterTo);
   }, [dateFilterFrom, dateFilterTo]);
 
+// Same date+time format used by the Leads follow-up export ("Jul 15, 2026 at 01:12 PM")
+  const formatFollowUpStamp = (value) => {
+    const d = value ? new Date(value) : null;
+    if (!d || isNaN(d.getTime())) return "";
+    const datePart = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const timePart = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    return `${datePart} at ${timePart}`;
+  };
+
+/* ── Export Deal Follow-ups to Excel ─────────────────────── */
+  // One row per followUpHistory entry, sourced client-side from the
+  // currently-filtered deals (filteredDeals already reflects search/stage/
+  // assignee/etc.) — /deals/export has no notion of follow-up history, so
+  // Export All keeps using it while Export Follow-ups reads local state.
+  const handleExportDealFollowUps = async ({ startDate, endDate } = {}) => {
+    try {
+      setExporting(true);
+
+      const inRange = (value) => {
+        if (!startDate && !endDate) return true;
+        const t = value ? new Date(value).getTime() : NaN;
+        if (isNaN(t)) return false;
+        if (startDate && t < new Date(startDate).getTime()) return false;
+        if (endDate && t > new Date(`${endDate}T23:59:59.999Z`).getTime()) return false;
+        return true;
+      };
+
+      const rows = filteredDeals.flatMap((deal) => {
+        const assignee = deal.assignedTo
+          ? `${deal.assignedTo.firstName || ""} ${deal.assignedTo.lastName || ""}`.trim()
+          : "";
+        const history = Array.isArray(deal.followUpHistory) ? deal.followUpHistory : [];
+        const entries = history.filter((h) => inRange(h.date));
+
+        if (!entries.length) {
+          return [{
+            dealName: deal.dealName || "",
+            companyName: deal.companyName || "",
+            assignedTo: assignee,
+            followUpDate: "",
+            loggedOn: "",
+            outcome: "",
+            note: "",
+          }];
+        }
+
+        return [...entries]
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .map((h) => ({
+            dealName: deal.dealName || "",
+            companyName: deal.companyName || "",
+            assignedTo: assignee,
+            followUpDate: formatFollowUpStamp(h.followUpDate),
+            loggedOn: formatFollowUpStamp(h.date),
+            outcome: h.outcome || h.action || "",
+            note: h.notes || h.followUpComment || "",
+          }));
+      });
+
+      if (!rows.length) {
+        toast.info("No data found for the selected criteria. There is nothing to export.");
+        return;
+      }
+
+      await exportRowsToExcel(rows, FOLLOWUP_DEAL_COLUMNS, `deals_followups_${new Date().toISOString().slice(0, 10)}.xlsx`, "Follow-ups");
+      const entryCount = rows.filter((r) => r.loggedOn).length;
+      toast.success(`Exported ${entryCount} follow-up entr${entryCount === 1 ? "y" : "ies"} for ${filteredDeals.length} deal(s)`);
+      setShowExportModal(false);
+      setExportStartDate("");
+      setExportEndDate("");
+      setExportMode("all");
+    } catch (err) {
+      console.error("Export deal follow-ups error:", err);
+      toast.error("Failed to export follow-ups");
+    } finally {
+      setExporting(false);
+    }
+  };
+
 /* ── Export Deals to Excel ─────────────────────── */
   const handleExportDeals = async ({ startDate, endDate } = {}) => {
     try {
@@ -434,6 +534,7 @@ function AllDealsComponent() {
       setShowExportModal(false);
       setExportStartDate("");
       setExportEndDate("");
+      setExportMode("all");
     } catch (err) {
       console.error("Export deals error:", err);
       toast.error("Failed to export deals");
@@ -716,13 +817,40 @@ function AllDealsComponent() {
               >
                 <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
               </button>
-              <button
-                onClick={() => setShowExportModal(true)}
-                disabled={exporting}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
-              </button>
+              <div className="relative inline-block text-left" ref={exportMenuRef}>
+                <button
+                  onClick={() => setExportMenuOpen((prev) => !prev)}
+                  disabled={exporting}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                >
+                  <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                </button>
+
+                {exportMenuOpen && (
+                  <div className="absolute right-0 z-20 mt-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                    <button
+                      onClick={() => {
+                        setExportMode("all");
+                        setExportMenuOpen(false);
+                        setShowExportModal(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4 mr-2" /> Export All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setExportMode("followups");
+                        setExportMenuOpen(false);
+                        setShowExportModal(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                    >
+                      <MessageSquarePlus className="w-4 h-4 mr-2" /> Export Follow-ups
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
           {userRole === "Admin" && (
@@ -767,8 +895,8 @@ function AllDealsComponent() {
             <option value="Qualification">Qualification</option>
             <option value="Proposal Sent-Negotiation">Proposal Sent-Negotiation</option>
             <option value="Invoice Sent">Invoice Sent</option>
-            <option value="Closed Won">Closed Won</option>
-            <option value="Closed Lost">Closed Lost</option>
+            <option value="Closed Won">Deal Closed</option>
+            <option value="Closed Lost">Deal Lost</option>
           </select>
 
           <select
@@ -973,12 +1101,14 @@ function AllDealsComponent() {
         <table className="min-w-full text-sm text-gray-700">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left">Deal Name</th>
-              <th className="px-6 py-3 text-left">Client Type</th>
-              <th className="px-6 py-3 text-left">Assigned To</th>
+              <th className="px-6 py-3 text-left sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">Deal Name</th>
+
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
               <th className="px-6 py-3 text-left">Value ({userCurrency})</th>
+              {userRole === "Admin" && (
+                <th className="px-6 py-3 text-left">Assigned To</th>
+              )}
               <th className="px-6 py-3 text-left">Created At</th>
               <th className="px-6 py-3 text-left tour-deal-actions">Actions</th>
             </tr>
@@ -1008,30 +1138,32 @@ function AllDealsComponent() {
                   <tr
                     key={deal._id}
                     title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
-                    className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                    className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50 ${
                       isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
                       : isTerminal ? "pointer-events-none select-none"
                       : ""
                     }`}
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className={`px-6 py-4 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
+                      idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                    }`}>
+                      <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2 min-w-0">
                         <button
                           onClick={() => handleDealNameClick(deal._id)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium tour-deal-name"
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium tour-deal-name truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none text-left"
                         >
                           {deal.dealName || "-"}
                         </button>
                         {deal.stage === "Rejected" ? (
-                          <span className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto">
+                          <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {rejectedBadgeText}
                           </span>
                         ) : deal.stage === "Closed Won" ? (
-                          <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto">
+                          <span title={wonBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {wonBadgeText}
                           </span>
                         ) : deal.convertedBy ? (
-                          <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto">
+                          <span title={convertedBadgeText} className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {convertedBadgeText}
                           </span>
                         ) : isActiveDisabled ? (
@@ -1080,12 +1212,7 @@ function AllDealsComponent() {
                         })()}
                       </div>
                     </td>
-                    <td className="px-6 py-4">{deal.clientType || "-"}</td>
-                    <td className="px-6 py-4">
-                      {deal.assignedTo
-                        ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}`
-                        : "-"}
-                    </td>
+
                     <td className="px-6 py-4">
                       {deal.stage === "Rejected" ? (
                         <span
@@ -1101,7 +1228,7 @@ function AllDealsComponent() {
                             STAGE_BADGE_STYLES[deal.stage] || "bg-gray-50 text-gray-700 border-gray-200"
                           }`}
                         >
-                          {deal.stage}
+                          {deal.stage === "Closed Won" ? "Deal Closed" : deal.stage === "Closed Lost" ? "Deal Lost" : deal.stage}
                         </span>
                       ) : (
                         "-"
@@ -1115,6 +1242,13 @@ function AllDealsComponent() {
                         ? `${userCurrencySymbol} ${Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}`
                         : "-"}
                     </td>
+                    {userRole === "Admin" && (
+                      <td className="px-6 py-4">
+                        {deal.assignedTo
+                          ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}`
+                          : "-"}
+                      </td>
+                    )}
                     <td className="px-6 py-4">{formatDate(deal.createdAt)}</td>
                     <td className="px-6 py-4">
                       <button
@@ -1331,12 +1465,14 @@ function AllDealsComponent() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-800">
               <Download className="w-5 h-5" />
-              Export Deals
+              {exportMode === "followups" ? "Export Follow-ups" : "Export Deals"}
             </DialogTitle>
           </DialogHeader>
 
           <p className="text-sm text-gray-500 mb-3">
-            Optionally filter by date range. Leave both blank to export all deals.
+            {exportMode === "followups"
+              ? "Exports Deal, Company, Assign To, Follow-up Date, Logged On, Outcome and Note — one row per follow-up entry. Optionally filter by the date it was logged."
+              : "Optionally filter by date range. Leave both blank to export all deals."}
           </p>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1368,13 +1504,18 @@ function AllDealsComponent() {
                 setShowExportModal(false);
                 setExportStartDate("");
                 setExportEndDate("");
+                setExportMode("all");
               }}
               className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
             >
               Cancel
             </button>
             <button
-              onClick={() => handleExportDeals({ startDate: exportStartDate, endDate: exportEndDate })}
+              onClick={() =>
+                exportMode === "followups"
+                  ? handleExportDealFollowUps({ startDate: exportStartDate, endDate: exportEndDate })
+                  : handleExportDeals({ startDate: exportStartDate, endDate: exportEndDate })
+              }
               disabled={exporting}
               className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
             >

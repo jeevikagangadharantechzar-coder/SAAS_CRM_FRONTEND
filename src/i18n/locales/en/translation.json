@@ -157,7 +157,7 @@
     },
     "cards": {
       "totalLeads": "Total Leads",
-      "dealsWon": "Deals Won",
+      "dealsWon": "Deal Closed",
       "totalRevenue": "Total Revenue",
       "pendingInvoices": "Pending Invoices",
       "vsPrevious": "vs previous"
@@ -187,10 +187,10 @@
     "salesPipeline": {
       "title": "Sales Pipeline Analytics",
       "totalDealsBadge": "{{count}} Total Deals",
-      "description": "Monthly breakdown of open opportunities vs won deals with performance metrics",
+      "description": "Monthly breakdown of open opportunities vs closed deals with performance metrics",
       "openOpportunities": "Open Opportunities",
-      "wonDeals": "Won Deals",
-      "winRate": "Win Rate",
+      "wonDeals": "Closed Deals",
+      "winRate": "Close Rate",
       "activePipeline": "Active Pipeline",
       "deals": "deals",
       "total": "Total"
@@ -201,7 +201,7 @@
       "noDeals": "No deals for this period",
       "totalLabel": "Total",
       "open": "Open",
-      "won": "Won",
+      "won": "Closed",
       "lost": "Lost"
     }
   }
