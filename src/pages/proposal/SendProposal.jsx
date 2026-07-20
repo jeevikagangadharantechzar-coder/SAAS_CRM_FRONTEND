@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -11,9 +11,14 @@ const SendProposal = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
 
   const proposalData = location.state?.proposal || null;
   const isEditing = location.state?.isEditing || false;
+  // Opened from a Deal's own Proposal tab — preselect that deal and, once
+  // sent, return to the Deal page instead of the general Proposal list.
+  const presetDealId = location.state?.presetDealId || null;
+  const returnToDealId = location.state?.returnToDealId || null;
 
   const [title, setTitle] = useState("");
   const [dealTitle, setDealTitle] = useState("");
@@ -89,6 +94,16 @@ const SendProposal = () => {
       if (proposalData.email) setEmails(proposalData.email);
     }
   }, [proposalData, deals, isEditing]);
+
+  // Preselect the deal this page was opened from (Deal Details → Proposal
+  // tab → New Proposal). The existing "selecting a deal" effect below already
+  // fills in dealTitle/email once selectedDealId is set, so this just needs
+  // to set it once deals have loaded.
+  useEffect(() => {
+    if (presetDealId && !isEditing && deals.length > 0 && !selectedDealId) {
+      setSelectedDealId(presetDealId);
+    }
+  }, [presetDealId, isEditing, deals, selectedDealId]);
 
   // Update email and dealTitle when selecting a deal
   useEffect(() => {
@@ -185,7 +200,9 @@ const SendProposal = () => {
     }
 
     setTimeout(() => {
-      if (!isDraftMode) {
+      if (returnToDealId && tenantSlug) {
+        navigate(`/${tenantSlug}/Pipelineview/${returnToDealId}`);
+      } else if (!isDraftMode) {
         navigate("/proposal");
       } else {
         navigate("/proposal/drafts");

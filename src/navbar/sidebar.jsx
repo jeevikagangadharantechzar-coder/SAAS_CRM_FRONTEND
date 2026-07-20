@@ -26,6 +26,7 @@ import {
   ShieldAlert,
   MapPin,
   FileText,
+  LifeBuoy,
   Bell,
 } from "lucide-react";
 
@@ -845,6 +846,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             to="live-locations"
             icon={<MapPin />}
             label={t("sidebar.liveLocations", "Live Locations")}
+            sidebarOpen={isOpen}
+          />
+        )}
+
+        {/* Support — only the tenant Admin raises tickets to Techzar support */}
+        {isAdmin && (
+          <SidebarItem
+            to={`/${tenantSlug}/support`}
+            icon={<LifeBuoy />}
+            label={t("sidebar.support", "Support")}
             sidebarOpen={isOpen}
           />
         )}

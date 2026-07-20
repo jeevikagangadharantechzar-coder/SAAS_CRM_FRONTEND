@@ -69,20 +69,26 @@ export default function ScheduledEmails() {
     }
   };
 
-  /* ── Handle Delete Scheduled Email Function ─────────────────────── */
+  /* ── Handle Cancel Scheduled Email Function ─────────────────────── */
+  // Soft-cancels (status -> "cancelled") instead of permanently deleting the
+  // record, so cancelled emails stay visible in places like a Deal's
+  // Activity Log rather than vanishing without a trace. Still disappears
+  // from this Scheduled list immediately either way, since that list only
+  // ever shows status: "scheduled".
   const handleDeleteScheduledEmail = async () => {
     if (!emailToDelete) return;
 
     try {
       setIsDeleting(true);
       const token = localStorage.getItem("token");
-      const response = await axios.delete(
-        `${API_URL}/email/delete/${emailToDelete._id}`,
+      const response = await axios.patch(
+        `${API_URL}/email/cancel/${emailToDelete._id}`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
-        toast.success("Scheduled email deleted successfully");
+        toast.success("Scheduled email cancelled successfully");
 
         setScheduledEmails((prev) =>
           prev.filter((email) => email._id !== emailToDelete._id)
@@ -92,9 +98,9 @@ export default function ScheduledEmails() {
         setEmailToDelete(null);
       }
     } catch (error) {
-      console.error("Error deleting scheduled email:", error);
+      console.error("Error cancelling scheduled email:", error);
       toast.error(
-        error.response?.data?.message || "Failed to delete scheduled email"
+        error.response?.data?.message || "Failed to cancel scheduled email"
       );
     } finally {
       setIsDeleting(false);
