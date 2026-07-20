@@ -25,6 +25,7 @@ import PlanDetail from "./pages/superadmin/SubscriptionPlans/PlanDetail";
 import UpgradePlan from "./pages/superadmin/SubscriptionPlans/UpgradePlan";
 import ViewPlans from "./pages/superadmin/SubscriptionPlans/ViewPlans";
 import UpgradeRequests from "./pages/superadmin/UpgradeRequests";
+import SupportTickets from "./pages/superadmin/SupportTickets";
 import TenantDetail from "./pages/superadmin/TenantDetail";
 import FreeTrialSignups from "./pages/superadmin/FreeTrialSignups";
 
@@ -76,6 +77,7 @@ import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 import { Meetings } from "./pages/meetings/Meetings";
 import GoogleIntegration from "./pages/settings/GoogleIntegration";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Support from "./pages/support/UserSupportView";
 import WebsiteContactForm from "./pages/website/WebsiteContactForm";
 import TaskManagement from "./pages/tasks/TaskManagement";
 import AssignedTasks from "./pages/tasks/AssignedTasks";
@@ -209,6 +211,7 @@ function App() {
                   <Route path="tenants/create" element={<CreateTenant />} />
                   <Route path="free-trials" element={<FreeTrialSignups />} />
                   <Route path="upgrade-requests" element={<UpgradeRequests />} />
+                  <Route path="support-tickets" element={<SupportTickets />} />
                   <Route path="subscription-plans" element={<SubscriptionPlans />} />
                   <Route path="subscription-plans/create" element={<CreatePlan />} />
                   <Route path="subscription-plans/:id/edit" element={<EditPlan />} />
@@ -316,6 +319,8 @@ function App() {
                   <Route element={<PrivateRoute permission="settings" />}>
                     <Route path="settings" element={<Settings />} />
                   </Route>
+
+                  <Route path="support" element={<Support />} />
 
                   {/* MESSAGES */}
                   <Route element={<PrivateRoute planFeature="messages" />}>
