@@ -110,6 +110,7 @@
     "deals": "Deals",
     "pipelineView": "Pipeline View",
     "allDeals": "All Deals",
+    "document": "Document",
     "tasks": "Tasks",
     "taskManagement": "Task Management",
     "targetManagement": "Target Management",
@@ -129,6 +130,7 @@
     "meetings": "Meetings",
     "teamAnalytics": "Team Analytics",
     "usersRoles": "Users & Roles",
+    "support": "Support",
     "upgradePlan": "Upgrade Plan"
   },
   "leaderboard": {
