@@ -16,6 +16,10 @@ import "react-phone-input-2/lib/style.css";
 import { getNames } from "country-list";
 import useLostDealModal from "../LostDealModal/LossDeal";
 import LostDealModal from "../LostDealModal/ModalLoss";
+import { useModal } from "../../context/ModalContext";
+import InvoiceModal from "../invoice/InvoiceModal.jsx";
+import MeetingModal from "../meetings/MeetingModal.jsx";
+import useMeetings from "../meetings/useMeetings.js";
 
 // Email validation function
 const validateEmail = (email) => {
@@ -106,6 +110,37 @@ const FILE_STYLES = {
   pdf: { bg: "bg-red-100", icon: "text-red-600" },
   text: { bg: "bg-yellow-100", icon: "text-yellow-600" },
   other: { bg: "bg-blue-100", icon: "text-blue-600" },
+};
+
+// Proposal status colors — matches ProposalHead.jsx's STATUS_STYLES exactly,
+// so a proposal's status pill looks the same everywhere it's shown.
+const PROPOSAL_STATUS_STYLES = {
+  draft: "bg-orange-50 text-orange-700 border-orange-200",
+  sent: "bg-blue-50 text-blue-700 border-blue-200",
+  "no reply": "bg-gray-50 text-gray-500 border-gray-200",
+  rejection: "bg-red-50 text-red-600 border-red-200",
+  success: "bg-green-50 text-green-700 border-green-200",
+};
+
+// Activity Log — icon/color per backend event type (Pipeline_modal_view.jsx's
+// `activeTab === "activity"` panel). Keys must match dealDetail.controller.js's
+// `getActivityLog` event `type` field exactly.
+const ACTIVITY_TYPE_META = {
+  stage_change:            { icon: Tag,         bg: "bg-indigo-100", iconColor: "text-indigo-600" },
+  assignee_changed:        { icon: User,        bg: "bg-violet-100", iconColor: "text-violet-600" },
+  followup:                { icon: Calendar,    bg: "bg-purple-100", iconColor: "text-purple-600" },
+  attachment_uploaded:     { icon: Paperclip,   bg: "bg-blue-100",   iconColor: "text-blue-600" },
+  note_added:              { icon: Edit,        bg: "bg-yellow-100", iconColor: "text-yellow-600" },
+  proposal_sent:           { icon: FileText,    bg: "bg-teal-100",   iconColor: "text-teal-600" },
+  proposal_status_changed: { icon: FileText,    bg: "bg-teal-100",   iconColor: "text-teal-600" },
+  invoice_created:         { icon: DollarSign,  bg: "bg-green-100",  iconColor: "text-green-600" },
+  invoice_status_changed:  { icon: DollarSign,  bg: "bg-green-100",  iconColor: "text-green-600" },
+  meeting_scheduled:       { icon: Calendar,    bg: "bg-pink-100",   iconColor: "text-pink-600" },
+  meeting_cancelled:       { icon: XCircle,     bg: "bg-red-100",    iconColor: "text-red-600" },
+  email_sent:              { icon: Mail,        bg: "bg-cyan-100",   iconColor: "text-cyan-600" },
+  email_scheduled:         { icon: Mail,        bg: "bg-cyan-100",   iconColor: "text-cyan-600" },
+  email_cancelled:         { icon: XCircle,     bg: "bg-red-100",    iconColor: "text-red-600" },
+  default:                 { icon: Clock,       bg: "bg-slate-100",  iconColor: "text-slate-600" },
 };
 
 // ─────────────────────────────────────────────
@@ -275,11 +310,55 @@ const NotesPopup = ({ deal, onClose }) => {
 // ─────────────────────────────────────────────
 function Pipeline_modal_view() {
   const API_URL = import.meta.env.VITE_API_URL;
-  const { dealId } = useParams();
+  const { dealId, tenantSlug } = useParams();
   const navigate = useNavigate();
 
   const [deal, setDeal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Deal Score — provisional placeholder score shown top-right in the header
+  const [dealScore, setDealScore] = useState(null);
+
+  // Activity Log — unified feed from the backend (stage changes, notes,
+  // proposal/invoice/meeting events, attachments), replacing the old
+  // hardcoded 3-item stub.
+  const [activityFeed, setActivityFeed] = useState([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+
+  // Details tab — pending Tasks & Targets highlight banner
+  const [highlights, setHighlights] = useState({ pendingTasks: [], pendingTargets: [] });
+
+  // Notes tab
+  const [notes, setNotes] = useState([]);
+  const [isNotesLoading, setIsNotesLoading] = useState(false);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [isAddingNote, setIsAddingNote] = useState(false);
+
+  // Proposal tab
+  const [dealProposals, setDealProposals] = useState([]);
+  const [isProposalsLoading, setIsProposalsLoading] = useState(false);
+
+  // Invoice tab
+  const [dealInvoices, setDealInvoices] = useState([]);
+  const [isInvoicesLoading, setIsInvoicesLoading] = useState(false);
+  const [editingInvoiceForModal, setEditingInvoiceForModal] = useState(null);
+
+  // Meeting tab
+  const [dealMeetings, setDealMeetings] = useState([]);
+  const [isMeetingsLoading, setIsMeetingsLoading] = useState(false);
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+
+  // Email tab
+  const [dealEmails, setDealEmails] = useState([]);
+  const [isEmailsLoading, setIsEmailsLoading] = useState(false);
+
+  // Invoice tab — reuses the real Invoice page's own modal/context, so
+  // create/edit/mark-paid behave identically to the actual Invoice page.
+  const { openModal: openInvoiceModal } = useModal();
+
+  // Meeting tab — reuses the real Meetings page's own hook, so create,
+  // alarms, and toasts behave identically to the actual Meetings page.
+  const { createMeeting, cancelMeeting, googleConfigured, zoomConfigured } = useMeetings();
 
   // Use Lost Deal Modal hook — same one CreateDeal.jsx uses, so switching a
   // deal to Closed Lost always captures a reason regardless of which screen
@@ -364,6 +443,241 @@ function Pipeline_modal_view() {
       setIsLoading(false);
     }
   };
+
+  // ── Deal Details page additions: score, activity, notes, highlights,
+  // proposals, invoices, meetings, emails — each a live read against its own
+  // backend module, never duplicated/cached beyond this component's state.
+  const authHeader = () => ({ headers: { Authorization: `Bearer ${getAuthToken()}` } });
+
+  // Upload new attachments directly from this tab — same
+  // PATCH /deals/update-deal/:id endpoint the Create/Edit Deal form already
+  // uses. Not sending `existingAttachments` at all makes the backend keep
+  // the deal's current attachments as-is and just append the new files, so
+  // there's no risk of accidentally dropping anything already there.
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const handleUploadAttachments = async (files) => {
+    if (!files || files.length === 0) return;
+    try {
+      setIsUploadingAttachment(true);
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("attachments", f));
+      await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
+        headers: { Authorization: `Bearer ${getAuthToken()}`, "Content-Type": "multipart/form-data" },
+      });
+      toast.success(files.length > 1 ? "Attachments uploaded" : "Attachment uploaded");
+      fetchDealDetails();
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to upload attachment:", err);
+      toast.error(err.response?.data?.message || "Failed to upload attachment");
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  const fetchDealScore = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}/deals/${dealId}/score`, authHeader());
+      setDealScore(res.data.score);
+    } catch (err) {
+      console.error("Failed to fetch deal score:", err);
+    }
+  }, [dealId]);
+
+  const fetchHighlights = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}/deals/${dealId}/highlights`, authHeader());
+      setHighlights({ pendingTasks: res.data.pendingTasks || [], pendingTargets: res.data.pendingTargets || [] });
+    } catch (err) {
+      console.error("Failed to fetch deal highlights:", err);
+    }
+  }, [dealId]);
+
+  const fetchActivity = useCallback(async () => {
+    try {
+      setIsActivityLoading(true);
+      const res = await axios.get(`${API_URL}/deals/${dealId}/activity`, authHeader());
+      setActivityFeed(res.data.activity || []);
+    } catch (err) {
+      console.error("Failed to fetch activity log:", err);
+      toast.error("Failed to load activity log");
+    } finally {
+      setIsActivityLoading(false);
+    }
+  }, [dealId]);
+
+  const fetchNotes = useCallback(async () => {
+    try {
+      setIsNotesLoading(true);
+      const res = await axios.get(`${API_URL}/deals/${dealId}/notes`, authHeader());
+      setNotes(res.data.notes || []);
+    } catch (err) {
+      console.error("Failed to fetch notes:", err);
+      toast.error("Failed to load notes");
+    } finally {
+      setIsNotesLoading(false);
+    }
+  }, [dealId]);
+
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) return;
+    try {
+      setIsAddingNote(true);
+      const res = await axios.post(`${API_URL}/deals/${dealId}/notes`, { text: newNoteText.trim() }, authHeader());
+      setNotes((prev) => [res.data.note, ...prev]);
+      setNewNoteText("");
+      toast.success("Note added");
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to add note:", err);
+      toast.error(err.response?.data?.message || "Failed to add note");
+    } finally {
+      setIsAddingNote(false);
+    }
+  };
+
+  const fetchDealProposals = useCallback(async () => {
+    try {
+      setIsProposalsLoading(true);
+      const res = await axios.get(`${API_URL}/deals/${dealId}/proposals`, authHeader());
+      setDealProposals(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch proposals:", err);
+      toast.error("Failed to load proposals");
+    } finally {
+      setIsProposalsLoading(false);
+    }
+  }, [dealId]);
+
+  // Change a proposal's status right from this page — same endpoint and
+  // options ProposalHead.jsx's own status dropdown uses, so behavior is
+  // identical to changing it on the real Proposal page.
+  const handleProposalStatusChange = async (proposalId, newStatus) => {
+    try {
+      await axios.put(`${API_URL}/proposal/updatestatus/${proposalId}`, { status: newStatus }, authHeader());
+      setDealProposals((prev) => prev.map((p) => (p._id === proposalId ? { ...p, status: newStatus } : p)));
+      toast.success("Proposal status updated");
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to update proposal status:", err);
+      toast.error(err.response?.data?.error || "Failed to update proposal status");
+    }
+  };
+
+  const fetchDealInvoices = useCallback(async () => {
+    try {
+      setIsInvoicesLoading(true);
+      const res = await axios.get(`${API_URL}/deals/${dealId}/invoices`, authHeader());
+      setDealInvoices(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch invoices:", err);
+      toast.error("Failed to load invoices");
+    } finally {
+      setIsInvoicesLoading(false);
+    }
+  }, [dealId]);
+
+  const fetchDealMeetings = useCallback(async () => {
+    try {
+      setIsMeetingsLoading(true);
+      const res = await axios.get(`${API_URL}/deals/${dealId}/meetings`, authHeader());
+      setDealMeetings(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch meetings:", err);
+      toast.error("Failed to load meetings");
+    } finally {
+      setIsMeetingsLoading(false);
+    }
+  }, [dealId]);
+
+  const fetchDealEmails = useCallback(async () => {
+    try {
+      setIsEmailsLoading(true);
+      const res = await axios.get(`${API_URL}/deals/${dealId}/emails`, authHeader());
+      setDealEmails(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch emails:", err);
+      toast.error("Failed to load emails");
+    } finally {
+      setIsEmailsLoading(false);
+    }
+  }, [dealId]);
+
+  // Invoice saved (created/updated/marked paid) inside the embedded
+  // InvoiceModal — refetch this deal's invoice list, and the deal itself,
+  // since a full payment flips the deal to Closed Won inside InvoiceModal's
+  // own save logic (its existing PATCH /deals/update-deal call), so the
+  // header's stage badge needs to pick that up too.
+  const handleInvoiceSaved = () => {
+    fetchDealInvoices();
+    fetchDealDetails();
+    fetchActivity();
+  };
+
+  // Same endpoint/flow InvoiceHead.jsx's "Send to Email" action uses — emails
+  // the invoice PDF, then best-effort bumps the deal to "Invoice Sent"
+  // (failure to bump the stage must not be reported as a failed send).
+  const [sendingInvoiceEmailId, setSendingInvoiceEmailId] = useState(null);
+  const handleSendInvoiceEmail = async (invoiceId) => {
+    try {
+      setSendingInvoiceEmailId(invoiceId);
+      await axios.post(`${API_URL}/invoices/sendEmail/${invoiceId}`, {}, authHeader());
+      toast.success("Invoice email sent");
+      try {
+        await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, { stage: "Invoice Sent" }, authHeader());
+        fetchDealDetails();
+      } catch (_) {}
+      fetchDealInvoices();
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to send invoice email:", err);
+      toast.error(err.response?.data?.error || "Failed to send invoice email");
+    } finally {
+      setSendingInvoiceEmailId(null);
+    }
+  };
+
+  // Meeting saved via the embedded MeetingModal — delegates to the real
+  // Meetings page's own createMeeting (same API call, alarms, toasts),
+  // just folding in this deal's id and contact email.
+  const handleMeetingSave = async (formData) => {
+    // Attendees already come prefilled with the deal's email (visible and
+    // editable in the modal itself, via initialAttendees below) — no need to
+    // force it back in here, which would undo the user deliberately removing it.
+    await createMeeting({ ...formData, dealId: deal._id });
+    setIsMeetingModalOpen(false);
+    fetchDealMeetings();
+    fetchActivity();
+  };
+
+  // Same cancelMeeting the real Meetings page uses (PUT /meetings/:id,
+  // {status: "cancelled"}) — Edit stays on the real Meetings page itself
+  // (per request), Cancel is quick enough to keep inline here.
+  const handleCancelMeeting = async (meetingId) => {
+    if (!window.confirm("Cancel this meeting?")) return;
+    await cancelMeeting(meetingId);
+    fetchDealMeetings();
+    fetchActivity();
+  };
+
+  // Score + Task/Target highlights load once alongside the deal itself
+  useEffect(() => {
+    if (dealId) {
+      fetchDealScore();
+      fetchHighlights();
+    }
+  }, [dealId, fetchDealScore, fetchHighlights]);
+
+  // Everything else loads lazily, the first time its tab is opened
+  useEffect(() => {
+    if (!dealId) return;
+    if (activeTab === "activity" && activityFeed.length === 0 && !isActivityLoading) fetchActivity();
+    if (activeTab === "notes" && notes.length === 0 && !isNotesLoading) fetchNotes();
+    if (activeTab === "proposal" && dealProposals.length === 0 && !isProposalsLoading) fetchDealProposals();
+    if (activeTab === "invoice" && dealInvoices.length === 0 && !isInvoicesLoading) fetchDealInvoices();
+    if (activeTab === "meeting" && dealMeetings.length === 0 && !isMeetingsLoading) fetchDealMeetings();
+    if (activeTab === "email" && dealEmails.length === 0 && !isEmailsLoading) fetchDealEmails();
+  }, [activeTab, dealId]);
 
   // Handle schedule follow-up
   const handleScheduleFollowUp = async () => {
@@ -805,6 +1119,23 @@ function Pipeline_modal_view() {
         <NotesPopup deal={deal} onClose={() => setIsNotesPopupOpen(false)} />
       )}
 
+      {/* Invoice creation/edit — the exact same modal the real Invoice page
+          uses, prefilled with this deal so its own send/paid/partially-paid
+          logic doesn't need to be duplicated here. */}
+      <InvoiceModal onInvoiceSaved={handleInvoiceSaved} editingInvoice={editingInvoiceForModal} presetDeal={deal} />
+
+      {/* Meeting scheduling — the exact same modal the real Meetings page
+          uses. */}
+      <MeetingModal
+        isOpen={isMeetingModalOpen}
+        onClose={() => setIsMeetingModalOpen(false)}
+        onSave={handleMeetingSave}
+        editMeeting={null}
+        zoomConfigured={zoomConfigured}
+        googleMeetSyncEnabled={googleConfigured}
+        initialAttendees={deal.email ? [deal.email] : []}
+      />
+
       <LostDealModal
         isOpen={lostModalOpen}
         onClose={closeLostDealModal}
@@ -1025,6 +1356,23 @@ function Pipeline_modal_view() {
               </div>
             </div>
           </div>
+
+          {/* Deal Score — provisional placeholder score, top-right corner */}
+          {dealScore !== null && (
+            <div
+              className={`inline-flex flex-col items-center px-5 py-2 rounded-xl border ${
+                dealScore >= 70
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : dealScore >= 40
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}
+              title="Deal Score (provisional)"
+            >
+              <span className="text-2xl font-bold leading-none">{dealScore}</span>
+              <span className="text-[11px] font-medium uppercase tracking-wide mt-1">Deal Score</span>
+            </div>
+          )}
         </div>
 
         {/* Tab Navigation */}
@@ -1072,6 +1420,56 @@ function Pipeline_modal_view() {
           >
             Follow-up History
           </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "notes"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("notes")}
+          >
+            Notes
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "proposal"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("proposal")}
+          >
+            Proposal
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "invoice"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("invoice")}
+          >
+            Invoice
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "meeting"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("meeting")}
+          >
+            Meeting
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "email"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("email")}
+          >
+            Email
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1079,6 +1477,44 @@ function Pipeline_modal_view() {
           <div className="lg:col-span-2">
             {/* Details Card */}
             {activeTab === "details" && (
+              <>
+              {(highlights.pendingTasks.length > 0 || highlights.pendingTargets.length > 0) && (
+                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
+                  <div className="p-4 border-b border-amber-200">
+                    <h3 className="text-sm font-semibold text-amber-900">Pending Tasks & Targets</h3>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {highlights.pendingTasks.map((t) => (
+                      <div key={t._id} className="flex items-start gap-2 text-sm">
+                        <CheckCircle size={15} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-medium text-slate-900">{t.title}</span>
+                          {t.description && <p className="text-slate-600">{t.description}</p>}
+                          {t.dueDate && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Due {new Date(t.dueDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {highlights.pendingTargets.map((tg) => (
+                      <div key={tg._id} className="flex items-start gap-2 text-sm">
+                        <Tag size={15} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-medium text-slate-900">Target</span>
+                          {tg.description && <p className="text-slate-600">{tg.description}</p>}
+                          {tg.endDate && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Ends {new Date(tg.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                   <div>
@@ -1558,18 +1994,34 @@ function Pipeline_modal_view() {
                   )}
                 </div>
               </div>
+              </>
             )}
 
             {/* Attachments Card */}
             {activeTab === "attachments" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
-                <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    Attachments
-                  </h2>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Files and documents related to this deal
-                  </p>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Attachments
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Files and documents related to this deal
+                    </p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingAttachment ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Plus size={15} />
+                    {isUploadingAttachment ? "Uploading…" : "Upload"}
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingAttachment}
+                      onChange={(e) => { handleUploadAttachments(e.target.files); e.target.value = ""; }}
+                    />
+                  </label>
                 </div>
                 <div className="p-6">
                   {deal.attachments && deal.attachments.length > 0 ? (
@@ -1666,7 +2118,7 @@ function Pipeline_modal_view() {
               </div>
             )}
 
-            {/* Activity Card */}
+            {/* Activity Card — unified live feed from the backend */}
             {activeTab === "activity" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
@@ -1674,102 +2126,52 @@ function Pipeline_modal_view() {
                     Activity Timeline
                   </h2>
                   <p className="text-sm text-slate-600 mt-1">
-                    Recent activities and updates for this deal
+                    Everything that happened on this deal, in one place
                   </p>
                 </div>
-                <div className="p-6">
-                  <div className="relative">
-                    {/* Follow-up Activity */}
-                    {deal.followUpDate && (
-                      <div className="flex items-start mb-8">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                            <Calendar size={16} className="text-purple-600" />
+                <div className="p-6 max-h-[405px] overflow-y-auto">
+                  {isActivityLoading ? (
+                    <p className="text-sm text-slate-500">Loading activity…</p>
+                  ) : activityFeed.length === 0 ? (
+                    <p className="text-sm text-slate-500">No activity recorded yet.</p>
+                  ) : (
+                    <div className="relative">
+                      {/* Connecting line — runs behind every icon, center to
+                          center, so consecutive events read as one continuous
+                          timeline instead of disconnected blocks. */}
+                      {activityFeed.length > 1 && (
+                        <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-slate-200" />
+                      )}
+                      {activityFeed.map((event, idx) => {
+                        const meta = ACTIVITY_TYPE_META[event.type] || ACTIVITY_TYPE_META.default;
+                        const Icon = meta.icon;
+                        return (
+                          <div
+                            key={`${event.type}-${event.timestamp}-${idx}`}
+                            className={`flex items-start ${idx !== activityFeed.length - 1 ? "mb-8" : ""}`}
+                          >
+                            <div className="flex-shrink-0">
+                              <div className={`relative z-10 w-10 h-10 ${meta.bg} rounded-full flex items-center justify-center`}>
+                                <Icon size={16} className={meta.iconColor} />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <h3 className="text-sm font-medium text-slate-900">{event.description}</h3>
+                              <p className="text-sm text-slate-500 mt-1">
+                                {event.performedBy?.name ? `${event.performedBy.name} — ` : ""}
+                                {event.timestamp
+                                  ? new Date(event.timestamp).toLocaleString("en-US", {
+                                      month: "long", day: "numeric", year: "numeric",
+                                      hour: "2-digit", minute: "2-digit",
+                                    })
+                                  : ""}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="ml-4">
-                          <h3 className="text-sm font-medium text-slate-900">
-                            Follow-up scheduled
-                          </h3>
-                          <div className="mt-1">
-                            <p className="text-sm text-slate-700">
-                              {" "}
-                              {new Date(deal.followUpDate).toLocaleDateString(
-                                "en-US",
-                                {
-                                  weekday: "long",
-                                  month: "long",
-                                  day: "numeric",
-                                  year: "numeric",
-                                }
-                              )}
-                            </p>
-                            <p className="text-sm text-slate-700">
-                              {" "}
-                              {new Date(deal.followUpDate).toLocaleTimeString(
-                                "en-US",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                }
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Creation Activity */}
-                    <div className="flex items-start mb-8">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <FileText size={16} className="text-blue-600" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <h3 className="text-sm font-medium text-slate-900">
-                          Deal created
-                        </h3>
-                        <p className="text-sm text-slate-500 mt-1">
-                          {" "}
-                          {new Date(deal.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "long",
-                              day: "numeric",
-                              year: "numeric",
-                            }
-                          )}
-                        </p>
-                      </div>
+                        );
+                      })}
                     </div>
-
-                    {/* Last Update Activity */}
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                          <Clock size={16} className="text-slate-600" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <h3 className="text-sm font-medium text-slate-900">
-                          Deal updated
-                        </h3>
-                        <p className="text-sm text-slate-500 mt-1">
-                          {" "}
-                          {new Date(deal.updatedAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "long",
-                              day: "numeric",
-                              year: "numeric",
-                            }
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2196,6 +2598,305 @@ function Pipeline_modal_view() {
                     </div>
                     );
                   })()}
+                </div>
+              </div>
+            )}
+
+            {/* Notes Tab */}
+            {activeTab === "notes" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
+                  <p className="text-sm text-slate-600 mt-1">Newest first</p>
+                </div>
+                <div className="p-6 border-b border-slate-100">
+                  <textarea
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Write a note…"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={handleAddNote}
+                      disabled={isAddingNote || !newNoteText.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {isAddingNote ? "Adding…" : "Add Note"}
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  {isNotesLoading ? (
+                    <p className="text-sm text-slate-500">Loading notes…</p>
+                  ) : notes.length === 0 ? (
+                    <p className="text-sm text-slate-500">No notes yet.</p>
+                  ) : (
+                    notes.map((n) => (
+                      <div key={n._id} className={`p-4 rounded-lg border ${n.seed ? "bg-slate-50 border-slate-200" : "bg-white border-slate-200"}`}>
+                        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">{n.text}</p>
+                        <p className="text-xs text-slate-500 mt-2">
+                          {n.seed ? "Original note — " : ""}
+                          {n.createdBy?.name || "Unknown"}
+                          {n.createdAt && ` — ${new Date(n.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}`}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Proposal Tab */}
+            {activeTab === "proposal" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Proposals</h2>
+                    <p className="text-sm text-slate-600 mt-1">Sent to this deal's contact</p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/${tenantSlug}/proposal/sendproposal`, { state: { presetDealId: deal._id, returnToDealId: deal._id } })}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
+                  >
+                    <Plus size={15} />
+                    New Proposal
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  {isProposalsLoading ? (
+                    <p className="text-sm text-slate-500">Loading proposals…</p>
+                  ) : dealProposals.length === 0 ? (
+                    <p className="text-sm text-slate-500">No proposals yet.</p>
+                  ) : (
+                    dealProposals.map((p) => {
+                      // Drafts have nothing to view yet — open them in the same
+                      // edit-and-send flow the Drafts page itself uses
+                      // (proposal + isEditing prefill), so "Send" here behaves
+                      // identically to sending from Drafts, just returning to
+                      // this Deal page afterward instead of the Proposal list.
+                      const goToProposal = () => {
+                        if (p.status === "draft") {
+                          navigate(`/${tenantSlug}/proposal/sendproposal`, {
+                            state: { proposal: p, isEditing: true, returnToDealId: deal._id },
+                          });
+                        } else {
+                          navigate(`/${tenantSlug}/proposal/view/${p._id}`);
+                        }
+                      };
+                      return (
+                        <div
+                          key={p._id}
+                          onClick={goToProposal}
+                          className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{p.title}</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {p.createdAt && new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              {p.lastUpdatedBy?.name ? ` — last updated by ${p.lastUpdatedBy.name}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={p.status}
+                              onChange={(e) => handleProposalStatusChange(p._id, e.target.value)}
+                              className={`text-xs font-medium px-2 py-1 rounded-full border capitalize cursor-pointer ${PROPOSAL_STATUS_STYLES[p.status] || "bg-slate-100 text-slate-700 border-slate-200"}`}
+                            >
+                              <option value="draft" disabled={p.status !== "draft"}>Draft</option>
+                              <option value="sent">Sent</option>
+                              <option value="no reply">No Reply</option>
+                              <option value="rejection">Rejection</option>
+                              <option value="success">Success</option>
+                            </select>
+                            {p.status === "draft" && (
+                              <button
+                                onClick={goToProposal}
+                                className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                              >
+                                Finish & Send
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Invoice Tab */}
+            {activeTab === "invoice" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Invoices</h2>
+                    <p className="text-sm text-slate-600 mt-1">Billed to this deal</p>
+                  </div>
+                  <button
+                    onClick={() => { setEditingInvoiceForModal(null); openInvoiceModal(); }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
+                  >
+                    <Plus size={15} />
+                    New Invoice
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  {isInvoicesLoading ? (
+                    <p className="text-sm text-slate-500">Loading invoices…</p>
+                  ) : dealInvoices.length === 0 ? (
+                    <p className="text-sm text-slate-500">No invoices yet.</p>
+                  ) : (
+                    dealInvoices.map((inv) => (
+                      <div
+                        key={inv._id}
+                        onClick={() => { setEditingInvoiceForModal(inv); openInvoiceModal(); }}
+                        className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">#{inv.invoicenumber}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {inv.dueDate && `Due ${new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                            {inv.amountPaid ? ` — ${inv.amountPaid} ${inv.currency} paid` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleSendInvoiceEmail(inv._id)}
+                            disabled={sendingInvoiceEmailId === inv._id}
+                            className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            {sendingInvoiceEmailId === inv._id ? "Sending…" : "Send to Email"}
+                          </button>
+                          <span
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${
+                              inv.status === "paid"
+                                ? "bg-green-100 text-green-700"
+                                : inv.status === "partially_paid"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {inv.status?.replace("_", " ")}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Meeting Tab */}
+            {activeTab === "meeting" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Meetings</h2>
+                    <p className="text-sm text-slate-600 mt-1">Scheduled with this deal's contact</p>
+                  </div>
+                  <button
+                    onClick={() => setIsMeetingModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
+                  >
+                    <Plus size={15} />
+                    Schedule Meeting
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  {isMeetingsLoading ? (
+                    <p className="text-sm text-slate-500">Loading meetings…</p>
+                  ) : dealMeetings.length === 0 ? (
+                    <p className="text-sm text-slate-500">No meetings scheduled yet.</p>
+                  ) : (
+                    dealMeetings.map((m) => {
+                      const isUpcoming = m.status === "scheduled" && new Date(m.startDateTime) > new Date();
+                      return (
+                        <div
+                          key={m._id}
+                          onClick={() => navigate(`/${tenantSlug}/meetings`)}
+                          className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{m.title}</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {m.startDateTime && new Date(m.startDateTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              {" — "}{m.provider === "zoom" ? "Zoom" : "Google Meet"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {isUpcoming && (
+                              <>
+                                <button
+                                  onClick={() => navigate(`/${tenantSlug}/meetings`)}
+                                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleCancelMeeting(m._id)}
+                                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-orange-300 text-orange-600 hover:bg-orange-50 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize">
+                              {m.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Email Tab */}
+            {activeTab === "email" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Emails</h2>
+                    <p className="text-sm text-slate-600 mt-1">Campaign sends to this deal's contact</p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/${tenantSlug}/create-email`, { state: { selectedContacts: deal.email ? [{ name: deal.dealName || deal.email, email: deal.email, type: "deal" }] : [] } })}
+                    disabled={!deal.email}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 disabled:opacity-50"
+                  >
+                    <Mail size={15} />
+                    Send Email
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  {isEmailsLoading ? (
+                    <p className="text-sm text-slate-500">Loading emails…</p>
+                  ) : dealEmails.length === 0 ? (
+                    <p className="text-sm text-slate-500">No emails sent to this contact yet.</p>
+                  ) : (
+                    dealEmails.map((e) => (
+                      <div
+                        key={e._id}
+                        onClick={() => navigate(`/${tenantSlug}/${e.status === "scheduled" ? "scheduled-emails" : "email-history"}`)}
+                        className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{e.subject}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {(e.scheduledFor || e.createdAt) &&
+                              new Date(e.scheduledFor || e.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize flex-shrink-0">
+                          {e.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -36,6 +36,18 @@ const SuperEditor = ({ value, setValue, style, className }) => {
       setValue(editor.getHTML());
     },
   });
+
+  // useEditor only seeds `content` once, at creation — it never re-syncs on
+  // its own when `value` changes later (e.g. a draft's content arriving
+  // async after the editor has already mounted empty). Push external value
+  // changes in explicitly, but only when they didn't just come from the
+  // editor's own onUpdate (emitUpdate: false), or every keystroke would loop.
+  useEffect(() => {
+    if (!editor) return;
+    if (value !== editor.getHTML()) {
+      editor.commands.setContent(value || "<p></p>", false);
+    }
+  }, [value, editor]);
 
   if (!editor) return null;
 

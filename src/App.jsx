@@ -25,6 +25,7 @@ import PlanDetail from "./pages/superadmin/SubscriptionPlans/PlanDetail";
 import UpgradePlan from "./pages/superadmin/SubscriptionPlans/UpgradePlan";
 import ViewPlans from "./pages/superadmin/SubscriptionPlans/ViewPlans";
 import UpgradeRequests from "./pages/superadmin/UpgradeRequests";
+import SupportTickets from "./pages/superadmin/SupportTickets";
 import TenantDetail from "./pages/superadmin/TenantDetail";
 import FreeTrialSignups from "./pages/superadmin/FreeTrialSignups";
 
@@ -43,6 +44,7 @@ import RejectedLeads from "./pages/Leads/RejectedLeads";
 import CreateLeads from "./pages/Leads/CreateLeads";
 import { AllDeals } from "./pages/Deals/allDeals";
 import RejectedDeals from "./pages/Deals/RejectedDeals";
+import DealsDocument from "./pages/Deals/DealsDocument";
 import CreateDeal from "./pages/Deals/CreateDeal";
 import Pipeline_view from "./pages/Pipeline_View/Pipelien_view";
 import Pipeline_modal_view from "./pages/Pipeline_View/Pipeline_modal_view";
@@ -63,6 +65,7 @@ import EmailHistory from "./pages/Email/EmailHistory";
 import Settings from "./pages/settings/Settings";
 import NotificationsPage from "./pages/notification/NotificationsPage";
 import ViewLead from "./pages/Leads/ViewLead";
+import LeadDocument from "./pages/Leads/LeadDocument";
 import ViewProposal from "./pages/proposal/ViewProposal";
 
 import DealIntelligenceDashboard from "./pages/Dealmetrics/pipeline";
@@ -74,6 +77,7 @@ import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 import { Meetings } from "./pages/meetings/Meetings";
 import GoogleIntegration from "./pages/settings/GoogleIntegration";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Support from "./pages/support/UserSupportView";
 import WebsiteContactForm from "./pages/website/WebsiteContactForm";
 import TaskManagement from "./pages/tasks/TaskManagement";
 import AssignedTasks from "./pages/tasks/AssignedTasks";
@@ -207,6 +211,7 @@ function App() {
                   <Route path="tenants/create" element={<CreateTenant />} />
                   <Route path="free-trials" element={<FreeTrialSignups />} />
                   <Route path="upgrade-requests" element={<UpgradeRequests />} />
+                  <Route path="support-tickets" element={<SupportTickets />} />
                   <Route path="subscription-plans" element={<SubscriptionPlans />} />
                   <Route path="subscription-plans/create" element={<CreatePlan />} />
                   <Route path="subscription-plans/:id/edit" element={<EditPlan />} />
@@ -247,6 +252,7 @@ function App() {
                     <Route path="leads" element={<Leads />} />
                     <Route path="leads/view/:id" element={<ViewLead />} />
                     <Route path="leads/rejected" element={<RejectedLeads />} />
+                    <Route path="lead-document" element={<LeadDocument />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_lead" planFeature="leads" />}>
@@ -256,6 +262,7 @@ function App() {
                   <Route element={<PrivateRoute permission="deals_all" planFeature="deals_all" />}>
                     <Route path="deals" element={<AllDeals />} />
                     <Route path="deals/rejected" element={<RejectedDeals />} />
+                    <Route path="deals-document" element={<DealsDocument />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_deal" planFeature="deals_all" />}>
@@ -312,6 +319,8 @@ function App() {
                   <Route element={<PrivateRoute permission="settings" />}>
                     <Route path="settings" element={<Settings />} />
                   </Route>
+
+                  <Route path="support" element={<Support />} />
 
                   {/* MESSAGES */}
                   <Route element={<PrivateRoute planFeature="messages" />}>
