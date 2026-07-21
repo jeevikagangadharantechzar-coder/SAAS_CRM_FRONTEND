@@ -33,7 +33,7 @@ const sanitizePriceInput = (raw) => {
   return decPart !== undefined ? `${boundedInt}.${decPart.slice(0, 2)}` : boundedInt;
 };
 
-const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
+const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const { isOpen, closeModal } = useModal();
 
@@ -67,6 +67,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   const [note, setNote] = useState("");
   const [isNoteVisible, setIsNoteVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
   const [issueDateObj, setIssueDateObj] = useState(null);
   const [dueDateObj, setDueDateObj] = useState(null);
   const issueDateRef = useRef(null);
@@ -86,7 +87,11 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
       const issue = toMMDDYYYY(editingInvoice.issueDate);
       const due = toMMDDYYYY(editingInvoice.dueDate);
       setInvoiceData({
-        assignTo: editingInvoice.assignTo?._id || "",
+        // Fall back to the deal's own assigned sales person if this invoice
+        // was saved without one (e.g. created from the Deal page before this
+        // field was auto-filled) — otherwise every edit silently fails
+        // validation on a required field with no obvious cause.
+        assignTo: editingInvoice.assignTo?._id || presetDeal?.assignedTo?._id || presetDeal?.assignedTo || "",
         issueDate: issue.formatted,
         dueDate: due.formatted,
         status: editingInvoice.status || "unpaid",
@@ -116,6 +121,45 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
         (d) => d._id === editingInvoice.items?.[0]?.deal?._id
       );
       setSelectedDealRequirement(selectedDeal || null);
+    } else if (presetDeal) {
+      // Opened from a Deal's own Invoice tab — skip the deal-select dropdown
+      // entirely and prefill from the deal object we already have, same
+      // fields the "deal" branch of handleChange fills in for the dropdown flow.
+      const numericValue = presetDeal.value
+        ? Number(String(presetDeal.value).replace(/[^0-9.]/g, ""))
+        : 0;
+      const rawCurrency = presetDeal.value
+        ? String(presetDeal.value).replace(/[\d.,\s]/g, "").trim()
+        : "";
+      const currency = CURRENCY_SYMBOL_MAP[rawCurrency] || rawCurrency.toUpperCase() || "INR";
+      setInvoiceData({
+        // Default to the deal's own assigned sales person — still editable
+        // via the dropdown below, this just avoids an easy-to-miss required
+        // field being left blank when the deal-select dropdown is hidden.
+        assignTo: presetDeal.assignedTo?._id || presetDeal.assignedTo || "",
+        issueDate: "",
+        dueDate: "",
+        status: "unpaid",
+        deal: presetDeal._id,
+        price: numericValue,
+        tax: "0",
+        taxType: "none",
+        discountType: "none",
+        discountValue: 0,
+        note: "",
+        currency,
+        billingAddress: presetDeal.address || "",
+        clientTaxId: "",
+        poNumber: "",
+        clientState: "",
+      });
+      setIssueDateObj(null);
+      setDueDateObj(null);
+      setNote("");
+      setIsNoteVisible(false);
+      setSelectedDealRequirement(presetDeal);
+      setPaymentReceivedNow("");
+      setCustomFields([]);
     } else {
       setInvoiceData({
         assignTo: "",
@@ -144,7 +188,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
       setCustomFields([]);
     }
     setValidationErrors({});
-  }, [editingInvoice, isOpen, deals]);
+  }, [editingInvoice, isOpen, deals, presetDeal]);
 
   // Fetch sales users
   useEffect(() => {
@@ -157,8 +201,6 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice }) => {
   headers: { Authorization: `Bearer ${token}` },
 });
 setSalesUsers(response.data.users);
-
-        setSalesUsers(filteredSales);
       } catch {
        // toast.error("Failed to fetch sales users");
       }
@@ -350,6 +392,21 @@ setSalesUsers(response.data.users);
 
     setValidationErrors(errors);
 
+    if (Object.keys(errors).length > 0) {
+      toast.error(Object.values(errors).join(" "));
+    }
+
+    // The generic "Please correct the errors in the form" toast gives no clue
+    // which field actually failed once the culprit scrolls out of view (the
+    // only two fields that auto-scroll into focus below are issueDate/
+    // dueDate) — so scroll straight to whichever field failed, of any kind,
+    // and surface its exact message too.
+    const firstErrorId = { assignTo: "invoice-field-assignTo", deal: "invoice-field-deal", price: "invoice-field-price", paymentReceivedNow: "invoice-field-paymentReceivedNow" };
+    const firstErrorKey = Object.keys(errors).find((k) => firstErrorId[k]);
+    if (firstErrorKey) {
+      setTimeout(() => document.getElementById(firstErrorId[firstErrorKey])?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    }
+
     if (errors.issueDate) {
       setTimeout(() => issueDateRef.current?.setFocus(), 50);
     } else if (errors.dueDate) {
@@ -433,9 +490,12 @@ setSalesUsers(response.data.users);
 
   // Save
   const handleSaveInvoice = async () => {
+    // The button below has no in-flight/disabled state, so a slow request
+    // (this does an exchange-rate lookup for paid/partial statuses) plus an
+    // impatient double-click fires two POSTs — guard it here explicitly.
+    if (isSaving) return;
     if (!validateInputs()) {
-      toast.error("Please correct the errors in the form.");
-      return;
+      return; // validateInputs already toasts the specific field error(s)
     }
 
     const breakdown = calculateTotalBreakdown();
@@ -505,6 +565,7 @@ setSalesUsers(response.data.users);
       }
     }
 
+    setIsSaving(true);
     try {
       const token = localStorage.getItem("token");
       let response;
@@ -548,6 +609,8 @@ setSalesUsers(response.data.users);
       }
     } catch (error) {
       toast.error(error.response?.data?.error || "Failed to save invoice.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -595,6 +658,7 @@ setSalesUsers(response.data.users);
                       Assign To (Sales User) *
                     </label>
                     <select
+                      id="invoice-field-assignTo"
                       name="assignTo"
                       value={invoiceData.assignTo}
                       onChange={handleChange}
@@ -725,6 +789,7 @@ setSalesUsers(response.data.users);
                           Amount Received Now *
                         </label>
                         <input
+                          id="invoice-field-paymentReceivedNow"
                           type="number"
                           min="0"
                           step="0.01"
@@ -776,30 +841,39 @@ setSalesUsers(response.data.users);
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Select Deal *
                     </label>
-                    <select
-                      name="deal"
-                      value={invoiceData.deal}
-                      onChange={handleChange}
-                      className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
-                        validationErrors.deal
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      <option value="">Select a Deal</option>
-                      {deals.filter((deal) => 
+                    {presetDeal ? (
+                      <div id="invoice-field-deal" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                        {presetDeal.dealName}
+                      </div>
+                    ) : (
+                      <>
+                        <select
+                          id="invoice-field-deal"
+                          name="deal"
+                          value={invoiceData.deal}
+                          onChange={handleChange}
+                          className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                            validationErrors.deal
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          <option value="">Select a Deal</option>
+                          {deals.filter((deal) =>
   deal.stage !== "Closed Won" && (deal.stage !== "Closed Lost" || deal.lossReason === "")
 )
 .map((deal) => (
-                        <option key={deal._id} value={deal._id}>
-                          {deal.dealName}
-                        </option>
-                      ))}
-                    </select>
-                    {validationErrors.deal && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {validationErrors.deal}
-                      </p>
+                            <option key={deal._id} value={deal._id}>
+                              {deal.dealName}
+                            </option>
+                          ))}
+                        </select>
+                        {validationErrors.deal && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {validationErrors.deal}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -840,6 +914,7 @@ setSalesUsers(response.data.users);
                         Price *
                       </label>
                       <input
+                        id="invoice-field-price"
                         type="number"
                         name="price"
                         min="0"
@@ -1327,9 +1402,10 @@ setSalesUsers(response.data.users);
               Cancel
             </button>
             <button
-              className="px-5 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center justify-center w-full sm:w-auto"
+              className="px-5 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition flex items-center justify-center w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
               type="button"
               onClick={handleSaveInvoice}
+              disabled={isSaving}
             >
               <svg
                 className="w-4 h-4 mr-1"
@@ -1344,7 +1420,7 @@ setSalesUsers(response.data.users);
                   d="M5 13l4 4L19 7"
                 ></path>
               </svg>
-              {editingInvoice ? "Update Invoice" : "Create Invoice"}
+              {isSaving ? "Saving…" : editingInvoice ? "Update Invoice" : "Create Invoice"}
             </button>
           </div>
         </div>

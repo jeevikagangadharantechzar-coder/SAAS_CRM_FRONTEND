@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   CreditCard,
   Rocket,
+  LifeBuoy,
 } from "lucide-react";
 import { clearSuperAdminCredentials } from "../../store/authSlice";
 
@@ -100,6 +101,7 @@ const SuperAdminLayout = () => {
     { to: "/superadmin/tenants", icon: <Building2 size={20} />, label: "Tenants" },
     { to: "/superadmin/free-trials", icon: <Rocket size={20} />, label: "Free Trial Signups" },
     { to: "/superadmin/upgrade-requests", icon: <ShieldAlert size={20} />, label: "Upgrade Requests" },
+    { to: "/superadmin/support-tickets", icon: <LifeBuoy size={20} />, label: "Support Tickets" },
     { to: "/superadmin/subscription-plans", icon: <CreditCard size={20} />, label: "Subscription plans" },
     { to: "/superadmin/settings", icon: <Settings size={20} />, label: "Settings" },
     { to: "/superadmin/profile", icon: <User size={20} />, label: "Profile" },

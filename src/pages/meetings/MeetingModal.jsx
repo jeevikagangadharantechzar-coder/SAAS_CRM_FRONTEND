@@ -25,7 +25,7 @@ const toLocalInput = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoomConfigured, googleMeetSyncEnabled = true, zoomMeetingsEnabled = true }) {
+export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoomConfigured, googleMeetSyncEnabled = true, zoomMeetingsEnabled = true, initialAttendees }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [emailInput, setEmailInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -44,10 +44,13 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
       });
     } else {
       const defaultProvider = googleMeetSyncEnabled ? "google_meet" : zoomMeetingsEnabled ? "zoom" : "google_meet";
-      setForm({ ...EMPTY_FORM, provider: defaultProvider });
+      // Pre-fill Attendees when opened with a known contact (e.g. from a
+      // Deal's Meeting tab) instead of silently merging it in only at save
+      // time — the user should see it's there and be able to edit/remove it.
+      setForm({ ...EMPTY_FORM, provider: defaultProvider, attendees: initialAttendees || [] });
     }
     setEmailInput("");
-  }, [isOpen, editMeeting, googleMeetSyncEnabled, zoomMeetingsEnabled]);
+  }, [isOpen, editMeeting, googleMeetSyncEnabled, zoomMeetingsEnabled, initialAttendees]);
 
   if (!isOpen) return null;
 
