@@ -10,6 +10,7 @@ export const CATEGORY_LABELS = {
   deal: "Deals",
   followup: "Follow-ups",
   scheduled_email: "Scheduled Emails",
+  invoice: "Invoices",
   other: "Other",
 };
 
@@ -31,6 +32,8 @@ const TYPE_TO_CATEGORY = {
   followup: "followup",
 
   scheduled_email: "scheduled_email",
+
+  invoice: "invoice",
 };
 
 // Fallback only — the backend already attaches `category` to every notification

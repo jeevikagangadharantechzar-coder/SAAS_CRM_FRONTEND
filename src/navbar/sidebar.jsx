@@ -575,12 +575,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* Notifications — visible to every logged-in user, same as the bell
             icon in the header (no permission gate today). Admins see the
             tenant-wide feed here; Sales see only their own. */}
-        <SidebarItem
-          to="dashboard/notifications"
-          icon={<Bell />}
-          label={t("sidebar.notifications", "Notifications")}
-          sidebarOpen={isOpen}
-        />
+
 
         {/* Leads */}
         <SidebarItem
