@@ -45,6 +45,7 @@ const Navbar = ({ toggleSidebar }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { notifications, setNotifications } = useNotifications();
+  const [notifAvatarErrorIds, setNotifAvatarErrorIds] = useState(() => new Set());
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
@@ -410,11 +411,12 @@ const handleLogout = async () => {
                         }`}
                       >
                         <div className="flex-shrink-0 relative">
-                          {n.profileImage ? (
+                          {n.profileImage && !notifAvatarErrorIds.has(n._id) ? (
                             <img
                               src={getProfileImageUrl(n.profileImage)}
                               alt="avatar"
                               className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                              onError={() => setNotifAvatarErrorIds((prev) => new Set(prev).add(n._id))}
                             />
                           ) : (
                             <FaUserCircle

@@ -411,6 +411,10 @@ export default function NotificationsPage() {
                       handleMarkRead(n._id);
                       const path = tenantSlug ? `/${tenantSlug}/createleads` : "/createleads";
                       navigate(path, { state: { contactFormData: n.meta } });
+                    } else if (n.type === "invoice" && n.meta?.invoiceId) {
+                      handleMarkRead(n._id);
+                      const path = tenantSlug ? `/${tenantSlug}/invoices/${n.meta.invoiceId}` : `/invoices/${n.meta.invoiceId}`;
+                      navigate(path);
                     }
                   }}
                   className={`flex items-start gap-3 px-4 py-4 group transition-colors border-l-4 ${
@@ -465,7 +469,7 @@ export default function NotificationsPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         {isUnread && (
                           <button
-                            onClick={() => handleMarkRead(n._id)}
+                            onClick={(e) => { e.stopPropagation(); handleMarkRead(n._id); }}
                             title="Mark as read"
                             className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-50 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
                           >
@@ -473,7 +477,7 @@ export default function NotificationsPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(n._id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(n._id); }}
                           disabled={deletingId === n._id}
                           title="Delete"
                           className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
@@ -502,6 +506,7 @@ export default function NotificationsPage() {
                           deal: "bg-orange-100 text-orange-700",
                           followup: "bg-amber-100 text-amber-700",
                           scheduled_email: "bg-purple-100 text-purple-700",
+                          invoice: "bg-cyan-100 text-cyan-700",
                         }[cat] || "bg-gray-100 text-gray-600";
                         return (
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${catClass}`}>
