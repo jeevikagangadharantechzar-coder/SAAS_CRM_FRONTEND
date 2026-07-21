@@ -23,8 +23,8 @@ import {
 } from "../../components/ui/dialog";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Receipt, CheckCircle, Clock, FileText, Trash2, List, Kanban } from "lucide-react";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { Receipt, CheckCircle, Clock, FileText, Trash2, List, LayoutGrid, Download } from "lucide-react";
 import InvoicePipelineView from "./InvoicePipelineView";
 import { exportRowsToExcel } from "../../utils/excelImportExport";
 
@@ -662,7 +662,7 @@ const InvoiceHead = () => {
               }`}
               title="Kanban View"
             >
-              <Kanban size={20} />
+              <LayoutGrid size={20} />
             </button>
           </div>
           {user?.role?.name?.toLowerCase() === "admin" && (

@@ -8,7 +8,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-datepicker/dist/react-datepicker.css";
-import { List, Kanban } from "lucide-react";
+import { List, LayoutGrid } from "lucide-react";
 import ProposalPipelineView from "./ProposalPipelineView";
 
 import {
@@ -369,7 +369,7 @@ const ProposalHeadContent = () => {
               }`}
               title="Kanban View"
             >
-              <Kanban size={20} />
+              <LayoutGrid size={20} />
             </button>
           </div>
           <Link to="/proposal/sendproposal" className="tour-new-proposal">
