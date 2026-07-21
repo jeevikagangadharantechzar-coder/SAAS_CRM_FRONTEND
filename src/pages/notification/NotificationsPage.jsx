@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useNotifications } from "../../context/NotificationContext";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { formatDistanceToNow, format, isToday, isThisWeek, isThisMonth, parseISO, startOfDay, endOfDay } from "date-fns";
 import {
   Bell, Trash2, Clock, CheckCircle, ArrowLeft, RefreshCw,
@@ -9,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { getNotificationBadge, getNotificationAccentClass } from "../../utils/taskNotifications";
+import { CATEGORY_LABELS, getNotificationCategory } from "../../utils/notificationCategory";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const API_SI  = import.meta.env.VITE_SI_URI;
@@ -26,14 +26,12 @@ const buildProfileImageUrl = (profileImage) => {
   return `${base}/uploads/users/${name}`;
 };
 
-const TYPE_LABELS = {
-  all: "All",
-  task: "Tasks",
-  followup: "Follow-ups",
-  activity: "Activities",
-  contact_form: "Website Contacts",
-  unread: "Unread",
-};
+// This page shows the centralized, category-organized notification feed —
+// Admins get every notification in the tenant, Sales see only their own
+// (enforced server-side by GET /notifications). Deliberately independent of
+// NotificationContext (the bell dropdown / per-page badges), which stay
+// scoped to "my own notifications" everywhere else in the app.
+const TYPE_LABELS = CATEGORY_LABELS;
 
 const DATE_FILTERS = [
   { key: "all", label: "All Time" },
@@ -60,10 +58,11 @@ const matchesDate = (notif, dateFilter, customFrom, customTo) => {
 };
 
 export default function NotificationsPage() {
-  const { notifications, setNotifications, fetchNotifications } = useNotifications();
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
 
+  const [notifications, setNotifications] = useState([]);
+  const [loading,       setLoading]       = useState(true);
   const [search,       setSearch]       = useState("");
   const [typeFilter,   setTypeFilter]   = useState("all");
   const [dateFilter,   setDateFilter]   = useState("all");
@@ -76,11 +75,30 @@ export default function NotificationsPage() {
   const token = localStorage.getItem("token");
   const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
 
+  const baseUrl = (tenantSlug || localStorage.getItem("tenantSlug"))
+    ? `${API_SI}/${tenantSlug || localStorage.getItem("tenantSlug")}/api/notifications`
+    : `${API_URL}/notifications`;
+
+  // Centralized fetch: GET /notifications (no :userId) — server derives identity
+  // from the JWT and returns the tenant-wide feed for Admins, own-only for Sales.
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await axios.get(baseUrl, authHeaders);
+      setNotifications(res.data || []);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      toast.error("Failed to load notifications");
+    }
+  }, [baseUrl, token]);
+
   // Reset page on filter change
   useEffect(() => { setPage(1); setSelectedIds([]); }, [search, typeFilter, dateFilter, customFrom, customTo]);
 
   // Fetch on mount
-  useEffect(() => { fetchNotifications(); }, []);
+  useEffect(() => {
+    setLoading(true);
+    fetchNotifications().finally(() => setLoading(false));
+  }, [fetchNotifications]);
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -90,7 +108,7 @@ export default function NotificationsPage() {
     if (typeFilter === "unread") {
       list = list.filter((n) => !n.read && !n.isRead);
     } else if (typeFilter !== "all") {
-      list = list.filter((n) => n.type === typeFilter);
+      list = list.filter((n) => getNotificationCategory(n) === typeFilter);
     }
 
     // Date filter
@@ -357,7 +375,12 @@ export default function NotificationsPage() {
         </div>
 
         {/* Notifications */}
-        {paginated.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <RefreshCw size={28} className="mb-3 animate-spin opacity-40" />
+            <p className="text-sm font-medium">Loading notifications…</p>
+          </div>
+        ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400">
             <Bell size={40} className="mb-3 opacity-20" />
             <p className="text-sm font-medium">No notifications found</p>
@@ -470,17 +493,22 @@ export default function NotificationsPage() {
                         <Clock size={11} />
                         <span title={dateStr}>{time}</span>
                       </div>
-                      {n.type && (
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                          n.type === "task" ? "bg-indigo-100 text-indigo-700" :
-                          n.type === "followup" ? "bg-amber-100 text-amber-700" :
-                          n.type === "activity" ? "bg-green-100 text-green-700" :
-                          n.type === "contact_form" ? "bg-purple-100 text-purple-700" :
-                          "bg-gray-100 text-gray-600"
-                        }`}>
-                          {TYPE_LABELS[n.type] || n.type}
-                        </span>
-                      )}
+                      {n.type && (() => {
+                        const cat = getNotificationCategory(n);
+                        const catClass = {
+                          task: "bg-indigo-100 text-indigo-700",
+                          target: "bg-sky-100 text-sky-700",
+                          lead: "bg-teal-100 text-teal-700",
+                          deal: "bg-orange-100 text-orange-700",
+                          followup: "bg-amber-100 text-amber-700",
+                          scheduled_email: "bg-purple-100 text-purple-700",
+                        }[cat] || "bg-gray-100 text-gray-600";
+                        return (
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${catClass}`}>
+                            {CATEGORY_LABELS[cat] || n.type}
+                          </span>
+                        );
+                      })()}
                       {isUnread && (
                         <span className="text-[10px] font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
                           Unread
