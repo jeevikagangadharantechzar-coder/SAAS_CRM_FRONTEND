@@ -24,6 +24,9 @@ import confetti from "canvas-confetti";
 import StreakLeaderboard from "../pages/StreakLeaderboard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { AddWidgetModal } from "./AddWidgetModal";
+import { CustomListWidget } from "./CustomListWidget";
+import { NoteWidget } from "./NoteWidget";
 
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -669,6 +672,105 @@ const AdminDashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
+  const defaultBuiltin = [
+    { id: "summary", title: "Summary Cards", visible: true },
+    { id: "currency", title: "Currency Breakdown", visible: true },
+    { id: "pending", title: "Pending Invoices", visible: true },
+    { id: "leaderboard", title: "Streak Leaderboard", visible: true },
+    { id: "revenue", title: "Revenue Trend", visible: true },
+    { id: "pipeline", title: "Sales Pipeline", visible: true },
+    { id: "distribution", title: "Deal Distribution", visible: true },
+  ];
+
+  const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
+  const [customWidgets, setCustomWidgets] = useState(() => {
+    try {
+      if (storedUser?.dashboardConfig) {
+        const parsed = JSON.parse(storedUser.dashboardConfig);
+        if (parsed.customWidgets) return parsed.customWidgets;
+      }
+      const saved = localStorage.getItem(`custom_widgets_${storedUser?._id || "default"}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [dashboardNotes, setDashboardNotes] = useState(() => {
+    try {
+      if (storedUser?.dashboardConfig) {
+        const parsed = JSON.parse(storedUser.dashboardConfig);
+        if (parsed.dashboardNotes) return parsed.dashboardNotes;
+      }
+      const saved = localStorage.getItem(`dashboard_notes_${storedUser?._id || "default"}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [builtinWidgetsConfig, setBuiltinWidgetsConfig] = useState(() => {
+    try {
+      if (storedUser?.dashboardConfig) {
+        const parsed = JSON.parse(storedUser.dashboardConfig);
+        if (parsed.builtinWidgetsConfig) return parsed.builtinWidgetsConfig;
+      }
+      const saved = localStorage.getItem(`builtin_widgets_${storedUser?._id || "default"}`);
+      return saved ? JSON.parse(saved) : defaultBuiltin;
+    } catch {
+      return defaultBuiltin;
+    }
+  });
+
+  const handleAddCustomWidget = (widgetConfig) => {
+    const updated = [...customWidgets, widgetConfig];
+    setCustomWidgets(updated);
+  };
+
+  const isInitialMount = React.useRef(true);
+
+  useEffect(() => {
+    localStorage.setItem(`custom_widgets_${storedUser?._id || "default"}`, JSON.stringify(customWidgets));
+    localStorage.setItem(`builtin_widgets_${storedUser?._id || "default"}`, JSON.stringify(builtinWidgetsConfig));
+    localStorage.setItem(`dashboard_notes_${storedUser?._id || "default"}`, JSON.stringify(dashboardNotes));
+    
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    const syncToDB = async () => {
+      try {
+        if (!storedUser?._id) return;
+        const token = localStorage.getItem("token");
+        const payload = new FormData();
+        const configString = JSON.stringify({ customWidgets, builtinWidgetsConfig, dashboardNotes });
+        payload.append("dashboardConfig", configString);
+        
+        await axios.put(`${API_URL}/users/update-user/${storedUser._id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Update local user object so refresh uses latest
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        currentUser.dashboardConfig = configString;
+        localStorage.setItem("user", JSON.stringify(currentUser));
+        
+      } catch (err) {
+        console.error("Failed to sync dashboard config to DB:", err);
+      }
+    };
+    
+    const timeoutId = setTimeout(syncToDB, 1500); // debounce 1.5s
+    return () => clearTimeout(timeoutId);
+  }, [customWidgets, builtinWidgetsConfig, dashboardNotes, storedUser?._id]);
+
+  // Helper to check visibility
+  const isWidgetVisible = (id) => {
+    const widget = builtinWidgetsConfig.find(w => w.id === id);
+    return widget ? widget.visible !== false : true; // default to true if missing
+  };
+
   const [leads, setLeads] = useState([]);
   const [deals, setDeals] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -762,7 +864,7 @@ const AdminDashboard = () => {
     if (prev === 0) return cur === 0 ? 0 : 100;
     return Number((((cur - prev) / Math.abs(prev)) * 100).toFixed(1));
   };
-/* ── To Fetch Dashboard Data ─────────────────────── */
+  /* ── To Fetch Dashboard Data ─────────────────────── */
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -864,13 +966,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!socket) return;
     const refresh = () => fetchDashboardData();
-    socket.on("lead_created",       refresh);
+    socket.on("lead_created", refresh);
     socket.on("deal_stage_updated", refresh);
-    socket.on("invoice_updated",    refresh);
+    socket.on("invoice_updated", refresh);
     return () => {
-      socket.off("lead_created",       refresh);
+      socket.off("lead_created", refresh);
       socket.off("deal_stage_updated", refresh);
-      socket.off("invoice_updated",    refresh);
+      socket.off("invoice_updated", refresh);
     };
   }, [socket, fetchDashboardData]);
 
@@ -911,72 +1013,127 @@ const AdminDashboard = () => {
               </SelectContent>
             </Select>
           )}
+          
+          <button 
+            onClick={() => setIsAddWidgetModalOpen(true)}
+            className="p-2 px-3 rounded-lg border bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition-colors text-sm font-medium shadow-sm"
+          >
+            + Add Widget
+          </button>
         </div>
       </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-           {error}
+          {error}
         </div>
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {loading
-          ? Array(4).fill(0).map((_, i) => <SummaryCard key={i} loading />)
-          : summaryCards.map((card) => (
-            <SummaryCard
-              key={card.id}
-              {...card}
-              title={t(`dashboard.cards.${card.id}`)}
-              loading={false}
-              onClick={() => handleCardClick(card)}
-            />
-          ))}
-      </div>
+      {isWidgetVisible("summary") && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {loading
+            ? Array(4).fill(0).map((_, i) => <SummaryCard key={i} loading />)
+            : summaryCards.map((card) => (
+              <SummaryCard
+                key={card.id}
+                {...card}
+                title={t(`dashboard.cards.${card.id}`)}
+                loading={false}
+                onClick={() => handleCardClick(card)}
+              />
+            ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-5 relative z-10">
         {/* Currency Breakdown + Pending + Leaderboard */}
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-5">
-          <CurrencyBreakdownCard revenueData={revenueByCurrency} loading={loading} />
-          <PendingInvoicesCard invoices={recentInvoices} loading={loading} />
-          <StreakLeaderboard
-            loading={loading}
-            deals={deals}
-            leads={leads}
-            startDate={resolvedRange.start}
-            endDate={resolvedRange.end}
-          />
+          {isWidgetVisible("currency") && <CurrencyBreakdownCard revenueData={revenueByCurrency} loading={loading} />}
+          {isWidgetVisible("pending") && <PendingInvoicesCard invoices={recentInvoices} loading={loading} />}
+          {isWidgetVisible("leaderboard") && (
+            <StreakLeaderboard
+              loading={loading}
+              deals={deals}
+              leads={leads}
+              startDate={resolvedRange.start}
+              endDate={resolvedRange.end}
+            />
+          )}
         </div>
 
         {/* Revenue Trend */}
         <div className="lg:col-span-2">
-          <RevenueTrendChart
-            revenueData={revenueByCurrency}
-            loading={loading}
-            activePreset={activePreset}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            invoices={recentInvoices}
-          />
+          {isWidgetVisible("revenue") && (
+            <RevenueTrendChart
+              revenueData={revenueByCurrency}
+              loading={loading}
+              activePreset={activePreset}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              invoices={recentInvoices}
+            />
+          )}
         </div>
       </div>
 
       {/* Pipeline + Deal Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 relative z-10">
-        <SalesPipelineChart
-          pipelineBarData={pipelineBarData}
-          loading={loading}
-          totalPipelineLeads={pipelineLeads}
-        />
+        {isWidgetVisible("pipeline") && (
+          <SalesPipelineChart
+            pipelineBarData={pipelineBarData}
+            loading={loading}
+            totalPipelineLeads={pipelineLeads}
+          />
+        )}
 
         {/*  totalDeals = open + won + lost (not deals.length) */}
-        <DealDistributionChart
-          data={dealCounts}
-          loading={loading}
-          totalDeals={dealCounts.open + dealCounts.won + dealCounts.lost}
-        />
+        {isWidgetVisible("distribution") && (
+          <DealDistributionChart
+            data={dealCounts}
+            loading={loading}
+            totalDeals={dealCounts.open + dealCounts.won + dealCounts.lost}
+          />
+        )}
       </div>
+
+      {/* Custom Widgets rendering */}
+      {customWidgets.filter(cw => cw.visible !== false).length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10 mt-6">
+          {customWidgets.filter(cw => cw.visible !== false).map((cw) => (
+            <div key={cw.id} className="min-h-[300px]">
+              <CustomListWidget config={cw} dateRange={resolvedRange} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Notes rendering */}
+      {dashboardNotes.filter(n => n.visible !== false).length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10 mt-6">
+          {dashboardNotes.filter(n => n.visible !== false).map((note) => (
+            <div key={note.id} className="min-h-[250px]">
+              <NoteWidget 
+                note={note} 
+                onUpdate={(id, newContent) => {
+                  setDashboardNotes(prev => prev.map(n => n.id === id ? { ...n, content: newContent } : n));
+                }} 
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AddWidgetModal 
+        isOpen={isAddWidgetModalOpen}
+        onClose={() => setIsAddWidgetModalOpen(false)}
+        customWidgets={customWidgets}
+        setCustomWidgets={setCustomWidgets}
+        builtinWidgetsConfig={builtinWidgetsConfig}
+        setBuiltinWidgetsConfig={setBuiltinWidgetsConfig}
+        dashboardNotes={dashboardNotes}
+        setDashboardNotes={setDashboardNotes}
+      />
     </div>
   );
 };

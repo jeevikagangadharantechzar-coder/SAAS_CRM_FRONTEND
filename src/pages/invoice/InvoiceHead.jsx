@@ -23,8 +23,9 @@ import {
 } from "../../components/ui/dialog";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Receipt, CheckCircle, Clock, FileText, Trash2, Download } from "lucide-react";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { Receipt, CheckCircle, Clock, FileText, Trash2, List, LayoutGrid, Download } from "lucide-react";
+import InvoicePipelineView from "./InvoicePipelineView";
 import { exportRowsToExcel } from "../../utils/excelImportExport";
 
 const INVOICE_EXPORT_COLUMNS = [
@@ -79,6 +80,7 @@ const InvoiceHead = () => {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterMethod, setFilterMethod] = useState("");
   const [openIndex, setOpenIndex] = useState(null);
+  const [viewMode, setViewMode] = useState("list");
   const [sendingEmailId, setSendingEmailId] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingInvoice, setEditingInvoice] = useState(null);
@@ -117,6 +119,7 @@ const InvoiceHead = () => {
 
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
 
   // ─── FIX 1: Fetch ALL invoices once — no page/limit params ───────────────
   const fetchInvoices = async () => {
@@ -150,6 +153,43 @@ const InvoiceHead = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleStatusChange = async (id, newStatus) => {
+    const currentInvoice = invoices.find((inv) => inv._id === id);
+    if (!currentInvoice) return;
+
+    // If moving to or between paid statuses, or any status that requires manual amount entry
+    if (newStatus === "paid" || newStatus === "partially_paid" || currentInvoice.status === "paid" || currentInvoice.status === "partially_paid") {
+      setEditingInvoice({ ...currentInvoice, status: newStatus });
+      openModal();
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      const updateData = { status: newStatus };
+      
+      await axios.put(
+        `${API_URL}/invoices/updateInvoice/${id}`,
+        updateData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv._id === id ? { ...inv, status: newStatus } : inv
+        )
+      );
+      setRefreshTrigger((prev) => prev + 1);
+      toast.success(`Status updated to ${newStatus}`);
+    } catch (error) {
+      toast.error("Failed to update invoice status.");
+      console.error("Status Update Error:", error);
+    }
+  };
 
   // ───  Reset to page 1 whenever filters change ──────────────────────
   useEffect(() => {
@@ -404,7 +444,7 @@ const InvoiceHead = () => {
     }
   };
 
-  const handleInvoiceClick = (invoiceId) => navigate(`/invoices/${invoiceId}`);
+  const handleInvoiceClick = (invoiceId) => navigate(`/${tenantSlug}/invoices/${invoiceId}`);
 
   // ─── Pagination — slices filteredInvoices for TABLE only ─────────────────
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
@@ -598,16 +638,42 @@ const InvoiceHead = () => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h1 className="text-2xl font-semibold">Invoices</h1>
-        {user?.role?.name?.toLowerCase() === "admin" && (
-          <button
-            onClick={() => { setEditingInvoice(null); openModal(); }}
-            className="bg-[#4466f2] p-2 px-4 text-white rounded-sm hover:bg-[#3355e0] transition-colors"
-          >
-            + Create invoices
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-md transition-colors ${
+                viewMode === "list"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              title="List View"
+            >
+              <List size={20} />
+            </button>
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`p-2 rounded-md transition-colors ${
+                viewMode === "kanban"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              title="Kanban View"
+            >
+              <LayoutGrid size={20} />
+            </button>
+          </div>
+          {user?.role?.name?.toLowerCase() === "admin" && (
+            <button
+              onClick={() => { setEditingInvoice(null); openModal(); }}
+              className="bg-[#4466f2] p-2 px-4 text-white rounded-sm hover:bg-[#3355e0] transition-colors"
+            >
+              + Create invoices
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards — show totals across ALL filtered invoices, not just current page */}
@@ -796,8 +862,10 @@ const InvoiceHead = () => {
         </div>
       )}
 
-      {/* Table — only paginatedInvoices (slice of filteredInvoices) */}
-      <div className="bg-white mt-6 rounded-xl shadow-md overflow-x-auto">
+      {/* Table or Kanban View */}
+      {viewMode === "list" ? (
+        <>
+          <div className="bg-white mt-6 rounded-xl shadow-md overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
             <tr>
@@ -1021,6 +1089,20 @@ const InvoiceHead = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
+      ) : (
+        <InvoicePipelineView
+          invoices={filteredInvoices}
+          handleStatusChange={handleStatusChange}
+          CURRENCY_SYMBOLS={CURRENCY_SYMBOLS}
+          userCurrency={userCurrency}
+          tenantSlug={tenantSlug}
+          handleSendEmail={handleSendEmail}
+          downloadInvoice={downloadInvoice}
+          handleEdit={handleEdit}
+          confirmDelete={confirmDelete}
+        />
       )}
 
       {/* Email Sending Modal */}

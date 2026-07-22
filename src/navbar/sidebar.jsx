@@ -28,6 +28,7 @@ import {
   MapPin,
   FileText,
   LifeBuoy,
+  Bell,
 } from "lucide-react";
 
 import { NavLink, useLocation, useParams } from "react-router-dom";
@@ -585,6 +586,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           hasPermission={(isAdmin || userPermissions.dashboard) && hasPlanFeature("dashboard")}
           sidebarOpen={isOpen}
         />
+
+        {/* Notifications — visible to every logged-in user, same as the bell
+            icon in the header (no permission gate today). Admins see the
+            tenant-wide feed here; Sales see only their own. */}
+
 
         {/* Leads */}
         <SidebarItem
