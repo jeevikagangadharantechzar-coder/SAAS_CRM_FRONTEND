@@ -30,6 +30,7 @@ export const permissionGroups = [
     permissions: [
       { key: "dashboard", label: "Dashboard", icon: Home },
       { key: "leads", label: "Leads", icon: Users },
+      { key: "schedule_view", label: "Calendar", icon: Calendar },
     ],
   },
   {
@@ -46,6 +47,7 @@ export const permissionGroups = [
     permissions: [
       { key: "invoices", label: "Invoices", icon: FileText },
       { key: "proposal", label: "Proposal", icon: Edit },
+      { key: "documents", label: "Document Center", icon: FileText },
     ],
   },
   {
@@ -106,6 +108,8 @@ const DEFAULT_TRUE_KEYS = new Set([
   "won_analysis",
   "loss_analysis",
   "messages",
+  "schedule_view",
+  "documents",
 ]);
 
 export const DEFAULT_PERMISSIONS = permissionGroups.reduce((acc, group) => {

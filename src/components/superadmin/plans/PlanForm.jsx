@@ -52,6 +52,7 @@ const DEFAULT_FEATURES = {
   deals_pipeline: true,
   invoices: true,
   proposal: true,
+  documents: true,
   users_roles: true,
   admin_access: true,
   email_chat: true,
@@ -66,6 +67,7 @@ const DEFAULT_FEATURES = {
   meetings: true,
   google_meet_sync: true,
   zoom_meetings: true,
+  schedule_view: true,
   messages: true,
   chatbot: true,
   integration_facebook: true,
@@ -97,6 +99,7 @@ const FEATURE_GROUPS = [
     features: [
       { key: "invoices", label: "Invoices", icon: Receipt },
       { key: "proposal", label: "Proposal", icon: ClipboardEdit },
+      { key: "documents", label: "Document Center", icon: FileText },
     ],
   },
   {
@@ -134,6 +137,7 @@ const FEATURE_GROUPS = [
       { key: "meetings", label: "Meetings Scheduler", icon: Calendar },
       { key: "google_meet_sync", label: "Google Meet Sync", icon: Video },
       { key: "zoom_meetings", label: "Zoom Meetings", icon: Video },
+      { key: "schedule_view", label: "Calendar", icon: Calendar },
     ],
   },
   {
