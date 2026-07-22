@@ -7,15 +7,18 @@ import { MODULE_CONFIG } from "./CustomListWidgetConfig";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export const CustomListWidget = ({ config, dateRange }) => {
+export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
   const { tenantSlug: paramSlug } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
   const { module, filter, fields, title } = config;
   const moduleConfig = MODULE_CONFIG[module];
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState(title || `Custom ${moduleConfig?.label} List`);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -121,6 +124,7 @@ export const CustomListWidget = ({ config, dateRange }) => {
     else if (field === "dealTitle" || field === "dealName") val = item.dealName || item.dealTitle || item.deal?.dealName || item.deal?.dealTitle || item.title;
     else if (field === "contactNumber" || field === "phone") val = item.phoneNumber || item.phone || item.contactNumber || item.mobile;
     else if (field === "leadName" || field === "firstName" || field === "name" || field === "title") val = item.leadName || item.name || item.title || item.taskName || item.targetName || `${item.firstName || ""} ${item.lastName || ""}`.trim();
+    else if (field === "email") val = item.email || item.emailAddress || item.contactEmail;
     else if (field === "company") val = item.company || item.companyName;
     else if (field === "country") val = item.country || item.address?.country || item.location?.country;
     else if (field === "source") val = item.source || item.leadSource;
@@ -156,10 +160,38 @@ export const CustomListWidget = ({ config, dateRange }) => {
 
   return (
     <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm h-full flex flex-col">
-      <CardHeader className="pb-3 border-b">
-        <CardTitle className="text-base font-semibold text-gray-800">
-          {title || `Custom ${moduleConfig.label} List`}
-        </CardTitle>
+      <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+        {isEditingTitle ? (
+          <input
+            type="text"
+            className="text-base font-semibold text-gray-800 bg-transparent border-b border-blue-500 focus:outline-none w-full mr-2"
+            value={editTitleValue}
+            autoFocus
+            onChange={(e) => setEditTitleValue(e.target.value)}
+            onBlur={() => {
+              setIsEditingTitle(false);
+              if (onUpdateTitle && editTitleValue.trim() !== title) {
+                onUpdateTitle(config.id, editTitleValue.trim() || `Custom ${moduleConfig.label} List`);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setIsEditingTitle(false);
+                if (onUpdateTitle && editTitleValue.trim() !== title) {
+                  onUpdateTitle(config.id, editTitleValue.trim() || `Custom ${moduleConfig.label} List`);
+                }
+              }
+            }}
+          />
+        ) : (
+          <CardTitle 
+            className="text-base font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+            onClick={() => setIsEditingTitle(true)}
+            title="Click to edit title"
+          >
+            {title || `Custom ${moduleConfig.label} List`}
+          </CardTitle>
+        )}
       </CardHeader>
       <CardContent className="p-0 flex-1 overflow-auto">
         {loading ? (

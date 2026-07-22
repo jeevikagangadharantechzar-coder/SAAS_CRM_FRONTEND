@@ -1102,7 +1102,13 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10 mt-6">
           {customWidgets.filter(cw => cw.visible !== false).map((cw) => (
             <div key={cw.id} className="min-h-[300px]">
-              <CustomListWidget config={cw} dateRange={resolvedRange} />
+              <CustomListWidget 
+                config={cw} 
+                dateRange={resolvedRange} 
+                onUpdateTitle={(id, newTitle) => {
+                  setCustomWidgets(prev => prev.map(w => w.id === id ? { ...w, title: newTitle } : w));
+                }}
+              />
             </div>
           ))}
         </div>
