@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -168,7 +168,7 @@ function AllDealsComponent() {
     setRejectTooltipTimeout(timeout);
   };
 
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Tour setup on mount
   useEffect(() => {
@@ -717,12 +717,19 @@ function AllDealsComponent() {
     const pages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage));
     setTotalPages(pages);
     if (currentPage > pages) setCurrentPage(pages);
-  }, [filteredDeals.length]);
+  }, [filteredDeals.length, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
 
   const paginatedDeals = filteredDeals.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const firstItem = filteredDeals.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const lastItem = Math.min(currentPage * itemsPerPage, filteredDeals.length);
 
 /* ── Handle Edit Function ─────────────────────── */
   const handleEdit = (deal) => {
@@ -1273,30 +1280,45 @@ function AllDealsComponent() {
             )}
           </tbody>
         </table>
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded border bg-white hover:bg-gray-100 disabled:opacity-50"
-          >
-            Previous
-          </button>
+        <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <span>Rows per page:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+          </div>
+
           <span>
-            Page {currentPage} of {totalPages}
+            {firstItem}–{lastItem} of {filteredDeals.length}
           </span>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded border bg-white hover:bg-gray-100 disabled:opacity-50"
-          >
-            Next
-          </button>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              aria-label="Next page"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Simple Tooltip - Only shows date, time, and truncated notes */}
       {hoveredDeal && tooltipCoords && ReactDOM.createPortal(
