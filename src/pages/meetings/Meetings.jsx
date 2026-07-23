@@ -83,7 +83,10 @@ export function Meetings() {
   const hasZoomMeetings = user?.planFeatures?.zoom_meetings !== false;
   const [modalOpen, setModalOpen] = useState(false);
   const [editMeeting, setEditMeeting] = useState(null);
-  const [filter, setFilter] = useState("all");
+  // Defaults to "scheduled" rather than "all" — otherwise the page opens
+  // with completed/cancelled meetings from the past cluttering the list
+  // the user actually needs to act on.
+  const [filter, setFilter] = useState("scheduled");
   const [search, setSearch] = useState("");
 
   const openCreate = () => {
