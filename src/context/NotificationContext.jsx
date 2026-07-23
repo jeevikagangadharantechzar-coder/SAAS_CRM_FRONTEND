@@ -47,7 +47,8 @@ export const NotificationProvider = ({ children }) => {
       const url = tenantSlug
         ? `${SI_URI}/${tenantSlug}/api/notifications/${id}`
         : `${API_URL}/notifications/${id}`;
-      const response = await axios.get(url);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setNotifications(response.data);
     } catch (error) {
       console.error("Error fetching notifications:", error);

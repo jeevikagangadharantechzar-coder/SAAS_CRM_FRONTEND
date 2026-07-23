@@ -217,7 +217,7 @@ const VoiceButton = ({ onCommand, onTranscript, navigate, onNavigationSuccess })
         'invoices': { path: '/invoices', name: 'Invoices' },
         'proposal': { path: '/proposal', name: 'Proposals' },
         'proposals': { path: '/proposal', name: 'Proposals' },
-        'calendar': { path: '/calendar', name: 'Calendar' },
+        'calendar': { path: '/schedule', name: 'Calendar' },
         'activity': { path: '/list', name: 'Activities' },
         'tasks': { path: '/list', name: 'Tasks' },
         'users': { path: 'user&roles', name: 'User Management' },

@@ -465,14 +465,16 @@ const CreateTenant = () => {
                 const FEATURE_LABELS = {
                   dashboard: "Dashboard", leads: "Leads", create_lead: "Create Lead",
                   deals_all: "Deals", create_deal: "Create Deal", deals_pipeline: "Pipeline View",
-                  invoices: "Invoices", proposal: "Proposal", users_roles: "Users & Roles",
+                  invoices: "Invoices", proposal: "Proposal", documents: "Document Center",
+                  users_roles: "Users & Roles",
                   admin_access: "Admin Access", email_chat: "Email Chat",
                   email_campaigns: "Email Campaigns", whatsapp_chat: "WhatsApp Chat",
                   analytics: "Analytics", settings: "Settings",
                   streak_leaderboard: "Streak Leaderboard", assigned_tasks: "Assigned Tasks",
                   task_management: "Task Management", target_management: "Target Management",
                   meetings: "Meetings", google_meet_sync: "Google Meet",
-                  zoom_meetings: "Zoom Meetings", messages: "Messages", chatbot: "AI Chatbot",
+                  zoom_meetings: "Zoom Meetings", schedule_view: "Calendar",
+                  messages: "Messages", chatbot: "AI Chatbot",
                 };
                 const enabledFeatures = selectedPlan.features
                   ? Object.entries(selectedPlan.features).filter(([, v]) => v === true).map(([k]) => k)

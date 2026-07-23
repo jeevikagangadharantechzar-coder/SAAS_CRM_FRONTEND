@@ -29,8 +29,8 @@ const FEATURE_LABELS = {
   deals_pipeline:      "Pipeline",
   invoices:            "Invoices",
   proposal:            "Proposal",
+  documents:           "Document Center",
   activities:          "Activities",
-  activities_calendar: "Calendar",
   activities_list:     "Activity List",
   users_roles:         "User Roles",
   admin_access:        "Admin Access",
@@ -47,6 +47,7 @@ const FEATURE_LABELS = {
   meetings:            "Meetings",
   google_meet_sync:    "Google Meet",
   zoom_meetings:       "Zoom Meetings",
+  schedule_view:       "Calendar",
   messages:            "Messages",
   chatbot:             "Chatbot",
 };

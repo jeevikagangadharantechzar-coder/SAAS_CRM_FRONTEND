@@ -95,13 +95,20 @@ export default function RejectedLeads() {
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
 
-      const { data } = await axios.get(`${API_URL}/leads/rejected?${params.toString()}`, {
+      params.append("status", "Rejected");
+
+      const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setLeads(data.leads || []);
-      setTotalLeads(data.totalLeads || 0);
-      setTotalPages(data.totalPages || 1);
+      const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
+      let leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
+      let total = isNew ? data.totalLeads : leadsArr.length;
+      let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
+
+      setLeads(leadsArr);
+      setTotalLeads(total);
+      setTotalPages(pages);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to fetch rejected leads");
     } finally {

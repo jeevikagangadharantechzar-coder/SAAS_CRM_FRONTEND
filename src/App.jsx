@@ -53,7 +53,7 @@ import SendProposal from "./pages/proposal/SendProposal";
 import DraftsPage from "./pages/proposal/DraftsPage";
 import InvoiceHead from "./pages/invoice/InvoiceHead";
 import InvoiceView from "./pages/invoice/InvoiceView";
-import CalendarView from "./pages/activities/CalendarView";
+import ScheduleView from "./pages/Schedule/ScheduleView";
 import Activity from "./pages/activityList/Activity";
 import UserManagement from "./pages/useroles/UserManagement";
 import ReportsPage from "./pages/reports/ReportsPage";
@@ -252,7 +252,6 @@ function App() {
                     <Route path="leads" element={<Leads />} />
                     <Route path="leads/view/:id" element={<ViewLead />} />
                     <Route path="leads/rejected" element={<RejectedLeads />} />
-                    <Route path="lead-document" element={<LeadDocument />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="create_lead" planFeature="leads" />}>
@@ -262,6 +261,13 @@ function App() {
                   <Route element={<PrivateRoute permission="deals_all" planFeature="deals_all" />}>
                     <Route path="deals" element={<AllDeals />} />
                     <Route path="deals/rejected" element={<RejectedDeals />} />
+                  </Route>
+
+                  {/* Document module — independent permission, decoupled from
+                      Leads/Deals access (was previously just an OR of those
+                      two permissions with no dedicated toggle of its own) */}
+                  <Route element={<PrivateRoute permission="documents" planFeature="documents" />}>
+                    <Route path="lead-document" element={<LeadDocument />} />
                     <Route path="deals-document" element={<DealsDocument />} />
                   </Route>
 
@@ -287,8 +293,8 @@ function App() {
                     <Route path="invoices/:id" element={<InvoiceView />} />
                   </Route>
 
-                  <Route element={<PrivateRoute permission="activities_calendar" />}>
-                    <Route path="calendar" element={<CalendarView />} />
+                  <Route element={<PrivateRoute permission="schedule_view" planFeature="schedule_view" />}>
+                    <Route path="schedule" element={<ScheduleView />} />
                   </Route>
 
                   <Route element={<PrivateRoute permission="activities_list" />}>
@@ -366,6 +372,7 @@ function App() {
                 <Route path="/invoices" element={<div />} />
                 <Route path="/invoices/:id" element={<div />} />
                 <Route path="/calendar" element={<div />} />
+                <Route path="/schedule" element={<div />} />
                 <Route path="/list" element={<div />} />
                 <Route path="/user&roles" element={<div />} />
                 <Route path="/team-analytics" element={<div />} />

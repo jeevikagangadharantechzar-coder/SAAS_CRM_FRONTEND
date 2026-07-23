@@ -8,6 +8,9 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-datepicker/dist/react-datepicker.css";
+import { List, LayoutGrid } from "lucide-react";
+import ProposalPipelineView from "./ProposalPipelineView";
+
 import {
   Dialog,
   DialogContent,
@@ -88,6 +91,8 @@ const ProposalHeadContent = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCreatedDate, setFilterCreatedDate] = useState(null);
+  const [filterAssignee, setFilterAssignee] = useState("");
+  const [usersList, setUsersList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [draftCount, setDraftCount] = useState(0);
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
@@ -98,6 +103,7 @@ const ProposalHeadContent = () => {
   const [selectedProposals, setSelectedProposals] = useState([]);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [viewMode, setViewMode] = useState("list");
 
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
@@ -123,6 +129,22 @@ const ProposalHeadContent = () => {
 
   useEffect(() => {
     fetchProposals();
+  }, []);
+
+  // Fetch users for assignee filter
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${API_URL}/users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUsersList(response.data.users || []);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
+    fetchUsers();
   }, []);
 
   // Close dropdown on outside click
@@ -232,7 +254,11 @@ const ProposalHeadContent = () => {
       (filterCreatedDate === null ||
         (proposal.createdAt &&
           new Date(proposal.createdAt).toLocaleDateString() ===
-            new Date(filterCreatedDate).toLocaleDateString()));
+            new Date(filterCreatedDate).toLocaleDateString())) &&
+      (filterAssignee === "" ||
+        (proposal.deal &&
+          (proposal.deal.assignedTo?._id === filterAssignee ||
+           proposal.deal.assignedTo === filterAssignee)));
 
     return matchesSearch && matchesFilters;
   });
@@ -310,7 +336,7 @@ const ProposalHeadContent = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 tour-header">
         <h1 className="text-2xl font-bold text-gray-800">Proposal List</h1>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <button
             onClick={startTour}
             className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
@@ -318,10 +344,34 @@ const ProposalHeadContent = () => {
             <FaEye className="w-4 h-4" /> Take Tour
           </button>
           <Link to="/proposal/drafts" className="tour-drafts">
-            <button className="bg-gray-600 text-white px-5 py-2 rounded-lg shadow hover:bg-gray-700 transition">
+            <button className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium shadow-sm transition">
               Drafts ({draftCount})
             </button>
           </Link>
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-md flex items-center justify-center transition ${
+                viewMode === "list"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              title="List View"
+            >
+              <List size={20} />
+            </button>
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`p-2 rounded-md flex items-center justify-center transition ${
+                viewMode === "kanban"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              title="Kanban View"
+            >
+              <LayoutGrid size={20} />
+            </button>
+          </div>
           <Link to="/proposal/sendproposal" className="tour-new-proposal">
             <button className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 transition">
               + New Proposal
@@ -343,6 +393,19 @@ const ProposalHeadContent = () => {
           <option value="no reply">No Reply</option>
           <option value="rejection">Rejection</option>
           <option value="success">Success</option>
+        </select>
+
+        <select
+          value={filterAssignee}
+          onChange={(e) => setFilterAssignee(e.target.value)}
+          className="border rounded-md px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="">All Assignees</option>
+          {usersList.map((user) => (
+            <option key={user._id || user.id} value={user._id || user.id}>
+              {user.firstName} {user.lastName}
+            </option>
+          ))}
         </select>
 
         <div className="flex items-center gap-2">
@@ -410,8 +473,10 @@ const ProposalHeadContent = () => {
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white shadow rounded-lg tour-proposal-table">
+      {/* Table or Kanban */}
+      {viewMode === "list" ? (
+        <>
+          <div className="overflow-x-auto bg-white shadow rounded-lg tour-proposal-table">
         <table className="min-w-full border-collapse text-sm">
           <thead className="bg-gray-100 sticky top-0">
             <tr>
@@ -602,6 +667,15 @@ const ProposalHeadContent = () => {
           </button>
         </div>
       )}
+      </>
+      ) : (
+        <ProposalPipelineView
+          proposals={filteredProposals}
+          handleStatusChange={handleStatusChange}
+          handleDelete={handleDelete}
+          openFollowUpDialog={openFollowUpDialog}
+        />
+      )}
 
       {/* Follow-up Dialog */}
       <Dialog open={followUpDialogOpen} onOpenChange={setFollowUpDialogOpen}>
@@ -704,8 +778,6 @@ const ProposalHeadContent = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

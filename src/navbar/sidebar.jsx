@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Target,
   Calendar,
+  CalendarClock,
   Briefcase,
   Receipt,
   Send,
@@ -27,9 +28,18 @@ import {
   MapPin,
   FileText,
   LifeBuoy,
+  Bell,
 } from "lucide-react";
 
 import { NavLink, useLocation, useParams } from "react-router-dom";
+
+// A plain startsWith prefix check treats "/deals-document" as part of
+// "/deals" (or "/leads" as part of some future "/leads-anything"), since one
+// is a literal text prefix of the other despite being unrelated routes.
+// Require an actual path-segment boundary — exact match, or followed by "/"
+// — so only genuine sub-routes count as active.
+const isPathActive = (pathname, prefix) =>
+  pathname === prefix || pathname.startsWith(`${prefix}/`);
 
 const IconCircle = ({ children, isActive, sidebarOpen = true }) => (
   <div
@@ -68,7 +78,7 @@ const SidebarItem = ({
 
   const isActive = exact
     ? location.pathname === resolvedTo
-    : location.pathname.startsWith(resolvedTo);
+    : isPathActive(location.pathname, resolvedTo);
 
   return (
     <NavLink
@@ -134,10 +144,16 @@ const Collapsible = ({
       tenantSlug && !childTo.startsWith(`/${tenantSlug}`) && !childTo.startsWith("http")
         ? `/${tenantSlug}${childTo.startsWith("/") ? childTo : "/" + childTo}`
         : childTo;
-    return location.pathname.startsWith(resolvedChildTo);
+    return isPathActive(location.pathname, resolvedChildTo);
   });
 
-  const isChildActive = activePaths.some((p) => location.pathname.includes(p)) || hasActiveChild;
+  // Plain substring match would wrongly light up "Deals" (activePaths
+  // includes "/deals") while actually on "/deals-document", since that path
+  // literally contains "/deals" as text. Require a real path boundary
+  // instead — either an exact match or followed by "/", never mid-word.
+  const isChildActive =
+    activePaths.some((p) => location.pathname === p || location.pathname.endsWith(p) || location.pathname.includes(`${p}/`)) ||
+    hasActiveChild;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -213,7 +229,7 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true, 
       ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
       : to;
 
-  const isResolvedActive = location.pathname.startsWith(resolvedTo);
+  const isResolvedActive = isPathActive(location.pathname, resolvedTo);
 
   return (
     <NavLink
@@ -322,7 +338,7 @@ const MessagesItem = ({ to, sidebarOpen = true, hasPermission = true }) => {
       ? `/${tenantSlug}${to.startsWith("/") ? to : "/" + to}`
       : to.startsWith("/") ? to : `/${to}`;
 
-  const isActive = location.pathname.startsWith(resolvedTo);
+  const isActive = isPathActive(location.pathname, resolvedTo);
 
   return (
     <NavLink
@@ -421,7 +437,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         deals_pipeline: true,
         invoices: true,
         proposal: true,
-        activities_calendar: true,
+        documents: true,
         activities_list: true,
         users_roles: true,
         email_chat: true,
@@ -571,6 +587,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           sidebarOpen={isOpen}
         />
 
+        {/* Notifications — visible to every logged-in user, same as the bell
+            icon in the header (no permission gate today). Admins see the
+            tenant-wide feed here; Sales see only their own. */}
+
+
         {/* Leads */}
         <SidebarItem
           to="leads"
@@ -607,7 +628,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </Collapsible>
 
-        {/* Document (Collapsible) */}
+        {/* Document (Collapsible) — independent "documents" permission now,
+            decoupled from Leads/Deals access (previously just an OR of
+            those two permissions, with no dedicated toggle of its own) */}
         <Collapsible
           label={t("sidebar.document")}
           icon={<FileText />}
@@ -615,28 +638,19 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onToggle={() => setShowDocument((s) => !s)}
           sidebarOpen={isOpen}
           activePaths={["/deals-document", "/lead-document"]}
-          hasPermission={
-            (isAdmin ||
-              userPermissions.deals_all ||
-              userPermissions.deals_pipeline ||
-              userPermissions.leads) &&
-            (hasPlanFeature("deals_all") || hasPlanFeature("deals_pipeline") || hasPlanFeature("leads"))
-          }
+          hasPermission={(isAdmin || userPermissions.documents) && hasPlanFeature("documents")}
         >
                 <SmallLink
             to="lead-document"
             icon={<Users />}
             label={t("sidebar.leads")}
-            hasPermission={(isAdmin || userPermissions.leads) && hasPlanFeature("leads")}
+            hasPermission={(isAdmin || userPermissions.documents) && hasPlanFeature("documents")}
           />
           <SmallLink
             to="deals-document"
             icon={<Briefcase />}
             label={t("sidebar.deals")}
-            hasPermission={
-              (isAdmin || userPermissions.deals_all || userPermissions.deals_pipeline) &&
-              (hasPlanFeature("deals_all") || hasPlanFeature("deals_pipeline"))
-            }
+            hasPermission={(isAdmin || userPermissions.documents) && hasPlanFeature("documents")}
           />
     
         </Collapsible>
@@ -797,7 +811,18 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           to="meetings"
           icon={<Calendar />}
           label={t("sidebar.meetings")}
-          hasPermission={(isAdmin || userPermissions.Meetings) && hasPlanFeature("meetings")}
+          hasPermission={(isAdmin || userPermissions.meetings) && hasPlanFeature("meetings")}
+          sidebarOpen={isOpen}
+        />
+
+        {/* Calendar — unified view across tasks/targets/follow-ups/
+            invoices/proposals/meetings/emails, distinct from the older
+            Activities page above (single-source, manual entries) */}
+        <SidebarItem
+          to="schedule"
+          icon={<CalendarClock />}
+          label={t("sidebar.schedule", "Calendar")}
+          hasPermission={(isAdmin || userPermissions.schedule_view) && hasPlanFeature("schedule_view")}
           sidebarOpen={isOpen}
         />
 
