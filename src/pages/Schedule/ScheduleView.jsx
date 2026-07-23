@@ -6,7 +6,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { CalendarClock, StickyNote, X, Trash2, Layers } from "lucide-react";
+import { CalendarClock, StickyNote, X, Trash2, Layers, Users } from "lucide-react";
 
 const localizer = momentLocalizer(moment);
 
@@ -88,6 +88,15 @@ const ScheduleView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTypes, setActiveTypes] = useState(() => new Set(Object.keys(TYPE_META)));
 
+  // Admin-only "view as user" filter — narrows the merged feed down to one
+  // salesperson's follow-ups instead of everyone's at once. Sales users
+  // only ever see their own data anyway (enforced server-side), so there's
+  // nothing for them to filter.
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = currentUser.role?.name === "Admin";
+  const [salesUsers, setSalesUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+
   // Sticky note add/edit modal — the one type of item actually created/
   // edited from this calendar (everything else is read-only, links out to
   // its own real page).
@@ -104,7 +113,7 @@ const ScheduleView = () => {
 
   const authHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
-  const fetchEvents = useCallback(async (anchorDate) => {
+  const fetchEvents = useCallback(async (anchorDate, userId) => {
     try {
       setIsLoading(true);
       // A generous window around the visible month covers week/day views too
@@ -112,7 +121,10 @@ const ScheduleView = () => {
       // shows at the edges of the grid.
       const start = moment(anchorDate).startOf("month").subtract(7, "days").toISOString();
       const end = moment(anchorDate).endOf("month").add(7, "days").toISOString();
-      const res = await axios.get(`${API_URL}/calendar`, { ...authHeader(), params: { start, end } });
+      const res = await axios.get(`${API_URL}/calendar`, {
+        ...authHeader(),
+        params: { start, end, ...(userId ? { userId } : {}) },
+      });
       setEvents(res.data.events || []);
     } catch (err) {
       console.error("Failed to fetch calendar events:", err);
@@ -123,12 +135,23 @@ const ScheduleView = () => {
   }, [API_URL]);
 
   useEffect(() => {
-    fetchEvents(currentDate);
-  }, [fetchEvents]);
+    fetchEvents(currentDate, selectedUserId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchEvents, selectedUserId]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    axios.get(`${API_URL}/users/sales`, authHeader())
+      .then((res) => {
+        const data = res.data.salesUsers || res.data.users || res.data;
+        setSalesUsers(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => console.error("Failed to fetch sales users:", err));
+  }, [isAdmin, API_URL]);
 
   const handleNavigate = (date) => {
     setCurrentDate(date);
-    fetchEvents(date);
+    fetchEvents(date, selectedUserId);
   };
 
   const openAddNote = (date) => {
@@ -164,7 +187,7 @@ const ScheduleView = () => {
         toast.success("Note added");
       }
       closeNoteModal();
-      fetchEvents(currentDate);
+      fetchEvents(currentDate, selectedUserId);
     } catch (err) {
       console.error("Failed to save note:", err);
       toast.error(err.response?.data?.message || "Failed to save note");
@@ -181,7 +204,7 @@ const ScheduleView = () => {
       await axios.delete(`${API_URL}/calendar/notes/${editingNoteId}`, authHeader());
       toast.success("Note deleted");
       closeNoteModal();
-      fetchEvents(currentDate);
+      fetchEvents(currentDate, selectedUserId);
     } catch (err) {
       console.error("Failed to delete note:", err);
       toast.error(err.response?.data?.message || "Failed to delete note");
@@ -352,6 +375,24 @@ const ScheduleView = () => {
             </p>
           </div>
         </div>
+
+        {/* Admin-only: view one salesperson's follow-ups instead of everyone's */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 mb-4">
+            <Users size={16} className="text-slate-400" />
+            <label className="text-xs font-medium text-slate-500">Viewing:</label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All users</option>
+              {salesUsers.map((u) => (
+                <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Type filters */}
         <div className="flex flex-wrap gap-2 mb-4">
