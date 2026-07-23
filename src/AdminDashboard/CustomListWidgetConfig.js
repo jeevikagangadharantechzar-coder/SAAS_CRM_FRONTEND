@@ -25,7 +25,6 @@ export const MODULE_CONFIG = {
     ],
     fields: [
       { value: "firstName", label: "Lead Name" },
-      { value: "contactName", label: "Contact Name" },
       { value: "contactNumber", label: "Contact Number" },
       { value: "company", label: "Company" },
       { value: "country", label: "Country" },
