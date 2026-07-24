@@ -43,6 +43,7 @@ const Navbar = ({ toggleSidebar }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { notifications, setNotifications } = useNotifications();
   const [notifAvatarErrorIds, setNotifAvatarErrorIds] = useState(() => new Set());
@@ -600,7 +601,10 @@ const handleLogout = async () => {
                   </button>
                   <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setShowDropdown(false);
+                      setShowLogoutConfirm(true);
+                    }}
                     className="flex items-center w-full px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <Power size={16} className="mr-3" />
@@ -619,6 +623,37 @@ const handleLogout = async () => {
           isOpen={showPasswordModal}
           onClose={() => setShowPasswordModal(false)}
         />
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+              Log out
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              Are you sure you want to logout?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  handleLogout();
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
