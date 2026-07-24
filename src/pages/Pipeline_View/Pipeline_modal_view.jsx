@@ -2702,7 +2702,9 @@ function Pipeline_modal_view() {
                             <select
                               value={p.status}
                               onChange={(e) => handleProposalStatusChange(p._id, e.target.value)}
-                              className={`text-xs font-medium px-2 py-1 rounded-full border capitalize cursor-pointer ${PROPOSAL_STATUS_STYLES[p.status] || "bg-slate-100 text-slate-700 border-slate-200"}`}
+                              disabled={p.status === "draft"}
+                              title={p.status === "draft" ? "Send this draft first (it hasn't been emailed yet) before its status can change" : ""}
+                              className={`text-xs font-medium px-2 py-1 rounded-full border capitalize ${p.status === "draft" ? "opacity-60 cursor-not-allowed" : "cursor-pointer"} ${PROPOSAL_STATUS_STYLES[p.status] || "bg-slate-100 text-slate-700 border-slate-200"}`}
                             >
                               <option value="draft" disabled={p.status !== "draft"}>Draft</option>
                               <option value="sent">Sent</option>

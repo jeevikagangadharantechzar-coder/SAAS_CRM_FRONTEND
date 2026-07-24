@@ -524,6 +524,7 @@ const ViewLead = () => {
   const [editFormData, setEditFormData] = useState(null);
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [salesUsers, setSalesUsers] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -531,6 +532,13 @@ const ViewLead = () => {
       .then((r) => setLead(r.data))
       .catch(() => toast.error("Failed to fetch lead details"));
   }, [id]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    axios.get(`${API_URL}/users/sales`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => setSalesUsers(r.data.salesUsers || r.data.users || r.data || []))
+      .catch(() => {});
+  }, []);
 
   const startEditDetails = () => {
     setEditFormData({
@@ -543,6 +551,7 @@ const ViewLead = () => {
       notes: lead.notes || "",
       address: lead.address || "",
       country: lead.country || "",
+      assignTo: lead.assignTo?._id || "",
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -595,6 +604,7 @@ const ViewLead = () => {
         notes: editFormData.notes,
         address: editFormData.address,
         country: editFormData.country,
+        assignTo: editFormData.assignTo,
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
@@ -1114,6 +1124,21 @@ const ViewLead = () => {
                             <option value="">Select Country</option>
                             {countryNames.map((name) => (
                               <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                          <select
+                            name="assignTo"
+                            value={editFormData.assignTo}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            {salesUsers.map((u) => (
+                              <option key={u._id} value={u._id}>
+                                {u.firstName} {u.lastName}
+                              </option>
                             ))}
                           </select>
                         </div>

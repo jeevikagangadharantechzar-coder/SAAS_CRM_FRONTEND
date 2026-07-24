@@ -67,6 +67,7 @@ export default function CreateLeads() {
     followUpDate: "",
     notes: "",
     clientType: "",
+    NumberOfEmployees: "",
     attachments: [],
   });
 
@@ -164,6 +165,7 @@ export default function CreateLeads() {
             source: leadData.source || "",
             industry: leadData.industry || "",
             clientType: leadData.clientType || "",
+            NumberOfEmployees: leadData.NumberOfEmployees ?? "",
             requirement: leadData.requirement || "",
             status: leadData.status || "Cold",
             assignTo: leadData.assignTo?._id || "",
@@ -644,9 +646,10 @@ export default function CreateLeads() {
           icon: <FileText size={16} />,
         },
          {
-          name: "Number of Employees",
+          name: "NumberOfEmployees",
           label: "Number of Employees",
           icon: <Users size={16} />,
+          type: "number",
         },
       ],
     },

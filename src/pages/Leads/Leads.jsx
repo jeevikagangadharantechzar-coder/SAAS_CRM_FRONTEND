@@ -27,7 +27,9 @@ import {
   LayoutGrid,
   List,
   Filter,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 import LeadsPipelineView from "./LeadsPipelineView";
@@ -215,7 +217,7 @@ function LeadTableComponent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [menuOpen, setMenuOpen] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 1 });
@@ -313,7 +315,7 @@ function LeadTableComponent() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, sourceFilter, assigneeFilter, followUpFilter]);
+  }, [debouncedSearch, statusFilter, sourceFilter, assigneeFilter, followUpFilter, itemsPerPage]);
 
   // currencies
   const allowedCurrencies = [
@@ -683,19 +685,6 @@ function LeadTableComponent() {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const pageNumbers = () => {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const pages = [];
-    const left = Math.max(2, currentPage - 1);
-    const right = Math.min(totalPages - 1, currentPage + 1);
-    pages.push(1);
-    if (left > 2) pages.push("...");
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < totalPages - 1) pages.push("...");
-    pages.push(totalPages);
-    return pages;
   };
 
   const handleMenuToggle = (leadId, e) => {
@@ -1619,51 +1608,45 @@ function LeadTableComponent() {
             )}
           </tbody>
         </table>
-      </div>
-      )}
 
-      {/* Pagination */}
-      {viewMode === "table" && totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
-          <p className="text-sm text-gray-500">
-            {t("leads.pagination.showing")}{" "}
-            <span className="font-semibold text-gray-700">{firstItem}</span>–
-            <span className="font-semibold text-gray-700">{lastItem}</span>{" "}
-            {t("leads.pagination.of")}{" "}
-            <span className="font-semibold text-gray-700">{totalLeads}</span>
-          </p>
+        <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <span>Rows per page:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+          </div>
+
+          <span>
+            {t("leads.pagination.showing")} {firstItem}–{lastItem} {t("leads.pagination.of")} {totalLeads}
+          </span>
 
           <div className="flex items-center gap-1">
-            <button onClick={() => goToPage(1)} disabled={currentPage === 1}
-              className="px-2 py-1.5 text-sm border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">«</button>
-            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}
-              className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-              {t("leads.pagination.prev")}
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={18} />
             </button>
-
-            {pageNumbers().map((p, i) =>
-              p === "..." ? (
-                <span key={`d${i}`} className="px-2 text-gray-400">…</span>
-              ) : (
-                <button key={p} onClick={() => goToPage(p)}
-                  className={`min-w-[36px] px-2 py-1.5 text-sm border rounded-lg transition-colors ${
-                    currentPage === p
-                      ? "bg-blue-600 text-white border-blue-600 font-semibold"
-                      : "hover:bg-gray-100 text-gray-700"
-                  }`}>
-                  {p}
-                </button>
-              )
-            )}
-
-            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}
-              className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-              {t("leads.pagination.next")}
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              aria-label="Next page"
+            >
+              <ChevronRight size={18} />
             </button>
-            <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}
-              className="px-2 py-1.5 text-sm border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">»</button>
           </div>
         </div>
+      </div>
       )}
 
       {/* Rejection reason tooltip — portalled so it's never clipped by the table's scroll container */}

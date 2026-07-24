@@ -547,11 +547,12 @@ const ProposalHeadContent = () => {
                       onChange={(e) =>
                         handleStatusChange(proposal._id, e.target.value)
                       }
+                      disabled={proposal.status === "draft"}
+                      title={proposal.status === "draft" ? "Send this draft first (it hasn't been emailed yet) before its status can change" : ""}
                       className={`border px-2 py-1 rounded ${
                         STATUS_STYLES[proposal.status]
-                      }`}
+                      } ${proposal.status === "draft" ? "opacity-60 cursor-not-allowed" : ""}`}
                     >
-                      {/* <option value="draft" >Draft</option> */}
                       <option value="draft" disabled={proposal.status !== "draft"}>Draft</option>
                       <option value="sent">Sent</option>
                       <option value="no reply">No Reply</option>
