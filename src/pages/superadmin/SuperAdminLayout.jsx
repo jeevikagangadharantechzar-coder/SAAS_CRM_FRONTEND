@@ -32,6 +32,7 @@ const SuperAdminLayout = () => {
   const [pendingUpgrades, setPendingUpgrades] = useState(0);
   const [platformLogo, setPlatformLogo] = useState("");
   const [superAdminTitle, setSuperAdminTitle] = useState("");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -178,7 +179,7 @@ const SuperAdminLayout = () => {
               </div>
             </div>
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="p-2 rounded-lg text-slate-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
               title="Logout"
             >
@@ -213,6 +214,35 @@ const SuperAdminLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-semibold text-slate-800 mb-2">Log out</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Are you sure you want to logout?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded-lg text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  handleLogout();
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
