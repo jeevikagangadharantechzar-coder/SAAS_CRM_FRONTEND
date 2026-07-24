@@ -11,7 +11,7 @@
  *  5. Redirect to /integrations on success
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { CheckCircle, AlertCircle, RefreshCw } from "react-feather";
@@ -25,6 +25,7 @@ export default function FacebookCallback() {
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving]     = useState(false);
   const [userToken, setUserToken] = useState(null); // stored after first exchange so code isn't reused
+  const hasFetched              = useRef(false); // prevents double-exchange (StrictMode / remount)
 
   const code = searchParams.get("code");
 
@@ -35,6 +36,10 @@ export default function FacebookCallback() {
       setErrorMsg("No authorization code received from Facebook. Please try again.");
       return;
     }
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    // Remove code from URL so a browser-back can't replay this one-time code
+    window.history.replaceState({}, "", window.location.pathname);
     exchangeCode(code);
   }, []);
 
