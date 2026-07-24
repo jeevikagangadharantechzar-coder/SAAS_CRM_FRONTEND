@@ -13,7 +13,7 @@ import { Eye, EyeOff, X } from "lucide-react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
-export default function AddUserModal({ onUserCreated, disabled }) {
+export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
   const API_URL = import.meta.env.VITE_API_URL;
   const API_SI  = import.meta.env.VITE_SI_URI;
 
@@ -214,6 +214,14 @@ export default function AddUserModal({ onUserCreated, disabled }) {
       newErrors.mobileNumber = "Phone number is required";
     } else if (!validatePhoneNumber(formData.mobileNumber, phoneCountryCode)) {
       newErrors.mobileNumber = `Please enter a valid phone number (${getPhoneNumberLengthMessage(phoneCountryCode)})`;
+    } else {
+      const digits = formData.mobileNumber.replace(/\D/g, "");
+      const isDuplicatePhone = users.some(
+        (u) => u.mobileNumber?.replace(/\D/g, "") === digits
+      );
+      if (isDuplicatePhone) {
+        newErrors.mobileNumber = "This phone number is already in use by another user";
+      }
     }
     
     // Date of Birth validation
