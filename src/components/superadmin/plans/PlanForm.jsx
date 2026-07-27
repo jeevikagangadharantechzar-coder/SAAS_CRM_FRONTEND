@@ -228,6 +228,7 @@ export const PlanForm = ({
       trial_days: 0,
       max_users_per_tenant: 0,
       is_visible: true,
+      show_on_landing_page: false,
       is_recommended: false,
       sort_order: 1,
       features: DEFAULT_FEATURES,
@@ -639,6 +640,21 @@ export const PlanForm = ({
                     Visible on pricing page
                   </label>
                   <p className="text-[10px] text-slate-400 mt-0.5">Show this plan on public landing pages.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="show_on_landing_page"
+                  {...register("show_on_landing_page")}
+                  className="w-4 h-4 text-[#008ecc] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
+                />
+                <div>
+                  <label htmlFor="show_on_landing_page" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
+                    Visible on Landing Page
+                  </label>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Feature this plan on the marketing landing page.</p>
                 </div>
               </div>
 
