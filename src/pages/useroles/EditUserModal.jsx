@@ -42,7 +42,7 @@ const buildProfileImageUrl = (profileImage, baseUrl) => {
 const DEFAULT_AVATAR =
   "https://static.vecteezy.com/system/resources/previews/020/429/953/non_2x/admin-icon-vector.jpg";
 
-export default function EditUserModal({ user, roles, onClose, onUserUpdated }) {
+export default function EditUserModal({ user, roles, users = [], onClose, onUserUpdated }) {
   const API_URL = import.meta.env.VITE_API_URL;
   const API_SI = import.meta.env.VITE_SI_URI;
 
@@ -215,9 +215,27 @@ export default function EditUserModal({ user, roles, onClose, onUserUpdated }) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
+    } else if (
+      users.some(
+        (u) =>
+          u._id !== user?._id &&
+          u.email?.trim().toLowerCase() === formData.email.trim().toLowerCase()
+      )
+    ) {
+      newErrors.email = "This email is already in use by another user";
     }
     const phoneValidation = validatePhoneNumber(formData.mobileNumber);
-    if (!phoneValidation.isValid) newErrors.mobileNumber = phoneValidation.error;
+    if (!phoneValidation.isValid) {
+      newErrors.mobileNumber = phoneValidation.error;
+    } else {
+      const digits = formData.mobileNumber.replace(/\D/g, "");
+      const isDuplicatePhone = users.some(
+        (u) => u._id !== user?._id && u.mobileNumber?.replace(/\D/g, "") === digits
+      );
+      if (isDuplicatePhone) {
+        newErrors.mobileNumber = "This phone number is already in use by another user";
+      }
+    }
     if (!formData.role) newErrors.role = "Role is required";
     if (!formData.gender) newErrors.gender = "Gender is required";
 
