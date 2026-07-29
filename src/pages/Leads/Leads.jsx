@@ -29,10 +29,13 @@ import {
   Filter,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Flag,
+  Target
 } from "lucide-react";
 
 import LeadsPipelineView from "./LeadsPipelineView";
+import LinkedWorkModal from "../components/LinkedWorkModal";
 
 import { initSocket, getSocket } from "../../utils/socket";
 import {
@@ -194,6 +197,9 @@ function LeadTableComponent() {
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
 
+  // Active Linked Work Filters
+  const [activeWorkFilter, setActiveWorkFilter] = useState("");
+
   // Rejection-reason hover tooltip (portalled so it never gets clipped by the
   // table's horizontal-scroll container)
   const [hoveredRejectedLead, setHoveredRejectedLead] = useState(null);
@@ -249,6 +255,10 @@ function LeadTableComponent() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [converting, setConverting] = useState(false);
 
+  // Linked Work Modal
+  const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
+  const [linkedWorkData, setLinkedWorkData] = useState(null);
+
   const [dealData, setDealData] = useState({
     value: 0,
     currency: "USD",
@@ -260,6 +270,7 @@ function LeadTableComponent() {
   const dateInputRefs = useRef({});
   const [editingFollowUpId, setEditingFollowUpId] = useState(null);
   const [followUpSavingId, setFollowUpSavingId] = useState(null);
+  const [openBellTooltipId, setOpenBellTooltipId] = useState(null);
 
   // Add Follow-up Note modal
   const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
@@ -408,9 +419,13 @@ function LeadTableComponent() {
       params.append("followUpStatus", followUpFilter);
     }
 
-    // General date range filter (applied client-side)
-    // Removed backend params for startDate/endDate as they might not map to created date
-
+    // Active Linked Work Filters
+    if (activeWorkFilter === "task") {
+      params.append("activeTask", "true");
+    }
+    if (activeWorkFilter === "target") {
+      params.append("activeTarget", "true");
+    }
 
       console.log("Fetching leads with params:", Object.fromEntries(params));
 
@@ -473,7 +488,7 @@ function LeadTableComponent() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, followUpFilter, dateFilterFrom, dateFilterTo, itemsPerPage, t]);
+  }, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, followUpFilter, dateFilterFrom, dateFilterTo, itemsPerPage, activeWorkFilter, t]);
 
   useEffect(() => {
     fetchLeads();
@@ -1095,7 +1110,7 @@ function LeadTableComponent() {
             </button>
           )}
 
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2"
               onClick={() => navigate(`/${tenantSlug}/createleads`)}
@@ -1301,6 +1316,21 @@ function LeadTableComponent() {
                 </button>
               )}
             </div>
+
+            {/* Active Linked Work Filters */}
+            {viewMode !== "pipeline" && (
+              <div className="col-span-1 md:col-span-2 flex items-center w-full">
+                <select
+                  value={activeWorkFilter}
+                  onChange={(e) => setActiveWorkFilter(e.target.value)}
+                  className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm h-10"
+                >
+                  <option value="">All Linked Work</option>
+                  <option value="task">Active Task</option>
+                  <option value="target">Active Target</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1321,6 +1351,10 @@ function LeadTableComponent() {
           onRejectClick={handleRejectClick}
           onConvertClick={openConvertModal}
           onEditClick={handleEdit}
+          onLinkedWorkClick={(data) => {
+            setLinkedWorkData(data);
+            setLinkedWorkModalOpen(true);
+          }}
           userRole={userRole}
           userId={currentUserId}
         />
@@ -1407,28 +1441,62 @@ function LeadTableComponent() {
                               Pending Reassignment
                             </span>
                           ) : null}
+                          {/* Task / Target Icons */}
+                          {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
+                            <div className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => {
+                              e.stopPropagation();
+                              setLinkedWorkData({
+                                activeTasks: lead.activeTasks || [],
+                                activeTargets: lead.activeTargets || [],
+                                itemName: lead.leadName || t("leads.table.unnamedLead")
+                              });
+                              setLinkedWorkModalOpen(true);
+                            }}>
+                              {(lead.activeTasks && lead.activeTasks.length > 0) && (
+                                <Flag size={14} className="text-blue-500 hover:text-blue-600 transition-colors" />
+                              )}
+                              {(lead.activeTargets && lead.activeTargets.length > 0) && (
+                                <Target size={14} className="text-purple-500 hover:text-purple-600 transition-colors" />
+                              )}
+                            </div>
+                          )}
+
                           {targetLinkedLeadIds.has(String(lead._id)) && (() => {
                             const tInfo = targetLinkedLeadIds.get(String(lead._id));
                             const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
                             const fmtT = (d) => d ? new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+                            const isBellClicked = openBellTooltipId === lead._id;
                             return (
-                              <div className="group relative inline-flex cursor-default">
-                                <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
-                                <div className="absolute top-full left-0 mt-1.5 hidden group-hover:flex flex-col min-w-[200px] shadow-xl z-50 pointer-events-none" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
-                                  <div style={{background:"#f97316"}} className="px-3 py-2">
-                                    <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
-                                  </div>
-                                  <div className="bg-white px-3 py-2 space-y-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
-                                      <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                              <div className="relative inline-flex ml-1">
+                                <button 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setOpenBellTooltipId(isBellClicked ? null : lead._id); 
+                                  }}
+                                  className="focus:outline-none transition-transform hover:scale-110"
+                                >
+                                  <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
+                                </button>
+                                {isBellClicked && (
+                                  <div className="absolute top-full left-0 mt-1.5 flex flex-col min-w-[200px] shadow-xl z-50" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
+                                    <div style={{background:"#f97316"}} className="px-3 py-2 flex justify-between items-center">
+                                      <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
+                                      <button onClick={(e) => { e.stopPropagation(); setOpenBellTooltipId(null); }} className="text-white hover:text-orange-200">
+                                        <X size={12} />
+                                      </button>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
-                                      <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                    <div className="bg-white px-3 py-2 space-y-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
+                                        <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
+                                        <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             );
                           })()}
@@ -1438,7 +1506,19 @@ function LeadTableComponent() {
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.phoneNumber || "-"}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {lead.phoneNumber ? (
+                      <a
+                        href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
+                        className="text-blue-600 hover:underline font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
@@ -2014,6 +2094,15 @@ function LeadTableComponent() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Linked Work Modal */}
+      <LinkedWorkModal 
+        isOpen={linkedWorkModalOpen}
+        onClose={() => {
+          setLinkedWorkModalOpen(false);
+          setLinkedWorkData(null);
+        }}
+        data={linkedWorkData}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { clearCredentials } from "./store/authSlice";
 import "./App.css";
 import { applyTenantBranding } from "./utils/applyTenantBranding";
+import axios from "axios";
 
 import Login from "./pages/auth/login";
 import Layout from "./navbar/Layout";

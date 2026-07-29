@@ -12,7 +12,8 @@
   } from "../../components/ui/dialog";
   import { useNavigate, useParams } from "react-router-dom";
   import { TourProvider, useTour } from "@reactour/tour";
-  import { Eye } from "lucide-react";
+  import { Eye, Flag, Target } from "lucide-react";
+  import LinkedWorkModal from "../components/LinkedWorkModal";
 
   // Import the Lost Deal components
   import useLostDealModal from "../LostDealModal/LossDeal";
@@ -153,6 +154,10 @@ const STAGES = [
 
     // NEW: Store previous stage when moving to Lost
     const [previousStage, setPreviousStage] = useState(null);
+
+    // Linked Work Modal
+    const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
+    const [linkedWorkData, setLinkedWorkData] = useState(null);
 
     const { setIsOpen, setCurrentStep } = useTour();
     const navigate = useNavigate();
@@ -792,6 +797,16 @@ const STAGES = [
           isLoading={isModalLoading}
         />
 
+        {/* Linked Work Modal */}
+        <LinkedWorkModal 
+          isOpen={linkedWorkModalOpen}
+          onClose={() => {
+            setLinkedWorkModalOpen(false);
+            setLinkedWorkData(null);
+          }}
+          data={linkedWorkData}
+        />
+
         {/* Toolbar */}
         <div className="mx-auto mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between max-w-[1600px] px-2 sm:px-0">
           <div>
@@ -818,7 +833,7 @@ const STAGES = [
               >
                 <Eye className="w-4 h-4" /> Take Tour
               </button>
-              {userRole === "Admin" && (
+              {(userRole === "Admin" || userRole === "Sales") && (
                 <button
                   className="create-deal-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
                   onClick={() => navigate(`/${tenantSlug}/createDeal`)}
@@ -945,6 +960,10 @@ const STAGES = [
               onEdit={handleEditClick}
               onDelete={handleDeleteClick}
               onView={handleViewClick}
+              onLinkedWork={(data) => {
+                setLinkedWorkData(data);
+                setLinkedWorkModalOpen(true);
+              }}
               userRole={userRole}
               userId={userId}
               query={query}
@@ -970,6 +989,7 @@ const STAGES = [
     onEdit,
     onDelete,
     onView,
+    onLinkedWork,
     userRole,
     userId,
     className = "",
@@ -1011,6 +1031,7 @@ const STAGES = [
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onView={onView}
+                onLinkedWork={onLinkedWork}
                 userRole={userRole}
                 userId={userId}
                 className={index === 0 ? "deal-card" : ""}
@@ -1035,18 +1056,16 @@ const STAGES = [
     onEdit,
     onDelete,
     onView,
+    onLinkedWork,
     userRole,
     userId,
     className = "",
   }) {
-    // Overdue on an expired target, awaiting admin reassignment — read-only
-    // for the owning sales person until it's reassigned.
-    const isDisabled = deal.isActive === false && userRole !== "Admin";
 
     const [{ isDragging }, dragRef] = useDrag({
       type: ItemTypes.DEAL,
       item: { id: deal._id, from: stageId },
-      canDrag: () => !isDisabled,
+      canDrag: () => true,
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     });
 
@@ -1105,63 +1124,85 @@ const STAGES = [
 
     return (
       <div
-        ref={isDisabled ? null : dragRef}
-        title={isDisabled ? "Disabled — pending admin reassignment" : undefined}
-        className={`border p-4 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col gap-3 relative ${isDisabled ? "cursor-not-allowed opacity-50 grayscale pointer-events-none select-none bg-white border-gray-200" : "cursor-move bg-white border-gray-200"} ${className}`}
-        style={{ opacity: isDragging ? 0.5 : isDisabled ? 0.5 : 1 }}
+        ref={dragRef}
+        className={`border p-4 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col gap-3 relative cursor-move bg-white border-gray-200 ${className}`}
+        style={{ opacity: isDragging ? 0.5 : 1 }}
       >
-        {/* Three-dot menu - only show if user has permission */}
-        {canEditDelete && (
-          <div className="absolute top-3 right-3 deal-menu" ref={menuRef}>
-            <button
-              className="p-1 rounded hover:bg-gray-100"
-              onClick={() => setMenuOpen(!menuOpen)}
+        <div className="absolute top-3 right-3 flex items-center" ref={menuRef}>
+          {/* Linked Work Icons */}
+          {((deal.activeTasks && deal.activeTasks.length > 0) || (deal.activeTargets && deal.activeTargets.length > 0)) && (
+            <div 
+              className="flex items-center gap-1 mr-2 cursor-pointer bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200" 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onLinkedWork) {
+                  onLinkedWork({
+                    activeTasks: deal.activeTasks || [],
+                    activeTargets: deal.activeTargets || [],
+                    itemName: deal.dealName || "-"
+                  });
+                }
+              }}
             >
-              <svg
-                className="w-4 h-4 text-gray-500"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
-                <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
-              </svg>
-            </button>
+              {(deal.activeTasks && deal.activeTasks.length > 0) && (
+                <Flag size={12} className="text-blue-500 hover:text-blue-600 transition-colors" />
+              )}
+              {(deal.activeTargets && deal.activeTargets.length > 0) && (
+                <Target size={12} className="text-purple-500 hover:text-purple-600 transition-colors" />
+              )}
+            </div>
+          )}
 
-            {menuOpen && (
-              <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
-                <button
-                  className={`block w-full text-left px-4 py-2 text-sm ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
-                  disabled={isDisabled}
-                  title={isDisabled ? "Disabled pending admin reassignment" : undefined}
-                  onClick={() => {
-                    if (isDisabled) return;
-                    onEdit(deal);
-                    setMenuOpen(false);
-                  }}
+          {/* Three-dot menu - only show if user has permission */}
+          {canEditDelete && (
+            <div className="relative">
+              <button
+                className="p-1 rounded hover:bg-gray-100"
+                onClick={() => setMenuOpen(!menuOpen)}
+              >
+                <svg
+                  className="w-4 h-4 text-gray-500"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
                 >
-                  Edit
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={() => {
-                    onView(deal);
-                    setMenuOpen(false);
-                  }}
-                >
-                  View
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                  onClick={() => {
-                    onDelete(deal);
-                    setMenuOpen(false);
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                  <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
+                </svg>
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+                  <button
+                    className={`block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100`}
+                    onClick={() => {
+                      onEdit(deal);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      onView(deal);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    View
+                  </button>
+                  <button
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    onClick={() => {
+                      onDelete(deal);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Deal Name - Centered and emphasized */}
         <div className={`text-center ${canEditDelete ? "pr-6" : ""}`}>
@@ -1172,13 +1213,7 @@ const STAGES = [
             {deal.dealName}
           </h3>
 
-          {isDisabled && (
-            <div className="mb-1">
-              <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
-                Pending Reassignment
-              </span>
-            </div>
-          )}
+
 
           <div className="text-xs text-stone-800 font-medium bg-indigo-100 py-1 px-2 rounded-full inline-block">
             {deal.companyName || "No company"}

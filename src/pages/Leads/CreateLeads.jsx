@@ -25,6 +25,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import ReassignmentModal from "../components/ReassignmentModal";
 
 export default function CreateLeads() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -80,6 +81,11 @@ export default function CreateLeads() {
   const [phoneCountryCode, setPhoneCountryCode] = useState("in");
   const [followUpDateObj, setFollowUpDateObj] = useState(null);
   const followUpDateRef = useRef(null);
+
+  const [originalAssignTo, setOriginalAssignTo] = useState(null);
+  const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
+  const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState(null);
 
   //  Load user role and ID - Only auto-assign for new leads and if not already assigned
   useEffect(() => {
@@ -183,6 +189,7 @@ export default function CreateLeads() {
             notes: leadData.notes || "",
             attachments: [],
           });
+          setOriginalAssignTo(leadData.assignTo?._id || null);
         } catch (error) {
           console.error("Error fetching lead:", error);
           toast.error("Failed to fetch lead data");
@@ -467,22 +474,54 @@ export default function CreateLeads() {
       return;
     }
 
-    setIsSubmitting(true);
+    if (leadId && originalAssignTo && formData.assignTo !== originalAssignTo) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          `${API_URL}/tasks/reassignment-check/lead/${leadId}/${originalAssignTo}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (res.data.hasActiveTasks || res.data.hasActiveTargets) {
+          setReassignmentCheckData(res.data);
+          setPendingSubmitData(formData);
+          setReassignmentModalOpen(true);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking reassignment:", err);
+      }
+    }
 
+    setIsSubmitting(true);
+    await submitLeadData(formData);
+  };
+
+  const submitLeadData = async (dataToSubmit) => {
     try {
       const token = localStorage.getItem("token");
       const dataToSend = new FormData();
 
-      for (let key in formData) {
+      for (let key in dataToSubmit) {
+        if (["taskAction", "extendedTaskDueDate", "extendedTaskDescription", "targetAction", "extendedTargetEndDate", "extendedTargetDescription"].includes(key)) {
+          if (dataToSubmit[key] !== null && dataToSubmit[key] !== undefined) {
+            dataToSend.append(key, dataToSubmit[key]);
+          }
+          continue;
+        }
         if (key === "attachments") {
-          formData.attachments.forEach((file) =>
+          dataToSubmit.attachments.forEach((file) =>
             dataToSend.append("attachments", file)
           );
-        } else if (key === "followUpDate" && formData.followUpDate) {
-          const [mm, dd, yyyy] = formData.followUpDate.split("/");
+        } else if (key === "followUpDate" && dataToSubmit.followUpDate) {
+          const [mm, dd, yyyy] = dataToSubmit.followUpDate.split("/");
           dataToSend.append(key, `${yyyy}-${mm}-${dd}`);
+        } else if (key === "phoneNumber" && dataToSubmit.phoneNumber) {
+          const rawPhone = String(dataToSubmit.phoneNumber).trim();
+          const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
+          dataToSend.append(key, formattedPhone);
         } else {
-          dataToSend.append(key, formData[key]);
+          dataToSend.append(key, dataToSubmit[key]);
         }
       }
 
@@ -568,6 +607,25 @@ export default function CreateLeads() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleReassignmentConfirm = async (payload) => {
+    setReassignmentModalOpen(false);
+    if (pendingSubmitData) {
+      setIsSubmitting(true);
+      const dataToSubmit = {
+        ...pendingSubmitData,
+        taskAction: payload.taskAction,
+        newTaskName: payload.newTaskName || null,
+        extendedTaskDueDate: payload.extendedTaskDueDate ? payload.extendedTaskDueDate.toISOString() : null,
+        extendedTaskDescription: payload.extendedTaskDescription || null,
+        targetAction: payload.targetAction,
+        extendedTargetEndDate: payload.extendedTargetEndDate ? payload.extendedTargetEndDate.toISOString() : null,
+        extendedTargetDescription: payload.extendedTargetDescription || null,
+      };
+      await submitLeadData(dataToSubmit);
+      setPendingSubmitData(null);
     }
   };
 
@@ -1086,6 +1144,14 @@ export default function CreateLeads() {
           </form>
         </div>
       </div>
+      <ReassignmentModal
+        isOpen={reassignmentModalOpen}
+        onClose={() => setReassignmentModalOpen(false)}
+        onConfirm={handleReassignmentConfirm}
+        hasTasks={reassignmentCheckData?.hasActiveTasks}
+        hasTargets={reassignmentCheckData?.hasActiveTargets}
+        itemType="lead"
+      />
 
       <ToastContainer position="top-right" autoClose={3000} theme="light" />
     </>

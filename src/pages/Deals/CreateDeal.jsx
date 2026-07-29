@@ -29,6 +29,7 @@ import "react-toastify/dist/ReactToastify.css";
 // Import Lost Deal components
 import useLostDealModal from "../LostDealModal/LossDeal";
 import LostDealModal from "../LostDealModal/ModalLoss";
+import ReassignmentModal from "../components/ReassignmentModal";
 
 // Email validation function
 const validateEmail = (email) => {
@@ -170,8 +171,10 @@ export default function CreateDeal() {
     setLossReason,
     setLossNotes,
     openModal: openLostDealModal,
+    dealIdForLostModal,
     closeModal: closeLostDealModal,
     validateAndExecute: validateLostDeal,
+    handleLostDealSubmit,
     resetModal,
   } = useLostDealModal();
 
@@ -216,6 +219,9 @@ export default function CreateDeal() {
   const [countries] = useState(getNames());
   const [previewFile, setPreviewFile] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
+  const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
+  const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState(null);
 
 /* ── Fetch User Data Function ─────────────────────── */
   useEffect(() => {
@@ -527,6 +533,10 @@ export default function CreateDeal() {
         if (key !== "attachments") {
           if (key === "followUpDate" && formDataToSubmit[key] instanceof Date) {
             data.append(key, formDataToSubmit[key].toISOString());
+          } else if ((key === "phoneNumber" || key === "alternativeNumber") && formDataToSubmit[key]) {
+            const rawPhone = String(formDataToSubmit[key]).trim();
+            const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
+            data.append(key, formattedPhone);
           } else {
             data.append(key, formDataToSubmit[key] || "");
           }
@@ -644,7 +654,47 @@ export default function CreateDeal() {
       return;
     }
 
+    if (isEditMode && existingDeal && formData.assignTo !== existingDeal.assignedTo?._id) {
+      try {
+        const token = localStorage.getItem("token");
+        const oldUserId = existingDeal.assignedTo?._id;
+        if (oldUserId) {
+          const res = await axios.get(
+            `${API_URL}/tasks/reassignment-check/deal/${existingDeal._id}/${oldUserId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          if (res.data.hasActiveTasks || res.data.hasActiveTargets) {
+            setReassignmentCheckData(res.data);
+            setPendingSubmitData(formData);
+            setReassignmentModalOpen(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error checking reassignment:", err);
+      }
+    }
+
     await submitDealData(formData);
+  };
+
+  const handleReassignmentConfirm = async (payload) => {
+    setReassignmentModalOpen(false);
+    if (pendingSubmitData) {
+      const dataToSubmit = {
+        ...pendingSubmitData,
+        taskAction: payload.taskAction,
+        newTaskName: payload.newTaskName || null,
+        extendedTaskDueDate: payload.extendedTaskDueDate ? payload.extendedTaskDueDate.toISOString() : null,
+        extendedTaskDescription: payload.extendedTaskDescription || null,
+        targetAction: payload.targetAction,
+        extendedTargetEndDate: payload.extendedTargetEndDate ? payload.extendedTargetEndDate.toISOString() : null,
+        extendedTargetDescription: payload.extendedTargetDescription || null,
+      };
+      await submitDealData(dataToSubmit);
+      setPendingSubmitData(null);
+    }
   };
 
   const handleBackClick = () => navigate(-1);
@@ -1234,6 +1284,21 @@ export default function CreateDeal() {
       </div>
 
       {previewFile && <PreviewModal file={previewFile} onClose={closePreview} />}
+
+      <LostDealModal
+        isOpen={lostModalOpen}
+        onClose={closeLostDealModal}
+        onSubmit={handleLostDealSubmit}
+        dealId={dealIdForLostModal}
+      />
+      <ReassignmentModal
+        isOpen={reassignmentModalOpen}
+        onClose={() => setReassignmentModalOpen(false)}
+        onConfirm={handleReassignmentConfirm}
+        hasTasks={reassignmentCheckData?.hasActiveTasks}
+        hasTargets={reassignmentCheckData?.hasActiveTargets}
+        itemType="deal"
+      />
     </div>
   );
 }

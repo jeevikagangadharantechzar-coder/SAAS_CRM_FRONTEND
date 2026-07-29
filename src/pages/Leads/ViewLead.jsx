@@ -12,6 +12,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { getNames } from "country-list";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import LinkedTasksTargetsTab from "../../components/LinkedTasksTargetsTab";
 
 const countryNames = getNames();
 
@@ -602,7 +603,9 @@ const ViewLead = () => {
         leadName: editFormData.leadName.trim(),
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber,
+        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
+          ? `+${editFormData.phoneNumber}`
+          : editFormData.phoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
         notes: editFormData.notes,
@@ -929,7 +932,7 @@ const ViewLead = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 mb-6">
-          {["details", "attachments", "activity", "followups"].map((tab) => (
+          {["details", "tasks_targets", "attachments", "activity", "followups"].map((tab) => (
             <button
               key={tab}
               className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
@@ -939,12 +942,17 @@ const ViewLead = () => {
               }`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === "followups" ? "Follow-up Notes" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "tasks_targets"
+                ? "Tasks & Targets"
+                : tab === "followups"
+                ? "Follow-up Notes"
+                : tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "attachments" &&
-                lead.attachments &&
-                lead.attachments.length > 0
-                ? ` (${lead.attachments.length})`
-                : ""}
+                lead.attachments?.length > 0 && (
+                  <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-[10px]">
+                    {lead.attachments.length}
+                  </span>
+                )}
             </button>
           ))}
         </div>
@@ -983,7 +991,10 @@ const ViewLead = () => {
                             value={lead.email
                               ? <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a>
                               : "N/A"} />
-                          <InfoRow icon={<Phone size={18}/>}    label="Phone"     value={lead.phoneNumber} />
+                          <InfoRow icon={<Phone size={18}/>}    label="Phone"
+                            value={lead.phoneNumber
+                              ? <a href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`} className="text-blue-600 hover:underline">{lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}</a>
+                              : "N/A"} />
                           <InfoRow icon={<Building2 size={18}/>} label="Client Type" value={lead.clientType || "Not specified"} />
                         </div>
                       </div>
@@ -1230,6 +1241,13 @@ const ViewLead = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Tasks & Targets ── */}
+            {activeTab === "tasks_targets" && (
+              <div className="p-4 sm:p-6 bg-white animate-fade-in max-w-5xl mx-auto">
+                <LinkedTasksTargetsTab itemType="lead" itemId={id} />
               </div>
             )}
 
