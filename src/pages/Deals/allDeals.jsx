@@ -474,7 +474,7 @@ function AllDealsComponent() {
             dealName: deal.dealName || "",
             companyName: deal.companyName || "",
             assignedTo: assignee,
-            followUpDate: "",
+            followUpDate: formatFollowUpStamp(deal.followUpDate),
             loggedOn: "",
             outcome: "",
             note: "",

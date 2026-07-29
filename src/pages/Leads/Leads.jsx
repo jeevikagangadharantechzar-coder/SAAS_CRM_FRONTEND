@@ -574,7 +574,7 @@ function LeadTableComponent() {
                 leadName: lead.leadName || "",
                 companyName: lead.companyName || "",
                 assignTo: assignee,
-                followUpDate: "",
+                followUpDate: formatNoteStamp(lead.followUpDate),
                 followUpNote: "",
               }];
             }
