@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
 import { initSocket, getSocket } from "../../utils/socket";
 import { exportRowsToExcel, downloadExcelTemplate, parseExcelFile } from "../../utils/excelImportExport";
+import LinkedWorkModal from "../components/LinkedWorkModal";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -156,6 +157,13 @@ function AllDealsComponent() {
   const [hoveredRejectedDeal, setHoveredRejectedDeal] = useState(null);
   const [rejectTooltipCoords, setRejectTooltipCoords] = useState(null);
   const [rejectTooltipTimeout, setRejectTooltipTimeout] = useState(null);
+
+  // Active Linked Work Filters
+  const [activeWorkFilter, setActiveWorkFilter] = useState("");
+
+  // Linked Work Modal
+  const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
+  const [linkedWorkData, setLinkedWorkData] = useState(null);
 
   const handleRejectionHover = (deal, event) => {
     if (rejectTooltipTimeout) clearTimeout(rejectTooltipTimeout);
@@ -708,6 +716,11 @@ function AllDealsComponent() {
       if (!d.lostDate) return true;
       return new Date(d.lostDate).toDateString() === new Date().toDateString();
     })
+    .filter((d) => {
+      if (activeWorkFilter === "task" && (!d.activeTasks || d.activeTasks.length === 0)) return false;
+      if (activeWorkFilter === "target" && (!d.activeTargets || d.activeTargets.length === 0)) return false;
+      return true;
+    })
     .filter((d) => !customRangeIds || customRangeIds.has(d._id))
     .filter((d) => !dateFilterIds || dateFilterIds.has(d._id));
 
@@ -860,7 +873,7 @@ function AllDealsComponent() {
               </div>
             </>
           )}
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <button
               onClick={() => navigate(`/${tenantSlug}/createDeal`)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 tour-create-deal"
@@ -1003,12 +1016,22 @@ function AllDealsComponent() {
             </button>
           )}
 
+          <select
+            value={activeWorkFilter}
+            onChange={(e) => setActiveWorkFilter(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Linked Work</option>
+            <option value="task">Active Task</option>
+            <option value="target">Active Target</option>
+          </select>
+
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search Deal Name..."
-            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
           />
         </div>
 
@@ -1126,7 +1149,6 @@ function AllDealsComponent() {
                 const hasFollowUp = deal.followUpDate;
                 const isToday = isFollowUpToday(deal.followUpDate);
                 const isOverdue = isFollowUpOverdue(deal.followUpDate);
-                const isActiveDisabled = deal.isActive === false && userRole !== "Admin";
                 const isTerminal = deal.stage === "Rejected" || deal.stage === "Closed Won";
 
                 const rejectedByName = deal.rejectedBy ? `${deal.rejectedBy.firstName || ""} ${deal.rejectedBy.lastName || ""}`.trim() : "";
@@ -1144,10 +1166,8 @@ function AllDealsComponent() {
                 return (
                   <tr
                     key={deal._id}
-                    title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
                     className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50 ${
-                      isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
-                      : isTerminal ? "pointer-events-none select-none"
+                      isTerminal ? "pointer-events-none select-none"
                       : ""
                     }`}
                   >
@@ -1173,11 +1193,28 @@ function AllDealsComponent() {
                           <span title={convertedBadgeText} className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {convertedBadgeText}
                           </span>
-                        ) : isActiveDisabled ? (
-                          <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
-                            Pending Reassignment
-                          </span>
                         ) : null}
+
+                        {/* Task / Target Icons */}
+                        {((deal.activeTasks && deal.activeTasks.length > 0) || (deal.activeTargets && deal.activeTargets.length > 0)) && (
+                          <div className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => {
+                            e.stopPropagation();
+                            setLinkedWorkData({
+                              activeTasks: deal.activeTasks || [],
+                              activeTargets: deal.activeTargets || [],
+                              itemName: deal.dealName || "-"
+                            });
+                            setLinkedWorkModalOpen(true);
+                          }}>
+                            {(deal.activeTasks && deal.activeTasks.length > 0) && (
+                              <Flag size={14} className="text-blue-500 hover:text-blue-600 transition-colors" />
+                            )}
+                            {(deal.activeTargets && deal.activeTargets.length > 0) && (
+                              <Target size={14} className="text-purple-500 hover:text-purple-600 transition-colors" />
+                            )}
+                          </div>
+                        )}
+
                         {/* Follow-up bell (only when not target-linked to avoid double bell) */}
                         {hasFollowUp && !targetLinkedDealIds.has(String(deal._id)) && (
                           <div
@@ -1594,6 +1631,15 @@ function AllDealsComponent() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Linked Work Modal */}
+      <LinkedWorkModal 
+        isOpen={linkedWorkModalOpen}
+        onClose={() => {
+          setLinkedWorkModalOpen(false);
+          setLinkedWorkData(null);
+        }}
+        data={linkedWorkData}
+      />
     </div>
   );
 }

@@ -7,8 +7,10 @@ import {
   ArrowLeft, Calendar, FileText, Mail, Paperclip, Tag, Clock,
   User, Building, Building2, DollarSign, CheckCircle, XCircle, AlertCircle,
   Download, Eye, ChevronRight, ChevronLeft, Phone, MapPin, Globe, Briefcase,
-  BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive, Save
+  BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive, Save,
+  Sparkles, Activity, Send, AlertTriangle
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import PhoneInput from "react-phone-input-2";
@@ -20,6 +22,7 @@ import { useModal } from "../../context/ModalContext";
 import InvoiceModal from "../invoice/InvoiceModal.jsx";
 import MeetingModal from "../meetings/MeetingModal.jsx";
 import useMeetings from "../meetings/useMeetings.js";
+import LinkedTasksTargetsTab from "../../components/LinkedTasksTargetsTab";
 
 // Email validation function
 const validateEmail = (email) => {
@@ -114,6 +117,204 @@ const FILE_STYLES = {
 
 // Proposal status colors — matches ProposalHead.jsx's STATUS_STYLES exactly,
 // so a proposal's status pill looks the same everywhere it's shown.
+// ─────────────────────────────────────────────
+// Deal Analysis Scoring Engine & Stage Actions (Reused from Deal Analysis & Intelligence module)
+// ─────────────────────────────────────────────
+const STAGE_ACTIONS = {
+  "Qualification": {
+    actions: ["Manage Follow-ups & History", "Send Proposal"],
+    nextStep: "Move to Proposal Sent",
+    label: "Need Attention",
+  },
+  "Proposal Sent-Negotiation": {
+    actions: ["Manage Follow-ups & History", "Send Invoice"],
+    nextStep: "Move to Invoice Sent",
+    label: "Follow-up Needed",
+  },
+  "Invoice Sent": {
+    actions: ["Manage Follow-ups & History", "Convert to Won"],
+    nextStep: "Mark as Won",
+    label: "Payment Pending",
+  },
+  "Closed Won": {
+    actions: ["View in CLV Dashboard"],
+    nextStep: "Track in CLV",
+    label: "Deal Closed",
+  },
+  "Closed Lost": {
+    actions: ["Review Loss Reasons"],
+    nextStep: "Analyze Loss",
+    label: "Deal Lost",
+  }
+};
+
+const STAGE_BASE_SCORES = {
+  "Qualification": 0,
+  "Proposal Sent-Negotiation": 15,
+  "Invoice Sent": 40,
+  "Closed Won": 100,
+  "Closed Lost": 0,
+};
+
+const extractNumericValue = (value) => {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  const cleaned = String(value).replace(/[₹$,]/g, "").trim();
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
+const getDaysSinceUpdate = (updatedAt) => {
+  if (!updatedAt) return null;
+  const lastUpdate = new Date(updatedAt);
+  const today = new Date();
+  return Math.floor((today - lastUpdate) / (1000 * 60 * 60 * 24));
+};
+
+const calculateFollowUpScore = (deal) => {
+  if (!deal || !deal.followUpDate) return 0;
+  const daysUntilFollowUp = Math.ceil((new Date(deal.followUpDate) - new Date()) / (1000 * 60 * 60 * 24));
+  if (daysUntilFollowUp < -365) return -50;
+  if (daysUntilFollowUp < -90) return -40;
+  if (daysUntilFollowUp < -30) return -35;
+  if (daysUntilFollowUp < -14) return -30;
+  if (daysUntilFollowUp < -7) return -20;
+  if (daysUntilFollowUp < 0) return -10;
+  if (daysUntilFollowUp <= 3) return 20;
+  if (daysUntilFollowUp <= 7) return 15;
+  if (daysUntilFollowUp <= 14) return 10;
+  return 0;
+};
+
+const calculateActivityScore = (deal) => {
+  if (!deal) return 0;
+  const daysSinceUpdate = getDaysSinceUpdate(deal.updatedAt) || 0;
+  if (daysSinceUpdate > 14) return -30;
+  if (daysSinceUpdate > 7) return -15;
+  return 0;
+};
+
+const calculateValueScore = (deal) => {
+  if (!deal) return 0;
+  const numericValue = extractNumericValue(deal.value);
+  if (numericValue >= 500000) return 10;
+  if (numericValue >= 100000) return 5;
+  return 0;
+};
+
+const calculateStageScore = (deal) => {
+  if (!deal) return 0;
+  return STAGE_BASE_SCORES[deal.stage] || 0;
+};
+
+const calculateDealAnalysisScore = (deal, weights = { followUpWeight: 25, activityWeight: 25, valueWeight: 20, stageWeight: 30 }) => {
+  if (!deal) return 0;
+  if (deal.stage === "Closed Won") return 100;
+  if (deal.stage === "Closed Lost") return 0;
+
+  const baseScore = 50;
+  const followUpScore = calculateFollowUpScore(deal);
+  const activityScore = calculateActivityScore(deal);
+  const valueScore = calculateValueScore(deal);
+  const stageScore = calculateStageScore(deal);
+
+  const weightedScore =
+    (followUpScore * (weights.followUpWeight / 100)) +
+    (valueScore * (weights.valueWeight / 100)) +
+    (stageScore * (weights.stageWeight / 100)) +
+    (activityScore * (weights.activityWeight / 100));
+
+  const finalScore = baseScore + weightedScore;
+  return Math.max(0, Math.min(100, Math.round(finalScore)));
+};
+
+const getDealAnalysisFactors = (deal) => {
+  if (!deal) return [];
+  const factors = [];
+  const followUpScore = calculateFollowUpScore(deal);
+  if (followUpScore !== 0) factors.push({ factor: "Follow-up Recency", impact: followUpScore });
+  const activityScore = calculateActivityScore(deal);
+  if (activityScore !== 0) factors.push({ factor: "Activity Gap", impact: activityScore });
+  const valueScore = calculateValueScore(deal);
+  if (valueScore !== 0) factors.push({ factor: "Deal Value Tier", impact: valueScore });
+  const stageScore = calculateStageScore(deal);
+  if (stageScore !== 0) factors.push({ factor: "Stage Bonus", impact: stageScore });
+  return factors;
+};
+
+const getWeightedScoreBreakdown = (deal, weights = { followUpWeight: 25, activityWeight: 25, valueWeight: 20, stageWeight: 30 }) => {
+  if (!deal) return { base: 50, components: [], total: 50 };
+
+  if (deal.stage === "Closed Won") {
+    return {
+      base: 100,
+      components: [{ name: "Closed Won Status", detail: "Deal successfully won and closed", pts: 100 }],
+      total: 100
+    };
+  }
+
+  if (deal.stage === "Closed Lost") {
+    return {
+      base: 0,
+      components: [{ name: "Closed Lost Status", detail: deal.lossReason ? `Loss Reason: ${deal.lossReason}` : "Deal closed lost", pts: 0 }],
+      total: 0
+    };
+  }
+
+  const base = 50;
+  const followUpRaw = calculateFollowUpScore(deal);
+  const activityRaw = calculateActivityScore(deal);
+  const valueRaw = calculateValueScore(deal);
+  const stageRaw = calculateStageScore(deal);
+
+  const followUpPts = Math.round(followUpRaw * (weights.followUpWeight / 100));
+  const activityPts = Math.round(activityRaw * (weights.activityWeight / 100));
+  const valuePts = Math.round(valueRaw * (weights.valueWeight / 100));
+  const stagePts = Math.round(stageRaw * (weights.stageWeight / 100));
+
+  const components = [];
+
+  if (deal.stage) {
+    components.push({
+      name: `Stage Bonus ("${deal.stage}")`,
+      detail: `30% weight of ${stageRaw} stage pts`,
+      pts: stagePts
+    });
+  }
+
+  if (deal.followUpDate) {
+    const daysUntil = Math.ceil((new Date(deal.followUpDate) - new Date()) / 86400000);
+    const detailText = daysUntil < 0 ? `${Math.abs(daysUntil)} day(s) overdue` : `Scheduled in ${daysUntil} day(s)`;
+    components.push({
+      name: "Follow-up Recency",
+      detail: `${detailText} (25% weight of ${followUpRaw >= 0 ? "+" : ""}${followUpRaw} pts)`,
+      pts: followUpPts
+    });
+  }
+
+  const daysInactive = getDaysSinceUpdate(deal.updatedAt) || 0;
+  if (activityPts !== 0) {
+    components.push({
+      name: "Activity Gap",
+      detail: `Last updated ${daysInactive} day(s) ago (25% weight)`,
+      pts: activityPts
+    });
+  }
+
+  if (valuePts > 0) {
+    const numericVal = extractNumericValue(deal.value);
+    components.push({
+      name: "Deal Value Tier",
+      detail: `Value ${deal.currency || "USD"} ${numericVal.toLocaleString()} (20% weight)`,
+      pts: valuePts
+    });
+  }
+
+  const total = Math.max(0, Math.min(100, base + stagePts + followUpPts + activityPts + valuePts));
+
+  return { base, components, total };
+};
+
 const PROPOSAL_STATUS_STYLES = {
   draft: "bg-orange-50 text-orange-700 border-orange-200",
   sent: "bg-blue-50 text-blue-700 border-blue-200",
@@ -671,6 +872,14 @@ function Pipeline_modal_view() {
   // Everything else loads lazily, the first time its tab is opened
   useEffect(() => {
     if (!dealId) return;
+    if (activeTab === "deal_score") {
+      if (activityFeed.length === 0 && !isActivityLoading) fetchActivity();
+      if (notes.length === 0 && !isNotesLoading) fetchNotes();
+      if (dealProposals.length === 0 && !isProposalsLoading) fetchDealProposals();
+      if (dealInvoices.length === 0 && !isInvoicesLoading) fetchDealInvoices();
+      if (dealMeetings.length === 0 && !isMeetingsLoading) fetchDealMeetings();
+      if (dealEmails.length === 0 && !isEmailsLoading) fetchDealEmails();
+    }
     if (activeTab === "activity" && activityFeed.length === 0 && !isActivityLoading) fetchActivity();
     if (activeTab === "notes" && notes.length === 0 && !isNotesLoading) fetchNotes();
     if (activeTab === "proposal" && dealProposals.length === 0 && !isProposalsLoading) fetchDealProposals();
@@ -937,9 +1146,13 @@ function Pipeline_modal_view() {
         notes: editFormData.notes,
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber,
+        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
+          ? `+${editFormData.phoneNumber}`
+          : editFormData.phoneNumber,
         alternativeEmail: editFormData.alternativeEmail,
-        alternativeNumber: editFormData.alternativeNumber,
+        alternativeNumber: editFormData.alternativeNumber && !editFormData.alternativeNumber.startsWith("+")
+          ? `+${editFormData.alternativeNumber}`
+          : editFormData.alternativeNumber,
         clientType: editFormData.clientType,
         address: editFormData.address.trim(),
         country: editFormData.country.trim(),
@@ -963,6 +1176,24 @@ function Pipeline_modal_view() {
       }
     } finally {
       setIsSavingDetails(false);
+    }
+  };
+
+  const handleConvertToWon = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return navigate("/login");
+      await axios.patch(
+        `${API_URL}/deals/update-deal/${dealId}`,
+        { stage: "Closed Won" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Deal status updated to Closed Won!");
+      fetchDealDetails();
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to convert deal to Won:", err);
+      toast.error(err.response?.data?.message || "Failed to update deal stage");
     }
   };
 
@@ -1357,22 +1588,25 @@ function Pipeline_modal_view() {
             </div>
           </div>
 
-          {/* Deal Score — provisional placeholder score, top-right corner */}
-          {dealScore !== null && (
-            <div
-              className={`inline-flex flex-col items-center px-5 py-2 rounded-xl border ${
-                dealScore >= 70
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : dealScore >= 40
-                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                  : "bg-red-50 text-red-700 border-red-200"
-              }`}
-              title="Deal Score (provisional)"
-            >
-              <span className="text-2xl font-bold leading-none">{dealScore}</span>
-              <span className="text-[11px] font-medium uppercase tracking-wide mt-1">Deal Score</span>
-            </div>
-          )}
+          {/* Deal Score Top Right Header Badge (100% Deal Analysis Engine Score) */}
+          {(() => {
+            const currentScore = calculateDealAnalysisScore(deal);
+            return (
+              <div
+                className={`inline-flex flex-col items-center px-5 py-2 rounded-xl border ${
+                  currentScore >= 70
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : currentScore >= 40
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                }`}
+                title="Deal Analysis Score"
+              >
+                <span className="text-2xl font-bold leading-none">{currentScore}</span>
+                <span className="text-[11px] font-medium uppercase tracking-wide mt-1">Deal Score</span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Tab Navigation */}
@@ -1386,6 +1620,26 @@ function Pipeline_modal_view() {
             onClick={() => setActiveTab("details")}
           >
             Details
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "deal_score"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("deal_score")}
+          >
+            Deal Score
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "tasks_targets"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("tasks_targets")}
+          >
+            Tasks & Targets
           </button>
           <button
             className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -1474,47 +1728,551 @@ function Pipeline_modal_view() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content Column */}
-          <div className="lg:col-span-2">
+          <div className={activeTab === "deal_score" ? "lg:col-span-3" : "lg:col-span-2"}>
+            {/* Deal Score Tab */}
+            {activeTab === "deal_score" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Section 1: Score & Health Overview (Strict Deal Analysis Match) */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-hidden">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                        <Sparkles size={14} className="text-amber-500" />
+                        <span>Deal Score & Health Analysis</span>
+                      </div>
+                      <h2 className="text-xl font-bold text-slate-900">{deal.dealName}</h2>
+                      <p className="text-sm text-slate-500">{deal.companyName || "No Company Specified"}</p>
+                    </div>
+
+                    {/* Score & Health Status Badge (Derived 100% from Deal Analysis STAGE_ACTIONS) */}
+                    {(() => {
+                      const analysisScore = calculateDealAnalysisScore(deal);
+                      const stageConfig = STAGE_ACTIONS[deal.stage] || STAGE_ACTIONS["Qualification"];
+                      const statusLabel = stageConfig.label;
+
+                      let badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+                      if (statusLabel === "Need Attention") {
+                        badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                      } else if (statusLabel === "Follow-up Needed") {
+                        badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+                      } else if (statusLabel === "Payment Pending") {
+                        badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                      } else if (statusLabel === "Deal Closed" || statusLabel === "Converted") {
+                        badgeStyle = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                      } else if (statusLabel === "Deal Lost") {
+                        badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                      }
+
+                      return (
+                        <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-3 px-5">
+                          <div className="text-center pr-4 border-r border-slate-200">
+                            <span className="block text-3xl font-extrabold text-slate-900">
+                              {analysisScore}
+                            </span>
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Out of 100</span>
+                          </div>
+                          <div>
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border ${badgeStyle}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                              {statusLabel}
+                            </span>
+                            <p className="text-[11px] text-slate-500 mt-1 max-w-[180px] truncate">
+                              Deal Analysis Status
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Key Deal Metadata Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-sm">
+                    <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                      <span className="text-xs text-slate-400 block font-medium">Stage</span>
+                      <span className="font-semibold text-slate-800">{deal.stage || "Qualification"}</span>
+                    </div>
+                    <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                      <span className="text-xs text-slate-400 block font-medium">Deal Value</span>
+                      <span className="font-semibold text-slate-800">
+                        {formatCurrencyValue(deal.value)}
+                      </span>
+                    </div>
+                    <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                      <span className="text-xs text-slate-400 block font-medium">Follow-Up Date</span>
+                      <span className="font-semibold text-slate-800">
+                        {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : "Not Scheduled"}
+                      </span>
+                    </div>
+                    <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                      <span className="text-xs text-slate-400 block font-medium">Assigned To</span>
+                      <span className="font-semibold text-slate-800 truncate block">
+                        {deal.assignTo ? `${deal.assignTo.firstName || ""} ${deal.assignTo.lastName || ""}`.trim() : "Unassigned"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Why This Deal Scored {analysisScore}/100 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Supporting Factors & Score Calculation Breakdown */}
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    {(() => {
+                      const breakdown = getWeightedScoreBreakdown(deal);
+                      const positiveComponents = breakdown.components.filter((c) => c.pts >= 0);
+
+                      return (
+                        <>
+                          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                                <CheckCircle size={16} />
+                              </div>
+                              <h3 className="text-sm font-bold text-slate-900">
+                                Why This Deal Scored {breakdown.total}/100
+                              </h3>
+                            </div>
+                            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                              Score Breakdown
+                            </span>
+                          </div>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Base Score Row */}
+                            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 font-bold">●</span>
+                                <span className="font-medium text-slate-700">Base Deal Score</span>
+                              </div>
+                              <span className="font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                                +{breakdown.base} pts
+                              </span>
+                            </div>
+
+                            {/* Component Score Rows */}
+                            {positiveComponents.map((item, idx) => (
+                              <div key={`pos-c-${idx}`} className="flex items-center justify-between p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/70">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-emerald-500 font-bold">✓</span>
+                                  <div>
+                                    <span className="font-semibold text-slate-800 block">{item.name}</span>
+                                    <span className="text-[10px] text-slate-500 block">{item.detail}</span>
+                                  </div>
+                                </div>
+                                <span className="font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded text-[11px]">
+                                  +{item.pts} pts
+                                </span>
+                              </div>
+                            ))}
+
+                            {/* Total Score Footer */}
+                            <div className="flex items-center justify-between pt-2 mt-3 border-t border-slate-200 font-bold text-slate-900 text-xs">
+                              <span>Total Score:</span>
+                              <span className="text-sm text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-lg">
+                                {breakdown.total} / 100
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Areas Requiring Attention */}
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                      <div className="p-1.5 bg-amber-100 rounded-lg text-amber-600">
+                        <AlertCircle size={16} />
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-900">Areas Requiring Attention</h3>
+                    </div>
+                    <ul className="space-y-2 text-xs text-slate-700">
+                      {(() => {
+                        const breakdown = getWeightedScoreBreakdown(deal);
+                        const negativeComponents = breakdown.components.filter((c) => c.pts < 0);
+
+                        const extraConcerns = [];
+                        if (!deal.followUpDate) {
+                          extraConcerns.push("No upcoming follow-up date currently scheduled");
+                        }
+                        if (highlights?.pendingTasks?.length > 0) {
+                          extraConcerns.push(`${highlights.pendingTasks.length} pending task(s) require action`);
+                        }
+                        if (dealInvoices.some((i) => i.status !== "paid" && i.status !== "Paid")) {
+                          extraConcerns.push("Unpaid invoice(s) pending payment confirmation");
+                        }
+                        if (deal.stage === "Closed Lost" && deal.lossReason) {
+                          extraConcerns.push(`Loss Reason: ${deal.lossReason}`);
+                        }
+
+                        if (negativeComponents.length === 0 && extraConcerns.length === 0) {
+                          return (
+                            <li className="text-slate-400 italic py-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                              No immediate risk areas or penalties flagged.
+                            </li>
+                          );
+                        }
+
+                        return (
+                          <>
+                            {negativeComponents.map((item, idx) => (
+                              <li key={`neg-c-${idx}`} className="flex items-start justify-between gap-2 p-2 bg-rose-50/50 rounded-lg border border-rose-100/70">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-rose-500 font-bold mt-0.5">⚠</span>
+                                  <div>
+                                    <span className="font-semibold text-slate-800 block">{item.name}</span>
+                                    <span className="text-[10px] text-slate-500 block">{item.detail}</span>
+                                  </div>
+                                </div>
+                                <span className="font-bold text-rose-700 bg-rose-100/70 px-2 py-0.5 rounded text-[11px]">
+                                  {item.pts} pts
+                                </span>
+                              </li>
+                            ))}
+                            {extraConcerns.map((item, idx) => (
+                              <li key={`neg-e-${idx}`} className="flex items-start gap-2 p-2 bg-amber-50/50 rounded-lg border border-amber-100/70">
+                                <span className="text-amber-500 font-bold mt-0.5">⚠</span>
+                                <span className="text-slate-700">{item}</span>
+                              </li>
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Section 3: Next Best Action & Suggested Next Step (Exact Deal Analysis Match) */}
+                <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-white rounded-xl shadow-sm border border-blue-100 p-5">
+                  {(() => {
+                    const stageConfig = STAGE_ACTIONS[deal.stage] || STAGE_ACTIONS["Qualification"];
+                    const suggestedNextStep = stageConfig.nextStep;
+                    const availableActions = stageConfig.actions || [];
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                          <div>
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                              Next Best Action
+                            </span>
+                            <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                              Current Stage: <span className="text-indigo-600">{deal.stage || "Qualification"}</span>
+                            </h4>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block uppercase font-medium">Suggested Next Step</span>
+                            <span className="text-xs font-bold text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-full inline-block mt-0.5">
+                              {suggestedNextStep}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Working Action Buttons derived directly from Deal Analysis STAGE_ACTIONS */}
+                        <div className="flex flex-wrap items-center gap-3 pt-1">
+                          {availableActions.map((actionName, idx) => {
+                            if (actionName === "Manage Follow-ups & History") {
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => setIsFollowUpModalOpen(true)}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <Clock size={14} />
+                                  Manage Follow-ups & History
+                                </button>
+                              );
+                            }
+                            if (actionName === "Send Proposal") {
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => setActiveTab("proposal")}
+                                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <Send size={14} />
+                                  Send Proposal
+                                </button>
+                              );
+                            }
+                            if (actionName === "Send Invoice") {
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => setActiveTab("invoice")}
+                                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <FileText size={14} />
+                                  Send Invoice
+                                </button>
+                              );
+                            }
+                            if (actionName === "Convert to Won") {
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={handleConvertToWon}
+                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <CheckCircle size={14} />
+                                  Convert to Won
+                                </button>
+                              );
+                            }
+                            if (actionName === "View in CLV Dashboard") {
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => navigate(`/cltv/dashboard`)}
+                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <BarChart size={14} />
+                                  View in CLV Dashboard
+                                </button>
+                              );
+                            }
+                            if (actionName === "Review Loss Reasons") {
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={openLostDealModal}
+                                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                  <AlertTriangle size={14} />
+                                  Review Loss Reasons
+                                </button>
+                              );
+                            }
+                            return null;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Section 4: Statistical Visualization (Deal Analysis Engine Data) */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+                  <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Activity size={16} className="text-blue-600" />
+                      <span>Deal Analysis & Statistical Visualizations</span>
+                    </span>
+                    <span className="text-xs font-normal text-slate-400">3 Interactive Charts</span>
+                  </h3>
+
+                  {/* 3 Presentation Charts Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                    {/* Chart 1: Deal Analysis Score Factors BarChart */}
+                    <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">Deal Analysis Score Breakdown</h4>
+                        <p className="text-[11px] text-slate-500 mb-3">Impacts from Deal Analysis Engine</p>
+                      </div>
+                      {(() => {
+                        const stageBase = calculateStageScore(deal);
+                        const followUpImpact = calculateFollowUpScore(deal);
+                        const activityImpact = calculateActivityScore(deal);
+                        const valueTierImpact = calculateValueScore(deal);
+
+                        const scoreFactorsData = [
+                          { name: "Base", pts: 50, color: "#94a3b8" },
+                          { name: "Stage", pts: stageBase, color: "#3b82f6" },
+                          { name: "Follow-up", pts: Math.abs(followUpImpact), color: followUpImpact < 0 ? "#ef4444" : "#10b981" },
+                          { name: "Activity", pts: Math.abs(activityImpact), color: activityImpact < 0 ? "#f59e0b" : "#10b981" },
+                          { name: "Value Tier", pts: valueTierImpact, color: "#8b5cf6" },
+                        ];
+
+                        return (
+                          <div className="h-44 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={scoreFactorsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <Tooltip
+                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  formatter={(value, name) => [`${value} pts`, name]}
+                                />
+                                <Bar dataKey="pts" radius={[4, 4, 0, 0]}>
+                                  {scoreFactorsData.map((entry, index) => (
+                                    <Cell key={`score-cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Chart 2: Positive vs Attention Factors PieChart */}
+                    <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">Health Factors Ratio</h4>
+                        <p className="text-[11px] text-slate-500 mb-3">Positive points vs penalties</p>
+                      </div>
+                      {(() => {
+                        const stageBase = calculateStageScore(deal);
+                        const followUpImpact = calculateFollowUpScore(deal);
+                        const activityImpact = calculateActivityScore(deal);
+                        const valueTierImpact = calculateValueScore(deal);
+
+                        const positivePts = 50 + stageBase + (followUpImpact > 0 ? followUpImpact : 0) + (activityImpact > 0 ? activityImpact : 0) + valueTierImpact;
+                        const penaltyPts = (followUpImpact < 0 ? Math.abs(followUpImpact) : 0) + (activityImpact < 0 ? Math.abs(activityImpact) : 0);
+
+                        const healthPieData = [
+                          { name: "Positive Points", value: positivePts, color: "#10b981" },
+                          { name: "Penalties", value: penaltyPts > 0 ? penaltyPts : 1, color: penaltyPts > 0 ? "#ef4444" : "#e2e8f0" },
+                        ];
+
+                        return (
+                          <div className="h-44 w-full flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={healthPieData}
+                                  cx="50%"
+                                  cy="45%"
+                                  innerRadius={30}
+                                  outerRadius={55}
+                                  paddingAngle={4}
+                                  dataKey="value"
+                                >
+                                  {healthPieData.map((entry, index) => (
+                                    <Cell key={`pie-cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Tooltip
+                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                />
+                                <Legend iconSize={8} wrapperStyle={{ fontSize: "10px" }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Chart 3: Activity Breakdown BarChart */}
+                    <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">Activity Volume</h4>
+                        <p className="text-[11px] text-slate-500 mb-3">Logged CRM activities</p>
+                      </div>
+                      {(() => {
+                        const chartData = [
+                          { name: "Meetings", count: dealMeetings.length, color: "#ec4899" },
+                          { name: "Proposals", count: dealProposals.length, color: "#14b8a6" },
+                          { name: "Invoices", count: dealInvoices.length, color: "#22c55e" },
+                          { name: "Emails", count: dealEmails.length, color: "#06b6d4" },
+                          { name: "Notes", count: notes.length, color: "#eab308" },
+                          { name: "Tasks", count: highlights?.pendingTasks?.length || 0, color: "#6366f1" },
+                        ];
+
+                        return (
+                          <div className="h-44 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <Tooltip
+                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                />
+                                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                                  {chartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                  </div>
+
+                  {/* Pipeline Stage Progress Visual */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-500 mb-3">Pipeline Stage Progress</h4>
+                    <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      {DEAL_STAGES.map((stg, index) => {
+                        const currentStageIdx = DEAL_STAGES.indexOf(deal.stage || "Qualification");
+                        const isCurrent = deal.stage === stg;
+                        const isPassed = index < currentStageIdx;
+
+                        let dotStyle = "bg-slate-200 text-slate-400";
+                        if (isCurrent) dotStyle = "bg-blue-600 text-white ring-4 ring-blue-100";
+                        else if (isPassed) dotStyle = "bg-emerald-500 text-white";
+
+                        return (
+                          <div key={stg} className="flex items-center gap-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${dotStyle}`}>
+                              {isPassed ? "✓" : index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className={`text-xs font-medium ${isCurrent ? "text-blue-600 font-bold" : isPassed ? "text-slate-800" : "text-slate-400"}`}>
+                                  {stg}
+                                </span>
+                                {isCurrent && (
+                                  <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+                                    Current Stage
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Recent Activity Summary Feed */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                  <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between mb-4">
+                    <span className="flex items-center gap-2">
+                      <Clock size={16} className="text-slate-500" />
+                      <span>Recent Activity Log</span>
+                    </span>
+                    <button onClick={() => setActiveTab("activity")} className="text-xs text-blue-600 hover:underline font-medium">
+                      View All Activity →
+                    </button>
+                  </h3>
+
+                  {activityFeed.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic py-4 text-center">No recent activity recorded.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {activityFeed.slice(0, 4).map((event, idx) => {
+                        const meta = ACTIVITY_TYPE_META[event.type] || ACTIVITY_TYPE_META.default;
+                        const IconComp = meta.icon;
+                        return (
+                          <div key={idx} className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${meta.bg}`}>
+                              <IconComp size={14} className={meta.iconColor} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-800">{event.description}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                {event.timestamp ? new Date(event.timestamp).toLocaleString() : "Recently"}
+                                {event.performedBy?.name ? ` • by ${event.performedBy.name}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Details Card */}
             {activeTab === "details" && (
               <>
-              {(highlights.pendingTasks.length > 0 || highlights.pendingTargets.length > 0) && (
-                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
-                  <div className="p-4 border-b border-amber-200">
-                    <h3 className="text-sm font-semibold text-amber-900">Pending Tasks & Targets</h3>
-                  </div>
-                  <div className="p-4 space-y-3">
-                    {highlights.pendingTasks.map((t) => (
-                      <div key={t._id} className="flex items-start gap-2 text-sm">
-                        <CheckCircle size={15} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <span className="font-medium text-slate-900">{t.title}</span>
-                          {t.description && <p className="text-slate-600">{t.description}</p>}
-                          {t.dueDate && (
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Due {new Date(t.dueDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {highlights.pendingTargets.map((tg) => (
-                      <div key={tg._id} className="flex items-start gap-2 text-sm">
-                        <Tag size={15} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <span className="font-medium text-slate-900">Target</span>
-                          {tg.description && <p className="text-slate-600">{tg.description}</p>}
-                          {tg.endDate && (
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              Ends {new Date(tg.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                   <div>
@@ -1681,9 +2439,12 @@ function Pipeline_modal_view() {
                                   <p className="text-sm font-medium">
                                     Phone Number
                                   </p>
-                                  <p className="text-slate-900">
-                                    {deal.phoneNumber}
-                                  </p>
+                                  <a
+                                    href={`tel:${deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}`}
+                                    className="text-blue-600 hover:underline text-slate-900"
+                                  >
+                                    {deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}
+                                  </a>
                                 </div>
                               </div>
                             )}
@@ -1711,9 +2472,12 @@ function Pipeline_modal_view() {
                                   <p className="text-sm font-medium">
                                     Alternative Number
                                   </p>
-                                  <p className="text-slate-900">
-                                    {deal.alternativeNumber}
-                                  </p>
+                                  <a
+                                    href={`tel:${deal.alternativeNumber.startsWith("+") ? deal.alternativeNumber : `+${deal.alternativeNumber}`}`}
+                                    className="text-blue-600 hover:underline text-slate-900"
+                                  >
+                                    {deal.alternativeNumber.startsWith("+") ? deal.alternativeNumber : `+${deal.alternativeNumber}`}
+                                  </a>
                                 </div>
                               </div>
                             )}
@@ -1995,6 +2759,13 @@ function Pipeline_modal_view() {
                 </div>
               </div>
               </>
+            )}
+
+            {/* Tasks & Targets Tab */}
+            {activeTab === "tasks_targets" && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6 animate-fade-in">
+                <LinkedTasksTargetsTab itemType="deal" itemId={dealId} />
+              </div>
             )}
 
             {/* Attachments Card */}
@@ -2905,100 +3676,105 @@ function Pipeline_modal_view() {
           </div>
 
           {/* Sidebar Column */}
-          <div className="space-y-6">
-            {/* Status Card */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
-                Deal Status
-              </h3>
-              <div
-                className={`inline-flex items-center px-4 py-2 rounded-full ${stageConfig.bgColor} ${stageConfig.color} border ${stageConfig.borderColor} mb-4`}
-              >
-                <StageIcon size={16} className="mr-2" />
-                <span className="capitalize font-medium text-sm">
-                  {stageConfig.label}
-                </span>
-              </div>
-              <p className="text-sm text-slate-600 mt-2">
-                Last updated {new Date(deal.updatedAt).toLocaleDateString()}
-              </p>
-            </div>
-
-            {/* Company Card */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
-                Company
-              </h3>
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mr-3">
-                  <Building size={20} className="text-slate-600" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-slate-900">
-                    {deal.companyName || "Unknown Company"}
-                  </h4>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {deal.email && (
-                  <a
-                    href={`mailto:${deal.email}`}
-                    className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
-                  >
-                    <Mail size={14} className="mr-2" />
-                    {deal.email}
-                  </a>
-                )}
-                {deal.phoneNumber && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Phone size={14} className="mr-2" />
-                    {deal.phoneNumber}
-                  </div>
-                )}
-                {deal.alternativeEmail && (
-                  <a
-                    href={`mailto:${deal.alternativeEmail}`}
-                    className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
-                  >
-                    <Mail size={14} className="mr-2" />
-                    {deal.alternativeEmail}
-                    <span className="ml-1 text-xs text-slate-400">(alt)</span>
-                  </a>
-                )}
-                {deal.alternativeNumber && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Phone size={14} className="mr-2" />
-                    {deal.alternativeNumber}
-                    <span className="ml-1 text-xs text-slate-400">(alt)</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions Card */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
-                Quick Actions
-              </h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    if (deal.followUpDate) {
-                      setFollowUpData({
-                        followUpDate: new Date(deal.followUpDate),
-                        followUpComment: deal.followUpComment || ""
-                      });
-                    }
-                    setIsFollowUpModalOpen(true);
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-slate-700 hover:bg-purple-50 rounded-lg transition-colors"
+          {activeTab !== "deal_score" && (
+            <div className="space-y-6">
+              {/* Status Card */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
+                <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                  Deal Status
+                </h3>
+                <div
+                  className={`inline-flex items-center px-4 py-2 rounded-full ${stageConfig.bgColor} ${stageConfig.color} border ${stageConfig.borderColor} mb-4`}
                 >
-                  <Calendar size={16} className="text-purple-600" />
-                  {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
-                </button>
+                  <StageIcon size={16} className="mr-2" />
+                  <span className="capitalize font-medium text-sm">
+                    {stageConfig.label}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 mt-2">
+                  Last updated {new Date(deal.updatedAt).toLocaleDateString()}
+                </p>
+              </div>
+
+              {/* Company Card */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
+                <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+                  Company
+                </h3>
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mr-3">
+                    <Building size={20} className="text-slate-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-slate-900">
+                      {deal.companyName || "Unknown Company"}
+                    </h4>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {deal.email && (
+                    <a
+                      href={`mailto:${deal.email}`}
+                      className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
+                    >
+                      <Mail size={14} className="mr-2" />
+                      {deal.email}
+                    </a>
+                  )}
+                  {deal.phoneNumber && (
+                    <a
+                      href={`tel:${deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}`}
+                      className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
+                    >
+                      <Phone size={14} className="mr-2" />
+                      {deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}
+                    </a>
+                  )}
+                  {deal.alternativeEmail && (
+                    <a
+                      href={`mailto:${deal.alternativeEmail}`}
+                      className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
+                    >
+                      <Mail size={14} className="mr-2" />
+                      {deal.alternativeEmail}
+                      <span className="ml-1 text-xs text-slate-400">(alt)</span>
+                    </a>
+                  )}
+                  {deal.alternativeNumber && (
+                    <div className="flex items-center text-sm text-slate-600">
+                      <Phone size={14} className="mr-2" />
+                      {deal.alternativeNumber}
+                      <span className="ml-1 text-xs text-slate-400">(alt)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Actions Card */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
+                <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+                  Quick Actions
+                </h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      if (deal.followUpDate) {
+                        setFollowUpData({
+                          followUpDate: new Date(deal.followUpDate),
+                          followUpComment: deal.followUpComment || ""
+                        });
+                      }
+                      setIsFollowUpModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-slate-700 hover:bg-purple-50 rounded-lg transition-colors"
+                  >
+                    <Calendar size={16} className="text-purple-600" />
+                    {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

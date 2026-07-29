@@ -1668,7 +1668,7 @@ function DealIntelligenceDashboard() {
   }, [handleOpenModal]);
 
   const canExport = userRole === "Admin" || userRole === "Manager";
-  const canCreateDeal = userRole === "Admin";
+  const canCreateDeal = userRole === "Admin" || userRole === "Sales";
 
   if (isLoading) {
     return (

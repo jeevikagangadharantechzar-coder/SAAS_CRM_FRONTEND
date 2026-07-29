@@ -357,7 +357,19 @@ export default function RejectedLeads() {
                         <span className="text-gray-400 text-xs">{lead.email || "-"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{lead.phoneNumber || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {lead.phoneNumber ? (
+                        <a
+                          href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
+                          className="text-blue-600 hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
                     <td className="px-4 py-3">

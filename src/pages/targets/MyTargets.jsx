@@ -10,8 +10,13 @@ import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
   Trophy, ArrowRight, Award, Clock, ChevronDown,
   ChevronUp, Briefcase, Mail, Building2, Send, MessageSquare,
-  Bell, AlertCircle, Check, XCircle, X, Trash2,
+  Bell, AlertCircle, Check, XCircle, X, Trash2, Activity, List, LayoutGrid, DollarSign, Flag, Info, CheckCheck
 } from "lucide-react";
+
+import TargetPipelineView from "./TargetPipelineView";
+import ReportCallModal from "./components/ReportCallModal";
+import ReportMeetingModal from "./components/ReportMeetingModal";
+import ViewReportsModal from "./components/ViewReportsModal";
 
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -297,7 +302,7 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
 }
 
 /* ── My Target Card ─────────────────────── */
-function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoExpand }) {
+function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoExpand, tasks, onOpenReport, onViewReports }) {
   const [expanded, setExpanded] = useState(false);
   // Each item's expand/collapse is fully independent — a Set of open keys,
   // not a single shared value, so opening one item never affects any other.
@@ -345,6 +350,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
   const selfConvertedCount = convertedLeadDeals.filter(d => d.salesPersonConverted !== false).length;
   const linkedDeals = (t.linkedDeals || []).filter(Boolean);
 
+  const activeTasks = (tasks || []).filter(task => task.status !== "Completed" && (task.assignedTo?._id || task.assignedTo) === (t.salesPerson?._id || t.salesPerson));
+
   // convertedLeadDeals always carries conversion attribution reliably (it's looked
   // up by leadId); borrow it here in case the same deal shows up in linkedDeals
   // via a path that didn't already have convertedByName/salesPersonConverted set.
@@ -364,11 +371,11 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
 
   const metrics = [
     { label: "Leads to Deals Converted", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadsConverted || 0, pct: percentages.leadsPercent || 0, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
-    { label: "Deal Closed", target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Leads to Deal Closed", target: null, actual: actuals.leadDealWon || 0, pct: null, icon: <Trophy size={13} className="text-amber-500" />, bg: "bg-amber-50", border: "border-amber-100", countOnly: true, badgeText: "leads closed", badgeClass: "text-amber-600 bg-amber-100" },
+    { label: "Deal Closed", target: percentages.effTargetDeals ?? t.targetDeals, actual: actuals.dealsWon || 0, pct: percentages.dealsPercent || 0, icon: <DollarSign size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
+    { label: "Leads to Deal Closed", target: percentages.effTargetLeads ?? t.targetLeads, actual: actuals.leadDealWon || 0, pct: percentages.leadDealWonPercent || 0, icon: <TrendingUp size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false, specialZeroMessage: "No converted lead is moved to closed deal" },
     { label: "Deal Lost", target: null, actual: actuals.dealsLost || 0, pct: null, icon: <XCircle size={13} className="text-red-500" />, bg: "bg-red-50", border: "border-red-100", countOnly: true, badgeText: "deal lost", badgeClass: "text-red-600 bg-red-100" },
-    { label: "Calls Made", target: t.targetCalls, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
-    { label: "Meetings Done", target: t.targetMeetings, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
+    { label: "Calls Made", type: "call", target: t.targetCalls, actual: actuals.calls || 0, pct: percentages.callsPercent || 0, icon: <Phone size={13} className="text-orange-500" />, bg: "bg-orange-50", border: "border-orange-100", countOnly: false },
+    { label: "Meetings Done", type: "meeting", target: t.targetMeetings, actual: actuals.meetings || 0, pct: percentages.meetingsPercent || 0, icon: <Activity size={13} className="text-purple-500" />, bg: "bg-purple-50", border: "border-purple-100", countOnly: false },
   ];
 
   return (
@@ -378,9 +385,12 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
       <div className="p-5">
         {/* Period + dates */}
         <div className="flex items-center justify-between mb-3">
-          <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
-            {t.period}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+              {t.period}
+            </span>
+          </div>
           <div className="flex items-center gap-1 text-[11px] text-gray-400">
             <Calendar size={10} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
           </div>
@@ -400,7 +410,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
         {/* Overall hero */}
         <div className={`rounded-xl p-4 mb-4 ${overall >= 80 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-amber-50 border border-amber-100" : "bg-red-50 border border-red-100"}`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700"><Trophy size={15} className={getTextColor(overall)} /> Overall Progress</span>
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700"><Trophy size={15} className={getTextColor(overall)} /> {overall >= 100 ? "Target Completed" : "Overall Progress"}</span>
             <span className={`text-2xl font-bold ${getTextColor(overall)}`}>{overall}%</span>
           </div>
           <ProgressBar value={overall} color={getProgressColor(overall)} />
@@ -425,8 +435,30 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                     <span className="text-lg font-bold text-gray-800">{m.actual}</span>
                     <span className="text-xs text-gray-400">/ {m.target}</span>
                   </div>
-                  <ProgressBar value={m.pct} color={getProgressColor(m.pct)} />
-                  <p className={`text-[11px] font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
+                  {m.specialZeroMessage && m.actual === 0 ? (
+                    <div className="mt-2 text-center text-[10px] font-semibold text-purple-600 bg-purple-100/50 py-1.5 rounded border border-purple-100">
+                      {m.specialZeroMessage}
+                    </div>
+                  ) : (
+                    <>
+                      <ProgressBar value={m.pct} color={getProgressColor(m.pct)} />
+                      <p className={`text-[11px] font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
+                    </>
+                  )}
+                  {(m.type === "call" || m.type === "meeting") && m.target > 0 && (
+                    m.actual >= m.target ? (
+                      <div className="mt-2 text-center text-[10px] font-semibold text-emerald-600 bg-emerald-50 py-1.5 rounded border border-emerald-100">
+                        Targeted {m.type}s are completed
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onOpenReport(t._id, m.type); }}
+                        className="mt-2 w-full text-xs font-bold py-1 border border-gray-200 rounded text-gray-600 hover:bg-gray-100 transition-colors"
+                      >
+                        + Add Report
+                      </button>
+                    )
+                  )}
                 </>
               )}
             </div>
@@ -490,27 +522,28 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
         {expanded && (
           <div className="mt-4 space-y-4">
 
-            {/* Won deals — detailed accordion */}
+
+
+            {/* ── Won Deals — accordion style ── */}
             {wonDeals.length > 0 && (
               <div>
-                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1.5"><Award size={12} className="text-emerald-500" /> Deal Closed — Full Details</p>
-                <div className="space-y-2">
+                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1.5">
+                  <Award size={13} className="text-emerald-500" /> Deal Closed ({wonDeals.length})
+                </p>
+                <div className={`space-y-2 ${wonDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
                   {wonDeals.map((d, i) => {
-                    const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
-                    const wonDate      = d.wonAt ? new Date(d.wonAt) : null;
-                    const totalDays    = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
-                    const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
+                    const createdDate   = d.createdAt   ? new Date(d.createdAt)   : null;
+                    const convertedDate = d.convertedAt ? new Date(d.convertedAt) : createdDate;
+                    const wonDate       = d.wonAt       ? new Date(d.wonAt)       : null;
+                    const totalDays     = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
+                    const stageHistory  = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
                     const isOpen = expandedItems.has(`won-${i}`);
                     const adminBadge = getAdminActionBadge(d);
                     return (
                       <div key={d._id} className="bg-emerald-50 border border-emerald-200 rounded-2xl overflow-hidden">
                         {/* Accordion header — always visible */}
-                        <div className="w-full px-3 pt-3 pb-2.5 flex items-start gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => toggleExpand(`won-${i}`)}
-                            className="flex-1 min-w-0 text-left"
-                          >
+                        <div className="flex items-center gap-1 px-3 pt-3 pb-0">
+                          <button type="button" onClick={() => toggleExpand(`won-${i}`)} className="flex-1 text-left pb-2.5">
                             <div className="flex items-center gap-1.5">
                               <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
@@ -525,68 +558,95 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
                               {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
                               {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
-                              {totalDays !== null && (
-                                <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
-                                  <Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}
-                                </span>
-                              )}
+                              {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
                             </div>
                           </button>
-                          <button onClick={(e) => handleRemoveCompleted(e, "deal", d._id, d.dealName || d.dealTitle)}
-                            className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target">
-                            <Trash2 size={13} />
-                          </button>
+                          
                         </div>
 
-                        {/* Accordion body — expanded details */}
+                        {/* Accordion body */}
                         {isOpen && (
                           <div className="border-t border-emerald-100">
-                            {/* Contact info */}
                             <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
-                              {d.phoneNumber && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
-                              {d.email && <span className="text-[11px] text-gray-500 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
+                              {d.phoneNumber && <span className="text-[11px] text-gray-600 flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
+                              {d.email && <span className="text-[11px] text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
                               {wonDate && <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)}</span>}
                             </div>
 
-                            {/* Stage journey */}
-                            {(stageHistory.length > 0 || createdDate) && (
-                              <div className="px-3 py-2.5 bg-white/60 space-y-1.5 border-t border-emerald-100">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
-                                {createdDate && (
-                                  <div className="flex items-start gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${STAGE_DOT["Qualification"] || "bg-gray-300"} mt-0.5 shrink-0`} />
+                            <div className="border-t border-emerald-100 px-3 py-2.5 bg-white/60 space-y-1.5">
+                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+                              {createdDate && (
+                                <div className="flex items-start gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-gray-400 mt-0.5 shrink-0" />
+                                  <div>
+                                    <span className="text-[11px] font-semibold text-gray-600">Lead Created</span>
+                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {convertedDate && createdDate && Math.abs(convertedDate - createdDate) > 60000 && (
+                                <div className="flex items-start gap-2 pl-1">
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <div className="w-px h-2 bg-gray-200" />
+                                    <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] font-semibold text-indigo-700">Lead → Deal Converted</span>
+                                    <span className="text-[10px] text-indigo-400 ml-1">(+{Math.max(0, Math.round((convertedDate - createdDate) / 86400000))}d)</span>
+                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {createdDate && (
+                                <div className="flex items-start gap-2 pl-1">
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <div className="w-px h-2 bg-gray-200" />
+                                    <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
+                                    <span className="text-[10px] text-gray-400 ml-1">(deal start)</span>
+                                    <p className="text-[10px] text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {stageHistory.map((h, hi) => {
+                                const prev = hi === 0 ? createdDate : new Date(stageHistory[hi - 1].movedAt);
+                                const diff = prev ? Math.max(0, Math.round((new Date(h.movedAt) - prev) / 86400000)) : null;
+                                return (
+                                  <div key={hi} className="flex items-start gap-2 pl-1">
+                                    <div className="flex flex-col items-center gap-0.5">
+                                      <div className="w-px h-2 bg-gray-200" />
+                                      <div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
+                                    </div>
                                     <div>
-                                      <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-                                      <span className="text-[10px] text-gray-400 ml-1">(created)</span>
-                                      <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+                                      <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
+                                      {diff !== null && <span className="text-[10px] text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+                                      <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
                                     </div>
                                   </div>
-                                )}
-                                {stageHistory.map((h, hi) => {
-                                  const prev = hi === 0 ? createdDate : new Date(stageHistory[hi - 1].movedAt);
-                                  const daysDiff = prev ? Math.max(0, Math.round((new Date(h.movedAt) - prev) / 86400000)) : null;
-                                  return (
-                                    <div key={hi} className="flex items-start gap-2 pl-1">
-                                      <div className="flex flex-col items-center gap-0.5">
-                                        <div className="w-px h-2 bg-gray-200" />
-                                        <div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
-                                      </div>
-                                      <div>
-                                        <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-                                        {daysDiff !== null && <span className="text-[10px] text-gray-400 ml-1">({daysDiff === 0 ? "same day" : `+${daysDiff}d`})</span>}
-                                        <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
+                                );
+                              })}
+                              {/* Always show Closed Won as final step — stageHistory may not include it if recorded before fix */}
+                              {wonDate && !stageHistory.some(h => h.stage === "Closed Won") && (
+                                <div className="flex items-start gap-2 pl-1">
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <div className="w-px h-2 bg-gray-200" />
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] font-semibold text-emerald-700">Closed Won</span>
+                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(wonDate)} {fmtTime(wonDate)}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
 
                             {totalDays !== null && (
                               <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
-                                <Clock size={10} className="text-emerald-600 shrink-0" />
+                                <Clock size={11} className="text-emerald-600 shrink-0" />
                                 <p className="text-[11px] font-bold text-emerald-700">
-                                  {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from creation to won`}
+                                  {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
                                 </p>
                               </div>
                             )}
@@ -624,9 +684,12 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                 {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
                               </div>
                               {adminBadge && (
-                                <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
+                                <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1" title={adminBadge.title}>
                                   {adminBadge.text}
                                 </span>
+                              )}
+                              {activeTasks.some(task => task.dealRefs?.some(ref => (ref._id || ref) === d._id) || (task.dealRef?._id || task.dealRef) === d._id) && (
+                                <span className="inline-flex text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 w-fit items-center gap-1"><Flag size={9}/>Linked to active Task</span>
                               )}
                               <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
                                 {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
@@ -635,10 +698,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                 {d.lossReason && <span className="text-[10px] text-red-600 font-medium">Reason: {d.lossReason}</span>}
                               </div>
                             </button>
-                            <button onClick={(e) => handleRemoveCompleted(e, "deal", d._id, d.dealName || d.dealTitle)}
-                              className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target">
-                              <Trash2 size={13} />
-                            </button>
+
                           </div>
                           {isOpen && (
                             <div className="border-t border-red-100">
@@ -718,12 +778,15 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                             <div className="flex items-center gap-1 shrink-0">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500"}`}>{d.stage}</span>
                               {isOpen ? <ChevronUp size={12} className="text-gray-500" /> : <ChevronDown size={12} className="text-gray-400" />}
                             </div>
                           </div>
                           {adminBadge && (
-                            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1" title={adminBadge.title}>{adminBadge.text}</span>
+                            <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 w-fit" title={adminBadge.title}>{adminBadge.text}</span>
+                          )}
+                          {activeTasks.some(task => task.dealRefs?.some(ref => (ref._id || ref) === d._id) || (task.dealRef?._id || task.dealRef) === d._id) && (
+                            <span className="inline-flex text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 w-fit items-center gap-1"><Flag size={9}/>Linked to active Task</span>
                           )}
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                             {d.companyName && <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><Building2 size={8} />{d.companyName}</span>}
@@ -797,14 +860,19 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                               {isOpen ? <ChevronUp size={12} className="text-gray-500" /> : <ChevronDown size={12} className="text-gray-400" />}
                             </div>
                           </div>
+                          {activeTasks.some(task => task.leadRefs?.some(ref => (ref._id || ref) === l._id) || (task.leadRef?._id || task.leadRef) === l._id) && (
+                            <span className="inline-flex text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 w-fit items-center gap-1 mt-1.5"><Flag size={9}/>Linked to active Task</span>
+                          )}
                         </button>
-                        <div className="px-2.5 pb-2.5">
-                          <ReportBox
-                            targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
-                            itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
-                            baseUrl={baseUrl} headers={headers}
-                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(l._id) && n.status === "pending")} />
-                        </div>
+                        {l.status !== "Converted" && (
+                          <div className="px-2.5 pb-2.5">
+                            <ReportBox
+                              targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
+                              itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
+                              baseUrl={baseUrl} headers={headers}
+                              isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(l._id) && n.status === "pending")} />
+                          </div>
+                        )}
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2">
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
@@ -841,31 +909,22 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                     const isOpen = expandedItems.has(`convlead-${i}`);
                     return (
                       <div key={d._id} className="bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
-                        <button type="button" onClick={() => toggleExpand(`convlead-${i}`)} className="w-full text-left p-2.5">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
-                              <p className="text-[10px] text-gray-400">{d.currency} {d.value}</p>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-start gap-1 px-2.5 pt-2.5 pb-1">
+                          <button type="button" onClick={() => toggleExpand(`convlead-${i}`)} className="flex-1 min-w-0 text-left">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName}</p>
                               {!d.convertedByName && (
-                                <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Converted → Deal</span>
+                                <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded shrink-0">Converted → Deal</span>
                               )}
-                              {isOpen ? <ChevronUp size={12} className="text-emerald-600" /> : <ChevronDown size={12} className="text-gray-400" />}
+                              {isOpen ? <ChevronUp size={12} className="text-emerald-600 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
                             </div>
-                          </div>
-                          {d.convertedByName && (
-                            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
-                              {d.salesPersonConverted ? `Converted Lead to Deal by ${d.convertedByName}` : `Converted Lead to Deal by Admin ${d.convertedByName}`}
-                            </span>
-                          )}
-                        </button>
-                        <div className="px-2.5 pb-2.5">
-                          <ReportBox
-                            targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName}
-                            itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage || "Qualification", statusColor: "bg-emerald-100 text-emerald-700", dateNote: d.convertedAt ? `converted ${fmt(d.convertedAt)}` : null }}
-                            baseUrl={baseUrl} headers={headers}
-                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
+                            {d.convertedByName && (
+                              <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
+                                {d.salesPersonConverted ? `Converted Lead to Deal by ${d.convertedByName}` : `Converted Lead to Deal by Admin ${d.convertedByName}`}
+                              </span>
+                            )}
+                            {d.value && <p className="text-[11px] text-emerald-700 font-bold mt-1">{d.currency} {d.value}</p>}
+                          </button>
                         </div>
                         {/* Lead status journey before conversion */}
                         {isOpen && (
@@ -949,6 +1008,48 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
               <p className="text-xs text-gray-400 text-center py-3">No leads or deals linked to this target yet.</p>
             )}
 
+            {/* Reported Calls */}
+            {t.reportedCalls?.length > 0 && (
+              <div className="border-t border-gray-100 pt-4 mt-2">
+                <button 
+                  onClick={() => onViewReports(t._id, "call")}
+                  className="w-full flex items-center justify-between p-3 bg-orange-50 hover:bg-orange-100/70 border border-orange-100 rounded-xl transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white rounded-lg shadow-sm">
+                      <Phone size={14} className="text-orange-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[11px] font-bold text-gray-800">Reported Calls</p>
+                      <p className="text-[10px] text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-orange-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
+                </button>
+              </div>
+            )}
+
+            {/* Reported Meetings */}
+            {t.reportedMeetings?.length > 0 && (
+              <div className="border-t border-gray-100 pt-4 mt-2">
+                <button 
+                  onClick={() => onViewReports(t._id, "meeting")}
+                  className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100/70 border border-purple-100 rounded-xl transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white rounded-lg shadow-sm">
+                      <Activity size={14} className="text-purple-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[11px] font-bold text-gray-800">Reported Meetings</p>
+                      <p className="text-[10px] text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-purple-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
+                </button>
+              </div>
+            )}
+
             {/* Notes section */}
             <NotesSection target={t} baseUrl={baseUrl} headers={headers} onNoteAdded={onRefresh} />
           </div>
@@ -965,15 +1066,20 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
 /* ── Main Component ─────────────────────── */
 export default function MyTargets() {
   const [targets, setTargets] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [myDashStats, setMyDashStats] = useState(null);
   const [periodFilter, setPeriodFilter] = useState("all");
   const [myView, setMyView] = useState("targets"); // "targets" | "notifications"
+  const [viewMode, setViewMode] = useState("card"); // "card" | "pipeline"
+  const [reportModal, setReportModal] = useState({ open: false, type: null, targetId: null });
+  const [viewReportsModal, setViewReportsModal] = useState({ open: false, type: null, targetId: null });
   const { notifications, setNotifications, fetchNotifications } = useNotifications();
   const location = useLocation();
   const expandTargetId = location.state?.expandTargetId || null;
   const socket = useSocket();
   const targetSocket = useTargetSocket();
+  const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
 
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
@@ -983,7 +1089,7 @@ export default function MyTargets() {
   const fetchTargets = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ data }, dashStatsRes] = await Promise.all([
+      const [{ data }, dashStatsRes, tasksRes] = await Promise.all([
         axios.get(`${baseUrl}/targets/my`, { headers }),
         // "My Monthly Overview" header — self-scoped, so it always shows real
         // numbers even when you have zero active Targets.
@@ -991,8 +1097,10 @@ export default function MyTargets() {
           console.error("Failed to load my dashboard stats", err);
           return null;
         }),
+        axios.get(`${baseUrl}/tasks`, { headers }),
       ]);
       setTargets(data);
+      setTasks(tasksRes.data);
       if (dashStatsRes) setMyDashStats(dashStatsRes.data);
     } catch {
       toast.error("Failed to load targets");
@@ -1008,10 +1116,12 @@ export default function MyTargets() {
     const newNotifHandler = () => { fetchNotifications(); setMyView("notifications"); };
     socket.on("deal_stage_updated", handler);
     socket.on("lead_converted", handler);
+    socket.on("task_completed", handler);
     socket.on("new_notification", newNotifHandler);
     return () => {
       socket.off("deal_stage_updated", handler);
       socket.off("lead_converted", handler);
+      socket.off("task_completed", handler);
       socket.off("new_notification", newNotifHandler);
     };
   }, [socket, fetchTargets, fetchNotifications]);
@@ -1103,15 +1213,22 @@ export default function MyTargets() {
   const isTargetTabNotif = (n) => TARGET_NOTIF_TYPES.includes(n.type);
 
   const switchToNotifications = () => {
-    setMyView(v => {
-      if (v === "notifications") return "targets";
-      // Mark all target notifications as read when opening the tab
-      setNotifications(prev => {
-        const unread = prev.filter(n => isTargetTabNotif(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
+    setMyView(v => (v === "notifications" ? "targets" : "notifications"));
+  };
+
+  const handleMarkNotifRead = (n) => {
+    if (n.read || n.isRead || !n._id || String(n._id).includes("-")) return;
+    setNotifications((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true, isRead: true } : x)));
+    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {});
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications(prev => {
+      const unread = prev.filter(n => isTargetTabNotif(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
+      if (unread.length > 0) {
         unread.forEach(n => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
-        return prev.map(n => isTargetTabNotif(n) ? { ...n, read: true, isRead: true } : n);
-      });
-      return "notifications";
+      }
+      return prev.map(n => isTargetTabNotif(n) ? { ...n, read: true, isRead: true } : n);
     });
   };
 
@@ -1129,15 +1246,26 @@ export default function MyTargets() {
     ? Math.round(targets.reduce((s, t) => s + (t.percentages?.overall || 0), 0) / targets.length)
     : 0;
 
+  const activeTasks = tasks.filter(t => t.status !== "Completed" && t.status !== "Archived");
+
   return (
     <div className="p-6 min-h-screen bg-gray-50">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Target size={20} className="text-[#008ecc]" /> My Targets
-        </h1>
-        <p className="text-gray-400 text-sm mt-0.5">Targets assigned to you by your admin</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Target size={20} className="text-[#008ecc]" /> My Targets
+            <button 
+              onClick={() => setShowWorkflowExplanation(true)}
+              className="ml-1 p-1 rounded-full text-indigo-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors bg-white border border-gray-200"
+              title="How Targets Work"
+            >
+              <Info size={16} />
+            </button>
+          </h1>
+          <p className="text-gray-400 text-sm mt-0.5">Targets assigned to you by your admin</p>
+        </div>
       </div>
 
       {myDashStats && (
@@ -1199,6 +1327,17 @@ export default function MyTargets() {
                 <span className="ml-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">{unreadCount}</span>
               )}
             </button>
+
+            <div className="ml-auto flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <button onClick={() => { setViewMode("card"); setMyView("targets"); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ${viewMode === "card" && myView === "targets" ? "bg-[#008ecc] text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                <LayoutGrid size={14} /> Card
+              </button>
+              <button onClick={() => { setViewMode("pipeline"); setMyView("targets"); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ${viewMode === "pipeline" && myView === "targets" ? "bg-[#008ecc] text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                <Activity size={14} /> Pipeline
+              </button>
+            </div>
           </div>
         );
       })()}
@@ -1214,7 +1353,12 @@ export default function MyTargets() {
                 <Bell size={14} className="text-amber-500" /> Notifications & Reminders
                 {unreadCount > 0 && <span className="bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">{unreadCount} new</span>}
               </p>
-              <span className="text-xs text-gray-400">{targetNotifs.length} notification{targetNotifs.length !== 1 ? "s" : ""}</span>
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button onClick={handleMarkAllRead} className="text-xs text-[#008ecc] hover:underline font-medium">Mark all as read</button>
+                )}
+                <span className="text-xs text-gray-400">{targetNotifs.length} notification{targetNotifs.length !== 1 ? "s" : ""}</span>
+              </div>
             </div>
             {targetNotifs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -1228,23 +1372,35 @@ export default function MyTargets() {
               const isDue = n.type === "target_due_today";
               const isReassign = n.type === "target_reassign";
               return (
-                <div key={n._id || i} className={`relative flex items-start gap-2.5 rounded-xl px-4 py-3 border transition-all ${isUnread ? "ring-1 ring-amber-300" : ""} ${isExpired ? "bg-red-50 border-red-200" : isDue ? "bg-orange-50 border-orange-200" : isReassign ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200"}`}>
-                  {/* Unread dot */}
-                  {isUnread && <span className="absolute top-2 right-8 w-2 h-2 rounded-full bg-red-500" />}
+                <div key={n._id || i} onClick={() => handleMarkNotifRead(n)} className={`relative flex items-start gap-2.5 rounded-xl px-4 py-3 border cursor-pointer transition-all ${isUnread ? "ring-1 ring-amber-300" : ""} ${isExpired ? "bg-red-50 border-red-200" : isDue ? "bg-orange-50 border-orange-200" : isReassign ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200"}`}>
                   {isExpired ? <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" /> : isDue ? <Clock size={15} className="text-orange-500 shrink-0 mt-0.5" /> : isReassign ? <Bell size={15} className="text-blue-500 shrink-0 mt-0.5" /> : <Bell size={15} className="text-amber-500 shrink-0 mt-0.5" />}
                   <div className="flex-1 min-w-0">
                     <p className={`text-xs font-bold ${isUnread ? "text-gray-900" : "text-gray-700"}`}>{n.title}</p>
                     <p className="text-[12px] text-gray-700 font-medium leading-relaxed mt-0.5">{n.message || n.text}</p>
                     <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={8} />{fmt(n.createdAt)}</p>
                   </div>
-                  {/* Delete button */}
-                  <button
-                    onClick={() => handleDeleteNotification(n._id)}
-                    className="shrink-0 p-1 rounded-full hover:bg-red-100 text-gray-300 hover:text-red-500 transition-colors mt-0.5"
-                    title="Delete notification"
-                  >
-                    <X size={13} />
-                  </button>
+                  {/* Actions */}
+                  <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
+                    {isUnread && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkNotifRead(n);
+                        }}
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        title="Mark as read"
+                      >
+                        <CheckCheck size={11} /> Mark as read
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteNotification(n._id); }}
+                      className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                      title="Delete notification"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -1260,6 +1416,13 @@ export default function MyTargets() {
           <p className="text-sm font-medium">No targets assigned yet</p>
           <p className="text-xs mt-1">Your admin will set targets for you here</p>
         </div>
+      ) : viewMode === "pipeline" ? (
+        <TargetPipelineView
+          targets={filtered}
+          baseUrl={baseUrl}
+          headers={headers}
+          onRefresh={fetchTargets}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
           {filtered.map((t) => {
@@ -1269,11 +1432,103 @@ export default function MyTargets() {
               (!n.meta?.targetId || String(n.meta?.targetId) === String(t._id))
             );
             return (
-              <MyTargetCard key={t._id} target={t} baseUrl={baseUrl} headers={headers} onRefresh={fetchTargets} hasUnread={hasUnread} autoExpand={expandTargetId && String(t._id) === String(expandTargetId)} />
+              <MyTargetCard key={t._id} target={t} baseUrl={baseUrl} headers={headers} onRefresh={fetchTargets} hasUnread={hasUnread} autoExpand={expandTargetId && String(t._id) === String(expandTargetId)} tasks={tasks} onOpenReport={(id, type) => setReportModal({ open: true, type, targetId: id })} onViewReports={(id, type) => setViewReportsModal({ open: true, type, targetId: id })} />
             );
           })}
         </div>
       ))}
+
+      {reportModal.open && reportModal.type === "call" && (
+        <ReportCallModal
+          isOpen={true}
+          onClose={() => setReportModal({ open: false, type: null, targetId: null })}
+          targetId={reportModal.targetId}
+          baseUrl={baseUrl}
+          headers={headers}
+          onSuccess={fetchTargets}
+        />
+      )}
+      {reportModal.open && reportModal.type === "meeting" && (
+        <ReportMeetingModal
+          isOpen={true}
+          onClose={() => setReportModal({ open: false, type: null, targetId: null })}
+          targetId={reportModal.targetId}
+          baseUrl={baseUrl}
+          headers={headers}
+          onSuccess={fetchTargets}
+        />
+      )}
+      
+      {viewReportsModal.open && (
+        <ViewReportsModal
+          isOpen={true}
+          onClose={() => setViewReportsModal({ open: false, type: null, targetId: null })}
+          type={viewReportsModal.type}
+          reports={viewReportsModal.type === "call" 
+            ? targets.find(t => t._id === viewReportsModal.targetId)?.reportedCalls 
+            : targets.find(t => t._id === viewReportsModal.targetId)?.reportedMeetings}
+          isAdmin={false}
+        />
+      )}
+      
+      <WorkflowExplanationModal open={showWorkflowExplanation} onClose={() => setShowWorkflowExplanation(false)} />
+    </div>
+  );
+}
+
+function WorkflowExplanationModal({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Info className="text-indigo-500" />
+          How Tasks & Targets Work
+        </h3>
+        
+        <div className="space-y-6 text-sm text-gray-700">
+          <section>
+            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <p className="mb-2">
+              Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
+            </p>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
+              <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
+              <li><strong>Auto-Completion:</strong> Once you complete 100% of the assigned linked items (e.g., all linked leads converted), the system automatically marks it <strong>Completed</strong> and notifies the Admin.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
+              <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>
+              <li><strong>Hold/Reject Approvals:</strong> Admins review requests from salespeople to put tasks on Hold (optionally extending the due date) or Rejecting them entirely if they are invalid.</li>
+            </ul>
+          </section>
+          
+          <div className="bg-indigo-50 p-4 rounded-lg mt-4 border border-indigo-100">
+            <p className="font-semibold text-indigo-800 mb-1">Key Takeaway:</p>
+            <p className="text-indigo-700">
+              The entire pipeline is driven by <strong>actual sales actions</strong> (converting leads, winning deals) rather than manual status dropdowns. This guarantees accurate reporting for the company.
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-6 flex justify-end">
+          <button onClick={onClose} className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+            Got it
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
