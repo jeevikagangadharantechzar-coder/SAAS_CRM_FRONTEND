@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { useNotifications } from "../context/NotificationContext";
+import { getGlobalSettings } from "../utils/globalSettings";
 import {
   Home,
   ChevronRight,
@@ -511,7 +512,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   useEffect(() => {
     const fetchLogo = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/settings`);
+        const data = await getGlobalSettings();
         if (data?.logo) {
           const cleanPath = data.logo.replace(/\\/g, "/");
           const fullUrl = `${API_URL.replace("/api", "")}/${cleanPath}`;

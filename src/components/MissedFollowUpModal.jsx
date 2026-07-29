@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, X, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import axios from "axios";
@@ -14,9 +14,13 @@ const SI_URI  = import.meta.env.VITE_SI_URI;
 // so it silently under-reports leads that are still genuinely missed.
 // Admin-only, since admins see the whole team's missed follow-ups and there's
 // almost always something outstanding — the popup is scoped to salespeople.
+// Poll interval for re-checking missed follow-ups while the app stays open —
+// long enough to avoid hammering the API on every click, short enough that a
+// newly-missed follow-up still surfaces within a normal working session.
+const POLL_INTERVAL_MS = 5 * 60 * 1000;
+
 const MissedFollowUpModal = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { tenantSlug } = useParams();
   const [missedList, setMissedList] = useState([]);
   const [dismissed, setDismissed] = useState(false);
@@ -30,21 +34,30 @@ const MissedFollowUpModal = () => {
   useEffect(() => {
     if (isAdmin) return;
 
-    const token = localStorage.getItem("token");
-    const storedSlug = localStorage.getItem("tenantSlug");
-    const url = storedSlug
-      ? `${SI_URI}/${storedSlug}/api/leads/missed-followups`
-      : `${API_URL}/leads/missed-followups`;
+    const fetchMissed = () => {
+      const token = localStorage.getItem("token");
+      const storedSlug = localStorage.getItem("tenantSlug");
+      const url = storedSlug
+        ? `${SI_URI}/${storedSlug}/api/leads/missed-followups`
+        : `${API_URL}/leads/missed-followups`;
 
-    axios
-      .get(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        setMissedList(res.data.leads || []);
-        setDismissed(false);
-      })
-      .catch(() => {});
+      axios
+        .get(url, { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => {
+          setMissedList(res.data.leads || []);
+          setDismissed(false);
+        })
+        .catch(() => {});
+    };
+
+    // Fetch once on mount/login, then re-check on an interval instead of on
+    // every in-app navigation — this previously fired on every route change
+    // via a location.pathname dependency, hitting the API on every click.
+    fetchMissed();
+    const interval = setInterval(fetchMissed, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, []);
 
   if (dismissed || missedList.length === 0) return null;
 

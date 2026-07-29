@@ -1210,7 +1210,10 @@ export default function AssignedTasks() {
   // otherwise leave a newly-assigned task invisible here until a manual
   // reload. Silent background poll, no loading-spinner blink (showLoading=false).
   useEffect(() => {
-    const interval = setInterval(() => fetchTasks(false), 20000);
+    // 2min, not 20s — this only needs to catch a missed socket event, not
+    // act as the primary refresh mechanism, so it doesn't need to be this
+    // frequent and was doubling baseline request volume for every open tab.
+    const interval = setInterval(() => fetchTasks(false), 120000);
     return () => clearInterval(interval);
   }, [fetchTasks]);
 
