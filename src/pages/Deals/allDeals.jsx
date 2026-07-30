@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
-import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
 import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
 import { initSocket, getSocket } from "../../utils/socket";
@@ -91,10 +91,35 @@ function AllDealsComponent() {
   const userCurrencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get("status");
-  const [clientTypeFilter, setClientTypeFilter] = useState("");
-  const [showTodayOnly, setShowTodayOnly] = useState(false);
+
+  // Mirrors the same pattern used on the Leads page — every filter's
+  // onChange writes into the URL, so navigating to a deal and back (or
+  // reloading) restores the exact filter state instead of resetting it.
+  const updateFilter = (key, value, setter) => {
+    setter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params);
+  };
+
+  const updateDealType = (type, checked) => {
+    setDealTypeFilter((prev) => {
+      const next = { ...prev, [type]: checked };
+      const params = new URLSearchParams(searchParams);
+      const list = [next.won && "won", next.lost && "lost", next.pending && "pending"].filter(Boolean);
+      if (list.length) params.set("dealType", list.join(","));
+      else params.delete("dealType");
+      setSearchParams(params);
+      return next;
+    });
+  };
+
+  const [clientTypeFilter, setClientTypeFilter] = useState(searchParams.get("clientType") || "");
+  const [showTodayOnly, setShowTodayOnly] = useState(searchParams.get("todayOnly") === "1");
   const { setIsOpen, setSteps, setCurrentStep, close } = useTour();
 
   const [deals, setDeals] = useState([]);
@@ -116,7 +141,10 @@ function AllDealsComponent() {
   const [users, setUsers] = useState([]);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
-  const [filters, setFilters] = useState({ stage: "", assignedTo: "" });
+  const [filters, setFilters] = useState({
+    stage: searchParams.get("stage") || "",
+    assignedTo: searchParams.get("assignedTo") || "",
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const [hoveredDeal, setHoveredDeal] = useState(null);
@@ -131,10 +159,17 @@ function AllDealsComponent() {
   // (getAll with start/end/dealType) since the default fetch no longer
   // returns previous-day Closed Won/Lost deals — those only come back into
   // view through this search.
-  const [showCustomRange, setShowCustomRange] = useState(false);
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-  const [dealTypeFilter, setDealTypeFilter] = useState({ won: false, lost: false, pending: false });
+  const initDealTypes = (searchParams.get("dealType") || "").split(",").filter(Boolean);
+  const [showCustomRange, setShowCustomRange] = useState(
+    !!(searchParams.get("customFrom") || searchParams.get("customTo") || initDealTypes.length)
+  );
+  const [customFrom, setCustomFrom] = useState(searchParams.get("customFrom") || "");
+  const [customTo, setCustomTo] = useState(searchParams.get("customTo") || "");
+  const [dealTypeFilter, setDealTypeFilter] = useState({
+    won: initDealTypes.includes("won"),
+    lost: initDealTypes.includes("lost"),
+    pending: initDealTypes.includes("pending"),
+  });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
 
@@ -143,8 +178,8 @@ function AllDealsComponent() {
   // type involved; reuses the same backend start/end params the Custom Range
   // search already uses, just without a dealType so the backend takes its
   // plain-createdAt branch.
-  const [dateFilterFrom, setDateFilterFrom] = useState("");
-  const [dateFilterTo, setDateFilterTo] = useState("");
+  const [dateFilterFrom, setDateFilterFrom] = useState(searchParams.get("startDate") || "");
+  const [dateFilterTo, setDateFilterTo] = useState(searchParams.get("endDate") || "");
   const [dateFilterDeals, setDateFilterDeals] = useState([]);
 
   // Reject modal
@@ -159,7 +194,7 @@ function AllDealsComponent() {
   const [rejectTooltipTimeout, setRejectTooltipTimeout] = useState(null);
 
   // Active Linked Work Filters
-  const [activeWorkFilter, setActiveWorkFilter] = useState("");
+  const [activeWorkFilter, setActiveWorkFilter] = useState(searchParams.get("activeWork") || "");
 
   // Linked Work Modal
   const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
@@ -316,7 +351,9 @@ function AllDealsComponent() {
   // Navigate to deal with follow-up tab open
   const handleViewFollowUpDetails = (dealId) => {
     setHoveredDeal(null);
-    navigate(`/${tenantSlug}/Pipelineview/${dealId}?tab=followup`);
+    const params = new URLSearchParams(location.search);
+    params.set("tab", "followup");
+    navigate(`/${tenantSlug}/Pipelineview/${dealId}?${params.toString()}`);
   };
 
 /* ── Format Currency Value Function ─────────────────────── */
@@ -783,7 +820,7 @@ function AllDealsComponent() {
 
 /* ── Handle Deal Name Click Function ─────────────────────── */
   const handleDealNameClick = (dealId) => {
-    navigate(`/${tenantSlug}/Pipelineview/${dealId}`);
+    navigate(`/${tenantSlug}/Pipelineview/${dealId}${location.search}`);
   };
 
   if (loading) {
@@ -907,7 +944,7 @@ function AllDealsComponent() {
           <select
             value={filters.stage}
             onChange={(e) =>
-              setFilters((prev) => ({ ...prev, stage: e.target.value }))
+              updateFilter("stage", e.target.value, (v) => setFilters((prev) => ({ ...prev, stage: v })))
             }
             className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -922,7 +959,7 @@ function AllDealsComponent() {
           <select
             value={filters.assignedTo}
             onChange={(e) =>
-              setFilters((prev) => ({ ...prev, assignedTo: e.target.value }))
+              updateFilter("assignedTo", e.target.value, (v) => setFilters((prev) => ({ ...prev, assignedTo: v })))
             }
             className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -935,7 +972,7 @@ function AllDealsComponent() {
           </select>
           <select
             value={clientTypeFilter}
-            onChange={(e) => setClientTypeFilter(e.target.value)}
+            onChange={(e) => updateFilter("clientType", e.target.value, setClientTypeFilter)}
             className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Client Types</option>
@@ -944,7 +981,7 @@ function AllDealsComponent() {
           </select>
           {/* Today's Follow-up Button */}
           <button
-            onClick={() => setShowTodayOnly(!showTodayOnly)}
+            onClick={() => updateFilter("todayOnly", showTodayOnly ? "" : "1", (v) => setShowTodayOnly(!!v))}
             className={`w-full px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition h-10 ${
               showTodayOnly
                 ? "bg-orange-500 text-white"
@@ -959,7 +996,7 @@ function AllDealsComponent() {
                 className="ml-1 cursor-pointer hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowTodayOnly(false);
+                  updateFilter("todayOnly", "", (v) => setShowTodayOnly(!!v));
                 }}
               />
             )}
@@ -971,7 +1008,7 @@ function AllDealsComponent() {
             <input
               type="date"
               value={dateFilterFrom}
-              onChange={(e) => setDateFilterFrom(e.target.value)}
+              onChange={(e) => updateFilter("startDate", e.target.value, setDateFilterFrom)}
               max={dateFilterTo || undefined}
               title="Start Date"
               className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] outline-none focus:ring-2 focus:ring-blue-500"
@@ -980,7 +1017,7 @@ function AllDealsComponent() {
             <input
               type="date"
               value={dateFilterTo}
-              onChange={(e) => setDateFilterTo(e.target.value)}
+              onChange={(e) => updateFilter("endDate", e.target.value, setDateFilterTo)}
               min={dateFilterFrom || undefined}
               title="End Date"
               className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] outline-none focus:ring-2 focus:ring-blue-500"
@@ -988,7 +1025,10 @@ function AllDealsComponent() {
             {(dateFilterFrom || dateFilterTo) && (
               <button
                 type="button"
-                onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                onClick={() => {
+                  updateFilter("startDate", "", setDateFilterFrom);
+                  updateFilter("endDate", "", setDateFilterTo);
+                }}
                 className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                 title="Clear date filter"
               >
@@ -1003,7 +1043,16 @@ function AllDealsComponent() {
               onClick={() => {
                 setShowCustomRange((v) => {
                   const next = !v;
-                  if (!next) { setCustomFrom(""); setCustomTo(""); setDealTypeFilter({ won: false, lost: false, pending: false }); }
+                  if (!next) {
+                    setCustomFrom("");
+                    setCustomTo("");
+                    setDealTypeFilter({ won: false, lost: false, pending: false });
+                    const params = new URLSearchParams(searchParams);
+                    params.delete("customFrom");
+                    params.delete("customTo");
+                    params.delete("dealType");
+                    setSearchParams(params);
+                  }
                   return next;
                 });
               }}
@@ -1018,7 +1067,7 @@ function AllDealsComponent() {
 
           <select
             value={activeWorkFilter}
-            onChange={(e) => setActiveWorkFilter(e.target.value)}
+            onChange={(e) => updateFilter("activeWork", e.target.value, setActiveWorkFilter)}
             className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Linked Work</option>
@@ -1044,7 +1093,7 @@ function AllDealsComponent() {
               <input
                 type="date"
                 value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
+                onChange={(e) => updateFilter("customFrom", e.target.value, setCustomFrom)}
                 className="border rounded-md px-3 py-2 bg-white text-sm"
               />
             </div>
@@ -1053,7 +1102,7 @@ function AllDealsComponent() {
               <input
                 type="date"
                 value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
+                onChange={(e) => updateFilter("customTo", e.target.value, setCustomTo)}
                 className="border rounded-md px-3 py-2 bg-white text-sm"
               />
             </div>
@@ -1076,7 +1125,7 @@ function AllDealsComponent() {
                     <input
                       type="checkbox"
                       checked={dealTypeFilter.won}
-                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, won: e.target.checked }))}
+                      onChange={(e) => updateDealType("won", e.target.checked)}
                       className="accent-green-600"
                     />
                     Deal Won
@@ -1085,7 +1134,7 @@ function AllDealsComponent() {
                     <input
                       type="checkbox"
                       checked={dealTypeFilter.lost}
-                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, lost: e.target.checked }))}
+                      onChange={(e) => updateDealType("lost", e.target.checked)}
                       className="accent-red-600"
                     />
                     Deal Lost
@@ -1094,7 +1143,7 @@ function AllDealsComponent() {
                     <input
                       type="checkbox"
                       checked={dealTypeFilter.pending}
-                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, pending: e.target.checked }))}
+                      onChange={(e) => updateDealType("pending", e.target.checked)}
                       className="accent-blue-600"
                     />
                     Pending Deal
@@ -1111,6 +1160,11 @@ function AllDealsComponent() {
                 setCustomTo("");
                 setDealTypeFilter({ won: false, lost: false, pending: false });
                 setShowCustomRange(false);
+                const params = new URLSearchParams(searchParams);
+                params.delete("customFrom");
+                params.delete("customTo");
+                params.delete("dealType");
+                setSearchParams(params);
               }}
               className="px-4 py-2 rounded-md text-sm font-medium text-gray-600 border border-gray-300 bg-white hover:bg-gray-100"
             >
