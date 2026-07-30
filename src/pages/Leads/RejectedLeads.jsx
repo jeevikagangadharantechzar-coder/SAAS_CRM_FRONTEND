@@ -97,7 +97,7 @@ export default function RejectedLeads() {
 
       params.append("status", "Rejected");
 
-      const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
+      const { data } = await axios.get(`${API_URL}/leads/rejected?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -339,7 +339,7 @@ export default function RejectedLeads() {
 
           <tbody className="divide-y divide-gray-200">
             {leads.length > 0 ? (
-              leads.map((lead, idx) => {
+              leads.filter((lead) => lead.status === "Rejected").map((lead, idx) => {
                 const rejectedByName = lead.rejectedBy ? `${lead.rejectedBy.firstName || ""} ${lead.rejectedBy.lastName || ""}`.trim() : "-";
                 return (
                   <tr key={lead._id} className={`hover:bg-gray-50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} whitespace-nowrap`}>
