@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft, ChevronRight, User, Mail, Phone, Building, Building2,
@@ -493,6 +493,11 @@ const ActivityItem = ({ color, icon, label, date }) => (
 const ViewLead = () => {
   const { id, tenantSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // The Leads list appends its active filters as a querystring when
+  // navigating here (e.g. ?status=Hot&source=Website) — carry it back so
+  // "All Leads" / post-action redirects return to the same filtered view.
+  const leadsListPath = `/${tenantSlug}/leads${location.search}`;
   const userRole = (() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}").role?.name || ""; }
     catch { return ""; }
@@ -803,7 +808,7 @@ const ViewLead = () => {
       });
 
       setConvertModalOpen(false);
-      setTimeout(() => navigate(`/${tenantSlug}/leads`), 1200);
+      setTimeout(() => navigate(leadsListPath), 1200);
     } catch (err) {
       toast.dismiss();
       console.error("Conversion error:", err);
@@ -827,7 +832,7 @@ const ViewLead = () => {
       toast.success("Lead rejected");
       setShowRejectModal(false);
       setRejectReason("");
-      setTimeout(() => navigate(`/${tenantSlug}/leads`), 1200);
+      setTimeout(() => navigate(leadsListPath), 1200);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
@@ -880,7 +885,7 @@ const ViewLead = () => {
           <div>
             <div className="flex items-center text-slate-600 mb-3">
               <Link
-                to={`/${tenantSlug}/leads`}
+                to={leadsListPath}
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft size={16} className="mr-1" />
