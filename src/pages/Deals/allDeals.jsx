@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target, Filter, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -93,8 +93,8 @@ function AllDealsComponent() {
   const { tenantSlug } = useParams();
   const [searchParams] = useSearchParams();
   const statusFilter = searchParams.get("status");
-  const [clientTypeFilter, setClientTypeFilter] = useState("");
-  const [showTodayOnly, setShowTodayOnly] = useState(false);
+  const [clientTypeFilter, setClientTypeFilter] = useState(() => localStorage.getItem("deals_clientTypeFilter") || "");
+  const [showTodayOnly, setShowTodayOnly] = useState(() => localStorage.getItem("deals_showTodayOnly") === "true");
   const { setIsOpen, setSteps, setCurrentStep, close } = useTour();
 
   const [deals, setDeals] = useState([]);
@@ -116,8 +116,14 @@ function AllDealsComponent() {
   const [users, setUsers] = useState([]);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
-  const [filters, setFilters] = useState({ stage: "", assignedTo: "" });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("deals_filters")) || { stage: "", assignedTo: "" };
+    } catch {
+      return { stage: "", assignedTo: "" };
+    }
+  });
+  const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem("deals_searchTerm") || "");
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const [hoveredDeal, setHoveredDeal] = useState(null);
   const [tooltipCoords, setTooltipCoords] = useState(null);
@@ -131,10 +137,17 @@ function AllDealsComponent() {
   // (getAll with start/end/dealType) since the default fetch no longer
   // returns previous-day Closed Won/Lost deals — those only come back into
   // view through this search.
-  const [showCustomRange, setShowCustomRange] = useState(false);
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-  const [dealTypeFilter, setDealTypeFilter] = useState({ won: false, lost: false, pending: false });
+  const [showCustomRange, setShowCustomRange] = useState(() => localStorage.getItem("deals_showCustomRange") === "true");
+  const [showFilters, setShowFilters] = useState(() => localStorage.getItem("deals_showFilters") === "true");
+  const [customFrom, setCustomFrom] = useState(() => localStorage.getItem("deals_customFrom") || "");
+  const [customTo, setCustomTo] = useState(() => localStorage.getItem("deals_customTo") || "");
+  const [dealTypeFilter, setDealTypeFilter] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("deals_dealTypeFilter")) || { won: false, lost: false, pending: false };
+    } catch {
+      return { won: false, lost: false, pending: false };
+    }
+  });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
 
@@ -143,8 +156,34 @@ function AllDealsComponent() {
   // type involved; reuses the same backend start/end params the Custom Range
   // search already uses, just without a dealType so the backend takes its
   // plain-createdAt branch.
-  const [dateFilterFrom, setDateFilterFrom] = useState("");
-  const [dateFilterTo, setDateFilterTo] = useState("");
+  const [dateFilterFrom, setDateFilterFrom] = useState(() => localStorage.getItem("deals_dateFilterFrom") || "");
+  const [dateFilterTo, setDateFilterTo] = useState(() => localStorage.getItem("deals_dateFilterTo") || "");
+
+  useEffect(() => {
+    localStorage.setItem("deals_showCustomRange", showCustomRange);
+    localStorage.setItem("deals_showFilters", showFilters);
+    localStorage.setItem("deals_clientTypeFilter", clientTypeFilter);
+    localStorage.setItem("deals_showTodayOnly", showTodayOnly);
+    localStorage.setItem("deals_dateFilterFrom", dateFilterFrom);
+    localStorage.setItem("deals_dateFilterTo", dateFilterTo);
+    localStorage.setItem("deals_filters", JSON.stringify(filters));
+    localStorage.setItem("deals_searchTerm", searchTerm);
+    localStorage.setItem("deals_customFrom", customFrom);
+    localStorage.setItem("deals_customTo", customTo);
+    localStorage.setItem("deals_dealTypeFilter", JSON.stringify(dealTypeFilter));
+  }, [
+    showCustomRange,
+    showFilters,
+    clientTypeFilter,
+    showTodayOnly,
+    dateFilterFrom,
+    dateFilterTo,
+    filters,
+    searchTerm,
+    customFrom,
+    customTo,
+    dealTypeFilter,
+  ]);
   const [dateFilterDeals, setDateFilterDeals] = useState([]);
 
   // Reject modal
@@ -798,7 +837,17 @@ function AllDealsComponent() {
     <div className="p-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-deals-header">
-        <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Deals Filter</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          </button>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={startTour}
@@ -806,14 +855,6 @@ function AllDealsComponent() {
           >
             <Eye className="w-4 h-4" /> Take Tour
           </button>
-          {userRole === "Admin" && (
-            <button
-              onClick={() => navigate(`/${tenantSlug}/deals/rejected`)}
-              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-            >
-              <Ban className="w-4 h-4" /> Reject Deals
-            </button>
-          )}
           {userRole === "Admin" && (
             <>
               <input
@@ -901,9 +942,10 @@ function AllDealsComponent() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-4 tour-filters">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
+      {/* Collapsible Filters */}
+      {showFilters && (
+        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 tour-filters">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
           <select
             value={filters.stage}
             onChange={(e) =>
@@ -1119,6 +1161,8 @@ function AllDealsComponent() {
           </div>
         )}
       </div>
+    )}
+
       {showTodayOnly && (
         <div className="mb-3 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
           <Calendar size={12} />
@@ -1181,11 +1225,7 @@ function AllDealsComponent() {
                         >
                           {deal.dealName || "-"}
                         </button>
-                        {deal.stage === "Rejected" ? (
-                          <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
-                            {rejectedBadgeText}
-                          </span>
-                        ) : deal.stage === "Closed Won" ? (
+                        {deal.stage === "Closed Won" ? (
                           <span title={wonBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {wonBadgeText}
                           </span>
@@ -1480,14 +1520,7 @@ function AllDealsComponent() {
                   >
                     <Edit size={16} className="mr-2" /> Edit
                   </button>
-                  {userRole === "Admin" && !activeIsTerminal && (
-                    <button
-                      onClick={() => handleRejectClick(activeDeal)}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 w-full text-left text-red-600"
-                    >
-                      <Ban size={16} className="mr-2" /> Reject
-                    </button>
-                  )}
+
                 </>
               );
             })()}
