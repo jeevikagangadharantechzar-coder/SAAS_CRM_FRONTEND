@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,6 +14,7 @@ const DraftsPage = () => {
   const [isUpdating, setIsUpdating] = useState({});
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchDrafts = async () => {
@@ -71,7 +72,7 @@ const DraftsPage = () => {
           Draft Proposals
         </h1>
         <div className="flex gap-3 items-center">
-          <Link to="/proposal">
+          <Link to={{ pathname: "/proposal", search: location.search }}>
             <button className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 text-white font-semibold rounded-lg shadow-lg">
               Back to Proposals
             </button>

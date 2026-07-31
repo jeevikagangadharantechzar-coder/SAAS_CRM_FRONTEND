@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -93,6 +93,7 @@ const STATUS_CONFIG = {
 // ─── Main ViewProposal component ──────────────────────────────────────────────
 const ViewProposal = () => {
   const { id } = useParams();
+  const location = useLocation();
   const [proposal, setProposal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
@@ -136,7 +137,7 @@ const ViewProposal = () => {
             The proposal you're looking for doesn't exist or may have been removed.
           </p>
           <Link
-            to="/proposal"
+            to={{ pathname: "/proposal", search: location.search }}
             className="inline-flex items-center px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
           >
             <ArrowLeft size={18} className="mr-2" />
@@ -158,7 +159,7 @@ const ViewProposal = () => {
           <div>
             <div className="flex items-center text-slate-600 mb-3">
               <Link
-                to="/proposal"
+                to={{ pathname: "/proposal", search: location.search }}
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft size={16} className="mr-1" />

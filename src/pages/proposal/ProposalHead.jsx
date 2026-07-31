@@ -3,12 +3,12 @@ import ReactDOM from "react-dom";
 import DatePicker from "react-datepicker";
 import { FaCalendarAlt, FaEye, FaTrash } from "react-icons/fa";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-datepicker/dist/react-datepicker.css";
-import { List, LayoutGrid } from "lucide-react";
+import { List, LayoutGrid, Eye, Plus, Filter, ChevronDown, FileText, Calendar, X } from "lucide-react";
 import ProposalPipelineView from "./ProposalPipelineView";
 
 import {
@@ -88,10 +88,25 @@ const ProposalHeadContent = () => {
   const [error, setError] = useState("");
   const [openActionId, setOpenActionId] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterCreatedDate, setFilterCreatedDate] = useState(null);
-  const [filterAssignee, setFilterAssignee] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+
+  const updateFilter = (key, value, setter) => {
+    setter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params);
+  };
+
+  const [showFilters, setShowFilters] = useState(searchParams.get("showFilters") === "true");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  const [filterStatus, setFilterStatus] = useState(searchParams.get("status") || "");
+  const [filterCreatedDate, setFilterCreatedDate] = useState(() => {
+    const d = searchParams.get("createdDate");
+    return d ? new Date(d) : null;
+  });
+  const [filterAssignee, setFilterAssignee] = useState(searchParams.get("assignedTo") || "");
   const [usersList, setUsersList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [draftCount, setDraftCount] = useState(0);
@@ -332,121 +347,139 @@ const ProposalHeadContent = () => {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 md:px-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 tour-header">
-        <h1 className="text-2xl font-bold text-gray-800">Proposal List</h1>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+    <div className="p-6">
+      {/* Compact Toolbar Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-header">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-800">Proposal List</h1>
+          <button
+            onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
+            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Proposal Filter</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
           <button
             onClick={startTour}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
+            className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors tour-finish"
+            title="Take Tour"
           >
-            <FaEye className="w-4 h-4" /> Take Tour
+            <Eye className="w-4 h-4" />
           </button>
-          <Link to="/proposal/drafts" className="tour-drafts">
-            <button className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium shadow-sm transition">
-              Drafts ({draftCount})
+          <Link to={`/proposal/drafts${location.search}`} className="tour-drafts" title={`Drafts (${draftCount})`}>
+            <button className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors">
+              <FileText className="w-4 h-4" />
             </button>
           </Link>
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center bg-gray-100 rounded-md p-0.5 border border-gray-200">
             <button
               onClick={() => setViewMode("list")}
-              className={`p-2 rounded-md flex items-center justify-center transition ${
+              className={`p-1 rounded transition-colors ${
                 viewMode === "list"
                   ? "bg-white text-blue-600 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               title="List View"
             >
-              <List size={20} />
+              <List className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode("kanban")}
-              className={`p-2 rounded-md flex items-center justify-center transition ${
+              className={`p-1 rounded transition-colors ${
                 viewMode === "kanban"
                   ? "bg-white text-blue-600 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               title="Kanban View"
             >
-              <LayoutGrid size={20} />
+              <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
           <Link to="/proposal/sendproposal" className="tour-new-proposal">
-            <button className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 transition">
-              + New Proposal
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Proposal
             </button>
           </Link>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-8 mb-6 items-center tour-filters">
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="border rounded-md px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="sent">Sent</option>
-          <option value="no reply">No Reply</option>
-          <option value="rejection">Rejection</option>
-          <option value="success">Success</option>
-        </select>
-
-        <select
-          value={filterAssignee}
-          onChange={(e) => setFilterAssignee(e.target.value)}
-          className="border rounded-md px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Assignees</option>
-          {usersList.map((user) => (
-            <option key={user._id || user.id} value={user._id || user.id}>
-              {user.firstName} {user.lastName}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex items-center gap-2">
-          <DatePicker
-            selected={filterCreatedDate}
-            onChange={(date) => {
-              setFilterCreatedDate(date);
-              setCurrentPage(1);
-            }}
-            customInput={
-              <button className="border rounded-md bg-white px-3 py-2 text-left w-full flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  {filterCreatedDate
-                    ? new Date(filterCreatedDate).toLocaleDateString()
-                    : "Create Date"}<FaCalendarAlt className="text-gray-500" />
-                </span>
-              </button>
-            }
-          />
-
-          {filterCreatedDate && (
-            <button
-              onClick={() => {
-                setFilterCreatedDate(null);
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
+      {/* Collapsible Filters */}
+      {showFilters && (
+        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 tour-filters">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+            <select
+              value={filterStatus}
+              onChange={(e) => updateFilter("status", e.target.value, setFilterStatus)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm h-10"
             >
-              Clear
-            </button>
-          )}
-        </div>
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="no reply">No Reply</option>
+              <option value="rejection">Rejection</option>
+              <option value="success">Success</option>
+            </select>
 
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by title, email, or deal"
-          className="border rounded-full px-3 py-2 bg-white focus:ring-2 focus:ring-blue-400 md:w-1/3"
-        />
-      </div>
+            <select
+              value={filterAssignee}
+              onChange={(e) => updateFilter("assignedTo", e.target.value, setFilterAssignee)}
+              className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm h-10"
+            >
+              <option value="">All Assignees</option>
+              {usersList.map((user) => (
+                <option key={user._id || user.id} value={user._id || user.id}>
+                  {user.firstName} {user.lastName}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-2 w-full h-10">
+              <div className="flex-1">
+                <DatePicker
+                  selected={filterCreatedDate}
+                  onChange={(date) => {
+                    updateFilter("createdDate", date ? date.toISOString().split('T')[0] : "", setFilterCreatedDate);
+                    setCurrentPage(1);
+                  }}
+                  customInput={
+                    <button className="border border-gray-200 rounded-lg bg-white px-3 py-2 text-left w-full flex items-center justify-between text-sm h-10 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <span className="flex items-center gap-2">
+                        {filterCreatedDate
+                          ? new Date(filterCreatedDate).toLocaleDateString()
+                          : "Create Date"}
+                      </span>
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                    </button>
+                  }
+                />
+              </div>
+
+              {filterCreatedDate && (
+                <button
+                  onClick={() => {
+                    updateFilter("createdDate", "", setFilterCreatedDate);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg h-10 flex-shrink-0"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => updateFilter("search", e.target.value, setSearchTerm)}
+              placeholder="Search by title, email, or deal"
+              className="w-full border border-gray-200 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm h-10 block"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Bulk Delete Bar */}
       {selectedProposals.length > 0 && (
@@ -536,7 +569,7 @@ const ProposalHeadContent = () => {
                   </td>
                   <td className="px-4 py-3">{proposal.title}</td>
                   <td className="px-4 py-3 text-blue-600 hover:underline cursor-pointer tour-deal-title">
-                    <Link to={`/proposal/view/${proposal._id}`}>
+                    <Link to={`/proposal/view/${proposal._id}${location.search}`}>
                       {proposal.dealTitle || "No Deal"}
                     </Link>
                   </td>
@@ -588,7 +621,7 @@ const ProposalHeadContent = () => {
                         >
                           <button
                             onClick={() =>
-                              navigate(`/proposal/view/${proposal._id}`)
+                              navigate(`/proposal/view/${proposal._id}${location.search}`)
                             }
                             className="block px-4 py-2 w-full text-left hover:bg-gray-100"
                           >
