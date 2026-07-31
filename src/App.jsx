@@ -87,6 +87,11 @@ import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
+import WhatsAppCallback from "./pages/integrations/WhatsAppCallback";
+import InstagramCallback from "./pages/integrations/InstagramCallback";
+import WhatsAppChat from "./pages/whatsapp/WhatsAppChat";
+import InstagramInbox from "./pages/instagram/InstagramInbox";
+import FacebookInbox from "./pages/facebook/FacebookInbox";
 import MessagesPage from "./pages/Messages/MessagesPage";
 import DeviceRequests from "./pages/security/DeviceRequests";
 import LiveLocations from "./pages/security/LiveLocations";
@@ -197,8 +202,10 @@ function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
-              <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
-              <Route path="/integrations/linkedin/callback" element={<LinkedInCallback />} />
+              <Route path="/integrations/facebook/callback"   element={<FacebookCallback />} />
+              <Route path="/integrations/linkedin/callback"   element={<LinkedInCallback />} />
+              <Route path="/integrations/whatsapp/callback"  element={<WhatsAppCallback />} />
+              <Route path="/integrations/instagram/callback" element={<InstagramCallback />} />
 
               {/* SUPERADMIN PORTAL */}
               <Route path="/superadmin/login" element={<Navigate to="/" replace />} />
@@ -349,8 +356,19 @@ function App() {
 
                   {/* INTEGRATIONS */}
                   <Route path="integrations" element={<Integrations />} />
-                  <Route path="integrations/facebook/callback" element={<FacebookCallback />} />
-                  <Route path="integrations/linkedin/callback" element={<LinkedInCallback />} />
+                  <Route path="integrations/facebook/callback"   element={<FacebookCallback />} />
+                  <Route path="integrations/linkedin/callback"   element={<LinkedInCallback />} />
+                  <Route path="integrations/whatsapp/callback"  element={<WhatsAppCallback />} />
+                  <Route path="integrations/instagram/callback" element={<InstagramCallback />} />
+
+                  {/* WHATSAPP CHAT */}
+                  <Route path="whatsapp" element={<WhatsAppChat />} />
+
+                  {/* INSTAGRAM INBOX */}
+                  <Route path="instagram" element={<InstagramInbox />} />
+
+                  {/* FACEBOOK INBOX */}
+                  <Route path="facebook" element={<FacebookInbox />} />
                 </Route>
               </Route>
 

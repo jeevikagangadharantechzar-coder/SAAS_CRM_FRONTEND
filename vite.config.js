@@ -8,10 +8,13 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
-    global: "window", // Define global to fix the error
+    global: "window",
+  },
+  server: {
+    allowedHosts: true,
   },
   build: {
-    chunkSizeWarningLimit: 5000, // Safe threshold to prevent warnings for large unified bundles
+    chunkSizeWarningLimit: 5000,
   },
 })
 
