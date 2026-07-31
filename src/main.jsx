@@ -2,7 +2,6 @@
 import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
-import axios from "axios";
 import "./index.css";
 import App from "./App.jsx";
 import { store } from "./store/store";
@@ -13,13 +12,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // Context Providers
 import { ModalProvider } from "./context/ModalContext.jsx";
 import { TemplateProvider } from "./context/TemplateContext.jsx";
+import { getGlobalSettings } from "./utils/globalSettings.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const queryClient = new QueryClient();
 
 const loadGlobalSettings = async () => {
   try {
-    const { data } = await axios.get(`${API_URL}/settings`);
+    const data = await getGlobalSettings();
 
     // 🔹 Set Company Name
     if (data?.companyName) {

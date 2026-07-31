@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,14 +7,15 @@ import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
 import { todayISO, validateTaskDueDate } from "../../utils/dateValidation";
 import { isTaskTabNotif, getNotificationAccentClass } from "../../utils/taskNotifications";
-import Select from "react-select";
 import {
   Plus, Trash2, CheckCircle, Clock, User,
   Calendar, X, Edit2, StickyNote,
   FileText, Briefcase, Bell, ArrowRightLeft, Check, ChevronDown, ChevronUp, History,
-  Users, Building2, Phone, Mail, LayoutGrid, List, Trophy, Award, XCircle, Activity,
-  TrendingUp, Flag,
+  Users, Building2, Phone, Mail, LayoutGrid, List, Trophy, Award, XCircle, 
+  TrendingUp, Flag, Activity, Target, AlertCircle, Info, CheckCheck
 } from "lucide-react";
+
+import TaskPipelineView from "./TaskPipelineView";
 
 function fmt(date) {
   if (!date) return "—";
@@ -24,25 +25,6 @@ function fmtTime(date) {
   if (!date) return "";
   return new Date(date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
-
-const customSelectStyles = {
-  control: (base, state) => ({
-    ...base,
-    minHeight: '42px',
-    borderRadius: '0.5rem',
-    borderColor: state.isFocused ? '#008ecc' : '#e5e7eb',
-    boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 142, 204, 0.3)' : 'none',
-    fontSize: '0.875rem',
-    '&:hover': { borderColor: state.isFocused ? '#008ecc' : '#d1d5db' }
-  }),
-  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-  menu: (base) => ({ ...base, fontSize: '0.875rem' }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isSelected ? '#008ecc' : state.isFocused ? '#e0f2fe' : 'white',
-    color: state.isSelected ? 'white' : '#1f2937'
-  })
-};
 
 // Which admin actually touched this task's linked lead/deal — shown so the
 // admin always sees who converted the lead or moved the deal's stage,
@@ -82,23 +64,25 @@ const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL;
 
 const PRIORITY_COLORS = {
-  Low: "bg-blue-100 text-blue-700 border-blue-200",
+  Low:    "bg-blue-100 text-blue-700 border-blue-200",
   Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  High: "bg-orange-100 text-orange-700 border-orange-200",
+  High:   "bg-orange-100 text-orange-700 border-orange-200",
   Urgent: "bg-red-100 text-red-700 border-red-200",
 };
 
 const PRIORITY_BORDER = {
-  Low: "border-l-blue-400",
+  Low:    "border-l-blue-400",
   Medium: "border-l-yellow-400",
-  High: "border-l-orange-400",
+  High:   "border-l-orange-400",
   Urgent: "border-l-red-500",
 };
 
 const STATUS_STYLES = {
-  Pending: "bg-gray-100 text-gray-700",
-  "In Progress": "bg-blue-100 text-blue-700",
-  Completed: "bg-green-100 text-green-700",
+  New:           "bg-blue-50 text-blue-600 border-blue-200",
+  Pending:       "bg-blue-50 text-blue-600 border-blue-200",
+  "In Progress": "bg-amber-50 text-amber-600 border-amber-200",
+  Completed:     "bg-emerald-50 text-emerald-600 border-emerald-200",
+  Rejected:      "bg-rose-50 text-rose-600 border-rose-200"
 };
 
 // Task cards use the exact same "hero progress" concept as Target Management
@@ -186,54 +170,107 @@ function resolveCurrentTarget(targets, userId, task) {
 // Target Management/My Targets. Tolerant of `target` being null/undefined
 // (no active target yet) — every field defaults to 0 so all 6 cells still
 // render in full instead of a half-empty placeholder.
-function TargetSnapshotGrid({ target: t }) {
-  const percentages = t?.percentages || {};
-  const actuals = t?.actuals || {};
-  const overall = percentages.overall || 0;
+
+function TaskProgressWidget({ task }) {
+  const dealItems = task.dealRefs?.length ? task.dealRefs : (task.dealRef ? [task.dealRef] : []);
+  const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
+  const totalItems = dealItems.length + leadItems.length;
+
+  let overall = 0;
+  let text = "";
+
+  if (task.status === "Completed") {
+    overall = 100;
+    text = "🎉 Task officially completed!";
+  } else if (totalItems > 0) {
+    let completedItems = 0;
+
+    dealItems.forEach(d => {
+      if (d.stage === "Closed Won") { completedItems++; }
+    });
+    leadItems.forEach(l => {
+      if (l.status === "Converted") { completedItems++; }
+    });
+    overall = Math.round((completedItems / totalItems) * 100);
+    
+    if (overall === 100) {
+      text = "🎉 All linked items achieved! (Mark task as Completed when ready)";
+    } else if (overall > 0) {
+      text = `${completedItems} of ${totalItems} linked items achieved.`;
+    } else {
+      text = task.status === "In Progress" ? "Task is in progress." : "Task is pending. Work on the linked items!";
+    }
+  } else {
+    overall = STATUS_PROGRESS[task.status] || 0;
+    text = overall === 100 ? "🎉 Task completed!" : overall >= 50 ? "Task is currently in progress." : "Task is pending.";
+  }
+
+  // Build the 6-grid metrics based entirely on THIS task's linked items (acting as its own mini-target)
+  const leadsTarget = leadItems.length;
+  const dealsTarget = dealItems.length;
+  
+  let dealsWonCount = 0;
+  let dealsLostCount = 0;
+  let leadsConvertedCount = 0;
+  dealItems.forEach(d => {
+    if (d.stage === "Closed Won") dealsWonCount++;
+    if (d.stage === "Closed Lost") dealsLostCount++;
+  });
+  leadItems.forEach(l => {
+    if (l.status === "Converted") leadsConvertedCount++;
+  });
+
+  const leadsPct = leadsTarget > 0 ? Math.round((leadsConvertedCount / leadsTarget) * 100) : 0;
+  const dealsPct = dealsTarget > 0 ? Math.round((dealsWonCount / dealsTarget) * 100) : 0;
 
   const metrics = [
-    { label: "Deal Closed",  target: percentages.effTargetDeals ?? t?.targetDeals ?? 0, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Deal Lost", target: null,                                             actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "deal lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Leads to Deals Converted", target: leadsTarget, actual: leadsConvertedCount, pct: leadsPct, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
+    { label: "Deal Closed", target: dealsTarget, actual: dealsWonCount, pct: dealsPct, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
   ];
 
   return (
     <div className="mb-4">
-      <div className={`rounded-xl p-4 mb-3 ${overall >= 80 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-amber-50 border border-amber-100" : "bg-red-50 border border-red-100"}`}>
+      <div className={`rounded-xl p-4 ${overall >= 100 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-blue-50 border border-blue-100" : "bg-gray-50 border border-gray-100"}`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700"><Trophy size={15} className={getTextColor(overall)} /> Overall Progress</span>
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+            <Trophy size={15} className={getTextColor(overall)} /> {overall >= 100 ? "Task Completed" : "Task Progress"}
+          </span>
           <span className={`text-2xl font-bold ${getTextColor(overall)}`}>{overall}%</span>
         </div>
         <ProgressBar value={overall} color={getProgressColor(overall)} />
-        <p className="text-xs text-gray-400 mt-1.5">
-          {overall >= 100 ? "🎉 Target achieved!" : overall >= 80 ? "Almost there — keep going!" : overall >= 50 ? "Good progress — stay focused!" : "Keep pushing — you can do it!"}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2.5">
-        {metrics.map((m) => (
-          <div key={m.label} className={`rounded-xl border p-3 ${m.bg} ${m.border}`}>
-            <div className="flex items-center gap-1.5 mb-1.5">{m.icon}<span className="text-xs font-medium text-gray-600">{m.label}</span></div>
-            {m.countOnly ? (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-2xl font-bold text-gray-800">{m.actual}</span>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.badgeClass}`}>{m.badgeText}</span>
+        <p className="text-xs text-gray-400 mt-1.5 mb-3">{text}</p>
+        
+        <div className="grid grid-cols-2 gap-2">
+          {metrics.map((m, i) => (
+            <div key={i} className={`p-2.5 rounded-xl border ${m.bg} ${m.border} flex flex-col justify-between min-h-[82px]`}>
+              <div className="flex items-start justify-between gap-1 mb-1.5">
+                <span className="text-[10px] font-bold text-gray-600 leading-tight">{m.label}</span>
+                <span className="shrink-0 mt-0.5">{m.icon}</span>
               </div>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between mb-1.5">
-                  <span className="text-lg font-bold text-gray-800">{m.actual}</span>
-                  <span className="text-xs text-gray-400">/ {m.target}</span>
-                </div>
-                <ProgressBar value={m.pct} color={getProgressColor(m.pct)} />
-                <p className={`text-[11px] font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
-              </>
-            )}
-          </div>
-        ))}
+              <div>
+                {m.countOnly ? (
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${m.badgeClass}`}>
+                    {m.actual} {m.badgeText}
+                  </span>
+                ) : (
+                  <div className="flex items-end gap-1.5">
+                    <span className="text-sm font-black text-gray-800">{m.actual}</span>
+                    <span className="text-[10px] text-gray-400 font-bold mb-0.5">/ {m.target}</span>
+                    <span className="text-[10px] font-bold ml-auto" style={{ color: m.pct >= 100 ? '#10b981' : m.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
+                      {m.pct}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+
+
 
 // Same lead-status / deal-stage color maps as Target Management, so the
 // sales-person preview panel in the task modal looks and reads identically.
@@ -386,25 +423,31 @@ function LeadStatusJourney({ lead }) {
 // Deals Won / Active Deals / Linked Leads sections, but entirely task-scoped
 // (no Target lookup) so it always renders fully regardless of whether the
 // assigned sales person has a target set.
-function LinkedItemDetail({ task, linkedBadgeText, canUnlink, baseUrl, headers, onUnlinked }) {
-  const [expanded, setExpanded] = useState(true);
+// One linked deal's card — used both for a directly-linked deal and for a
+// converted-lead's resulting deal (resolvedFromLead). unlinkField/unlinkValue
+// tell handleUnlink which of removeLeadRef/removeDealRef to send.
+function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, isActiveTargetLink, canUnlink, baseUrl, headers, taskId, unlinkField, unlinkValue, onUnlinked, dueDate, taskStatus }) {
+  const [expanded, setExpanded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
-  const deal = task.dealRef;
-  const lead = task.leadRef;
-  // A converted lead has no pipeline of its own — the real stage journey now
-  // lives on the deal it became. task.convertedDealRef is attached
-  // server-side by attachConvertedDealJourney on every task fetch (see
-  // taskNotificationService.js), independent of any target.
-  const resolvedFromLead = !deal && lead?.status === "Converted" ? task.convertedDealRef : null;
-  const effectiveDeal = deal || resolvedFromLead;
+
+  const stage = deal.stage;
+  const isWon = stage === "Closed Won";
+  const isLost = stage === "Closed Lost";
+  const isLeadCompleted = !!resolvedFromLead;
+  const isTaskCompleted = taskStatus === "Completed";
+  const dealName = deal.dealName || deal.dealTitle;
+  const bucketBg = (isWon || isLeadCompleted || isTaskCompleted) ? "bg-emerald-50 border-emerald-200" : isLost ? "bg-red-50 border-red-200" : "bg-white border-gray-200";
+  const icon = (isWon || isLeadCompleted || isTaskCompleted) ? <Award size={11} className="text-emerald-500" /> : isLost ? <XCircle size={11} className="text-red-500" /> : <Briefcase size={11} />;
+  const wonDate = deal.wonAt ? new Date(deal.wonAt) : null;
+  const createdDate = deal.createdAt ? new Date(deal.createdAt) : null;
+  const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
 
   const handleUnlink = async () => {
     setUnlinking(true);
     try {
-      const field = deal ? "dealRef" : "leadRef";
-      await axios.put(`${baseUrl}/tasks/${task._id}`, { [field]: "" }, { headers });
-      toast.success(`${deal ? "Deal" : "Lead"} unlinked from task`);
+      await axios.put(`${baseUrl}/tasks/${taskId}`, { [unlinkField]: unlinkValue }, { headers });
+      toast.success(`${unlinkField === "removeLeadRef" ? "Lead" : "Deal"} unlinked from task`);
       setConfirmOpen(false);
       onUnlinked?.();
     } catch (err) {
@@ -414,120 +457,246 @@ function LinkedItemDetail({ task, linkedBadgeText, canUnlink, baseUrl, headers, 
     }
   };
 
-  const confirmModal = confirmOpen && (
-    <ConfirmModal
-      open={confirmOpen}
-      title={`Unlink ${deal ? "Deal" : "Lead"}`}
-      message={`Remove this ${deal ? "deal" : "lead"} from the task? It won't be deleted — just unlinked from this task.`}
-      onConfirm={handleUnlink}
-      onClose={() => !unlinking && setConfirmOpen(false)}
-    />
-  );
+  return (
+    <div className={`rounded-2xl overflow-hidden border ${bucketBg}`}>
+      <div className="px-3 pt-3 pb-2.5">
+        <div className="flex items-start justify-between gap-1.5 mb-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-800 truncate flex-1">{dealName}</p>
+              {dueDate && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#008ecc] bg-white text-[#008ecc] font-semibold shrink-0 flex items-center gap-1" title="Due date for this deal">
+                  <Calendar size={9} />Due {fmt(dueDate)}
+                </span>
+              )}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600" title={expanded ? "Collapse" : "Expand"}>
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+            {canUnlink && (
+              <button onClick={() => setConfirmOpen(true)} className="p-1 rounded-md hover:bg-red-100 text-gray-400 hover:text-red-500" title="Unlink">
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+        {linkedBadgeText && (
+          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1">{linkedBadgeText}</span>
+        )}
+        {isActiveTargetLink && (
+          <span className="inline-block text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 flex items-center gap-1 w-fit"><Flag size={9}/>Linked to active Target</span>
+        )}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+          {deal.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
+          {deal.value && <span className={`text-[10px] font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
+          {deal.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
+          {deal.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
+          {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+        </div>
+      </div>
 
-  // Icons live inside the card's own header row (top-right), not as a
-  // separate label bar floating above it.
-  const CardIcons = () => (
-    <div className="flex items-center gap-1 shrink-0">
-      <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600" title={expanded ? "Collapse" : "Expand"}>
-        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-      </button>
-      {canUnlink && (
-        <button onClick={() => setConfirmOpen(true)} className="p-1 rounded-md hover:bg-red-100 text-gray-400 hover:text-red-500" title={`Unlink ${deal ? "deal" : "lead"}`}>
-          <Trash2 size={12} />
-        </button>
+      {expanded && <DealStageJourney deal={deal} />}
+
+      {expanded && totalDays !== null && (
+        <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
+          <Clock size={11} className="text-emerald-600 shrink-0" />
+          <p className="text-[11px] font-bold text-emerald-700">
+            {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
+          </p>
+        </div>
+      )}
+      {confirmOpen && (
+        <ConfirmModal
+          open={confirmOpen}
+          title="Unlink Deal"
+          message="Remove this deal from the task? It won't be deleted — just unlinked from this task."
+          onConfirm={handleUnlink}
+          onClose={() => !unlinking && setConfirmOpen(false)}
+        />
       )}
     </div>
   );
+}
 
-  if (effectiveDeal) {
-    const deal = effectiveDeal;
-    const stage = deal.stage;
-    const isWon = stage === "Closed Won";
-    const isLost = stage === "Closed Lost";
-    const dealName = deal.dealName || deal.dealTitle;
-    const bucketBg = isWon ? "bg-emerald-50 border-emerald-200" : isLost ? "bg-red-50 border-red-200" : "bg-white border-gray-200";
-    const icon = isWon ? <Award size={11} className="text-emerald-500" /> : isLost ? <XCircle size={11} className="text-red-500" /> : <Briefcase size={11} />;
-    const wonDate = deal.wonAt ? new Date(deal.wonAt) : null;
-    const createdDate = deal.createdAt ? new Date(deal.createdAt) : null;
-    const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
+// One linked lead's card.
+function LeadLinkCard({ lead, linkedBadgeText, isActiveTargetLink, canUnlink, baseUrl, headers, taskId, onUnlinked, dueDate, taskStatus }) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
+  const isTaskCompleted = taskStatus === "Completed";
+  const bgClass = isTaskCompleted ? "bg-emerald-50 border-emerald-200" : "bg-white border-gray-200";
 
-    return (
-      <div className={`rounded-2xl overflow-hidden border ${bucketBg}`}>
-        <div className="px-3 pt-3 pb-2.5">
-          <div className="flex items-start justify-between gap-1.5 mb-1">
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-bold text-gray-800 truncate flex-1">{dealName}</p>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
-              </div>
+  const handleUnlink = async () => {
+    setUnlinking(true);
+    try {
+      await axios.put(`${baseUrl}/tasks/${taskId}`, { removeLeadRef: lead._id }, { headers });
+      toast.success("Lead unlinked from task");
+      setConfirmOpen(false);
+      onUnlinked?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to unlink");
+    } finally {
+      setUnlinking(false);
+    }
+  };
+
+  return (
+    <div className={`border rounded-xl overflow-hidden ${bgClass}`}>
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-1.5 mb-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-800 truncate flex-1">{lead.leadName}</p>
+              {dueDate && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#008ecc] bg-white text-[#008ecc] font-semibold shrink-0 flex items-center gap-1" title="Due date for this lead">
+                  <Calendar size={9} />Due {fmt(dueDate)}
+                </span>
+              )}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
             </div>
-            <CardIcons />
           </div>
-          {linkedBadgeText && (
-            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
-          )}
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-            {deal.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
-            {deal.value && <span className={`text-[10px] font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
-            {deal.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
-            {deal.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
-            {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600" title={expanded ? "Collapse" : "Expand"}>
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+            {canUnlink && (
+              <button onClick={() => setConfirmOpen(true)} className="p-1 rounded-md hover:bg-red-100 text-gray-400 hover:text-red-500" title="Unlink">
+                <Trash2 size={12} />
+              </button>
+            )}
           </div>
         </div>
-
-        {expanded && <DealStageJourney deal={deal} />}
-
-        {expanded && totalDays !== null && (
-          <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
-            <Clock size={11} className="text-emerald-600 shrink-0" />
-            <p className="text-[11px] font-bold text-emerald-700">
-              {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
-            </p>
-          </div>
+        {linkedBadgeText && (
+          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1">{linkedBadgeText}</span>
         )}
-        {confirmModal}
-      </div>
-    );
-  }
-
-  if (lead) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="p-3">
-          <div className="flex items-start justify-between gap-1.5 mb-1">
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-bold text-gray-800 truncate flex-1">{lead.leadName}</p>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
-              </div>
-            </div>
-            <CardIcons />
-          </div>
-          {linkedBadgeText && (
-            <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
-          )}
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-            {lead.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
-            {lead.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
-            {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
-            {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
-          </div>
+        {isActiveTargetLink && (
+          <span className="inline-block text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 flex items-center gap-1 w-fit"><Flag size={9}/>Linked to active Target</span>
+        )}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+          {lead.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
+          {lead.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
+          {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
+          {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
         </div>
-        {expanded && <LeadStatusJourney lead={lead} />}
-        {confirmModal}
       </div>
-    );
-  }
+      {expanded && <LeadStatusJourney lead={lead} />}
+      {confirmOpen && (
+        <ConfirmModal
+          open={confirmOpen}
+          title="Unlink Lead"
+          message="Remove this lead from the task? It won't be deleted — just unlinked from this task."
+          onConfirm={handleUnlink}
+          onClose={() => !unlinking && setConfirmOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
 
-  return null;
+// Renders every linked lead/deal on this task as its own card (not just the
+// most-recently-linked "primary" one) — backward-compat-derived from
+// leadRefs/dealRefs, falling back to the singular leadRef/dealRef for tasks
+// created before this multi-link feature. The deal-stage/lead-status
+// "journey" timeline is only shown on the current primary item; other linked
+// items render as plain cards.
+function LinkedItemDetail({ task, linkedBadgeText, canUnlink, baseUrl, headers, onUnlinked, targets }) {
+  const dealItems = task.dealRefs?.length ? task.dealRefs : (task.dealRef ? [task.dealRef] : []);
+  const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
+  const primaryDealId = task.dealRef?._id || task.dealRef || null;
+  const primaryLeadId = task.leadRef?._id || task.leadRef || null;
+
+  if (!dealItems.length && !leadItems.length) return null;
+
+  return (
+    <div className="space-y-4">
+      {dealItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><Briefcase size={11}/> Linked Deals</p>
+          {dealItems.map((deal) => (
+            <DealLinkCard
+              key={deal._id}
+              deal={deal}
+              linkedBadgeText={String(deal._id) === String(primaryDealId) ? linkedBadgeText : null}
+              isActiveTargetLink={targets?.some(t => t.salesPerson?._id === task.assignedTo?._id && new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(deal._id)))}
+              canUnlink={canUnlink}
+              baseUrl={baseUrl}
+              headers={headers}
+              taskId={task._id}
+              unlinkField="removeDealRef"
+              unlinkValue={deal._id}
+              onUnlinked={onUnlinked}
+              dueDate={task.dealDueDates?.[String(deal._id)]}
+              taskStatus={task.status}
+            />
+          ))}
+        </div>
+      )}
+      {leadItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><FileText size={11}/> Linked Leads</p>
+          {leadItems.map((lead) => {
+            // A converted lead has no pipeline of its own — the real stage
+            // journey now lives on the deal it became. task.convertedDealRefsByLeadId
+            // is attached server-side (attachConvertedDealJourney) and covers
+            // EVERY converted lead on this task, not just the current primary one
+            // — otherwise adding another lead/deal during an edit (which re-points
+            // task.leadRef to the newest addition) demoted an already-won lead to
+            // non-primary and silently dropped its Won/Stage journey.
+            const isPrimary = String(lead._id) === String(primaryLeadId);
+            const resolvedFromLead = lead.status === "Converted"
+              ? (task.convertedDealRefsByLeadId?.[String(lead._id)] || (isPrimary && !task.dealRef ? task.convertedDealRef : null))
+              : null;
+            if (resolvedFromLead) {
+              return (
+                <DealLinkCard
+                  key={lead._id}
+                  deal={resolvedFromLead}
+                  resolvedFromLead
+                  linkedBadgeText={linkedBadgeText}
+                  isActiveTargetLink={targets?.some(t => t.salesPerson?._id === task.assignedTo?._id && new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(resolvedFromLead._id)))}
+                  canUnlink={canUnlink}
+                  baseUrl={baseUrl}
+                  headers={headers}
+                  taskId={task._id}
+                  unlinkField="removeLeadRef"
+                  unlinkValue={lead._id}
+                  onUnlinked={onUnlinked}
+                  dueDate={task.leadDueDates?.[String(lead._id)]}
+                  taskStatus={task.status}
+                />
+              );
+            }
+            return (
+              <LeadLinkCard
+                key={lead._id}
+                lead={lead}
+                linkedBadgeText={isPrimary ? linkedBadgeText : null}
+                isActiveTargetLink={targets?.some(t => t.salesPerson?._id === task.assignedTo?._id && new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedLeads || []).some(id => String(id) === String(lead._id)))}
+                canUnlink={canUnlink}
+                baseUrl={baseUrl}
+                headers={headers}
+                taskId={task._id}
+                onUnlinked={onUnlinked}
+                dueDate={task.leadDueDates?.[String(lead._id)]}
+                taskStatus={task.status}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Sales Person Preview Panel (inside Task modal) — single-select: click a
    lead/deal to link it as this task's leadRef/dealRef. Reuses the same
    sales-summary endpoint Target Management uses. ─────────────────────── */
-function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, selectedDealId, onSelectLead, onSelectDeal }) {
+function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, selectedDealIds, onToggleLead, onToggleDeal, newLeadIds = [], newDealIds = [], leadDueDates = {}, dealDueDates = {}, onLeadDueDateChange, onDealDueDateChange, inUseLeadIds = [], inUseDealIds = [] }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("leads");
@@ -557,12 +726,13 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, sele
 
   if (!data) return null;
 
-  const { leads } = data;
+  const leadsList = (data.leads.list || []).filter((l) => !["Converted", "Rejected"].includes(l.status) || selectedLeadIds.includes(l._id));
+  const leads = { ...data.leads, list: leadsList, total: leadsList.length };
   // A deal that's already Closed Won/Lost is done — linking a task to it just
   // recreates the "stale, already-resolved" card the fix above works around.
-  // The currently-selected deal stays visible even if closed, so an existing
+  // Every already-linked deal stays visible even if closed, so an existing
   // link doesn't silently disappear from view.
-  const dealsList = (data.deals.list || []).filter((d) => !["Closed Won", "Closed Lost"].includes(d.stage) || d._id === selectedDealId);
+  const dealsList = (data.deals.list || []).filter((d) => !["Closed Won", "Closed Lost"].includes(d.stage) || selectedDealIds.includes(d._id));
   const deals = { ...data.deals, list: dealsList, total: dealsList.length };
 
   return (
@@ -580,11 +750,11 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, sele
       </div>
 
       {/* Selection summary */}
-      {(selectedLeadId || selectedDealId) && (
+      {(selectedLeadIds.length > 0 || selectedDealIds.length > 0) && (
         <div className="bg-[#008ecc]/10 border border-[#008ecc]/20 rounded-xl px-3 py-2 flex items-center gap-2">
           <Check size={13} className="text-[#008ecc]" />
           <p className="text-xs text-[#008ecc] font-semibold">
-            {selectedLeadId ? "1 lead" : ""}{selectedLeadId && selectedDealId ? " + " : ""}{selectedDealId ? "1 deal" : ""} linked to this task
+            {selectedLeadIds.length > 0 ? `${selectedLeadIds.length} lead${selectedLeadIds.length > 1 ? "s" : ""}` : ""}{selectedLeadIds.length > 0 && selectedDealIds.length > 0 ? " + " : ""}{selectedDealIds.length > 0 ? `${selectedDealIds.length} deal${selectedDealIds.length > 1 ? "s" : ""}` : ""} linked to this task
           </p>
         </div>
       )}
@@ -605,20 +775,20 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, sele
       <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
         {tab === "leads" && leads.list.length > 0 && (
           <div className="flex items-center justify-between px-1 py-1 border-b border-gray-100">
-            <span className="text-[11px] font-semibold text-gray-500">Click a lead to link it with this task</span>
-            {selectedLeadId && (
-              <button type="button" onClick={() => onSelectLead("")} className="text-[11px] font-bold text-[#008ecc] hover:underline">
-                Clear
+            <span className="text-[11px] font-semibold text-gray-500">Tick leads to link with this task</span>
+            {selectedLeadIds.length > 0 && (
+              <button type="button" onClick={() => selectedLeadIds.forEach((id) => onToggleLead(id))} className="text-[11px] font-bold text-[#008ecc] hover:underline">
+                Clear all
               </button>
             )}
           </div>
         )}
         {tab === "deals" && deals.list.length > 0 && (
           <div className="flex items-center justify-between px-1 py-1 border-b border-gray-100">
-            <span className="text-[11px] font-semibold text-gray-500">Click a deal to link it with this task</span>
-            {selectedDealId && (
-              <button type="button" onClick={() => onSelectDeal("")} className="text-[11px] font-bold text-[#008ecc] hover:underline">
-                Clear
+            <span className="text-[11px] font-semibold text-gray-500">Tick deals to link with this task</span>
+            {selectedDealIds.length > 0 && (
+              <button type="button" onClick={() => selectedDealIds.forEach((id) => onToggleDeal(id))} className="text-[11px] font-bold text-[#008ecc] hover:underline">
+                Clear all
               </button>
             )}
           </div>
@@ -627,17 +797,48 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, sele
         {tab === "leads" && (
           leads.list.length === 0
             ? <p className="text-xs text-gray-400 text-center py-6">No leads assigned</p>
-            : leads.list.map((l) => (
+            : leads.list.map((l) => {
+              const isNewLead = selectedLeadIds.includes(l._id) && newLeadIds.includes(l._id);
+              const inUse = inUseLeadIds.includes(l._id);
+              const isLocked = l.status === "Converted";
+              return (
               <div key={l._id}
-                onClick={() => onSelectLead(selectedLeadId === l._id ? "" : l._id)}
-                className={`flex items-start gap-2.5 bg-white border rounded-xl p-2.5 cursor-pointer transition-all ${selectedLeadId === l._id ? "border-[#008ecc] bg-blue-50/30 shadow-sm" : "border-gray-100 hover:border-gray-200"}`}>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${selectedLeadId === l._id ? "bg-[#008ecc] border-[#008ecc]" : "border-gray-300 bg-white"}`}>
-                  {selectedLeadId === l._id && <Check size={10} className="text-white" strokeWidth={3} />}
+                onClick={() => {
+                  if (isLocked) {
+                    toast.info("Already this lead is converted");
+                    return;
+                  }
+                  if (!inUse) onToggleLead(l._id);
+                }}
+                className={`flex items-start gap-2.5 border rounded-xl p-2.5 transition-all ${(inUse || isLocked) ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-100" : selectedLeadIds.includes(l._id) ? "border-[#008ecc] bg-blue-50/30 shadow-sm cursor-pointer" : "bg-white border-gray-100 hover:border-gray-200 cursor-pointer"}`}>
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 ${selectedLeadIds.includes(l._id) ? "bg-[#008ecc] border-[#008ecc]" : "border-gray-300 bg-white"}`}>
+                  {selectedLeadIds.includes(l._id) && <Check size={10} className="text-white" strokeWidth={3} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <p className="text-xs font-semibold text-gray-800 truncate">{l.leadName}</p>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {(inUse || l.inActiveTask) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in task</span>}
+                      {l.inActiveTarget && <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in target</span>}
+                      {isNewLead && (
+                        <div
+                          className="flex items-center gap-1.5 rounded-full border border-[#008ecc] bg-white shadow-sm pl-2.5 pr-2 py-1"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Due date for this lead (required)"
+                        >
+                          <Calendar size={10} className="text-[#008ecc] shrink-0" />
+                          <input
+                            required
+                            type="date"
+                            min={todayISO()}
+                            value={leadDueDates[l._id] || ""}
+                            onChange={(e) => onLeadDueDateChange(l._id, e.target.value)}
+                            className="text-[10.5px] leading-none bg-transparent border-0 p-0 w-[98px] text-[#008ecc] font-semibold focus:outline-none cursor-pointer"
+                          />
+                        </div>
+                      )}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
+                    </div>
                   </div>
                   {l.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{l.companyName}</p>}
                   {l.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</p>}
@@ -645,7 +846,8 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, sele
                   <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Added {fmt(l.createdAt)}</p>
                 </div>
               </div>
-            ))
+              );
+            })
         )}
 
         {tab === "deals" && (
@@ -653,17 +855,47 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadId, sele
             ? <p className="text-xs text-gray-400 text-center py-6">No deals assigned</p>
             : deals.list.map((d) => {
               const adminBadge = getAdminActionBadge(d);
+              const isNewDeal = selectedDealIds.includes(d._id) && newDealIds.includes(d._id);
+              const inUse = inUseDealIds.includes(d._id);
+              const isLocked = d.stage === "Closed Won";
               return (
                 <div key={d._id}
-                  onClick={() => onSelectDeal(selectedDealId === d._id ? "" : d._id)}
-                  className={`flex items-start gap-2.5 bg-white border rounded-xl p-2.5 cursor-pointer transition-all ${selectedDealId === d._id ? "border-[#008ecc] bg-blue-50/30 shadow-sm" : "border-gray-100 hover:border-gray-200"}`}>
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${selectedDealId === d._id ? "bg-[#008ecc] border-[#008ecc]" : "border-gray-300 bg-white"}`}>
-                    {selectedDealId === d._id && <Check size={10} className="text-white" strokeWidth={3} />}
+                  onClick={() => {
+                    if (isLocked) {
+                      toast.info("Already this deal is won");
+                      return;
+                    }
+                    if (!inUse) onToggleDeal(d._id);
+                  }}
+                  className={`flex items-start gap-2.5 border rounded-xl p-2.5 transition-all ${(inUse || isLocked) ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-100" : selectedDealIds.includes(d._id) ? "border-[#008ecc] bg-blue-50/30 shadow-sm cursor-pointer" : "bg-white border-gray-100 hover:border-gray-200 cursor-pointer"}`}>
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 ${selectedDealIds.includes(d._id) ? "bg-[#008ecc] border-[#008ecc]" : "border-gray-300 bg-white"}`}>
+                    {selectedDealIds.includes(d._id) && <Check size={10} className="text-white" strokeWidth={3} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-1 mb-1">
                       <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {(inUse || d.inActiveTask) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in task</span>}
+                        {d.inActiveTarget && <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in target</span>}
+                        {isNewDeal && (
+                          <div
+                            className="flex items-center gap-1.5 rounded-full border border-[#008ecc] bg-white shadow-sm pl-2.5 pr-2 py-1"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Due date for this deal (required)"
+                          >
+                            <Calendar size={10} className="text-[#008ecc] shrink-0" />
+                            <input
+                              required
+                              type="date"
+                              min={todayISO()}
+                              value={dealDueDates[d._id] || ""}
+                              onChange={(e) => onDealDueDateChange(d._id, e.target.value)}
+                              className="text-[10.5px] leading-none bg-transparent border-0 p-0 w-[98px] text-[#008ecc] font-semibold focus:outline-none cursor-pointer"
+                            />
+                          </div>
+                        )}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                      </div>
                     </div>
                     {adminBadge && (
                       <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
@@ -694,10 +926,10 @@ function ConfirmModal({ open, title, message, confirmLabel = "Delete", onConfirm
         <h3 className="text-base font-bold text-gray-800 mb-2">{title}</h3>
         <p className="text-sm text-gray-500 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">
             Cancel
           </button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 text-sm font-medium">
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onConfirm(); }} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 text-sm font-medium">
             {confirmLabel}
           </button>
         </div>
@@ -707,35 +939,77 @@ function ConfirmModal({ open, title, message, confirmLabel = "Delete", onConfirm
 }
 
 /* ── Task Create/Edit Modal ─────────────────────── */
-function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, headers }) {
+function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, headers, inUseLeadIds = [], inUseDealIds = [] }) {
   const [form, setForm] = useState({
     title: "", description: "", priority: "Medium",
-    dueDate: "", assignedTo: "", leadRef: "", dealRef: "",
+    dueDate: "", assignedTo: "", leadRefs: [], dealRefs: [],
+    leadDueDates: {}, dealDueDates: {},
     callsMade: 0, meetingsDone: 0,
   });
   const [saving, setSaving] = useState(false);
   const [dateError, setDateError] = useState(null);
+  // Snapshot of the leads/deals already linked when this edit session opened —
+  // only leads/deals added AFTER that (not these) require their own due date.
+  const [initialRefs, setInitialRefs] = useState({ leadRefs: [], dealRefs: [] });
+  // Per-assignee tick cache for THIS modal session — switching "Assign To"
+  // away and back (without closing the modal) restores whatever was ticked
+  // for that person instead of losing it. Keyed by assignedTo user id.
+  const assigneeCacheRef = useRef({});
 
   useEffect(() => {
     if (open) {
+      assigneeCacheRef.current = {};
       if (editTask) {
+        // Backward-compat: older tasks only ever had the singular leadRef/dealRef.
+        const editLeadRefs = editTask.leadRefs?.length
+          ? editTask.leadRefs.map((l) => String(l._id || l))
+          : (editTask.leadRef ? [String(editTask.leadRef._id || editTask.leadRef)] : []);
+        const editDealRefs = editTask.dealRefs?.length
+          ? editTask.dealRefs.map((d) => String(d._id || d))
+          : (editTask.dealRef ? [String(editTask.dealRef._id || editTask.dealRef)] : []);
         setForm({
           title: editTask.title || "",
           description: editTask.description || "",
           priority: editTask.priority || "Medium",
           dueDate: editTask.dueDate ? editTask.dueDate.split("T")[0] : "",
           assignedTo: editTask.assignedTo?._id || "",
-          leadRef: editTask.leadRef?._id || editTask.leadRef || "",
-          dealRef: editTask.dealRef?._id || editTask.dealRef || "",
+          leadRefs: editLeadRefs,
+          dealRefs: editDealRefs,
+          leadDueDates: {},
+          dealDueDates: {},
           callsMade: editTask.callsMade || 0,
           meetingsDone: editTask.meetingsDone || 0,
         });
+        setInitialRefs({ leadRefs: editLeadRefs, dealRefs: editDealRefs });
       } else {
-        setForm({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "", leadRef: "", dealRef: "", callsMade: 0, meetingsDone: 0 });
+        setForm({ title: "", description: "", priority: "Medium", dueDate: "", assignedTo: "", leadRefs: [], dealRefs: [], leadDueDates: {}, dealDueDates: {}, callsMade: 0, meetingsDone: 0 });
+        setInitialRefs({ leadRefs: [], dealRefs: [] });
       }
       setDateError(null);
     }
   }, [editTask, open]);
+
+  // Only meaningful during an edit — a brand-new task has nothing "existing"
+  // to compare against, so nothing counts as newly added.
+  const newLeadIds = editTask ? form.leadRefs.filter((id) => !initialRefs.leadRefs.includes(id)) : [];
+  const newDealIds = editTask ? form.dealRefs.filter((id) => !initialRefs.dealRefs.includes(id)) : [];
+
+  const toggleLead = (id) => setForm((f) => {
+    const isSelected = f.leadRefs.includes(id);
+    const leadRefs = isSelected ? f.leadRefs.filter((x) => x !== id) : [...f.leadRefs, id];
+    const leadDueDates = { ...f.leadDueDates };
+    if (isSelected) delete leadDueDates[id];
+    else if (editTask && !initialRefs.leadRefs.includes(id) && !(id in leadDueDates)) leadDueDates[id] = "";
+    return { ...f, leadRefs, leadDueDates };
+  });
+  const toggleDeal = (id) => setForm((f) => {
+    const isSelected = f.dealRefs.includes(id);
+    const dealRefs = isSelected ? f.dealRefs.filter((x) => x !== id) : [...f.dealRefs, id];
+    const dealDueDates = { ...f.dealDueDates };
+    if (isSelected) delete dealDueDates[id];
+    else if (editTask && !initialRefs.dealRefs.includes(id) && !(id in dealDueDates)) dealDueDates[id] = "";
+    return { ...f, dealRefs, dealDueDates };
+  });
 
   const handleDueDateChange = (value) => {
     setForm((f) => ({ ...f, dueDate: value }));
@@ -744,8 +1018,29 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.leadRefs.length === 0 && form.dealRefs.length === 0) {
+      toast.error("Please select at least one Lead or Deal to link to this task.");
+      return;
+    }
     const err = validateTaskDueDate(form.dueDate);
     if (err) { setDateError(err); toast.error(err); return; }
+    let errorMsg = null;
+    for (const id of newLeadIds) {
+      if (!form.leadDueDates[id]) { errorMsg = "Please set a due date for all newly linked leads."; break; }
+      const err = validateTaskDueDate(form.leadDueDates[id]);
+      if (err) { errorMsg = `Lead Due Date: ${err}`; break; }
+    }
+    if (!errorMsg) {
+      for (const id of newDealIds) {
+        if (!form.dealDueDates[id]) { errorMsg = "Please set a due date for all newly linked deals."; break; }
+        const err = validateTaskDueDate(form.dealDueDates[id]);
+        if (err) { errorMsg = `Deal Due Date: ${err}`; break; }
+      }
+    }
+    if (errorMsg) {
+      toast.error(errorMsg);
+      return;
+    }
     setSaving(true);
     try {
       if (editTask) {
@@ -768,7 +1063,11 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
+      {/* Fixed height (not just max-height) — ticking a lead/deal mounts/unmounts
+          the due-date pill and the linked-summary chip, which changed the box's
+          content-driven height on every click and made the whole modal visibly
+          resize/jump. A fixed height means only the inner scroll panes move. */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[88vh] max-h-[820px] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
           <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -778,9 +1077,9 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={18} className="text-gray-500" /></button>
         </div>
 
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-full lg:w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-100">
+          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
               <input
@@ -803,16 +1102,18 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 z-10">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <Select
-                  options={["Low", "Medium", "High", "Urgent"].map(p => ({ value: p, label: p }))}
-                  value={{ value: form.priority, label: form.priority }}
-                  onChange={(selected) => setForm({ ...form, priority: selected ? selected.value : "Medium" })}
-                  menuPortalTarget={document.body}
-                  styles={customSelectStyles}
-                />
+                <select
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                >
+                  {["Low", "Medium", "High", "Urgent"].map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
@@ -830,26 +1131,42 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
-              <Select
-                options={salesUsers.map((u) => ({ value: u._id, label: `${u.firstName} ${u.lastName}` }))}
-                value={form.assignedTo ? { value: form.assignedTo, label: (() => {
-                  const u = salesUsers.find(x => x._id === form.assignedTo);
-                  return u ? `${u.firstName} ${u.lastName}` : "";
-                })() } : null}
-                onChange={(selected) => setForm({ ...form, assignedTo: selected ? selected.value : "", leadRef: "", dealRef: "" })}
-                placeholder="Select sales person"
-                isClearable
-                menuPortalTarget={document.body}
-                styles={customSelectStyles}
-              />
+              <select
+                required
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                value={form.assignedTo}
+                onChange={(e) => {
+                  const newAssignee = e.target.value;
+                  setForm((f) => {
+                    if (f.assignedTo) {
+                      assigneeCacheRef.current[f.assignedTo] = {
+                        leadRefs: f.leadRefs, dealRefs: f.dealRefs,
+                        leadDueDates: f.leadDueDates, dealDueDates: f.dealDueDates,
+                      };
+                    }
+                    const cached = assigneeCacheRef.current[newAssignee] || { leadRefs: [], dealRefs: [], leadDueDates: {}, dealDueDates: {} };
+                    return { ...f, assignedTo: newAssignee, ...cached };
+                  });
+                }}
+              >
+                <option value="">— Select sales person —</option>
+                {salesUsers.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.firstName} {u.lastName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Linked summary chip */}
-            {(form.leadRef || form.dealRef) && (
+            {(form.leadRefs.length > 0 || form.dealRefs.length > 0) && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-1">
                 <p className="text-[11px] font-bold text-blue-700">Linked to this task:</p>
-                {form.leadRef && <p className="text-[11px] text-blue-600">✓ 1 lead selected</p>}
-                {form.dealRef && <p className="text-[11px] text-blue-600">✓ 1 deal selected</p>}
+                {form.leadRefs.length > 0 && <p className="text-[11px] text-blue-600">✓ {form.leadRefs.length} lead{form.leadRefs.length > 1 ? "s" : ""} selected</p>}
+                {form.dealRefs.length > 0 && <p className="text-[11px] text-blue-600">✓ {form.dealRefs.length} deal{form.dealRefs.length > 1 ? "s" : ""} selected</p>}
+                {(newLeadIds.length > 0 || newDealIds.length > 0) && (
+                  <p className="text-[11px] text-amber-600 font-semibold pt-1">Set a due date for each newly linked lead/deal on the right →</p>
+                )}
               </div>
             )}
 
@@ -864,7 +1181,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
           </form>
 
           {/* RIGHT — sales person preview, click to link a lead/deal */}
-          <div className="w-full lg:flex-1 lg:min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
+          <div className="flex-1 min-w-0 p-5 bg-gray-50/50 flex flex-col overflow-hidden">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 shrink-0">
               {form.assignedTo ? "Sales Person Details — Click to link a lead/deal" : "Sales Person Details"}
             </p>
@@ -873,10 +1190,18 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
                 userId={form.assignedTo}
                 baseUrl={baseUrl}
                 headers={headers}
-                selectedLeadId={form.leadRef}
-                selectedDealId={form.dealRef}
-                onSelectLead={(id) => setForm((f) => ({ ...f, leadRef: id }))}
-                onSelectDeal={(id) => setForm((f) => ({ ...f, dealRef: id }))}
+                selectedLeadIds={form.leadRefs}
+                selectedDealIds={form.dealRefs}
+                onToggleLead={toggleLead}
+                onToggleDeal={toggleDeal}
+                newLeadIds={newLeadIds}
+                newDealIds={newDealIds}
+                leadDueDates={form.leadDueDates}
+                dealDueDates={form.dealDueDates}
+                onLeadDueDateChange={(id, value) => setForm((f) => ({ ...f, leadDueDates: { ...f.leadDueDates, [id]: value } }))}
+                onDealDueDateChange={(id, value) => setForm((f) => ({ ...f, dealDueDates: { ...f.dealDueDates, [id]: value } }))}
+                inUseLeadIds={inUseLeadIds}
+                inUseDealIds={inUseDealIds}
               />
             </div>
           </div>
@@ -887,18 +1212,20 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
 }
 
 /* ── Task Card ─────────────────────── */
-function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl, headers, onRefresh }) {
+function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl, headers, onRefresh, onApproveRejection, onApproveHold }) {
   const [expanded, setExpanded] = useState(false);
   const isCompleted = task.status === "Completed";
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted;
 
-  const leadName = task.leadRef?.leadName
-    ? `${task.leadRef.leadName}${task.leadRef.companyName ? ` — ${task.leadRef.companyName}` : ""}`
+  const primaryLead = task.leadRefs?.length ? task.leadRefs[0] : task.leadRef;
+  const primaryDeal = task.dealRefs?.length ? task.dealRefs[0] : task.dealRef;
+  const leadName = primaryLead?.leadName
+    ? `${primaryLead.leadName}${primaryLead.companyName ? ` — ${primaryLead.companyName}` : ""}`
     : null;
-  const dealName = task.dealRef?.dealName || task.dealRef?.dealTitle || null;
+  const dealName = primaryDeal?.dealName || primaryDeal?.dealTitle || null;
   const linkedBadgeText = getLinkedItemBadgeText(task.linkedItemBadge);
   const progressPct = STATUS_PROGRESS[task.status] ?? 0;
-  const linkedItemName = leadName || dealName;
+  const hasLinkedItems = (task.leadRefs?.length > 0) || (task.dealRefs?.length > 0) || primaryLead || primaryDeal;
   const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
   const adminTookTask = getAdminTookTaskBadge(task);
   // No Target covering this task yet? Fall back to the sales person's own
@@ -921,9 +1248,10 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${STATUS_STYLES[task.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{task.status || "New"}</span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
-            <button onClick={() => onEdit(task)} className="p-1 hover:bg-blue-50 rounded-full text-gray-400 hover:text-[#008ecc] transition-colors" title="Edit task"><Edit2 size={14} /></button>
-            <button onClick={() => onDelete(task)} className="p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors" title="Delete task"><Trash2 size={14} /></button>
+            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(task); }} className="p-1 hover:bg-blue-50 rounded-full text-gray-400 hover:text-[#008ecc] transition-colors" title="Edit task"><Edit2 size={14} /></button>
+            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(task); }} className="p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors" title="Delete task"><Trash2 size={14} /></button>
           </div>
         </div>
 
@@ -940,11 +1268,44 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
           </div>
         )}
 
+        {task.rejectionRequested && (
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+            <div className="flex items-start gap-2 mb-2">
+              <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-bold text-red-700">Rejection Requested</p>
+                <p className="text-[11px] text-red-600 mt-0.5 break-words">Reason: {task.rejectionReason}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => onApproveRejection(task, "approve")} className="flex-1 py-1.5 bg-red-500 text-white text-[11px] font-semibold rounded hover:bg-red-600">Approve</button>
+              <button onClick={() => onApproveRejection(task, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+            </div>
+          </div>
+        )}
+
+        {task.holdRequested && (
+          <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-xl">
+            <div className="flex items-start gap-2 mb-2">
+              <Info size={14} className="text-purple-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-bold text-purple-700">Hold Pending</p>
+                <p className="text-[11px] text-purple-600 mt-0.5 break-words">Reason: {task.holdReason}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => onApproveHold(task, "approve")} className="flex-1 py-1.5 bg-purple-500 text-white text-[11px] font-semibold rounded hover:bg-purple-600">Approve</button>
+              <button onClick={() => onApproveHold(task, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+            </div>
+          </div>
+        )}
+
         <div className={`flex items-center gap-1.5 text-[11px] mb-2 mt-1 ${isOverdue ? "text-red-500 font-semibold" : "text-gray-400"}`}>
           <Calendar size={11} /><span>Created {fmt(task.createdAt)} — Due {fmt(task.dueDate)}{isOverdue ? " (Overdue)" : ""}</span>
         </div>
 
-        <TargetSnapshotGrid target={currentTarget} />
+        <TaskProgressWidget task={task} />
+
 
         {/* Description */}
         {task.description && (
@@ -969,7 +1330,7 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
         )}
 
         {/* Toggle */}
-        {linkedItemName && (
+        {hasLinkedItems && (
           <button
             onClick={() => setExpanded((v) => !v)}
             className="w-full flex items-center justify-center gap-1.5 text-sm font-bold text-gray-700 hover:text-[#008ecc] py-2 border-t border-gray-100 transition-colors"
@@ -978,9 +1339,9 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
           </button>
         )}
 
-        {expanded && linkedItemName && (
+        {expanded && hasLinkedItems && (
           <div className="mt-4 space-y-4">
-            <LinkedItemDetail task={task} linkedBadgeText={linkedBadgeText} canUnlink baseUrl={baseUrl} headers={headers} onUnlinked={onRefresh} />
+            <LinkedItemDetail task={task} linkedBadgeText={linkedBadgeText} canUnlink baseUrl={baseUrl} headers={headers} onUnlinked={onRefresh} targets={targets} />
           </div>
         )}
 
@@ -991,14 +1352,13 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
 }
 
 /* ── Table View with expandable Tracking Journey rows ─────────────────────── */
-function TaskTableView({ tasks, onEdit, onDelete }) {
+function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveHold }) {
   const [expandedId, setExpandedId] = useState(null);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-      <div className="min-w-[900px]">
-        {/* Table header */}
-        <div className="grid grid-cols-[2fr_1.3fr_1fr_1fr_1fr_1.4fr_1.2fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Table header */}
+      <div className="grid grid-cols-[2fr_1.3fr_1fr_1fr_1fr_1.4fr_1.2fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
         {["Task", "Assigned To", "Priority", "Status", "Due Date", "Linked Lead/Deal", "Actions"].map((h, i) => (
           <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i >= 2 && i <= 4 ? "text-center" : i === 6 ? "text-center" : ""}`}>{h}</div>
         ))}
@@ -1007,8 +1367,10 @@ function TaskTableView({ tasks, onEdit, onDelete }) {
       {tasks.map((task) => {
         const isCompleted = task.status === "Completed";
         const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted;
-        const leadName = task.leadRef?.leadName || null;
-        const dealName = task.dealRef?.dealName || task.dealRef?.dealTitle || null;
+        const primaryLead = task.leadRefs?.length ? task.leadRefs[0] : task.leadRef;
+        const primaryDeal = task.dealRefs?.length ? task.dealRefs[0] : task.dealRef;
+        const leadName = primaryLead?.leadName || null;
+        const dealName = primaryDeal?.dealName || primaryDeal?.dealTitle || null;
         const linkedBadgeText = getLinkedItemBadgeText(task.linkedItemBadge);
         const history = [...(task.history || [])].sort((a, b) => new Date(a.at) - new Date(b.at));
         const isExpanded = expandedId === task._id;
@@ -1070,10 +1432,42 @@ function TaskTableView({ tasks, onEdit, onDelete }) {
               {/* Actions — just Edit/Delete; status is read-only, driven by the
                   task's own progress (or its linked deal's stage) above. */}
               <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => onEdit(task)} className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Edit"><Edit2 size={13} /></button>
-                <button onClick={() => onDelete(task)} className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500" title="Delete"><Trash2 size={13} /></button>
+                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(task); }} className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Edit"><Edit2 size={13} /></button>
+                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(task); }} className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500" title="Delete"><Trash2 size={13} /></button>
               </div>
             </div>
+
+            {task.rejectionRequested && (
+              <div className="px-4 py-2 bg-red-50 border-t border-red-100 flex items-center justify-between">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-bold text-red-700">Rejection Requested</p>
+                    <p className="text-[11px] text-red-600 mt-0.5 break-words">Reason: {task.rejectionReason}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => onApproveRejection(task, "approve")} className="px-3 py-1.5 bg-red-500 text-white text-[11px] font-semibold rounded hover:bg-red-600">Approve Rejection</button>
+                  <button onClick={() => onApproveRejection(task, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+                </div>
+              </div>
+            )}
+
+            {task.holdRequested && (
+              <div className="px-4 py-2 bg-purple-50 border-t border-purple-100 flex items-center justify-between">
+                <div className="flex items-start gap-2">
+                  <Info size={14} className="text-purple-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-bold text-purple-700">Hold Pending</p>
+                    <p className="text-[11px] text-purple-600 mt-0.5 break-words">Reason: {task.holdReason}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => onApproveHold(task, "approve")} className="px-3 py-1.5 bg-purple-500 text-white text-[11px] font-semibold rounded hover:bg-purple-600">Approve Hold</button>
+                  <button onClick={() => onApproveHold(task, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+                </div>
+              </div>
+            )}
 
             {/* Expanded — Tracking Journey */}
             {isExpanded && (
@@ -1115,7 +1509,6 @@ function TaskTableView({ tasks, onEdit, onDelete }) {
           </div>
         );
       })}
-      </div>
     </div>
   );
 }
@@ -1126,6 +1519,17 @@ export default function TaskManagement() {
   const [salesUsers, setSalesUsers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTask, setEditTask] = useState(null);
+
+  const inUseLeadIds = useMemo(() => Array.from(new Set(
+    tasks.filter(t => t.status !== "Completed" && !t.archived && (!editTask || t._id !== editTask._id))
+         .flatMap(t => (t.leadRefs || []).map(r => String(r._id || r)))
+  )), [tasks, editTask]);
+
+  const inUseDealIds = useMemo(() => Array.from(new Set(
+    tasks.filter(t => t.status !== "Completed" && !t.archived && (!editTask || t._id !== editTask._id))
+         .flatMap(t => (t.dealRefs || []).map(r => String(r._id || r)))
+  )), [tasks, editTask]);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
@@ -1140,14 +1544,13 @@ export default function TaskManagement() {
   // nothing at all the moment the tenant has zero active targets).
   const [orgDashStats, setOrgDashStats] = useState(null);
   const [viewMode, setViewMode] = useState("card"); // "card" | "table"
-  const [reassignModal, setReassignModal] = useState(null); // { notifId, taskId, itemName }
-  const [reassignUserId, setReassignUserId] = useState("");
-  const [reassignNote, setReassignNote] = useState("");
-  const [reassignExtendDate, setReassignExtendDate] = useState("");
-  const [reassigning, setReassigning] = useState(false);
+  const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
+
   const [targets, setTargets] = useState([]);
-  // Fallback Progress-card snapshots (keyed by taskId) for tasks whose
-  // assignee has no Target covering them yet — see GET /targets/progress-fallback-all.
+  // Task's own Progress-card ratio snapshots (keyed by taskId), used whenever
+  // the assignee has no real Target covering this task — see
+  // GET /tasks/progress/all (services/taskProgressService.js on the backend,
+  // deliberately independent of Target Management's own progress code).
   const [progressFallbacks, setProgressFallbacks] = useState({});
   const [reasonNotes, setReasonNotes] = useState([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
@@ -1155,6 +1558,7 @@ export default function TaskManagement() {
   const [loadingAdminActivity, setLoadingAdminActivity] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState(new Set());
   const [noteDeleteConfirm, setNoteDeleteConfirm] = useState(null); // { taskId, noteIdx, isBulk, count }
+  const [approveHoldTask, setApproveHoldTask] = useState(null);
 
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
@@ -1179,6 +1583,37 @@ export default function TaskManagement() {
       if (showLoading && reqId === tasksReqId.current) setLoading(false);
     }
   }, [baseUrl]);
+
+  const handleApproveRejection = async (taskId, action) => {
+    try {
+      await axios.patch(`${baseUrl}/tasks/${taskId}/rejection`, { action }, { headers });
+      toast.success(`Rejection ${action}d successfully`);
+      fetchTasks(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to ${action} rejection`);
+    }
+  };
+
+  const handleApproveHoldAction = (task, action) => {
+    if (action === "approve") {
+      setApproveHoldTask(task);
+    } else {
+      submitApproveHold(task._id, action);
+    }
+  };
+
+  const submitApproveHold = async (taskId, action, extendDueDate = null) => {
+    try {
+      const payload = { action };
+      if (extendDueDate) payload.extendDueDate = extendDueDate;
+      await axios.patch(`${baseUrl}/tasks/${taskId}/hold`, payload, { headers });
+      toast.success(`Hold request ${action}d successfully`);
+      fetchTasks(false);
+      setApproveHoldTask(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to ${action} hold request`);
+    }
+  };
 
   const fetchReferenceData = useCallback(async () => {
     try {
@@ -1205,7 +1640,7 @@ export default function TaskManagement() {
     const [targetsRes, dashStatsRes, fallbacksRes] = await Promise.allSettled([
       axios.get(`${baseUrl}/targets`, { headers }),
       axios.get(`${baseUrl}/targets/dashboard-stats`, { headers }),
-      axios.get(`${baseUrl}/targets/progress-fallback-all`, { headers }),
+      axios.get(`${baseUrl}/tasks/progress/all`, { headers }),
     ]);
 
     if (reqId !== targetsReqId.current) return;
@@ -1229,7 +1664,7 @@ export default function TaskManagement() {
       if (toMarkRead.length > 0) {
         Promise.all(
           toMarkRead.map((id) =>
-            axios.patch(`${API_URL}/notifications/read/${id}`, {}, { headers }).catch(() => { })
+            axios.patch(`${API_URL}/notifications/read/${id}`, {}, { headers }).catch(() => {})
           )
         );
       }
@@ -1290,28 +1725,32 @@ export default function TaskManagement() {
   const handleMarkNotifRead = (n) => {
     if (n.read || n.isRead || !n._id || String(n._id).includes("-")) return;
     setNotifications((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true, isRead: true } : x)));
-    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { });
+    axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {});
   };
 
   const handleDismissNotif = (e, n) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((x) => x._id !== n._id));
     if (n._id && !String(n._id).includes("-")) {
-      axios.delete(`${baseUrl}/notifications/${n._id}`, { headers }).catch(() => { });
+      axios.delete(`${baseUrl}/notifications/${n._id}`, { headers }).catch(() => {});
     }
   };
 
   useEffect(() => {
     if (mainView !== "notifications") return;
     fetchNotifications();
-    // Mark all task reminder/due-today notifications as read when the tab opens
-    setNotifications((prev) => {
-      const unread = prev.filter((n) => TASK_NOTIF_TYPES_FILTER(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
-      unread.forEach((n) => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => { }));
-      return prev.map((n) => (TASK_NOTIF_TYPES_FILTER(n) ? { ...n, read: true, isRead: true } : n));
-    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainView]);
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => {
+      const unread = prev.filter((n) => TASK_NOTIF_TYPES_FILTER(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
+      if (unread.length > 0) {
+        unread.forEach((n) => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
+      }
+      return prev.map((n) => (TASK_NOTIF_TYPES_FILTER(n) ? { ...n, read: true, isRead: true } : n));
+    });
+  };
 
   const fetchReasonNotes = useCallback(async () => {
     setLoadingNotes(true);
@@ -1324,6 +1763,20 @@ export default function TaskManagement() {
       setLoadingNotes(false);
     }
   }, [baseUrl]);
+
+  const handleMarkReasonNoteRead = async (note) => {
+    try {
+      const { data } = await axios.post(`${baseUrl}/tasks/${note.taskId}/reason-notes/${note.noteIdx}/read`, {}, { headers });
+      setReasonNotes((prev) => prev.map((n) => (n.taskId === note.taskId && n.noteIdx === note.noteIdx ? { ...n, status: "resolved" } : n)));
+      toast.success(data.message);
+      // Clean up local notifications
+      setNotifications((prev) =>
+        prev.filter((n) => !(n.type === "task" && n.meta?.reasonNote && String(n.meta?.taskId) === String(note.taskId) && n.meta?.noteIdx === note.noteIdx))
+      );
+    } catch {
+      toast.error("Failed to mark note as read");
+    }
+  };
 
   useEffect(() => {
     if (mainView !== "reasonNotes") return;
@@ -1408,61 +1861,6 @@ export default function TaskManagement() {
     }
   };
 
-  const handleReassign = async () => {
-    if (!reassignUserId) return toast.error("Select a sales person");
-    setReassigning(true);
-
-    // Reassigning from a reason note — resolves that specific note
-    if (reassignModal.noteIdx !== undefined) {
-      try {
-        await axios.post(
-          `${baseUrl}/tasks/${reassignModal.taskId}/reason-notes/${reassignModal.noteIdx}/reassign`,
-          { reassignToUserId: reassignUserId, adminNote: reassignNote, extendDueDate: reassignExtendDate || undefined },
-          { headers }
-        );
-        toast.success("Sales person notified");
-        setReassignModal(null);
-        setReassignUserId("");
-        setReassignNote("");
-        setReassignExtendDate("");
-        fetchReasonNotes();
-        fetchTasks(false);
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to reassign");
-      } finally {
-        setReassigning(false);
-      }
-      return;
-    }
-
-    try {
-      const { data } = await axios.patch(
-        `${baseUrl}/tasks/${reassignModal.taskId}/reassign`,
-        { newAssigneeId: reassignUserId, note: reassignNote, extendDueDate: reassignExtendDate || undefined },
-        { headers }
-      );
-      toast.success("Task reassigned — sales person notified");
-      setTasks((prev) => prev.map((t) => (t._id === data?.data?._id ? data.data : t)));
-      // Optimistically flip the Reassign button on this task's notifications
-      const newOwner = salesUsers.find((u) => u._id === reassignUserId);
-      setNotifications((prev) =>
-        prev.map((x) =>
-          x.type === "task" && String(x.meta?.taskId) === String(reassignModal.taskId)
-            ? { ...x, meta: { ...x.meta, resolved: true, resolvedToName: `${newOwner?.firstName || ""} ${newOwner?.lastName || ""}`.trim() } }
-            : x
-        )
-      );
-      setReassignModal(null);
-      setReassignUserId("");
-      setReassignNote("");
-      setReassignExtendDate("");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to reassign");
-    } finally {
-      setReassigning(false);
-    }
-  };
-
   const FILTERS = ["All"];
   const filtered = filter === "All" ? tasks : tasks.filter((t) => t.status === filter);
 
@@ -1490,18 +1888,11 @@ export default function TaskManagement() {
       {mainView === "tasks" && orgDashStats && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
-            <StatCard label="Assigned Leads" value={orgDashStats.monthly.totalLeads} icon={<Users size={16} />} color="text-blue-600" bg="bg-blue-50 border border-blue-100" />
-            <StatCard label="Assigned Deals" value={orgDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600" bg="bg-sky-50 border border-sky-100" />
-            <StatCard label="Leads Converted" value={orgDashStats.monthly.convertedLeads} icon={<CheckCircle size={16} />} color="text-green-600" bg="bg-green-50 border border-green-100" />
-            <StatCard label="Lead → Deal Rate" value={`${orgDashStats.monthly.leadToDealRate}%`} icon={<TrendingUp size={16} />} color="text-purple-600" bg="bg-purple-50 border border-purple-100" />
-            <StatCard label="Deal Closed" value={orgDashStats.monthly.wonDeals} icon={<Award size={16} />} color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
-          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard label="Monthly Calls" value={orgDashStats.monthly.calls} icon={<Phone size={16} />} color="text-orange-600" bg="bg-orange-50 border border-orange-100" />
-            <StatCard label="Monthly Meetings" value={orgDashStats.monthly.meetings} icon={<Activity size={16} />} color="text-teal-600" bg="bg-teal-50 border border-teal-100" />
-            <StatCard label="Weekly Calls" value={orgDashStats.weekly.calls} icon={<Phone size={16} />} color="text-cyan-600" bg="bg-cyan-50 border border-cyan-100" />
-            <StatCard label="Weekly Meetings" value={orgDashStats.weekly.meetings} icon={<Calendar size={16} />} color="text-pink-600" bg="bg-pink-50 border border-pink-100" />
+            <StatCard label="Total Leads" value={orgDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
+            <StatCard label="Total Deals" value={orgDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
+            <StatCard label="Deals Won"   value={orgDashStats.monthly.wonDeals}   icon={<Award size={16} />}     color="text-indigo-600" bg="bg-indigo-50 border border-indigo-100" />
+            <StatCard label="Deals Lost"  value={orgDashStats.monthly.lostDeals}  icon={<XCircle size={16} />}   color="text-red-600"    bg="bg-red-50 border border-red-100" />
           </div>
         </div>
       )}
@@ -1512,10 +1903,11 @@ export default function TaskManagement() {
           <button
             key={f}
             onClick={() => { setFilter(f); setMainView("tasks"); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${filter === f && mainView === "tasks"
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+              filter === f && mainView === "tasks"
                 ? "bg-[#008ecc] text-white"
                 : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
-              }`}
+            }`}
           >
             {f}
           </button>
@@ -1524,10 +1916,11 @@ export default function TaskManagement() {
         {/* Notifications & Reminders tab */}
         <button
           onClick={() => setMainView(mainView === "notifications" ? "tasks" : "notifications")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "notifications"
-              ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-              : "bg-white text-amber-600 border-amber-300 hover:bg-amber-50"
-            }`}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            mainView === "notifications"
+              ? "bg-[#008ecc] text-white"
+              : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
+          }`}
         >
           <Bell size={13} /> Notifications & Reminders
           {unreadTaskNotifCount > 0 && (
@@ -1540,10 +1933,11 @@ export default function TaskManagement() {
         {/* Reason Notes tab */}
         <button
           onClick={() => setMainView(mainView === "reasonNotes" ? "tasks" : "reasonNotes")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "reasonNotes"
-              ? "bg-rose-500 text-white border-rose-500 shadow-sm"
-              : "bg-white text-rose-600 border-rose-300 hover:bg-rose-50"
-            }`}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            mainView === "reasonNotes"
+              ? "bg-[#008ecc] text-white"
+              : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
+          }`}
         >
           <Flag size={13} /> Reason Notes
           {reasonNotes.filter((n) => n.status === "pending").length > 0 && (
@@ -1553,16 +1947,26 @@ export default function TaskManagement() {
           )}
         </button>
 
-        {/* Admin Completed tab */}
-        <button
-          onClick={() => setMainView(mainView === "adminActivity" ? "tasks" : "adminActivity")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "adminActivity"
-              ? "bg-indigo-500 text-white border-indigo-500 shadow-sm"
-              : "bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+        {/* Admin Completed tab and Info */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMainView(mainView === "adminActivity" ? "tasks" : "adminActivity")}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+              mainView === "adminActivity"
+                ? "bg-[#008ecc] text-white"
+                : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
             }`}
-        >
-          <Trophy size={13} /> Admin Completed
-        </button>
+          >
+            <Trophy size={13} /> Admin Completed
+          </button>
+          <button 
+            onClick={() => setShowWorkflowExplanation(true)}
+            className="p-1.5 rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-colors bg-white border border-gray-200"
+            title="How Tasks Work"
+          >
+            <Info size={16} />
+          </button>
+        </div>
 
         {/* Count + Card/Table toggle */}
         <span className="ml-auto text-xs text-gray-400 mr-2">{filtered.length} task{filtered.length !== 1 ? "s" : ""}</span>
@@ -1579,6 +1983,12 @@ export default function TaskManagement() {
           >
             <List size={14} /> Table
           </button>
+          <button
+            onClick={() => { setViewMode("pipeline"); setMainView("tasks"); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ${viewMode === "pipeline" && mainView === "tasks" ? "bg-[#008ecc] text-white" : "text-gray-500 hover:bg-gray-50"}`}
+          >
+            <Activity size={14} /> Pipeline
+          </button>
         </div>
       </div>
 
@@ -1589,9 +1999,14 @@ export default function TaskManagement() {
             <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
               <Bell size={16} className="text-amber-500" /> Notifications & Reminders
             </h2>
-            <button onClick={fetchNotifications} className="text-xs text-[#008ecc] hover:underline font-medium">
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              {taskNotifications.filter(n => !n.read && !n.isRead).length > 0 && (
+                <button onClick={handleMarkAllRead} className="text-xs text-[#008ecc] hover:underline font-medium">Mark all as read</button>
+              )}
+              <button onClick={fetchNotifications} className="text-xs text-gray-500 hover:text-gray-800 font-medium">
+                Refresh
+              </button>
+            </div>
           </div>
           {taskNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -1611,7 +2026,6 @@ export default function TaskManagement() {
               return (
                 <div
                   key={n._id || i}
-                  onClick={() => handleMarkNotifRead(n)}
                   className={`border ${accent ? "border-l-4" : ""} rounded-2xl px-4 py-3.5 flex items-start gap-3 cursor-pointer ${typeStyle} ${isUnread ? "shadow-sm" : "opacity-80"}`}
                 >
                   {icon}
@@ -1630,34 +2044,28 @@ export default function TaskManagement() {
                       </div>
                     )}
                     <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
-                    {n.meta?.taskId && n.meta?.needsReassign && (
-                      n.meta?.resolved ? (
-                        <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs font-semibold w-fit">
-                          <Check size={12} /> Reassigned to {n.meta.resolvedToName || "sales person"}
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMarkNotifRead(n);
-                            setReassignModal({ taskId: n.meta.taskId, itemName: n.meta.salesName || "this task" });
-                            setReassignUserId(""); setReassignNote(""); setReassignExtendDate("");
-                          }}
-                          className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-[#008ecc] text-white rounded-lg text-xs font-semibold hover:bg-[#0077aa]"
-                        >
-                          <ArrowRightLeft size={12} /> Reassign
-                        </button>
-                      )
-                    )}
                   </div>
-                  {isUnread && <span className="w-2 h-2 rounded-full bg-[#008ecc] shrink-0 mt-1.5" />}
-                  <button
-                    onClick={(e) => handleDismissNotif(e, n)}
-                    className="p-1 rounded hover:bg-black/5 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
-                    title="Remove notification"
-                  >
-                    <X size={14} />
-                  </button>
+                  <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
+                    {isUnread && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkNotifRead(n);
+                        }}
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        title="Mark as read"
+                      >
+                        <CheckCheck size={11} /> Mark as read
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => handleDismissNotif(e, n)}
+                      className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                      title="Remove notification"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -1736,12 +2144,9 @@ export default function TaskManagement() {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isPending && (
-                            <button onClick={() => {
-                              setReassignModal({ taskId: n.taskId, noteIdx: n.noteIdx, itemName: n.taskTitle });
-                              setReassignUserId(""); setReassignNote(""); setReassignExtendDate("");
-                            }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#008ecc] text-white rounded-lg text-xs font-semibold hover:bg-[#0077aa]">
-                              <ArrowRightLeft size={12} /> Reassign
+                            <button onClick={() => handleMarkReasonNoteRead(n)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
+                              <Check size={12} /> Mark as read
                             </button>
                           )}
                           <button onClick={() => setNoteDeleteConfirm({ taskId: n.taskId, noteIdx: n.noteIdx, isBulk: false, count: 1 })}
@@ -1833,11 +2238,11 @@ export default function TaskManagement() {
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <Trophy size={36} className="mb-3 opacity-20" />
                 <p className="text-sm font-medium">No admin-completed leads or deals yet</p>
+                <p className="text-xs mt-1">When Admin personally converts a lead or closes a deal Won, it shows up here</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-                <div className="min-w-[850px]">
-                  <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
                   {["Type", "Name", "Company", "Salesperson", "Date & Time", "Actions"].map((h, i) => (
                     <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
                   ))}
@@ -1863,7 +2268,6 @@ export default function TaskManagement() {
                     </div>
                   </div>
                 ))}
-                </div>
               </div>
             )}
 
@@ -1887,7 +2291,7 @@ export default function TaskManagement() {
           <p className="text-sm">No tasks in this category</p>
         </div>
       ) : viewMode === "card" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
           {filtered.map((task) => (
             <TaskCard
               key={task._id}
@@ -1896,88 +2300,34 @@ export default function TaskManagement() {
               progressFallbacks={progressFallbacks}
               onEdit={(t) => { setEditTask(t); setModalOpen(true); }}
               onDelete={(t) => setDeleteTarget(t)}
+              onApproveRejection={(t, action) => handleApproveRejection(t._id, action)}
+              onApproveHold={handleApproveHoldAction}
               baseUrl={baseUrl}
               headers={headers}
               onRefresh={() => { fetchTasks(false); fetchTargetData(); }}
             />
           ))}
         </div>
+      ) : viewMode === "pipeline" ? (
+        <TaskPipelineView
+          tasks={filtered}
+          baseUrl={baseUrl}
+          headers={headers}
+          onRefresh={() => { fetchTasks(false); fetchTargetData(); }}
+          onEdit={(t) => { setEditTask(t); setModalOpen(true); }}
+          onApproveRejection={(t, action) => handleApproveRejection(t._id, action)}
+          onApproveHold={handleApproveHoldAction}
+        />
       ) : (
         <TaskTableView
           tasks={filtered}
           onEdit={(t) => { setEditTask(t); setModalOpen(true); }}
           onDelete={(t) => setDeleteTarget(t)}
+          onApproveRejection={(t, action) => handleApproveRejection(t._id, action)}
+          onApproveHold={handleApproveHoldAction}
         />
       ))}
 
-      {/* ── REASSIGN MODAL ── */}
-      {reassignModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <ArrowRightLeft size={16} className="text-[#008ecc]" /> Reassign Task
-              </h3>
-              <button onClick={() => { setReassignModal(null); setReassignExtendDate(""); }} className="p-1 hover:bg-gray-100 rounded-full">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
-              <p className="text-xs text-gray-600 font-medium">
-                Reassigning <span className="font-bold text-gray-900">{reassignModal.itemName}</span>'s task.
-                {" "}You can assign it to the same person (extends the due date) or to some other sales person (transfers it to them).
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Same Person or Some Other Sales Person *</label>
-              <select
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                value={reassignUserId}
-                onChange={(e) => setReassignUserId(e.target.value)}
-              >
-                <option value="">Select sales person</option>
-                {salesUsers.map((u) => <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Extend Due Date <span className="text-gray-400 font-normal text-xs">(optional — gives new person more time)</span>
-              </label>
-              <input
-                type="date"
-                min={todayISO()}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
-                value={reassignExtendDate}
-                onChange={(e) => setReassignExtendDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Reason / Note to Sales Person <span className="text-gray-400 font-normal text-xs">(optional)</span>
-              </label>
-              <textarea
-                rows={2}
-                placeholder="e.g. This task needs immediate attention..."
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc] resize-none"
-                value={reassignNote}
-                onChange={(e) => setReassignNote(e.target.value)}
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => { setReassignModal(null); setReassignExtendDate(""); }} className="px-4 py-2 border border-gray-200 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">
-                Cancel
-              </button>
-              <button
-                onClick={handleReassign}
-                disabled={reassigning || !reassignUserId}
-                className="px-5 py-2 bg-[#008ecc] text-white rounded-lg text-sm font-semibold hover:bg-[#0077aa] disabled:opacity-60"
-              >
-                {reassigning ? "Reassigning..." : "Reassign & Notify"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <TaskModal
         open={modalOpen}
@@ -1987,6 +2337,8 @@ export default function TaskManagement() {
         editTask={editTask}
         baseUrl={baseUrl}
         headers={headers}
+        inUseLeadIds={inUseLeadIds}
+        inUseDealIds={inUseDealIds}
       />
 
       <ConfirmModal
@@ -2009,6 +2361,115 @@ export default function TaskManagement() {
         onConfirm={noteDeleteConfirm?.isBulk ? handleBulkDeleteNotes : handleDeleteNote}
         onClose={() => setNoteDeleteConfirm(null)}
       />
+
+      <ApproveHoldModal
+        open={!!approveHoldTask}
+        task={approveHoldTask}
+        onClose={() => setApproveHoldTask(null)}
+        onConfirm={submitApproveHold}
+      />
+      <WorkflowExplanationModal open={showWorkflowExplanation} onClose={() => setShowWorkflowExplanation(false)} />
     </div>
   );
 }
+
+function ApproveHoldModal({ open, task, onClose, onConfirm }) {
+  const [newDueDate, setNewDueDate] = useState("");
+
+  useEffect(() => {
+    if (open && task) {
+      setNewDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "");
+    }
+  }, [open, task]);
+
+  if (!open || !task) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Approve Hold Request</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Are you sure you want to approve the hold request for "{task.title}"?
+          Please provide a new due date to extend the task timeline.
+        </p>
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-1">New Due Date <span className="text-red-500">*</span></label>
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded p-2"
+            value={newDueDate}
+            onChange={(e) => setNewDueDate(e.target.value)}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded">Cancel</button>
+          <button onClick={() => {
+            if (!newDueDate) {
+              toast.error("Please provide a new due date");
+              return;
+            }
+            onConfirm(task._id, "approve", newDueDate);
+          }} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Approve Hold</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowExplanationModal({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Info className="text-blue-500" />
+          How Tasks & Targets Work
+        </h3>
+        
+        <div className="space-y-6 text-sm text-gray-700">
+          <section>
+            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <p className="mb-2">
+              Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
+            </p>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
+              <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
+              <li><strong>Auto-Completion:</strong> Once you complete 100% of the assigned linked items (e.g., all linked leads converted), the system automatically marks it <strong>Completed</strong> and notifies the Admin.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
+              <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>
+              <li><strong>Hold/Reject Approvals:</strong> Admins review requests from salespeople to put tasks on Hold (optionally extending the due date) or Rejecting them entirely if they are invalid.</li>
+            </ul>
+          </section>
+          
+          <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
+            <p className="font-semibold text-blue-800 mb-1">Key Takeaway:</p>
+            <p className="text-blue-700">
+              The entire pipeline is driven by <strong>actual sales actions</strong> (converting leads, winning deals) rather than manual status dropdowns. This guarantees accurate reporting for the company.
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-6 flex justify-end">
+          <button onClick={onClose} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

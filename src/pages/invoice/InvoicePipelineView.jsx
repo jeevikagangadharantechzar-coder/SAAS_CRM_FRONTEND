@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { MoreVertical, Eye } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const ItemTypes = {
   INVOICE: "INVOICE",
@@ -169,6 +169,7 @@ function InvoiceCard({
   handleEdit,
   confirmDelete,
 }) {
+  const location = useLocation();
   const [{ isDragging }, dragRef] = useDrag({
     type: ItemTypes.INVOICE,
     item: { id: invoice._id, from: stageId },
@@ -207,7 +208,7 @@ function InvoiceCard({
         {menuOpen && (
           <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]">
             <Link
-              to={`/${tenantSlug}/invoices/${invoice._id}`}
+              to={`/${tenantSlug}/invoices/${invoice._id}${location.search}`}
               className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               View Invoice

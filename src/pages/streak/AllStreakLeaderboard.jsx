@@ -18,7 +18,7 @@ const formatDateDisplay = (ds) =>
 /* ─── Month helpers (NEW) ────────────────────────────────────────────── */
 const getMonthOptions = (count = 36) => {
   const opts = [];
-  const now  = new Date();
+  const now = new Date();
   for (let i = 0; i < count; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -30,8 +30,8 @@ const getMonthOptions = (count = 36) => {
 
 const monthToDateRange = (ym) => {
   const [y, m] = ym.split("-").map(Number);
-  const start  = new Date(y, m - 1, 1);
-  const end    = new Date(y, m, 0);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0);
   return {
     sd: start.toISOString().split("T")[0],
     ed: end.toISOString().split("T")[0],
@@ -41,36 +41,64 @@ const monthToDateRange = (ym) => {
 /* ═══════════════════════════════════════════════════════════════════════ */
 const AllStreakLeaderboard = () => {
 
-  const [performers,         setPerformers]         = useState([]);
+  const [performers, setPerformers] = useState([]);
   const [filteredPerformers, setFilteredPerformers] = useState([]);
-  const [loading,            setLoading]            = useState(true);
-  const [error,              setError]              = useState(null);
-  const [searchTerm,         setSearchTerm]         = useState("");
-  const [sortBy,             setSortBy]             = useState("convertedLeads");
-  const [sortOrder,          setSortOrder]          = useState("desc");
-  const [currentPage,        setCurrentPage]        = useState(1);
-  const [itemsPerPage,       setItemsPerPage]       = useState(10);
-  const [currentUser,        setCurrentUser]        = useState(null);
-  const [userRole,           setUserRole]           = useState(null);
-  const [isAdmin,            setIsAdmin]            = useState(false);
-  const [dateRange,          setDateRange]          = useState("");
-  const [stats,              setStats]              = useState({
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("convertedLeads");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [dateRange, setDateRange] = useState("");
+  const [stats, setStats] = useState({
     totalSalespeople: 0, activeSalespeople: 0,
     avgConversionRate: 0, totalLeads: 0,
     totalConvertedLeads: 0, cumulativeTotalLeads: 0,
   });
 
-  const [filterMode,   setFilterMode]   = useState("single");
+  const [filterMode, setFilterMode] = useState("single");
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
-  const [rangeStart,   setRangeStart]   = useState("");
-  const [rangeEnd,     setRangeEnd]     = useState("");
-  const [refreshing,   setRefreshing]   = useState(false);
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   /* ── NEW: All Time month picker state ───────────────────────────────── */
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [dropdownOpen,  setDropdownOpen]  = useState(false);
-  const dropdownRef                        = useRef(null);
-  const monthOptions                       = getMonthOptions(36);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const monthOptions = getMonthOptions(36);
+
+  const getDynamicMonthLabel = () => {
+    if (filterMode === "single" && selectedDate) {
+      const d = new Date(selectedDate);
+      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    }
+    if (filterMode === "range") {
+      if (rangeStart && rangeEnd) {
+        const s = new Date(rangeStart);
+        const e = new Date(rangeEnd);
+        const sLabel = s.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        const eLabel = e.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        return sLabel === eLabel ? sLabel : `${sLabel} - ${eLabel}`;
+      } else if (rangeStart) {
+        return new Date(rangeStart).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      } else if (rangeEnd) {
+        return new Date(rangeEnd).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      }
+    }
+    if (filterMode === "alltime") {
+      if (selectedMonth) {
+        const opt = monthOptions.find(o => o.value === selectedMonth);
+        return opt ? opt.label : "All Time";
+      }
+      return "All Time";
+    }
+    return `${months[selectedMonthIdx]} ${selectedYear}`;
+  };
 
   const [startDate] = useState(() => {
     const t = new Date();
@@ -79,14 +107,14 @@ const AllStreakLeaderboard = () => {
   const [endDate] = useState(getTodayDate);
 
   const months = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
   const selectedMonthIdx = new Date().getMonth();
-  const selectedYear     = new Date().getFullYear();
+  const selectedYear = new Date().getFullYear();
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const token   = localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
   /* ── Close dropdown on outside click (NEW) ──────────────────────────── */
   useEffect(() => {
@@ -133,8 +161,8 @@ const AllStreakLeaderboard = () => {
 
   /* ── UPDATED: clearFilter resets month too ──────────────────────────── */
   const clearFilter = () => {
-    if (filterMode === "single")  setSelectedDate(getTodayDate());
-    if (filterMode === "range")   { setRangeStart(""); setRangeEnd(""); }
+    if (filterMode === "single") setSelectedDate(getTodayDate());
+    if (filterMode === "range") { setRangeStart(""); setRangeEnd(""); }
     if (filterMode === "alltime") setSelectedMonth("");
   };
 
@@ -161,14 +189,14 @@ const AllStreakLeaderboard = () => {
     if (!token) return;
     try {
       if (isRefresh) setRefreshing(true);
-      else           setLoading(true);
+      else setLoading(true);
       setError(null);
 
       const { sd, ed } = getEffectiveDates();
 
       const { data } = await axios.get(`${API_URL}/streak/leaderboard`, {
         headers: { Authorization: `Bearer ${token}` },
-        params:  { startDate: sd, endDate: ed },
+        params: { startDate: sd, endDate: ed },
       });
 
       const rows = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
@@ -185,9 +213,18 @@ const AllStreakLeaderboard = () => {
     }
   }, [API_URL, token, getEffectiveDates]);
 
+  const isFirstRender = useRef(true);
+
   /* ── UPDATED: selectedMonth added to dependency array ───────────────── */
   useEffect(() => {
-    if (currentUser) fetchStreakData();
+    if (currentUser) {
+      if (isFirstRender.current) {
+        fetchStreakData(false);
+        isFirstRender.current = false;
+      } else {
+        fetchStreakData(true);
+      }
+    }
   }, [filterMode, selectedDate, rangeStart, rangeEnd, selectedMonth, currentUser]);
 
   useEffect(() => {
@@ -196,7 +233,7 @@ const AllStreakLeaderboard = () => {
     if (isAdmin && searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(p =>
-        p.name?.toLowerCase().includes(term)  ||
+        p.name?.toLowerCase().includes(term) ||
         p.email?.toLowerCase().includes(term) ||
         p.role?.toLowerCase().includes(term)
       );
@@ -205,13 +242,13 @@ const AllStreakLeaderboard = () => {
     const fieldMap = {
       convertedLeads: "convertedLeads",
       conversionRate: "conversionRate",
-      "Total Leads":  "totalLeads",
-      "Active Days":  "productiveDays",
-      Streak:         "streak",
+      "Total Leads": "totalLeads",
+      "Active Days": "productiveDays",
+      Streak: "streak",
     };
 
     result.sort((a, b) => {
-      const key  = fieldMap[sortBy] || sortBy;
+      const key = fieldMap[sortBy] || sortBy;
       const aVal = a[key] ?? 0;
       const bVal = b[key] ?? 0;
       if (typeof aVal === "string")
@@ -223,11 +260,11 @@ const AllStreakLeaderboard = () => {
     setCurrentPage(1);
   }, [searchTerm, sortBy, sortOrder, performers, isAdmin]);
 
-  const totalCount   = filteredPerformers.length;
+  const totalCount = filteredPerformers.length;
   const indexOfFirst = (currentPage - 1) * itemsPerPage;
-  const indexOfLast  = indexOfFirst + itemsPerPage;
+  const indexOfLast = indexOfFirst + itemsPerPage;
   const currentUsers = filteredPerformers.slice(indexOfFirst, indexOfLast);
-  const totalPages   = Math.ceil(totalCount / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const handleSort = (field) => {
     if (sortBy === field) setSortOrder(o => o === "desc" ? "asc" : "desc");
@@ -247,11 +284,11 @@ const AllStreakLeaderboard = () => {
             <div className="animate-pulse space-y-6">
               <div className="h-10 bg-gray-200 rounded-lg w-64" />
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[1,2,3,4].map(i => <div key={i} className="h-24 bg-gray-200 rounded-xl" />)}
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-200 rounded-xl" />)}
               </div>
               <div className="h-14 bg-gray-200 rounded-lg w-full" />
               <div className="space-y-4">
-                {[1,2,3,4,5].map(i => <div key={i} className="h-20 bg-gray-100 rounded-lg" />)}
+                {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-20 bg-gray-100 rounded-lg" />)}
               </div>
             </div>
           </div>
@@ -295,11 +332,11 @@ const AllStreakLeaderboard = () => {
               </div>
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-                 Leaderboard
+                  Leaderboard
                 </h1>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   <span className="px-4 py-1.5 bg-white rounded-full text-sm font-medium text-gray-700 shadow-sm border border-gray-200">
-                    {months[selectedMonthIdx]} {selectedYear}
+                    {getDynamicMonthLabel()}
                   </span>
                   {isAdmin ? (
                     <span className="px-4 py-1.5 bg-purple-100 rounded-full text-sm font-medium text-purple-700 border border-purple-200 flex items-center gap-1.5">
@@ -408,18 +445,17 @@ const AllStreakLeaderboard = () => {
               {/* Mode tabs */}
               <div className="flex gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
                 {[
-                  { id: "single",  label: "Single Day" },
-                  { id: "range",   label: "Date Range" },
-                  { id: "alltime", label: "All Time"   },
+                  { id: "single", label: "Single Day" },
+                  { id: "range", label: "Date Range" },
+                  { id: "alltime", label: "All Time" },
                 ].map(({ id, label }) => (
                   <button
                     key={id}
                     onClick={() => setFilterMode(id)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                      filterMode === id
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${filterMode === id
                         ? "bg-white text-orange-600 shadow-sm"
                         : "text-gray-500 hover:text-gray-700"
-                    }`}
+                      }`}
                   >
                     {label}
                   </button>
@@ -430,19 +466,19 @@ const AllStreakLeaderboard = () => {
               <div className="flex items-center gap-2" style={{ minWidth: 280 }}>
 
                 {/* Single Day */}
-{filterMode === "single" && (
-  <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 hover:border-orange-400 transition-colors w-full">
-    <FiCalendar className="text-gray-400 w-4 h-4 shrink-0" />
-    <input
-      type="date"
-      value={selectedDate}
-      max={getTodayDate()}
-      onChange={e => setSelectedDate(e.target.value)}
-      onKeyDown={(e) => e.preventDefault()}   // 🚫 prevents typing
-      className="bg-transparent border-none focus:outline-none text-gray-700 text-sm w-full cursor-pointer"
-    />
-  </div>
-)}
+                {filterMode === "single" && (
+                  <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 hover:border-orange-400 transition-colors w-full">
+                    <FiCalendar className="text-gray-400 w-4 h-4 shrink-0" />
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      max={getTodayDate()}
+                      onChange={e => setSelectedDate(e.target.value)}
+                      onKeyDown={(e) => e.preventDefault()}   // 🚫 prevents typing
+                      className="bg-transparent border-none focus:outline-none text-gray-700 text-sm w-full cursor-pointer"
+                    />
+                  </div>
+                )}
 
                 {/* UNCHANGED: Date Range */}
                 {filterMode === "range" && (
@@ -495,11 +531,10 @@ const AllStreakLeaderboard = () => {
                         {/* All Records option */}
                         <div
                           onClick={() => { setSelectedMonth(""); setDropdownOpen(false); }}
-                          className={`px-4 py-2.5 text-sm cursor-pointer flex items-center gap-2 border-b border-gray-100 ${
-                            !selectedMonth
+                          className={`px-4 py-2.5 text-sm cursor-pointer flex items-center gap-2 border-b border-gray-100 ${!selectedMonth
                               ? "bg-orange-50 text-orange-700 font-medium"
                               : "text-gray-600 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           <FiCalendar className="w-3.5 h-3.5" />
                           All Records
@@ -511,11 +546,10 @@ const AllStreakLeaderboard = () => {
                             <div
                               key={opt.value}
                               onClick={() => { setSelectedMonth(opt.value); setDropdownOpen(false); }}
-                              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
-                                selectedMonth === opt.value
+                              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${selectedMonth === opt.value
                                   ? "bg-orange-50 text-orange-700 font-medium"
                                   : "text-gray-700 hover:bg-gray-50"
-                              }`}
+                                }`}
                             >
                               {opt.label}
                             </div>
@@ -617,22 +651,21 @@ const AllStreakLeaderboard = () => {
                     </td>
                   </tr>
                 ) : currentUsers.map((performer, index) => {
-                  const rank      = index + indexOfFirst + 1;
+                  const rank = index + indexOfFirst + 1;
                   const rankClass =
                     rank === 1 ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white" :
-                    rank === 2 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white"    :
-                    rank === 3 ? "bg-gradient-to-br from-amber-700 to-amber-800 text-white"  :
-                                 "bg-gray-100 text-gray-700";
+                      rank === 2 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white" :
+                        rank === 3 ? "bg-gradient-to-br from-amber-700 to-amber-800 text-white" :
+                          "bg-gray-100 text-gray-700";
                   const isCurrentUser = performer.id === currentUser?._id?.toString();
 
                   return (
                     <tr
                       key={performer.id}
-                      className={`border-b border-gray-50 transition-colors ${
-                        isCurrentUser && !isAdmin
+                      className={`border-b border-gray-50 transition-colors ${isCurrentUser && !isAdmin
                           ? "bg-blue-50/50 hover:bg-blue-100/50"
                           : "hover:bg-orange-50/30"
-                      }`}
+                        }`}
                     >
                       <td className="py-5 px-6">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${rankClass}`}>

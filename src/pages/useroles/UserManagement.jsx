@@ -312,6 +312,7 @@ function UserManagementInner() {
         <EditUserModal
           user={selectedItem}
           roles={roles}
+          users={users}
           onClose={() => setActionType("")}
           onUserUpdated={fetchUsers}
         />
@@ -345,7 +346,7 @@ function UserManagementInner() {
             </div>
             <div className="flex flex-wrap gap-3 items-center justify-center">
               <div className="add-user-btn">
-                <AddUserModal onUserCreated={fetchUsers} disabled={isLimitReached} />
+                <AddUserModal onUserCreated={fetchUsers} disabled={isLimitReached} users={users} />
               </div>
               <div className="create-role-btn"><CreateRoleModal onRoleCreated={fetchRoles} /></div>
               <button

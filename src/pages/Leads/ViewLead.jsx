@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import WhatsAppMessageModal from "../../components/whatsapp/WhatsAppMessageModal";
 import axios from "axios";
 import {
@@ -13,6 +13,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { getNames } from "country-list";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import LinkedTasksTargetsTab from "../../components/LinkedTasksTargetsTab";
 
 const countryNames = getNames();
 
@@ -493,6 +494,11 @@ const ActivityItem = ({ color, icon, label, date }) => (
 const ViewLead = () => {
   const { id, tenantSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // The Leads list appends its active filters as a querystring when
+  // navigating here (e.g. ?status=Hot&source=Website) — carry it back so
+  // "All Leads" / post-action redirects return to the same filtered view.
+  const leadsListPath = `/${tenantSlug}/leads${location.search}`;
   const userRole = (() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}").role?.name || ""; }
     catch { return ""; }
@@ -509,6 +515,10 @@ const ViewLead = () => {
   const [audioFile, setAudioFile] = useState(null);
   const [audioFileUrl, setAudioFileUrl] = useState(null);
   const [audioFileError, setAudioFileError] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [savingEditNoteId, setSavingEditNoteId] = useState(null);
+  const [deletingNoteId, setDeletingNoteId] = useState(null);
 
   // Convert-to-deal state
   const [convertModalOpen, setConvertModalOpen] = useState(false);
@@ -600,7 +610,9 @@ const ViewLead = () => {
         leadName: editFormData.leadName.trim(),
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber,
+        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
+          ? `+${editFormData.phoneNumber}`
+          : editFormData.phoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
         notes: editFormData.notes,
@@ -650,6 +662,7 @@ const ViewLead = () => {
     setAddNoteModalOpen(false);
     setNoteText("");
     discardAudioFile();
+    cancelEditNote();
   };
 
   const handleAudioFileChange = (e) => {
@@ -697,13 +710,68 @@ const ViewLead = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setLead((prev) => ({ ...prev, followUpNotes: res.data.lead.followUpNotes }));
+      setLead((prev) => ({ ...prev, followUpNotes: res.data.lead.followUpNotes, followUpNotesHistory: res.data.lead.followUpNotesHistory }));
       toast.success("Follow-up note added");
       closeAddNoteModal();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add follow-up note");
     } finally {
       setSavingNote(false);
+    }
+  };
+
+  const startEditNote = (n) => {
+    setEditingNoteId(n._id);
+    setEditingNoteText(n.note);
+  };
+
+  const cancelEditNote = () => {
+    setEditingNoteId(null);
+    setEditingNoteText("");
+  };
+
+  const handleEditFollowUpNote = async (noteId) => {
+    if (!editingNoteText.trim()) return;
+
+    try {
+      setSavingEditNoteId(noteId);
+      const token = localStorage.getItem("token");
+
+      const res = await axios.patch(
+        `${API_URL}/leads/${id}/followup-notes/${noteId}`,
+        { note: editingNoteText.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setLead((prev) => ({ ...prev, followUpNotes: res.data.lead.followUpNotes, followUpNotesHistory: res.data.lead.followUpNotesHistory }));
+      toast.success("Follow-up note updated");
+      cancelEditNote();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update follow-up note");
+    } finally {
+      setSavingEditNoteId(null);
+    }
+  };
+
+  const handleDeleteFollowUpNote = async (noteId) => {
+    if (!window.confirm("Delete this follow-up note?")) return;
+
+    try {
+      setDeletingNoteId(noteId);
+      const token = localStorage.getItem("token");
+
+      const res = await axios.delete(
+        `${API_URL}/leads/${id}/followup-notes/${noteId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setLead((prev) => ({ ...prev, followUpNotes: res.data.lead.followUpNotes, followUpNotesHistory: res.data.lead.followUpNotesHistory }));
+      toast.success("Follow-up note deleted");
+      if (editingNoteId === noteId) cancelEditNote();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete follow-up note");
+    } finally {
+      setDeletingNoteId(null);
     }
   };
 
@@ -742,7 +810,7 @@ const ViewLead = () => {
       });
 
       setConvertModalOpen(false);
-      setTimeout(() => navigate(`/${tenantSlug}/leads`), 1200);
+      setTimeout(() => navigate(leadsListPath), 1200);
     } catch (err) {
       toast.dismiss();
       console.error("Conversion error:", err);
@@ -766,7 +834,7 @@ const ViewLead = () => {
       toast.success("Lead rejected");
       setShowRejectModal(false);
       setRejectReason("");
-      setTimeout(() => navigate(`/${tenantSlug}/leads`), 1200);
+      setTimeout(() => navigate(leadsListPath), 1200);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
@@ -819,7 +887,7 @@ const ViewLead = () => {
           <div>
             <div className="flex items-center text-slate-600 mb-3">
               <Link
-                to={`/${tenantSlug}/leads`}
+                to={leadsListPath}
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft size={16} className="mr-1" />
@@ -887,7 +955,7 @@ const ViewLead = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 mb-6">
-          {["details", "attachments", "activity"].map((tab) => (
+          {["details", "tasks_targets", "attachments", "activity", "followups"].map((tab) => (
             <button
               key={tab}
               className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
@@ -897,12 +965,17 @@ const ViewLead = () => {
               }`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "tasks_targets"
+                ? "Tasks & Targets"
+                : tab === "followups"
+                ? "Follow-up Notes"
+                : tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "attachments" &&
-                lead.attachments &&
-                lead.attachments.length > 0
-                ? ` (${lead.attachments.length})`
-                : ""}
+                lead.attachments?.length > 0 && (
+                  <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-[10px]">
+                    {lead.attachments.length}
+                  </span>
+                )}
             </button>
           ))}
         </div>
@@ -941,7 +1014,10 @@ const ViewLead = () => {
                             value={lead.email
                               ? <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a>
                               : "N/A"} />
-                          <InfoRow icon={<Phone size={18}/>}    label="Phone"     value={lead.phoneNumber} />
+                          <InfoRow icon={<Phone size={18}/>}    label="Phone"
+                            value={lead.phoneNumber
+                              ? <a href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`} className="text-blue-600 hover:underline">{lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}</a>
+                              : "N/A"} />
                           <InfoRow icon={<Building2 size={18}/>} label="Client Type" value={lead.clientType || "Not specified"} />
                         </div>
                       </div>
@@ -1191,6 +1267,13 @@ const ViewLead = () => {
               </div>
             )}
 
+            {/* ── Tasks & Targets ── */}
+            {activeTab === "tasks_targets" && (
+              <div className="p-4 sm:p-6 bg-white animate-fade-in max-w-5xl mx-auto">
+                <LinkedTasksTargetsTab itemType="lead" itemId={id} />
+              </div>
+            )}
+
             {/* ── Attachments ── */}
             {activeTab === "attachments" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
@@ -1268,6 +1351,50 @@ const ViewLead = () => {
                   {lead.updatedAt      && <ActivityItem color="bg-emerald-100" icon={<Clock    size={16} className="text-emerald-600"/>} label="Lead updated"       date={lead.updatedAt} />}
                   {lead.followUpDate   && <ActivityItem color="bg-orange-100"  icon={<Calendar size={16} className="text-orange-600"/>}  label="Last Follow-Up"     date={lead.followUpDate} />}
                   {lead.lastReminderAt && <ActivityItem color="bg-yellow-100"  icon={<Clock    size={16} className="text-yellow-600"/>}  label="Last Reminder Sent" date={lead.lastReminderAt} />}
+                </div>
+              </div>
+            )}
+
+            {/* ── Follow-up Notes Timeline ── */}
+            {activeTab === "followups" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900">Follow-up Notes Timeline</h2>
+                  <p className="text-sm text-slate-600 mt-1">Every note added, edited, or deleted for this lead</p>
+                </div>
+                <div className="p-6 space-y-6">
+                  {Array.isArray(lead.followUpNotesHistory) && lead.followUpNotesHistory.length > 0 ? (
+                    [...lead.followUpNotesHistory]
+                      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                      .map((h, i) => {
+                        const config = {
+                          added:   { color: "bg-emerald-100", icon: <MessageSquarePlus size={16} className="text-emerald-600" />, label: "Note added" },
+                          edited:  { color: "bg-amber-100",   icon: <Edit             size={16} className="text-amber-600" />,   label: "Note edited" },
+                          deleted: { color: "bg-red-100",     icon: <Trash2           size={16} className="text-red-600" />,     label: "Note deleted" },
+                        }[h.action] || { color: "bg-slate-100", icon: <Clock size={16} className="text-slate-600" />, label: h.action };
+                        const actor = h.performedBy
+                          ? `${h.performedBy.firstName || ""} ${h.performedBy.lastName || ""}`.trim()
+                          : "";
+                        return (
+                          <div key={h._id || i} className="flex items-start">
+                            <div className={`w-10 h-10 ${config.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                              {config.icon}
+                            </div>
+                            <div className="ml-4 min-w-0">
+                              <h3 className="text-sm font-medium text-slate-900">
+                                {config.label}{actor && ` by ${actor}`}
+                              </h3>
+                              {h.note && (
+                                <p className="text-sm text-slate-600 mt-0.5 line-clamp-2 whitespace-pre-wrap">{h.note}</p>
+                              )}
+                              <p className="text-sm text-slate-500 mt-0.5">{new Date(h.createdAt).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <p className="text-sm text-slate-500">No follow-up note activity yet</p>
+                  )}
                 </div>
               </div>
             )}
@@ -1404,20 +1531,73 @@ const ViewLead = () => {
               <div className="max-h-48 overflow-y-auto space-y-2">
                 {[...lead.followUpNotes]
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                  .map((n, i) => (
-                    <div key={n._id || i} className="border border-slate-200 rounded-lg p-2.5">
-                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{n.note}</p>
-                      {n.audioPath && <FollowUpAudioPlayer audioPath={n.audioPath} />}
-                      <p className="text-xs text-slate-400 mt-1.5">
-                        {new Date(n.createdAt).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric", year: "numeric",
-                        })}{" at "}
-                        {new Date(n.createdAt).toLocaleTimeString("en-US", {
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  ))}
+                  .map((n, i) => {
+                    const isEditing = editingNoteId === n._id;
+                    return (
+                      <div key={n._id || i} className="border border-slate-200 rounded-lg p-2.5">
+                        {isEditing ? (
+                          <>
+                            <textarea
+                              value={editingNoteText}
+                              onChange={(e) => setEditingNoteText(e.target.value)}
+                              rows={3}
+                              className="w-full px-2 py-1.5 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                              <button
+                                onClick={cancelEditNote}
+                                disabled={savingEditNoteId === n._id}
+                                className="px-3 py-1 rounded-md border text-xs text-slate-700 hover:bg-slate-100"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleEditFollowUpNote(n._id)}
+                                disabled={!editingNoteText.trim() || savingEditNoteId === n._id}
+                                className="px-3 py-1 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {savingEditNoteId === n._id ? "Saving..." : "Save"}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm text-slate-800 whitespace-pre-wrap">{n.note}</p>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => startEditNote(n)}
+                                  disabled={deletingNoteId === n._id}
+                                  className="p-1 text-slate-400 hover:text-blue-600"
+                                  title="Edit note"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteFollowUpNote(n._id)}
+                                  disabled={deletingNoteId === n._id}
+                                  className="p-1 text-slate-400 hover:text-red-500"
+                                  title="Delete note"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {n.audioPath && <FollowUpAudioPlayer audioPath={n.audioPath} />}
+                            <p className="text-xs text-slate-400 mt-1.5">
+                              {new Date(n.createdAt).toLocaleDateString("en-US", {
+                                month: "short", day: "numeric", year: "numeric",
+                              })}{" at "}
+                              {new Date(n.createdAt).toLocaleTimeString("en-US", {
+                                hour: "2-digit", minute: "2-digit",
+                              })}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

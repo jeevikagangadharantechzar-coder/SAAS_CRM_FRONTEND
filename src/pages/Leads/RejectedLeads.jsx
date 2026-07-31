@@ -97,7 +97,7 @@ export default function RejectedLeads() {
 
       params.append("status", "Rejected");
 
-      const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
+      const { data } = await axios.get(`${API_URL}/leads/rejected?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -339,7 +339,7 @@ export default function RejectedLeads() {
 
           <tbody className="divide-y divide-gray-200">
             {leads.length > 0 ? (
-              leads.map((lead, idx) => {
+              leads.filter((lead) => lead.status === "Rejected").map((lead, idx) => {
                 const rejectedByName = lead.rejectedBy ? `${lead.rejectedBy.firstName || ""} ${lead.rejectedBy.lastName || ""}`.trim() : "-";
                 return (
                   <tr key={lead._id} className={`hover:bg-gray-50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} whitespace-nowrap`}>
@@ -357,7 +357,19 @@ export default function RejectedLeads() {
                         <span className="text-gray-400 text-xs">{lead.email || "-"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{lead.phoneNumber || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {lead.phoneNumber ? (
+                        <a
+                          href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
+                          className="text-blue-600 hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
                     <td className="px-4 py-3">

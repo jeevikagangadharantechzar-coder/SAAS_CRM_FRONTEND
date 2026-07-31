@@ -3,7 +3,7 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Loader2, MoreVertical, Edit, Calendar, Ban, Handshake } from "lucide-react";
+import { Loader2, MoreVertical, Edit, Calendar, Ban, Handshake, Flag, Target } from "lucide-react";
 
 const ItemTypes = {
   LEAD: "LEAD",
@@ -52,6 +52,7 @@ export default function LeadsPipelineView({
   onRejectClick,
   onConvertClick,
   onEditClick,
+  onLinkedWorkClick,
   userRole,
   userId,
 }) {
@@ -209,6 +210,7 @@ export default function LeadsPipelineView({
             onReject={onRejectClick}
             onConvert={onConvertClick}
             onEdit={onEditClick}
+            onLinkedWork={onLinkedWorkClick}
           />
         ))}
       </div>
@@ -227,6 +229,7 @@ function Column({
   onReject,
   onConvert,
   onEdit,
+  onLinkedWork,
 }) {
   const [, dropRef] = useDrop({
     accept: ItemTypes.LEAD,
@@ -261,6 +264,7 @@ function Column({
               onReject={onReject}
               onConvert={onConvert}
               onEdit={onEdit}
+              onLinkedWork={onLinkedWork}
             />
           ))}
           {leads.length === 0 && (
@@ -274,7 +278,7 @@ function Column({
   );
 }
 
-function LeadCard({ lead, stageId, onReject, onConvert, onEdit }) {
+function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) {
   const [{ isDragging }, dragRef] = useDrag({
     type: ItemTypes.LEAD,
     item: { id: lead._id, from: stageId },
@@ -305,7 +309,29 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit }) {
       className={`border border-gray-200 p-3 rounded-xl shadow-sm bg-white hover:shadow-md transition-shadow relative ${isTerminal ? "" : "cursor-move"}`}
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
-      <div className="absolute top-2 right-2" ref={menuRef}>
+      <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
+        {/* Linked Work Icons */}
+        {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
+          <div 
+            className="flex items-center gap-1 mr-2 cursor-pointer bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onLinkedWork({
+                activeTasks: lead.activeTasks || [],
+                activeTargets: lead.activeTargets || [],
+                itemName: lead.leadName || "Unnamed Lead"
+              });
+            }}
+          >
+            {(lead.activeTasks && lead.activeTasks.length > 0) && (
+              <Flag size={12} className="text-blue-500 hover:text-blue-600 transition-colors" />
+            )}
+            {(lead.activeTargets && lead.activeTargets.length > 0) && (
+              <Target size={12} className="text-purple-500 hover:text-purple-600 transition-colors" />
+            )}
+          </div>
+        )}
+
         <button
           onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
           className="p-1 rounded hover:bg-gray-100 text-gray-500"

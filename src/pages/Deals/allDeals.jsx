@@ -1,18 +1,19 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target, Filter, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
-import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
 import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
 import { initSocket, getSocket } from "../../utils/socket";
 import { exportRowsToExcel, downloadExcelTemplate, parseExcelFile } from "../../utils/excelImportExport";
+import LinkedWorkModal from "../components/LinkedWorkModal";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -90,10 +91,35 @@ function AllDealsComponent() {
   const userCurrencySymbol = CURRENCY_SYMBOLS[userCurrency] || userCurrency;
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get("status");
-  const [clientTypeFilter, setClientTypeFilter] = useState("");
-  const [showTodayOnly, setShowTodayOnly] = useState(false);
+
+  // Mirrors the same pattern used on the Leads page — every filter's
+  // onChange writes into the URL, so navigating to a deal and back (or
+  // reloading) restores the exact filter state instead of resetting it.
+  const updateFilter = (key, value, setter) => {
+    setter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params);
+  };
+
+  const updateDealType = (type, checked) => {
+    setDealTypeFilter((prev) => {
+      const next = { ...prev, [type]: checked };
+      const params = new URLSearchParams(searchParams);
+      const list = [next.won && "won", next.lost && "lost", next.pending && "pending"].filter(Boolean);
+      if (list.length) params.set("dealType", list.join(","));
+      else params.delete("dealType");
+      setSearchParams(params);
+      return next;
+    });
+  };
+
+  const [clientTypeFilter, setClientTypeFilter] = useState(searchParams.get("clientType") || "");
+  const [showTodayOnly, setShowTodayOnly] = useState(searchParams.get("todayOnly") === "1");
   const { setIsOpen, setSteps, setCurrentStep, close } = useTour();
 
   const [deals, setDeals] = useState([]);
@@ -115,7 +141,10 @@ function AllDealsComponent() {
   const [users, setUsers] = useState([]);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
-  const [filters, setFilters] = useState({ stage: "", assignedTo: "" });
+  const [filters, setFilters] = useState({
+    stage: searchParams.get("stage") || "",
+    assignedTo: searchParams.get("assignedTo") || "",
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const [hoveredDeal, setHoveredDeal] = useState(null);
@@ -130,20 +159,28 @@ function AllDealsComponent() {
   // (getAll with start/end/dealType) since the default fetch no longer
   // returns previous-day Closed Won/Lost deals — those only come back into
   // view through this search.
-  const [showCustomRange, setShowCustomRange] = useState(false);
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-  const [dealTypeFilter, setDealTypeFilter] = useState({ won: false, lost: false, pending: false });
+  const initDealTypes = (searchParams.get("dealType") || "").split(",").filter(Boolean);
+  const [showCustomRange, setShowCustomRange] = useState(
+    !!(searchParams.get("customFrom") || searchParams.get("customTo") || initDealTypes.length)
+  );
+  const [customFrom, setCustomFrom] = useState(searchParams.get("customFrom") || "");
+  const [customTo, setCustomTo] = useState(searchParams.get("customTo") || "");
+  const [dealTypeFilter, setDealTypeFilter] = useState({
+    won: initDealTypes.includes("won"),
+    lost: initDealTypes.includes("lost"),
+    pending: initDealTypes.includes("pending"),
+  });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
+  const [showFilters, setShowFilters] = useState(searchParams.get("showFilters") === "true");
 
   // General-purpose Start/End Date filter — available to every role (unlike
   // the sales-only Custom Range panel above). Plain createdAt range, no deal
   // type involved; reuses the same backend start/end params the Custom Range
   // search already uses, just without a dealType so the backend takes its
   // plain-createdAt branch.
-  const [dateFilterFrom, setDateFilterFrom] = useState("");
-  const [dateFilterTo, setDateFilterTo] = useState("");
+  const [dateFilterFrom, setDateFilterFrom] = useState(searchParams.get("startDate") || "");
+  const [dateFilterTo, setDateFilterTo] = useState(searchParams.get("endDate") || "");
   const [dateFilterDeals, setDateFilterDeals] = useState([]);
 
   // Reject modal
@@ -156,6 +193,13 @@ function AllDealsComponent() {
   const [hoveredRejectedDeal, setHoveredRejectedDeal] = useState(null);
   const [rejectTooltipCoords, setRejectTooltipCoords] = useState(null);
   const [rejectTooltipTimeout, setRejectTooltipTimeout] = useState(null);
+
+  // Active Linked Work Filters
+  const [activeWorkFilter, setActiveWorkFilter] = useState(searchParams.get("activeWork") || "");
+
+  // Linked Work Modal
+  const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
+  const [linkedWorkData, setLinkedWorkData] = useState(null);
 
   const handleRejectionHover = (deal, event) => {
     if (rejectTooltipTimeout) clearTimeout(rejectTooltipTimeout);
@@ -308,7 +352,9 @@ function AllDealsComponent() {
   // Navigate to deal with follow-up tab open
   const handleViewFollowUpDetails = (dealId) => {
     setHoveredDeal(null);
-    navigate(`/${tenantSlug}/Pipelineview/${dealId}?tab=followup`);
+    const params = new URLSearchParams(location.search);
+    params.set("tab", "followup");
+    navigate(`/${tenantSlug}/Pipelineview/${dealId}?${params.toString()}`);
   };
 
 /* ── Format Currency Value Function ─────────────────────── */
@@ -474,7 +520,7 @@ function AllDealsComponent() {
             dealName: deal.dealName || "",
             companyName: deal.companyName || "",
             assignedTo: assignee,
-            followUpDate: "",
+            followUpDate: formatFollowUpStamp(deal.followUpDate),
             loggedOn: "",
             outcome: "",
             note: "",
@@ -708,6 +754,11 @@ function AllDealsComponent() {
       if (!d.lostDate) return true;
       return new Date(d.lostDate).toDateString() === new Date().toDateString();
     })
+    .filter((d) => {
+      if (activeWorkFilter === "task" && (!d.activeTasks || d.activeTasks.length === 0)) return false;
+      if (activeWorkFilter === "target" && (!d.activeTargets || d.activeTargets.length === 0)) return false;
+      return true;
+    })
     .filter((d) => !customRangeIds || customRangeIds.has(d._id))
     .filter((d) => !dateFilterIds || dateFilterIds.has(d._id));
 
@@ -770,7 +821,7 @@ function AllDealsComponent() {
 
 /* ── Handle Deal Name Click Function ─────────────────────── */
   const handleDealNameClick = (dealId) => {
-    navigate(`/${tenantSlug}/Pipelineview/${dealId}`);
+    navigate(`/${tenantSlug}/Pipelineview/${dealId}${location.search}`);
   };
 
   if (loading) {
@@ -782,23 +833,34 @@ function AllDealsComponent() {
   }
 
   return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-deals-header">
-        <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="p-6">
+      {/* Compact Toolbar Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-deals-header">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
+          <button
+            onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
+            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Deals Filter</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between md:justify-end gap-2 mt-3 md:mt-0 w-full md:w-auto">
           <button
             onClick={startTour}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
+            className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+            title="Take Tour"
           >
-            <Eye className="w-4 h-4" /> Take Tour
+            <Eye className="w-4 h-4" />
           </button>
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <button
-              onClick={() => navigate(`/${tenantSlug}/deals/rejected`)}
-              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+              onClick={() => navigate(`/${tenantSlug}/createDeal`)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2 tour-create-deal"
             >
-              <Ban className="w-4 h-4" /> Reject Deals
+              <Plus className="w-4 h-4" /> Create Deal
             </button>
           )}
           {userRole === "Admin" && (
@@ -812,25 +874,27 @@ function AllDealsComponent() {
               />
               <button
                 onClick={handleDownloadTemplate}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                title="Download an Excel template with all required columns"
+                className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                title="Download Template"
               >
-                <FileSpreadsheet className="w-4 h-4" /> Download Template
+                <FileSpreadsheet className="w-4 h-4" />
               </button>
               <button
                 onClick={handleImportButtonClick}
                 disabled={importing}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-60"
+                title={importing ? "Importing..." : "Import"}
               >
-                <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+                <Download className="w-4 h-4" />
               </button>
               <div className="relative inline-block text-left" ref={exportMenuRef}>
                 <button
                   onClick={() => setExportMenuOpen((prev) => !prev)}
                   disabled={exporting}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                  className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-60"
+                  title={exporting ? "Exporting..." : "Export"}
                 >
-                  <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                  <Upload className="w-4 h-4" />
                 </button>
 
                 {exportMenuOpen && (
@@ -860,14 +924,6 @@ function AllDealsComponent() {
               </div>
             </>
           )}
-          {userRole === "Admin" && (
-            <button
-              onClick={() => navigate(`/${tenantSlug}/createDeal`)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 tour-create-deal"
-            >
-              <Plus className="w-4 h-4" /> Create Deal
-            </button>
-          )}
         </div>
       </div>
 
@@ -888,13 +944,14 @@ function AllDealsComponent() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-4 tour-filters">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
+      {/* Collapsible Filters */}
+      {showFilters && (
+        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 tour-filters">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
           <select
             value={filters.stage}
             onChange={(e) =>
-              setFilters((prev) => ({ ...prev, stage: e.target.value }))
+              updateFilter("stage", e.target.value, (v) => setFilters((prev) => ({ ...prev, stage: v })))
             }
             className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -909,7 +966,7 @@ function AllDealsComponent() {
           <select
             value={filters.assignedTo}
             onChange={(e) =>
-              setFilters((prev) => ({ ...prev, assignedTo: e.target.value }))
+              updateFilter("assignedTo", e.target.value, (v) => setFilters((prev) => ({ ...prev, assignedTo: v })))
             }
             className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -922,7 +979,7 @@ function AllDealsComponent() {
           </select>
           <select
             value={clientTypeFilter}
-            onChange={(e) => setClientTypeFilter(e.target.value)}
+            onChange={(e) => updateFilter("clientType", e.target.value, setClientTypeFilter)}
             className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Client Types</option>
@@ -931,7 +988,7 @@ function AllDealsComponent() {
           </select>
           {/* Today's Follow-up Button */}
           <button
-            onClick={() => setShowTodayOnly(!showTodayOnly)}
+            onClick={() => updateFilter("todayOnly", showTodayOnly ? "" : "1", (v) => setShowTodayOnly(!!v))}
             className={`w-full px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition h-10 ${
               showTodayOnly
                 ? "bg-orange-500 text-white"
@@ -946,7 +1003,7 @@ function AllDealsComponent() {
                 className="ml-1 cursor-pointer hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowTodayOnly(false);
+                  updateFilter("todayOnly", "", (v) => setShowTodayOnly(!!v));
                 }}
               />
             )}
@@ -958,7 +1015,7 @@ function AllDealsComponent() {
             <input
               type="date"
               value={dateFilterFrom}
-              onChange={(e) => setDateFilterFrom(e.target.value)}
+              onChange={(e) => updateFilter("startDate", e.target.value, setDateFilterFrom)}
               max={dateFilterTo || undefined}
               title="Start Date"
               className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] outline-none focus:ring-2 focus:ring-blue-500"
@@ -967,7 +1024,7 @@ function AllDealsComponent() {
             <input
               type="date"
               value={dateFilterTo}
-              onChange={(e) => setDateFilterTo(e.target.value)}
+              onChange={(e) => updateFilter("endDate", e.target.value, setDateFilterTo)}
               min={dateFilterFrom || undefined}
               title="End Date"
               className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] outline-none focus:ring-2 focus:ring-blue-500"
@@ -975,7 +1032,10 @@ function AllDealsComponent() {
             {(dateFilterFrom || dateFilterTo) && (
               <button
                 type="button"
-                onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                onClick={() => {
+                  updateFilter("startDate", "", setDateFilterFrom);
+                  updateFilter("endDate", "", setDateFilterTo);
+                }}
                 className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                 title="Clear date filter"
               >
@@ -990,7 +1050,16 @@ function AllDealsComponent() {
               onClick={() => {
                 setShowCustomRange((v) => {
                   const next = !v;
-                  if (!next) { setCustomFrom(""); setCustomTo(""); setDealTypeFilter({ won: false, lost: false, pending: false }); }
+                  if (!next) {
+                    setCustomFrom("");
+                    setCustomTo("");
+                    setDealTypeFilter({ won: false, lost: false, pending: false });
+                    const params = new URLSearchParams(searchParams);
+                    params.delete("customFrom");
+                    params.delete("customTo");
+                    params.delete("dealType");
+                    setSearchParams(params);
+                  }
                   return next;
                 });
               }}
@@ -1003,12 +1072,22 @@ function AllDealsComponent() {
             </button>
           )}
 
+          <select
+            value={activeWorkFilter}
+            onChange={(e) => updateFilter("activeWork", e.target.value, setActiveWorkFilter)}
+            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Linked Work</option>
+            <option value="task">Active Task</option>
+            <option value="target">Active Target</option>
+          </select>
+
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search Deal Name..."
-            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
           />
         </div>
 
@@ -1021,7 +1100,7 @@ function AllDealsComponent() {
               <input
                 type="date"
                 value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
+                onChange={(e) => updateFilter("customFrom", e.target.value, setCustomFrom)}
                 className="border rounded-md px-3 py-2 bg-white text-sm"
               />
             </div>
@@ -1030,7 +1109,7 @@ function AllDealsComponent() {
               <input
                 type="date"
                 value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
+                onChange={(e) => updateFilter("customTo", e.target.value, setCustomTo)}
                 className="border rounded-md px-3 py-2 bg-white text-sm"
               />
             </div>
@@ -1053,7 +1132,7 @@ function AllDealsComponent() {
                     <input
                       type="checkbox"
                       checked={dealTypeFilter.won}
-                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, won: e.target.checked }))}
+                      onChange={(e) => updateDealType("won", e.target.checked)}
                       className="accent-green-600"
                     />
                     Deal Won
@@ -1062,7 +1141,7 @@ function AllDealsComponent() {
                     <input
                       type="checkbox"
                       checked={dealTypeFilter.lost}
-                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, lost: e.target.checked }))}
+                      onChange={(e) => updateDealType("lost", e.target.checked)}
                       className="accent-red-600"
                     />
                     Deal Lost
@@ -1071,7 +1150,7 @@ function AllDealsComponent() {
                     <input
                       type="checkbox"
                       checked={dealTypeFilter.pending}
-                      onChange={(e) => setDealTypeFilter((p) => ({ ...p, pending: e.target.checked }))}
+                      onChange={(e) => updateDealType("pending", e.target.checked)}
                       className="accent-blue-600"
                     />
                     Pending Deal
@@ -1088,6 +1167,11 @@ function AllDealsComponent() {
                 setCustomTo("");
                 setDealTypeFilter({ won: false, lost: false, pending: false });
                 setShowCustomRange(false);
+                const params = new URLSearchParams(searchParams);
+                params.delete("customFrom");
+                params.delete("customTo");
+                params.delete("dealType");
+                setSearchParams(params);
               }}
               className="px-4 py-2 rounded-md text-sm font-medium text-gray-600 border border-gray-300 bg-white hover:bg-gray-100"
             >
@@ -1096,6 +1180,8 @@ function AllDealsComponent() {
           </div>
         )}
       </div>
+    )}
+
       {showTodayOnly && (
         <div className="mb-3 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
           <Calendar size={12} />
@@ -1126,7 +1212,6 @@ function AllDealsComponent() {
                 const hasFollowUp = deal.followUpDate;
                 const isToday = isFollowUpToday(deal.followUpDate);
                 const isOverdue = isFollowUpOverdue(deal.followUpDate);
-                const isActiveDisabled = deal.isActive === false && userRole !== "Admin";
                 const isTerminal = deal.stage === "Rejected" || deal.stage === "Closed Won";
 
                 const rejectedByName = deal.rejectedBy ? `${deal.rejectedBy.firstName || ""} ${deal.rejectedBy.lastName || ""}`.trim() : "";
@@ -1144,10 +1229,8 @@ function AllDealsComponent() {
                 return (
                   <tr
                     key={deal._id}
-                    title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
                     className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50 ${
-                      isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
-                      : isTerminal ? "pointer-events-none select-none"
+                      isTerminal ? "pointer-events-none select-none"
                       : ""
                     }`}
                   >
@@ -1161,11 +1244,7 @@ function AllDealsComponent() {
                         >
                           {deal.dealName || "-"}
                         </button>
-                        {deal.stage === "Rejected" ? (
-                          <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
-                            {rejectedBadgeText}
-                          </span>
-                        ) : deal.stage === "Closed Won" ? (
+                        {deal.stage === "Closed Won" ? (
                           <span title={wonBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {wonBadgeText}
                           </span>
@@ -1173,11 +1252,28 @@ function AllDealsComponent() {
                           <span title={convertedBadgeText} className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {convertedBadgeText}
                           </span>
-                        ) : isActiveDisabled ? (
-                          <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
-                            Pending Reassignment
-                          </span>
                         ) : null}
+
+                        {/* Task / Target Icons */}
+                        {((deal.activeTasks && deal.activeTasks.length > 0) || (deal.activeTargets && deal.activeTargets.length > 0)) && (
+                          <div className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => {
+                            e.stopPropagation();
+                            setLinkedWorkData({
+                              activeTasks: deal.activeTasks || [],
+                              activeTargets: deal.activeTargets || [],
+                              itemName: deal.dealName || "-"
+                            });
+                            setLinkedWorkModalOpen(true);
+                          }}>
+                            {(deal.activeTasks && deal.activeTasks.length > 0) && (
+                              <Flag size={14} className="text-blue-500 hover:text-blue-600 transition-colors" />
+                            )}
+                            {(deal.activeTargets && deal.activeTargets.length > 0) && (
+                              <Target size={14} className="text-purple-500 hover:text-purple-600 transition-colors" />
+                            )}
+                          </div>
+                        )}
+
                         {/* Follow-up bell (only when not target-linked to avoid double bell) */}
                         {hasFollowUp && !targetLinkedDealIds.has(String(deal._id)) && (
                           <div
@@ -1443,14 +1539,7 @@ function AllDealsComponent() {
                   >
                     <Edit size={16} className="mr-2" /> Edit
                   </button>
-                  {userRole === "Admin" && !activeIsTerminal && (
-                    <button
-                      onClick={() => handleRejectClick(activeDeal)}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 w-full text-left text-red-600"
-                    >
-                      <Ban size={16} className="mr-2" /> Reject
-                    </button>
-                  )}
+
                 </>
               );
             })()}
@@ -1594,6 +1683,15 @@ function AllDealsComponent() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Linked Work Modal */}
+      <LinkedWorkModal 
+        isOpen={linkedWorkModalOpen}
+        onClose={() => {
+          setLinkedWorkModalOpen(false);
+          setLinkedWorkData(null);
+        }}
+        data={linkedWorkData}
+      />
     </div>
   );
 }

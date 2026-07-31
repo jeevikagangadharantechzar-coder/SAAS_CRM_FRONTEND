@@ -11,8 +11,10 @@ import {
   CheckCircle, Clock, AlertCircle, Calendar, Flag, User,
   ClipboardList, ArrowRight, StickyNote, X, FileText, Briefcase,
   MessageSquare, Bell, ChevronDown, ChevronUp, History, LayoutGrid, List, Trophy,
-  Building2, Phone, Mail, Award, XCircle, Send, Check, Users, Activity, TrendingUp, Trash2,
+  Building2, Phone, Mail, Award, XCircle, Send, Check, Users, TrendingUp, Activity, Target, Trash2, Info, CheckCheck
 } from "lucide-react";
+
+import TaskPipelineView from "./TaskPipelineView";
 
 const SI_URI  = import.meta.env.VITE_SI_URI  || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -110,54 +112,106 @@ function getTextColor(pct) {
 // Target Management/My Targets. Tolerant of `target` being null/undefined
 // (no active target yet) — every field defaults to 0 so all 6 cells still
 // render in full instead of a half-empty placeholder.
-function TargetSnapshotGrid({ target: t }) {
-  const percentages = t?.percentages || {};
-  const actuals = t?.actuals || {};
-  const overall = percentages.overall || 0;
+
+function TaskProgressWidget({ task }) {
+  const dealItems = task.dealRefs?.length ? task.dealRefs : (task.dealRef ? [task.dealRef] : []);
+  const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
+  const totalItems = dealItems.length + leadItems.length;
+
+  let overall = 0;
+  let text = "";
+
+  if (task.status === "Completed") {
+    overall = 100;
+    text = "🎉 Task officially completed!";
+  } else if (totalItems > 0) {
+    let completedItems = 0;
+
+    dealItems.forEach(d => {
+      if (d.stage === "Closed Won") { completedItems++; }
+    });
+    leadItems.forEach(l => {
+      if (l.status === "Converted") { completedItems++; }
+    });
+    overall = Math.round((completedItems / totalItems) * 100);
+    
+    if (overall === 100) {
+      text = "🎉 All linked items achieved! (Mark task as Completed when ready)";
+    } else if (overall > 0) {
+      text = `${completedItems} of ${totalItems} linked items achieved.`;
+    } else {
+      text = task.status === "In Progress" ? "Task is in progress." : "Task is pending. Work on the linked items!";
+    }
+  } else {
+    overall = STATUS_PROGRESS[task.status] || 0;
+    text = overall === 100 ? "🎉 Task completed!" : overall >= 50 ? "Task is currently in progress." : "Task is pending.";
+  }
+
+  // Build the 6-grid metrics based entirely on THIS task's linked items (acting as its own mini-target)
+  const leadsTarget = leadItems.length;
+  const dealsTarget = dealItems.length;
+  
+  let dealsWonCount = 0;
+  let dealsLostCount = 0;
+  let leadsConvertedCount = 0;
+  dealItems.forEach(d => {
+    if (d.stage === "Closed Won") dealsWonCount++;
+    if (d.stage === "Closed Lost") dealsLostCount++;
+  });
+  leadItems.forEach(l => {
+    if (l.status === "Converted") leadsConvertedCount++;
+  });
+
+  const leadsPct = leadsTarget > 0 ? Math.round((leadsConvertedCount / leadsTarget) * 100) : 0;
+  const dealsPct = dealsTarget > 0 ? Math.round((dealsWonCount / dealsTarget) * 100) : 0;
 
   const metrics = [
-    { label: "Deal Closed",  target: percentages.effTargetDeals ?? t?.targetDeals ?? 0, actual: actuals.dealsWon || 0,  pct: percentages.dealsPercent || 0, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
-    { label: "Deal Lost", target: null,                                             actual: actuals.dealsLost || 0, pct: null,                          icon: <XCircle size={13} className="text-red-500" />,      bg: "bg-red-50",   border: "border-red-100",   countOnly: true, badgeText: "deal lost", badgeClass: "text-red-600 bg-red-100" },
+    { label: "Leads to Deals Converted", target: leadsTarget, actual: leadsConvertedCount, pct: leadsPct, icon: <Users size={13} className="text-blue-500" />, bg: "bg-blue-50", border: "border-blue-100", countOnly: false },
+    { label: "Deal Closed", target: dealsTarget, actual: dealsWonCount, pct: dealsPct, icon: <TrendingUp size={13} className="text-green-500" />, bg: "bg-green-50", border: "border-green-100", countOnly: false },
   ];
 
   return (
     <div className="mb-4">
-      <div className={`rounded-xl p-4 mb-3 ${overall >= 80 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-amber-50 border border-amber-100" : "bg-red-50 border border-red-100"}`}>
+      <div className={`rounded-xl p-4 ${overall >= 100 ? "bg-emerald-50 border border-emerald-100" : overall >= 50 ? "bg-blue-50 border border-blue-100" : "bg-gray-50 border border-gray-100"}`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700"><Trophy size={15} className={getTextColor(overall)} /> Overall Progress</span>
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+            <Trophy size={15} className={getTextColor(overall)} /> {overall >= 100 ? "Task Completed" : "Task Progress"}
+          </span>
           <span className={`text-2xl font-bold ${getTextColor(overall)}`}>{overall}%</span>
         </div>
         <ProgressBar value={overall} color={getProgressColor(overall)} />
-        <p className="text-xs text-gray-400 mt-1.5">
-          {overall >= 100 ? "🎉 Target achieved!" : overall >= 80 ? "Almost there — keep going!" : overall >= 50 ? "Good progress — stay focused!" : "Keep pushing — you can do it!"}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2.5">
-        {metrics.map((m) => (
-          <div key={m.label} className={`rounded-xl border p-3 ${m.bg} ${m.border}`}>
-            <div className="flex items-center gap-1.5 mb-1.5">{m.icon}<span className="text-xs font-medium text-gray-600">{m.label}</span></div>
-            {m.countOnly ? (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-2xl font-bold text-gray-800">{m.actual}</span>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.badgeClass}`}>{m.badgeText}</span>
+        <p className="text-xs text-gray-400 mt-1.5 mb-3">{text}</p>
+        
+        <div className="grid grid-cols-2 gap-2">
+          {metrics.map((m, i) => (
+            <div key={i} className={`p-2.5 rounded-xl border ${m.bg} ${m.border} flex flex-col justify-between min-h-[82px]`}>
+              <div className="flex items-start justify-between gap-1 mb-1.5">
+                <span className="text-[10px] font-bold text-gray-600 leading-tight">{m.label}</span>
+                <span className="shrink-0 mt-0.5">{m.icon}</span>
               </div>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between mb-1.5">
-                  <span className="text-lg font-bold text-gray-800">{m.actual}</span>
-                  <span className="text-xs text-gray-400">/ {m.target}</span>
-                </div>
-                <ProgressBar value={m.pct} color={getProgressColor(m.pct)} />
-                <p className={`text-[11px] font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
-              </>
-            )}
-          </div>
-        ))}
+              <div>
+                {m.countOnly ? (
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${m.badgeClass}`}>
+                    {m.actual} {m.badgeText}
+                  </span>
+                ) : (
+                  <div className="flex items-end gap-1.5">
+                    <span className="text-sm font-black text-gray-800">{m.actual}</span>
+                    <span className="text-[10px] text-gray-400 font-bold mb-0.5">/ {m.target}</span>
+                    <span className="text-[10px] font-bold ml-auto" style={{ color: m.pct >= 100 ? '#10b981' : m.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
+                      {m.pct}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+
 
 // Same icon-on-top stat-card concept as Target Management / admin Task
 // Management's "Monthly Overview" — still used for this page's own
@@ -491,17 +545,19 @@ function LeadStatusJourney({ lead }) {
 // (no Target lookup) so it always renders fully regardless of whether the
 // sales person has a target set.
 // One linked deal's card (read-only besides the "dismiss won" trash icon).
-function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, onRefresh }) {
-  const [expanded, setExpanded] = useState(true);
+function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, onRefresh, taskStatus }) {
+  const [expanded, setExpanded] = useState(false);
   const [dismissConfirm, setDismissConfirm] = useState(false);
   const [dismissing, setDismissing] = useState(false);
 
   const stage = deal.stage;
   const isWon = stage === "Closed Won";
   const isLost = stage === "Closed Lost";
+  const isLeadCompleted = !!resolvedFromLead;
+  const isTaskCompleted = taskStatus === "Completed";
   const dealName = deal.dealName || deal.dealTitle;
-  const bucketBg = isWon ? "bg-emerald-50 border-emerald-200" : isLost ? "bg-red-50 border-red-200" : "bg-white border-gray-200";
-  const icon = isWon ? <Award size={11} className="text-emerald-500" /> : isLost ? <XCircle size={11} className="text-red-500" /> : <Briefcase size={11} />;
+  const bucketBg = (isWon || isLeadCompleted || isTaskCompleted) ? "bg-emerald-50 border-emerald-200" : isLost ? "bg-red-50 border-red-200" : "bg-white border-gray-200";
+  const icon = (isWon || isLeadCompleted || isTaskCompleted) ? <Award size={11} className="text-emerald-500" /> : isLost ? <XCircle size={11} className="text-red-500" /> : <Briefcase size={11} />;
   const wonDate = deal.wonAt ? new Date(deal.wonAt) : null;
   const createdDate = deal.createdAt ? new Date(deal.createdAt) : null;
   const totalDays = wonDate && createdDate ? Math.max(0, Math.round((wonDate - createdDate) / 86400000)) : null;
@@ -536,11 +592,6 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {isWon && (
-              <button onClick={() => setDismissConfirm(true)} className="p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500" title="Remove this card">
-                <Trash2 size={13} />
-              </button>
-            )}
             <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 shrink-0" title={expanded ? "Collapse" : "Expand"}>
               {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
@@ -559,7 +610,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
         {/* Report Issue only makes sense while the deal is still live —
             posts against the task itself (no Target dependency), so it's
             always available regardless of whether a target is set. */}
-        {!isWon && !isLost && (
+        {!isWon && !isLost && !isLeadCompleted && taskStatus !== "Completed" && (
           <ReportBox
             mode="task" taskId={taskId} itemType="deal" itemName={dealName}
             itemDetails={{ companyName: deal.companyName, value: deal.value, currency: deal.currency, phoneNumber: deal.phoneNumber, email: deal.email, statusLabel: stage, statusColor: STAGE_COLOR[stage] }}
@@ -591,11 +642,13 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
 }
 
 // One linked lead's card (read-only, sales can't unlink leads).
-function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId }) {
-  const [expanded, setExpanded] = useState(true);
+function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, taskStatus }) {
+  const [expanded, setExpanded] = useState(false);
+  const isTaskCompleted = taskStatus === "Completed";
+  const bgClass = isTaskCompleted ? "bg-emerald-50 border-emerald-200" : "bg-white border-gray-200";
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className={`border rounded-xl overflow-hidden ${bgClass}`}>
       <div className="p-3">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <div className="min-w-0 flex-1">
@@ -618,12 +671,14 @@ function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers
           {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
           {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
         </div>
-        <ReportBox
-          mode="task" taskId={taskId} itemType="lead" itemName={lead.leadName}
-          itemDetails={{ companyName: lead.companyName, phoneNumber: lead.phoneNumber, email: lead.email, statusLabel: lead.status, statusColor: LEAD_STATUS_COLOR[lead.status] }}
-          baseUrl={baseUrl} headers={headers}
-          isReported={hasPendingIssue}
-        />
+        {taskStatus !== "Completed" && lead.status !== "Converted" && (
+          <ReportBox
+            mode="task" taskId={taskId} itemType="lead" itemName={lead.leadName}
+            itemDetails={{ companyName: lead.companyName, phoneNumber: lead.phoneNumber, email: lead.email, statusLabel: lead.status, statusColor: LEAD_STATUS_COLOR[lead.status] }}
+            baseUrl={baseUrl} headers={headers}
+            isReported={hasPendingIssue}
+          />
+        )}
       </div>
       {expanded && <LeadStatusJourney lead={lead} />}
     </div>
@@ -635,7 +690,7 @@ function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers
 // back to the singular leadRef/dealRef for tasks created before this
 // multi-link feature. The deal-stage/lead-status "journey" timeline is only
 // shown on the current primary item.
-function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh }) {
+function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, targets }) {
   const dealItems = task.dealRefs?.length ? task.dealRefs : (task.dealRef ? [task.dealRef] : []);
   const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
   const primaryDealId = task.dealRef?._id || task.dealRef || null;
@@ -645,58 +700,74 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh }
   if (!dealItems.length && !leadItems.length) return null;
 
   return (
-    <div className="space-y-2">
-      {dealItems.map((deal) => (
-        <DealLinkCard
-          key={deal._id}
-          deal={deal}
-          linkedBadgeText={String(deal._id) === String(primaryDealId) ? linkedBadgeText : null}
-          hasPendingIssue={hasPendingIssue}
-          baseUrl={baseUrl}
-          headers={headers}
-          taskId={task._id}
-          onRefresh={onRefresh}
-        />
-      ))}
-      {leadItems.map((lead) => {
-        const isPrimary = String(lead._id) === String(primaryLeadId);
-        // A converted lead has no pipeline of its own — the real stage
-        // journey now lives on the deal it became. task.convertedDealRefsByLeadId
-        // is attached server-side (attachConvertedDealJourney) and covers
-        // EVERY converted lead on this task, not just the current primary one
-        // — otherwise adding another lead/deal during an edit (which re-points
-        // task.leadRef to the newest addition) demoted an already-won lead to
-        // non-primary and silently dropped its Won/Stage journey.
-        const resolvedFromLead = lead.status === "Converted"
-          ? (task.convertedDealRefsByLeadId?.[String(lead._id)] || (isPrimary && !task.dealRef ? task.convertedDealRef : null))
-          : null;
-        if (resolvedFromLead) {
-          return (
+    <div className="space-y-4">
+      {dealItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><Briefcase size={11}/> Linked Deals</p>
+          {dealItems.map((deal) => (
             <DealLinkCard
-              key={lead._id}
-              deal={resolvedFromLead}
-              resolvedFromLead
-              linkedBadgeText={linkedBadgeText}
+              key={deal._id}
+              deal={deal}
+              linkedBadgeText={String(deal._id) === String(primaryDealId) ? linkedBadgeText : null}
+              isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(deal._id)))}
               hasPendingIssue={hasPendingIssue}
               baseUrl={baseUrl}
               headers={headers}
               taskId={task._id}
               onRefresh={onRefresh}
+              taskStatus={task.status}
             />
-          );
-        }
-        return (
-          <LeadLinkCard
-            key={lead._id}
-            lead={lead}
-            linkedBadgeText={isPrimary ? linkedBadgeText : null}
-            hasPendingIssue={hasPendingIssue}
-            baseUrl={baseUrl}
-            headers={headers}
-            taskId={task._id}
-          />
-        );
-      })}
+          ))}
+        </div>
+      )}
+      {leadItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><FileText size={11}/> Linked Leads</p>
+          {leadItems.map((lead) => {
+            const isPrimary = String(lead._id) === String(primaryLeadId);
+            // A converted lead has no pipeline of its own — the real stage
+            // journey now lives on the deal it became. task.convertedDealRefsByLeadId
+            // is attached server-side (attachConvertedDealJourney) and covers
+            // EVERY converted lead on this task, not just the current primary one
+            // — otherwise adding another lead/deal during an edit (which re-points
+            // task.leadRef to the newest addition) demoted an already-won lead to
+            // non-primary and silently dropped its Won/Stage journey.
+            const resolvedFromLead = lead.status === "Converted"
+              ? (task.convertedDealRefsByLeadId?.[String(lead._id)] || (isPrimary && !task.dealRef ? task.convertedDealRef : null))
+              : null;
+            if (resolvedFromLead) {
+              return (
+                <DealLinkCard
+                  key={lead._id}
+                  deal={resolvedFromLead}
+                  resolvedFromLead
+                  linkedBadgeText={linkedBadgeText}
+                  isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(resolvedFromLead._id)))}
+                  hasPendingIssue={hasPendingIssue}
+                  baseUrl={baseUrl}
+                  headers={headers}
+                  taskId={task._id}
+                  onRefresh={onRefresh}
+                  taskStatus={task.status}
+                />
+              );
+            }
+            return (
+              <LeadLinkCard
+                key={lead._id}
+                lead={lead}
+                linkedBadgeText={isPrimary ? linkedBadgeText : null}
+                isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedLeads || []).some(id => String(id) === String(lead._id)))}
+                hasPendingIssue={hasPendingIssue}
+                baseUrl={baseUrl}
+                headers={headers}
+                taskId={task._id}
+                taskStatus={task.status}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -804,12 +875,14 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
   const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
   const adminTookTask = getAdminTookTaskBadge(task);
 
-  const leadName = task.leadRef?.leadName
-    ? `${task.leadRef.leadName}${task.leadRef.companyName ? ` · ${task.leadRef.companyName}` : ""}`
+  const primaryLead = task.leadRefs?.length ? task.leadRefs[0] : task.leadRef;
+  const primaryDeal = task.dealRefs?.length ? task.dealRefs[0] : task.dealRef;
+  const leadName = primaryLead?.leadName
+    ? `${primaryLead.leadName}${primaryLead.companyName ? ` · ${primaryLead.companyName}` : ""}`
     : null;
-  const dealName = task.dealRef?.dealName || task.dealRef?.dealTitle || null;
+  const dealName = primaryDeal?.dealName || primaryDeal?.dealTitle || null;
   const linkedBadgeText = getLinkedItemBadgeText(task.linkedItemBadge);
-  const linkedItemName = leadName || dealName;
+  const hasLinkedItems = (task.leadRefs?.length > 0) || (task.dealRefs?.length > 0) || primaryLead || primaryDeal;
   const progressPct = STATUS_PROGRESS[task.status] ?? 0;
   // No Target covering this task yet? Fall back to your own real (self-only)
   // progress scoped to THIS task's own linked lead/deal, instead of an
@@ -829,7 +902,10 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
               <User size={9} />From: {task.createdBy?.firstName} {task.createdBy?.lastName}
             </p>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-bold shrink-0 ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${task.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : task.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : task.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{task.status || "New"}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold shrink-0 ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+          </div>
         </div>
 
         {adminTookTask && (
@@ -847,7 +923,8 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
 
         <p className="text-[11px] text-gray-400 mb-2 mt-1">Due {fmt(task.dueDate)}{isOverdue ? " (Overdue)" : ""}</p>
 
-        <TargetSnapshotGrid target={currentTarget} />
+        <TaskProgressWidget task={task} />
+
 
         {/* Description */}
         {task.description && (
@@ -872,7 +949,7 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
         )}
 
         {/* Toggle */}
-        {linkedItemName && (
+        {hasLinkedItems && (
           <button
             onClick={() => setExpanded((v) => !v)}
             className="w-full flex items-center justify-center gap-1.5 text-sm font-bold text-gray-700 hover:text-[#008ecc] py-2 border-t border-gray-100 transition-colors"
@@ -881,9 +958,9 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
           </button>
         )}
 
-        {expanded && linkedItemName && (
+        {expanded && hasLinkedItems && (
           <div className="mt-4 space-y-4">
-            <LinkedItemDetail task={task} linkedBadgeText={linkedBadgeText} baseUrl={baseUrl} headers={headers} onRefresh={onRefresh} />
+            <LinkedItemDetail task={task} linkedBadgeText={linkedBadgeText} baseUrl={baseUrl} headers={headers} onRefresh={onRefresh} targets={targets} />
           </div>
         )}
       </div>
@@ -937,8 +1014,10 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
         // seen it (backend allows the dismiss regardless of who won it).
         const dealForJourney = task.dealRef || task.convertedDealRef;
         const isWonDeal = dealForJourney?.stage === "Closed Won";
-        const leadName = task.leadRef?.leadName || null;
-        const dealName = task.dealRef?.dealName || task.dealRef?.dealTitle || null;
+        const primaryLead = task.leadRefs?.length ? task.leadRefs[0] : task.leadRef;
+        const primaryDeal = task.dealRefs?.length ? task.dealRefs[0] : task.dealRef;
+        const leadName = primaryLead?.leadName || null;
+        const dealName = primaryDeal?.dealName || primaryDeal?.dealTitle || null;
         const linkedBadgeText = getLinkedItemBadgeText(task.linkedItemBadge);
 
         return (
@@ -1036,16 +1115,6 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
                 {dealForJourney && (
                   <div className="mt-3 -mx-4 bg-white">
                     <DealStageJourney deal={dealForJourney} />
-                    {isWonDeal && (
-                      <div className="px-4 py-2 flex justify-end">
-                        <button
-                          onClick={() => setDismissConfirm(task)}
-                          className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 hover:text-red-500 px-2.5 py-1 rounded-md border border-gray-200 hover:border-red-200 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 size={12} /> Remove this card
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
                 {!task.dealRef && !task.convertedDealRef && task.leadRef && <div className="mt-3 -mx-4 bg-white"><LeadStatusJourney lead={task.leadRef} /></div>}
@@ -1086,6 +1155,7 @@ export default function AssignedTasks() {
   const [myDashStats, setMyDashStats] = useState(null);
   const socket = useSocket();
   const targetSocket = useTargetSocket();
+  const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
 
   // Deadline reminder/due-today/approval notifications — real-time via the shared socket,
   // no page refresh needed.
@@ -1159,14 +1229,19 @@ export default function AssignedTasks() {
     }
   };
 
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => {
+      const unread = prev.filter((n) => TASK_NOTIF_TYPES_FILTER(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
+      if (unread.length > 0) {
+        unread.forEach((n) => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
+      }
+      return prev.map((n) => (TASK_NOTIF_TYPES_FILTER(n) ? { ...n, read: true, isRead: true } : n));
+    });
+  };
+
   useEffect(() => {
     if (mainView !== "notifications") return;
     fetchNotifications();
-    setNotifications((prev) => {
-      const unread = prev.filter((n) => TASK_NOTIF_TYPES_FILTER(n) && !n.read && !n.isRead && n._id && !String(n._id).includes("-"));
-      unread.forEach((n) => axios.patch(`${baseUrl}/notifications/read/${n._id}`, {}, { headers }).catch(() => {}));
-      return prev.map((n) => (TASK_NOTIF_TYPES_FILTER(n) ? { ...n, read: true, isRead: true } : n));
-    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainView]);
 
@@ -1210,7 +1285,10 @@ export default function AssignedTasks() {
   // otherwise leave a newly-assigned task invisible here until a manual
   // reload. Silent background poll, no loading-spinner blink (showLoading=false).
   useEffect(() => {
-    const interval = setInterval(() => fetchTasks(false), 20000);
+    // 2min, not 20s — this only needs to catch a missed socket event, not
+    // act as the primary refresh mechanism, so it doesn't need to be this
+    // frequent and was doubling baseline request volume for every open tab.
+    const interval = setInterval(() => fetchTasks(false), 120000);
     return () => clearInterval(interval);
   }, [fetchTasks]);
 
@@ -1295,12 +1373,21 @@ export default function AssignedTasks() {
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <ClipboardList size={20} className="text-[#008ecc]" />
-          My Tasks
-        </h1>
-        <p className="text-gray-400 text-sm mt-0.5">Tasks assigned to you by your admin</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <ClipboardList size={20} className="text-[#008ecc]" />
+            My Tasks
+            <button 
+              onClick={() => setShowWorkflowExplanation(true)}
+              className="ml-1 p-1 rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-colors bg-white border border-gray-200"
+              title="How Tasks Work"
+            >
+              <Info size={16} />
+            </button>
+          </h1>
+          <p className="text-gray-400 text-sm mt-0.5">Tasks assigned to you by your admin</p>
+        </div>
       </div>
 
       {/* How it works — compact */}
@@ -1389,6 +1476,12 @@ export default function AssignedTasks() {
           >
             <List size={14} /> Table
           </button>
+          <button
+            onClick={() => { setViewMode("pipeline"); setMainView("tasks"); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ${viewMode === "pipeline" && mainView === "tasks" ? "bg-[#008ecc] text-white" : "text-gray-500 hover:bg-gray-50"}`}
+          >
+            <Activity size={14} /> Pipeline
+          </button>
         </div>
       </div>
 
@@ -1399,9 +1492,14 @@ export default function AssignedTasks() {
             <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
               <Bell size={16} className="text-amber-500" /> Notifications & Reminders
             </h2>
-            <button onClick={fetchNotifications} className="text-xs text-[#008ecc] hover:underline font-medium">
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              {unreadReminderCount > 0 && (
+                <button onClick={handleMarkAllRead} className="text-xs text-[#008ecc] hover:underline font-medium">Mark all as read</button>
+              )}
+              <button onClick={fetchNotifications} className="text-xs text-gray-500 hover:text-gray-800 font-medium">
+                Refresh
+              </button>
+            </div>
           </div>
           {taskReminderNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -1444,14 +1542,27 @@ export default function AssignedTasks() {
                     )}
                     <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
                   </div>
-                  {isUnread && <span className="w-2 h-2 rounded-full bg-[#008ecc] shrink-0 mt-1.5" />}
-                  <button
-                    onClick={(e) => handleDismissNotif(e, n)}
-                    className="p-1 rounded hover:bg-black/5 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
-                    title="Remove notification"
-                  >
-                    <X size={14} />
-                  </button>
+                  <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
+                    {isUnread && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkNotifRead(n);
+                        }}
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        title="Mark as read"
+                      >
+                        <CheckCheck size={11} /> Mark as read
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => handleDismissNotif(e, n)}
+                      className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                      title="Remove notification"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -1469,11 +1580,19 @@ export default function AssignedTasks() {
           <p className="text-xs text-center mt-1">Completed tasks disappear after admin approval — check Notifications & Reminders</p>
         </div>
       ) : viewMode === "card" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
           {filtered.map((task) => (
             <AssignedTaskCard key={task._id} task={task} baseUrl={baseUrl} headers={headers} onRefresh={() => { fetchTasks(false); fetchTargets(); }} targets={targets} progressFallback={progressFallback} />
           ))}
         </div>
+      ) : viewMode === "pipeline" ? (
+        <TaskPipelineView
+          tasks={filtered}
+          baseUrl={baseUrl}
+          headers={headers}
+          onRefresh={() => { fetchTasks(false); fetchTargets(); }}
+          onEdit={(t) => {}} 
+        />
       ) : (
         <AssignedTaskTableView
           tasks={filtered}
@@ -1499,6 +1618,65 @@ export default function AssignedTasks() {
         onClose={() => setCompleteModal({ open: false, task: null })}
         onConfirm={handleCompleteConfirm}
       />
+      
+      <WorkflowExplanationModal open={showWorkflowExplanation} onClose={() => setShowWorkflowExplanation(false)} />
+    </div>
+  );
+}
+
+function WorkflowExplanationModal({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Info className="text-blue-500" />
+          How Tasks & Targets Work
+        </h3>
+        
+        <div className="space-y-6 text-sm text-gray-700">
+          <section>
+            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <p className="mb-2">
+              Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
+            </p>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
+              <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
+              <li><strong>Auto-Completion:</strong> Once you complete 100% of the assigned linked items (e.g., all linked leads converted), the system automatically marks it <strong>Completed</strong> and notifies the Admin.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
+              <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>
+              <li><strong>Hold/Reject Approvals:</strong> Admins review requests from salespeople to put tasks on Hold (optionally extending the due date) or Rejecting them entirely if they are invalid.</li>
+            </ul>
+          </section>
+          
+          <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
+            <p className="font-semibold text-blue-800 mb-1">Key Takeaway:</p>
+            <p className="text-blue-700">
+              The entire pipeline is driven by <strong>actual sales actions</strong> (converting leads, winning deals) rather than manual status dropdowns. This guarantees accurate reporting for the company.
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-6 flex justify-end">
+          <button onClick={onClose} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            Got it
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

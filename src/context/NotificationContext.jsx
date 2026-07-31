@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { initSocket } from "../utils/socket";
 import axios from "axios";
 
@@ -38,8 +38,13 @@ export const NotificationProvider = ({ children }) => {
     return () => window.removeEventListener("storage", onStorage);
   }, [userId]);
 
-  // Fetch notifications from DB on mount
-  const fetchNotifications = async () => {
+  // Fetch notifications from DB on mount. Wrapped in useCallback with a
+  // stable (empty) dependency list — this function is handed out via context
+  // and consumed directly in other components' useEffect dependency arrays,
+  // so a new identity on every render (e.g. from a socket push updating
+  // `notifications`) was tearing down and re-attaching their socket
+  // listeners on unrelated notification traffic.
+  const fetchNotifications = useCallback(async () => {
     const id = getUser()?._id;
     if (!id) return;
     try {
@@ -53,7 +58,7 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;

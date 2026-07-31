@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation,useSearchParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
@@ -29,10 +29,13 @@ import {
   Filter,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Flag,
+  Target
 } from "lucide-react";
 
 import LeadsPipelineView from "./LeadsPipelineView";
+import LinkedWorkModal from "../components/LinkedWorkModal";
 
 import { initSocket, getSocket } from "../../utils/socket";
 import {
@@ -173,6 +176,7 @@ function LeadTableComponent() {
   const location = useLocation();
   const { setIsOpen } = useTour();
   const { t } = useTranslation();
+const [searchParams, setSearchParams] = useSearchParams();
 
   const [leads, setLeads] = useState([]);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'pipeline'
@@ -193,6 +197,11 @@ function LeadTableComponent() {
   const [leadToReject, setLeadToReject] = useState(null); // { id, name }
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
+
+  // Active Linked Work Filters
+  const [activeWorkFilter, setActiveWorkFilter] = useState(
+    searchParams.get("activeWork") || ""
+  );
 
   // Rejection-reason hover tooltip (portalled so it never gets clipped by the
   // table's horizontal-scroll container)
@@ -229,17 +238,35 @@ function LeadTableComponent() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [assigneeFilter, setAssigneeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [clientTypeFilter, setClientTypeFilter] = useState("");
+  // const [assigneeFilter, setAssigneeFilter] = useState("");
+  // const [statusFilter, setStatusFilter] = useState("");
+  // const [sourceFilter, setSourceFilter] = useState("");
+  // const [clientTypeFilter, setClientTypeFilter] = useState("");
+  const [assigneeFilter, setAssigneeFilter] = useState(
+  searchParams.get("assignee") || "");
+  const [statusFilter, setStatusFilter] = useState(
+  searchParams.get("status") || ""
+);
+  const [sourceFilter, setSourceFilter] = useState(
+    searchParams.get("source") || ""
+  );
+  const [clientTypeFilter, setClientTypeFilter] = useState(
+    searchParams.get("clientType") || ""
+  );
+  // const [followUpFilter, setFollowUpFilter] = useState(
+  //   location.state?.followUpFilter === "missed" ? "missed" : "all"
+  // );
   const [followUpFilter, setFollowUpFilter] = useState(
-    location.state?.followUpFilter === "missed" ? "missed" : "all"
+    searchParams.get("followUp") || "all"
   );
   // General Start/End Date filter — plain createdAt range; leaving either
   // blank (or both) shows every record, same as every other filter here.
-  const [dateFilterFrom, setDateFilterFrom] = useState("");
-  const [dateFilterTo, setDateFilterTo] = useState("");
+  const [dateFilterFrom, setDateFilterFrom] = useState(
+    searchParams.get("startDate") || ""
+  );
+  const [dateFilterTo, setDateFilterTo] = useState(
+    searchParams.get("endDate") || ""
+  );
   
   // Store users with their IDs for assignee filter
   const [usersList, setUsersList] = useState([]);
@@ -248,6 +275,10 @@ function LeadTableComponent() {
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [converting, setConverting] = useState(false);
+
+  // Linked Work Modal
+  const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
+  const [linkedWorkData, setLinkedWorkData] = useState(null);
 
   const [dealData, setDealData] = useState({
     value: 0,
@@ -260,6 +291,7 @@ function LeadTableComponent() {
   const dateInputRefs = useRef({});
   const [editingFollowUpId, setEditingFollowUpId] = useState(null);
   const [followUpSavingId, setFollowUpSavingId] = useState(null);
+  const [openBellTooltipId, setOpenBellTooltipId] = useState(null);
 
   // Add Follow-up Note modal
   const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
@@ -277,7 +309,19 @@ function LeadTableComponent() {
   const [historyLead, setHistoryLead] = useState(null);
 
   const startTour = () => setIsOpen(true);
+const updateFilter = (key, value, setter) => {
+  setter(value);
 
+  const params = new URLSearchParams(searchParams);
+
+  if (value) {
+    params.set(key, value);
+  } else {
+    params.delete(key);
+  }
+
+  setSearchParams(params);
+};
   // user role
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -408,9 +452,13 @@ function LeadTableComponent() {
       params.append("followUpStatus", followUpFilter);
     }
 
-    // General date range filter (applied client-side)
-    // Removed backend params for startDate/endDate as they might not map to created date
-
+    // Active Linked Work Filters
+    if (activeWorkFilter === "task") {
+      params.append("activeTask", "true");
+    }
+    if (activeWorkFilter === "target") {
+      params.append("activeTarget", "true");
+    }
 
       console.log("Fetching leads with params:", Object.fromEntries(params));
 
@@ -473,7 +521,7 @@ function LeadTableComponent() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, followUpFilter, dateFilterFrom, dateFilterTo, itemsPerPage, t]);
+  }, [currentPage, debouncedSearch, statusFilter, sourceFilter, assigneeFilter, clientTypeFilter, followUpFilter, dateFilterFrom, dateFilterTo, itemsPerPage, activeWorkFilter, t]);
 
   useEffect(() => {
     fetchLeads();
@@ -574,7 +622,7 @@ function LeadTableComponent() {
                 leadName: lead.leadName || "",
                 companyName: lead.companyName || "",
                 assignTo: assignee,
-                followUpDate: "",
+                followUpDate: formatNoteStamp(lead.followUpDate),
                 followUpNote: "",
               }];
             }
@@ -1095,7 +1143,7 @@ function LeadTableComponent() {
             </button>
           )}
 
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2"
               onClick={() => navigate(`/${tenantSlug}/createleads`)}
@@ -1202,7 +1250,10 @@ function LeadTableComponent() {
               <div>
                 <select
                   value={assigneeFilter}
-                  onChange={(e) => setAssigneeFilter(e.target.value)}
+                  // onChange={(e) => setAssigneeFilter(e.target.value)}
+                    onChange={(e) =>
+                       updateFilter("assignee", e.target.value, setAssigneeFilter)
+                      }
                   className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
                 >
                   <option value="">{t("leads.filters.allAssignees")}</option>
@@ -1218,7 +1269,10 @@ function LeadTableComponent() {
             <div>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                // onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) =>
+                    updateFilter("status", e.target.value, setStatusFilter)
+                   }
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="">{t("leads.filters.allStatus")}</option>
@@ -1233,7 +1287,10 @@ function LeadTableComponent() {
             <div>
               <select
                 value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
+                // onChange={(e) => setSourceFilter(e.target.value)}
+                  onChange={(e) =>
+    updateFilter("source", e.target.value, setSourceFilter)
+  }
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="">{t("leads.filters.allSources")}</option>
@@ -1249,7 +1306,10 @@ function LeadTableComponent() {
             <div>
               <select
                 value={clientTypeFilter}
-                onChange={(e) => setClientTypeFilter(e.target.value)}
+                // onChange={(e) => setClientTypeFilter(e.target.value)}
+                                    onChange={(e) =>
+    updateFilter("clientType", e.target.value, setClientTypeFilter )
+  }
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="">{t("leads.filters.allClientTypes")}</option>
@@ -1261,7 +1321,22 @@ function LeadTableComponent() {
             <div>
               <select
                 value={followUpFilter}
-                onChange={(e) => setFollowUpFilter(e.target.value)}
+                // onChange={(e) => setFollowUpFilter(e.target.value)}
+                onChange={(e) => {
+  const value = e.target.value;
+
+  setFollowUpFilter(value);
+
+  const params = new URLSearchParams(searchParams);
+
+  if (value === "all") {
+    params.delete("followUp"); // don't store the default value
+  } else {
+    params.set("followUp", value);
+  }
+
+  setSearchParams(params);
+}}
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="all">All Follow-ups</option>
@@ -1276,7 +1351,8 @@ function LeadTableComponent() {
               <input
                 type="date"
                 value={dateFilterFrom}
-                onChange={(e) => setDateFilterFrom(e.target.value)}
+                // onChange={(e) => setDateFilterFrom(e.target.value)}
+                onChange={(e) => updateFilter("startDate", e.target.value, setDateFilterFrom)}
                 max={dateFilterTo || undefined}
                 title="Start Date"
                 className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1285,7 +1361,8 @@ function LeadTableComponent() {
               <input
                 type="date"
                 value={dateFilterTo}
-                onChange={(e) => setDateFilterTo(e.target.value)}
+                // onChange={(e) => setDateFilterTo(e.target.value)}
+                onChange={(e) => updateFilter("endDate", e.target.value, setDateFilterTo)}
                 min={dateFilterFrom || undefined}
                 title="End Date"
                 className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1293,7 +1370,10 @@ function LeadTableComponent() {
               {(dateFilterFrom || dateFilterTo) && (
                 <button
                   type="button"
-                  onClick={() => { setDateFilterFrom(""); setDateFilterTo(""); }}
+                  onClick={() => {
+                    updateFilter("startDate", "", setDateFilterFrom);
+                    updateFilter("endDate", "", setDateFilterTo);
+                  }}
                   className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                   title="Clear date filter"
                 >
@@ -1301,6 +1381,22 @@ function LeadTableComponent() {
                 </button>
               )}
             </div>
+
+            {/* Active Linked Work Filters */}
+            {viewMode !== "pipeline" && (
+              <div className="col-span-1 md:col-span-2 flex items-center w-full">
+                <select
+                  value={activeWorkFilter}
+                  // onChange={(e) => setActiveWorkFilter(e.target.value)}
+                  onChange={(e) => updateFilter("activeWork", e.target.value, setActiveWorkFilter)}
+                  className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm h-10"
+                >
+                  <option value="">All Linked Work</option>
+                  <option value="task">Active Task</option>
+                  <option value="target">Active Target</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1321,6 +1417,10 @@ function LeadTableComponent() {
           onRejectClick={handleRejectClick}
           onConvertClick={openConvertModal}
           onEditClick={handleEdit}
+          onLinkedWorkClick={(data) => {
+            setLinkedWorkData(data);
+            setLinkedWorkModalOpen(true);
+          }}
           userRole={userRole}
           userId={currentUserId}
         />
@@ -1383,7 +1483,7 @@ function LeadTableComponent() {
                       <div className="flex flex-col min-w-0">
                         <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5 min-w-0">
                           <span
-                            onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}`)}
+                            onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}${location.search}`)}
                             className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none"
                           >
                             {lead.leadName || t("leads.table.unnamedLead")}
@@ -1407,28 +1507,62 @@ function LeadTableComponent() {
                               Pending Reassignment
                             </span>
                           ) : null}
+                          {/* Task / Target Icons */}
+                          {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
+                            <div className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => {
+                              e.stopPropagation();
+                              setLinkedWorkData({
+                                activeTasks: lead.activeTasks || [],
+                                activeTargets: lead.activeTargets || [],
+                                itemName: lead.leadName || t("leads.table.unnamedLead")
+                              });
+                              setLinkedWorkModalOpen(true);
+                            }}>
+                              {(lead.activeTasks && lead.activeTasks.length > 0) && (
+                                <Flag size={14} className="text-blue-500 hover:text-blue-600 transition-colors" />
+                              )}
+                              {(lead.activeTargets && lead.activeTargets.length > 0) && (
+                                <Target size={14} className="text-purple-500 hover:text-purple-600 transition-colors" />
+                              )}
+                            </div>
+                          )}
+
                           {targetLinkedLeadIds.has(String(lead._id)) && (() => {
                             const tInfo = targetLinkedLeadIds.get(String(lead._id));
                             const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
                             const fmtT = (d) => d ? new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+                            const isBellClicked = openBellTooltipId === lead._id;
                             return (
-                              <div className="group relative inline-flex cursor-default">
-                                <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
-                                <div className="absolute top-full left-0 mt-1.5 hidden group-hover:flex flex-col min-w-[200px] shadow-xl z-50 pointer-events-none" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
-                                  <div style={{background:"#f97316"}} className="px-3 py-2">
-                                    <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
-                                  </div>
-                                  <div className="bg-white px-3 py-2 space-y-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
-                                      <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                              <div className="relative inline-flex ml-1">
+                                <button 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setOpenBellTooltipId(isBellClicked ? null : lead._id); 
+                                  }}
+                                  className="focus:outline-none transition-transform hover:scale-110"
+                                >
+                                  <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
+                                </button>
+                                {isBellClicked && (
+                                  <div className="absolute top-full left-0 mt-1.5 flex flex-col min-w-[200px] shadow-xl z-50" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
+                                    <div style={{background:"#f97316"}} className="px-3 py-2 flex justify-between items-center">
+                                      <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
+                                      <button onClick={(e) => { e.stopPropagation(); setOpenBellTooltipId(null); }} className="text-white hover:text-orange-200">
+                                        <X size={12} />
+                                      </button>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
-                                      <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                    <div className="bg-white px-3 py-2 space-y-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
+                                        <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
+                                        <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             );
                           })()}
@@ -1438,7 +1572,19 @@ function LeadTableComponent() {
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.phoneNumber || "-"}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {lead.phoneNumber ? (
+                      <a
+                        href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
+                        className="text-blue-600 hover:underline font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
@@ -2014,6 +2160,15 @@ function LeadTableComponent() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Linked Work Modal */}
+      <LinkedWorkModal 
+        isOpen={linkedWorkModalOpen}
+        onClose={() => {
+          setLinkedWorkModalOpen(false);
+          setLinkedWorkData(null);
+        }}
+        data={linkedWorkData}
+      />
     </div>
   );
 }
