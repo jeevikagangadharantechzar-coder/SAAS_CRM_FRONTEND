@@ -172,6 +172,7 @@ function AllDealsComponent() {
   });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
+  const [showFilters, setShowFilters] = useState(searchParams.get("showFilters") === "true");
 
   // General-purpose Start/End Date filter — available to every role (unlike
   // the sales-only Custom Range panel above). Plain createdAt range, no deal
@@ -832,13 +833,13 @@ function AllDealsComponent() {
   }
 
   return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-deals-header">
+    <div className="p-6">
+      {/* Compact Toolbar Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-deals-header">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
           <button
-            onClick={() => setShowFilters(!showFilters)}
+            onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
             className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
           >
             <Filter className="w-4 h-4" />
@@ -846,13 +847,22 @@ function AllDealsComponent() {
             <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
           <button
             onClick={startTour}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
+            className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+            title="Take Tour"
           >
-            <Eye className="w-4 h-4" /> Take Tour
+            <Eye className="w-4 h-4" />
           </button>
+          {(userRole === "Admin" || userRole === "Sales") && (
+            <button
+              onClick={() => navigate(`/${tenantSlug}/createDeal`)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2 tour-create-deal"
+            >
+              <Plus className="w-4 h-4" /> Create Deal
+            </button>
+          )}
           {userRole === "Admin" && (
             <>
               <input
@@ -864,25 +874,27 @@ function AllDealsComponent() {
               />
               <button
                 onClick={handleDownloadTemplate}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                title="Download an Excel template with all required columns"
+                className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                title="Download Template"
               >
-                <FileSpreadsheet className="w-4 h-4" /> Download Template
+                <FileSpreadsheet className="w-4 h-4" />
               </button>
               <button
                 onClick={handleImportButtonClick}
                 disabled={importing}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-60"
+                title={importing ? "Importing..." : "Import"}
               >
-                <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+                <Download className="w-4 h-4" />
               </button>
               <div className="relative inline-block text-left" ref={exportMenuRef}>
                 <button
                   onClick={() => setExportMenuOpen((prev) => !prev)}
                   disabled={exporting}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                  className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-60"
+                  title={exporting ? "Exporting..." : "Export"}
                 >
-                  <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                  <Upload className="w-4 h-4" />
                 </button>
 
                 {exportMenuOpen && (
@@ -911,14 +923,6 @@ function AllDealsComponent() {
                 )}
               </div>
             </>
-          )}
-          {(userRole === "Admin" || userRole === "Sales") && (
-            <button
-              onClick={() => navigate(`/${tenantSlug}/createDeal`)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 tour-create-deal"
-            >
-              <Plus className="w-4 h-4" /> Create Deal
-            </button>
           )}
         </div>
       </div>
