@@ -847,7 +847,7 @@ function AllDealsComponent() {
             <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
+        <div className="flex items-center justify-between md:justify-end gap-2 mt-3 md:mt-0 w-full md:w-auto">
           <button
             onClick={startTour}
             className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
