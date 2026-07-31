@@ -357,8 +357,19 @@ function App() {
 
                       {/* INTEGRATIONS */}
                       <Route path="integrations" element={<Integrations />} />
-                      <Route path="integrations/facebook/callback" element={<FacebookCallback />} />
-                      <Route path="integrations/linkedin/callback" element={<LinkedInCallback />} />
+                      <Route path="integrations/facebook/callback"   element={<FacebookCallback />} />
+                      <Route path="integrations/linkedin/callback"   element={<LinkedInCallback />} />
+                      <Route path="integrations/whatsapp/callback"  element={<WhatsAppCallback />} />
+                      <Route path="integrations/instagram/callback" element={<InstagramCallback />} />
+
+                      {/* WHATSAPP CHAT */}
+                      <Route path="whatsapp" element={<WhatsAppChat />} />
+
+                      {/* INSTAGRAM INBOX */}
+                      <Route path="instagram" element={<InstagramInbox />} />
+
+                      {/* FACEBOOK INBOX */}
+                      <Route path="facebook" element={<FacebookInbox />} />
                     </Route>
                   </Route>
 
@@ -403,95 +414,6 @@ function App() {
                     <Route path="/email-history" element={<div />} />
                     <Route path="/meetings" element={<div />} />
                   </Route>
-
-                  <Route element={<PrivateRoute permission="email_chat" />}>
-                    <Route path="emailchat" element={<EmailChat />} />
-                  </Route>
-
-                  <Route element={<PrivateRoute permission="settings" />}>
-                    <Route path="settings" element={<Settings />} />
-                  </Route>
-
-                  <Route path="support" element={<Support />} />
-
-                  {/* MESSAGES */}
-                  <Route element={<PrivateRoute planFeature="messages" />}>
-                    <Route path="messages" element={<MessagesPage />} />
-                  </Route>
-                  {/* TASKS & TARGETS */}
-                  <Route path="task-management" element={<TaskManagement />} />
-                  <Route path="assigned-tasks" element={<AssignedTasks />} />
-                  <Route path="target-management" element={<TargetManagement />} />
-                  <Route path="my-targets" element={<MyTargets />} />
-                  {/* MEETINGS */}
-                  <Route element={<PrivateRoute planFeature="meetings" />}>
-                    <Route path="meetings" element={<Meetings />} />
-                  </Route>
-
-                  {/* GOOGLE INTEGRATION SETTINGS */}
-                  <Route element={<PrivateRoute planFeature="google_meet_sync" />}>
-                    <Route path="settings/google-integration" element={<GoogleIntegration />} />
-                  </Route>
-
-                  {/* INTEGRATIONS */}
-                  <Route path="integrations" element={<Integrations />} />
-                  <Route path="integrations/facebook/callback"   element={<FacebookCallback />} />
-                  <Route path="integrations/linkedin/callback"   element={<LinkedInCallback />} />
-                  <Route path="integrations/whatsapp/callback"  element={<WhatsAppCallback />} />
-                  <Route path="integrations/instagram/callback" element={<InstagramCallback />} />
-
-                  {/* WHATSAPP CHAT */}
-                  <Route path="whatsapp" element={<WhatsAppChat />} />
-
-                  {/* INSTAGRAM INBOX */}
-                  <Route path="instagram" element={<InstagramInbox />} />
-
-                  {/* FACEBOOK INBOX */}
-                  <Route path="facebook" element={<FacebookInbox />} />
-                </Route>
-              </Route>
-
-              {/* LEGACY REDIRECT HANDLER (FALLBACKS TO PRESERVE EXISTING ABSOLUTE LINKS) */}
-              <Route element={<PrivateRoute />}>
-                <Route path="/dashboard" element={<div />} />
-                <Route path="/leads" element={<div />} />
-                <Route path="/leads/view/:id" element={<div />} />
-                <Route path="/createleads" element={<div />} />
-                <Route path="/deals" element={<div />} />
-                <Route path="/createDeal" element={<div />} />
-                <Route path="/createDeal/:id" element={<div />} />
-                <Route path="/Pipelineview" element={<div />} />
-                <Route path="/Pipelineview/:dealId?" element={<div />} />
-                <Route path="/proposal" element={<div />} />
-                <Route path="/proposal/sendproposal" element={<div />} />
-                <Route path="/proposal/drafts" element={<div />} />
-                <Route path="/proposal/view/:id" element={<div />} />
-                <Route path="/invoices" element={<div />} />
-                <Route path="/invoices/:id" element={<div />} />
-                <Route path="/calendar" element={<div />} />
-                <Route path="/schedule" element={<div />} />
-                <Route path="/list" element={<div />} />
-                <Route path="/user&roles" element={<div />} />
-                <Route path="/team-analytics" element={<div />} />
-                <Route path="/emailchat" element={<div />} />
-                <Route path="/settings" element={<div />} />
-                <Route path="/DealAnalysis" element={<div />} />
-                <Route path="/LossAnalysis" element={<div />} />
-                <Route path="/cltv/dashboard" element={<div />} />
-                <Route path="/cltv/client/:companyName" element={<div />} />
-                <Route path="/leaderboard" element={<div />} />
-                <Route path="/dashboard/notifications" element={<div />} />
-                <Route path="/task-management" element={<div />} />
-                <Route path="/assigned-tasks" element={<div />} />
-                <Route path="/target-management" element={<div />} />
-                <Route path="/my-targets" element={<div />} />
-                <Route path="/mass-email" element={<div />} />
-                <Route path="/create-email" element={<div />} />
-                <Route path="/create-email/:id" element={<div />} />
-                <Route path="/scheduled-emails" element={<div />} />
-                <Route path="/email-history" element={<div />} />
-                <Route path="/meetings" element={<div />} />
-              </Route>
             </Routes>
             <ToastContainer />
           </div>
