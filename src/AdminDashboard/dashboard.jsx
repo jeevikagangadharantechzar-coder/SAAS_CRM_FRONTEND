@@ -668,7 +668,7 @@ const AdminDashboard = () => {
   const userCurrencySymbol = allowedCurrencies.find((c) => c.code === userCurrency)?.symbol || userCurrency;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activePreset, setActivePreset] = useState("7days");
+  const [activePreset, setActivePreset] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -786,6 +786,7 @@ const AdminDashboard = () => {
   const socket = useSocket();
 
   const getDateRange = useCallback((preset = activePreset, month = selectedMonth, year = selectedYear) => {
+    if (preset === "all") return { start: "", end: "" };
     if (preset === "today") return getTodayRange();
     if (preset === "7days") return getLast7Range();
     if (preset === "month") return getMonthRange(month, year);
@@ -794,6 +795,7 @@ const AdminDashboard = () => {
   }, [activePreset, selectedMonth, selectedYear]);
 
   const getPreviousRange = useCallback(() => {
+    if (activePreset === "all") return { start: "", end: "" };
     if (activePreset === "today") { const d = new Date(); d.setDate(d.getDate() - 1); return { start: formatDate(d), end: formatDate(d) }; }
     if (activePreset === "7days") { const e = new Date(); e.setDate(e.getDate() - 7); const s = new Date(); s.setDate(s.getDate() - 13); return { start: formatDate(s), end: formatDate(e) }; }
     if (activePreset === "month") { const d = new Date(selectedYear, selectedMonth, 1); d.setMonth(d.getMonth() - 1); return getMonthRange(d.getMonth(), d.getFullYear()); }
@@ -829,8 +831,13 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
 
+    const isAllTime = !range.start && !range.end;
+    const leadsParams = isAllTime
+      ? { overallLead: "all" }
+      : { start: range.start, end: range.end, limit: 9999, page: 1 };
+
     const [leadsRes, dealsRes, summaryRes, invoicesRes] = await Promise.all([
-      axios.get(`${API_URL}/leads/getAllLead`, { params: { start: range.start, end: range.end, limit: 9999, page: 1 }, headers }),
+      axios.get(`${API_URL}/leads/getAllLead`, { params: leadsParams, headers }),
       axios.get(`${API_URL}/deals/getAll`, { params: { start: range.start, end: range.end }, headers }),
       axios.get(`${API_URL}/dashboard/summary`, { params: { start: range.start, end: range.end }, headers }),
       axios.get(`${API_URL}/invoices/getInvoice`, { params: { start: range.start, end: range.end }, headers }),
@@ -889,6 +896,7 @@ const AdminDashboard = () => {
 
       const dealsWon = current.deals.filter((d) => {
         if (!isWonDeal(d.stage)) return false;
+        if (!range.start || !range.end) return true;
         const wonDate = new Date(d.wonAt || d.updatedAt || d.createdAt);
         const startDate = new Date(range.start);
         const endDate = new Date(range.end);
@@ -991,6 +999,7 @@ const AdminDashboard = () => {
           <Select value={activePreset} onValueChange={setActivePreset}>
             <SelectTrigger className="w-[160px] bg-white border"><SelectValue placeholder={t("dashboard.period.label")} /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="today">{t("dashboard.period.today")}</SelectItem>
               <SelectItem value="7days">{t("dashboard.period.last7days")}</SelectItem>
               <SelectItem value="month">{t("dashboard.period.thisMonth")}</SelectItem>
