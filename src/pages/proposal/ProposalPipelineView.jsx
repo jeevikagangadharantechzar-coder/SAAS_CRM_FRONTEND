@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { MoreVertical, Calendar, Trash2, Eye } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const ItemTypes = {
@@ -171,6 +171,7 @@ function Column({
 }
 
 function ProposalCard({ proposal, stageId, onDelete, onEditFollowUp }) {
+  const location = useLocation();
   const [{ isDragging }, dragRef] = useDrag({
     type: ItemTypes.PROPOSAL,
     item: { id: proposal._id, from: stageId },
@@ -206,7 +207,7 @@ function ProposalCard({ proposal, stageId, onDelete, onEditFollowUp }) {
         {menuOpen && (
           <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]">
             <Link
-              to={`/proposal/view/${proposal._id}`}
+              to={`/proposal/view/${proposal._id}${location.search}`}
               className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               <Eye className="w-4 h-4 mr-2" /> View Proposal
@@ -233,7 +234,7 @@ function ProposalCard({ proposal, stageId, onDelete, onEditFollowUp }) {
             {proposal.title || "Untitled Proposal"}
           </h3>
           <p className="text-xs text-blue-600 mt-0.5 line-clamp-1 hover:underline cursor-pointer">
-            <Link to={`/proposal/view/${proposal._id}`}>{proposal.dealTitle || "No Deal"}</Link>
+            <Link to={`/proposal/view/${proposal._id}${location.search}`}>{proposal.dealTitle || "No Deal"}</Link>
           </p>
         </div>
       </div>

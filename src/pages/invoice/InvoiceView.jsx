@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -21,6 +21,10 @@ import { toast } from "react-toastify";
 const InvoiceView = () => {
   const API_URL = import.meta.env.VITE_API_URL;
   const { id } = useParams();
+  const location = useLocation();
+  // Carries back whatever filters were active on the Invoices list page
+  // (createdDate/assignTo/filterStatus), the same way it arrived here.
+  const invoicesListPath = `/invoices${location.search}`;
 
   const [invoice, setInvoice] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
@@ -86,7 +90,7 @@ const InvoiceView = () => {
           <div>
             <div className="flex items-center text-slate-600 mb-3">
               <Link
-                to="/invoices"
+                to={invoicesListPath}
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft size={16} className="mr-1" />

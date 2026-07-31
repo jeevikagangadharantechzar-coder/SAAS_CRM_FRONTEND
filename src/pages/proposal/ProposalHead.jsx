@@ -30,6 +30,23 @@ const STATUS_STYLES = {
 
 const PAGE_SIZE = 10;
 
+// Local (not UTC) YYYY-MM-DD — date.toISOString() shifts to the previous day
+// in timezones ahead of UTC (e.g. IST), which corrupted the ?createdDate=
+// filter param and made it match nothing after a round trip.
+const toLocalDateStr = (date) => {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// `new Date("YYYY-MM-DD")` parses as UTC midnight, which shifts to the
+// previous local day in timezones behind UTC — parse the parts manually
+// so the restored date always matches what toLocalDateStr wrote.
+const fromLocalDateStr = (str) => {
+  if (!str) return null;
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 // Tour steps
 const tourSteps = [
   {
