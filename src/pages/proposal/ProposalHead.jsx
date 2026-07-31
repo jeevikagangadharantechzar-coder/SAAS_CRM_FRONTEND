@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import DatePicker from "react-datepicker";
 import { FaCalendarAlt, FaEye, FaTrash } from "react-icons/fa";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -29,6 +29,23 @@ const STATUS_STYLES = {
 };
 
 const PAGE_SIZE = 10;
+
+// Local (not UTC) YYYY-MM-DD — date.toISOString() shifts to the previous day
+// in timezones ahead of UTC (e.g. IST), which corrupted the ?createdDate=
+// filter param and made it match nothing after a round trip.
+const toLocalDateStr = (date) => {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// `new Date("YYYY-MM-DD")` parses as UTC midnight, which shifts to the
+// previous local day in timezones behind UTC — parse the parts manually
+// so the restored date always matches what toLocalDateStr wrote.
+const fromLocalDateStr = (str) => {
+  if (!str) return null;
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
 
 // Tour steps
 const tourSteps = [
@@ -88,10 +105,26 @@ const ProposalHeadContent = () => {
   const [error, setError] = useState("");
   const [openActionId, setOpenActionId] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+
+  // Same URL-persistence pattern as the Leads/Deals filters — every filter's
+  // onChange writes into the URL, so navigating to a proposal and back (or
+  // reloading) restores the exact filter state instead of resetting it.
+  const updateFilter = (key, value, setter) => {
+    setter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params);
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterCreatedDate, setFilterCreatedDate] = useState(null);
-  const [filterAssignee, setFilterAssignee] = useState("");
+  const [filterStatus, setFilterStatus] = useState(searchParams.get("status") || "");
+  const [filterCreatedDate, setFilterCreatedDate] = useState(
+    fromLocalDateStr(searchParams.get("createdDate"))
+  );
+  const [filterAssignee, setFilterAssignee] = useState(searchParams.get("assignee") || "");
   const [usersList, setUsersList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [draftCount, setDraftCount] = useState(0);
@@ -384,7 +417,7 @@ const ProposalHeadContent = () => {
       <div className="flex flex-col md:flex-row gap-8 mb-6 items-center tour-filters">
         <select
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          onChange={(e) => updateFilter("status", e.target.value, setFilterStatus)}
           className="border rounded-md px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400"
         >
           <option value="">All Status</option>
@@ -397,7 +430,7 @@ const ProposalHeadContent = () => {
 
         <select
           value={filterAssignee}
-          onChange={(e) => setFilterAssignee(e.target.value)}
+          onChange={(e) => updateFilter("assignee", e.target.value, setFilterAssignee)}
           className="border rounded-md px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400"
         >
           <option value="">All Assignees</option>
@@ -412,7 +445,11 @@ const ProposalHeadContent = () => {
           <DatePicker
             selected={filterCreatedDate}
             onChange={(date) => {
-              setFilterCreatedDate(date);
+              updateFilter(
+                "createdDate",
+                date ? toLocalDateStr(date) : "",
+                () => setFilterCreatedDate(date)
+              );
               setCurrentPage(1);
             }}
             customInput={
@@ -429,7 +466,7 @@ const ProposalHeadContent = () => {
           {filterCreatedDate && (
             <button
               onClick={() => {
-                setFilterCreatedDate(null);
+                updateFilter("createdDate", "", () => setFilterCreatedDate(null));
                 setCurrentPage(1);
               }}
               className="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
@@ -536,7 +573,7 @@ const ProposalHeadContent = () => {
                   </td>
                   <td className="px-4 py-3">{proposal.title}</td>
                   <td className="px-4 py-3 text-blue-600 hover:underline cursor-pointer tour-deal-title">
-                    <Link to={`/proposal/view/${proposal._id}`}>
+                    <Link to={`/proposal/view/${proposal._id}${location.search}`}>
                       {proposal.dealTitle || "No Deal"}
                     </Link>
                   </td>
@@ -588,7 +625,7 @@ const ProposalHeadContent = () => {
                         >
                           <button
                             onClick={() =>
-                              navigate(`/proposal/view/${proposal._id}`)
+                              navigate(`/proposal/view/${proposal._id}${location.search}`)
                             }
                             className="block px-4 py-2 w-full text-left hover:bg-gray-100"
                           >

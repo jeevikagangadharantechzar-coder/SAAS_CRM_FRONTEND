@@ -23,7 +23,7 @@ import {
 } from "../../components/ui/dialog";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
 import { Receipt, CheckCircle, Clock, FileText, Trash2, List, LayoutGrid, Download } from "lucide-react";
 import InvoicePipelineView from "./InvoicePipelineView";
 import { exportRowsToExcel } from "../../utils/excelImportExport";
@@ -58,6 +58,23 @@ const CustomCalendarInput = React.forwardRef(({ value, onClick, placeholder }, r
   </div>
 ));
 
+// Local (not UTC) YYYY-MM-DD — date.toISOString() shifts to the previous day
+// in timezones ahead of UTC (e.g. IST), which corrupted the ?createdDate=
+// filter param and made it match nothing after a round trip.
+const toLocalDateStr = (date) => {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// `new Date("YYYY-MM-DD")` parses as UTC midnight, which shifts to the
+// previous local day in timezones behind UTC — parse the parts manually
+// so the restored date always matches what toLocalDateStr wrote.
+const fromLocalDateStr = (str) => {
+  if (!str) return null;
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const CURRENCY_SYMBOLS = {
   USD: "$", EUR: "€", INR: "₹", GBP: "£", JPY: "¥",
   AUD: "A$", CAD: "C$", CHF: "CHF", MYR: "RM", AED: "د.إ",
@@ -68,16 +85,31 @@ const InvoiceHead = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
   const { openModal } = useModal();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const statusFilter = searchParams.get("status");
-  const [startDate, setStartDate] = useState(null);
+
+  // Same URL-persistence pattern as Leads/Deals/Proposals — every filter's
+  // onChange writes into the URL, so navigating to an invoice and back (or
+  // reloading) restores the exact filter state instead of resetting it.
+  // Uses "filterStatus" (not "status") so it never collides with the
+  // pending-invoices banner's own "status" query param above.
+  const updateFilter = (key, value, setter) => {
+    setter(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params);
+  };
+
+  const [startDate, setStartDate] = useState(fromLocalDateStr(searchParams.get("createdDate")));
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   // Invoices filtered by everything EXCEPT the status dropdown — used for summary cards
   const [statsInvoices, setStatsInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterAssignTo, setFilterAssignTo] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterAssignTo, setFilterAssignTo] = useState(searchParams.get("assignTo") || "");
+  const [filterStatus, setFilterStatus] = useState(searchParams.get("filterStatus") || "");
   const [filterMethod, setFilterMethod] = useState("");
   const [openIndex, setOpenIndex] = useState(null);
   const [viewMode, setViewMode] = useState("list");
@@ -444,7 +476,7 @@ const InvoiceHead = () => {
     }
   };
 
-  const handleInvoiceClick = (invoiceId) => navigate(`/${tenantSlug}/invoices/${invoiceId}`);
+  const handleInvoiceClick = (invoiceId) => navigate(`/${tenantSlug}/invoices/${invoiceId}${location.search}`);
 
   // ─── Pagination — slices filteredInvoices for TABLE only ─────────────────
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
@@ -680,7 +712,7 @@ const InvoiceHead = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div
           className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => setFilterStatus("")}
+          onClick={() => updateFilter("filterStatus", "", setFilterStatus)}
         >
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -699,7 +731,7 @@ const InvoiceHead = () => {
 
         <div
           className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => setFilterStatus("paid")}
+          onClick={() => updateFilter("filterStatus", "paid", setFilterStatus)}
         >
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -718,7 +750,7 @@ const InvoiceHead = () => {
 
         <div
           className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => setFilterStatus("unpaid")}
+          onClick={() => updateFilter("filterStatus", "unpaid", setFilterStatus)}
         >
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -737,7 +769,7 @@ const InvoiceHead = () => {
 
         <div
           className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all"
-          onClick={() => setFilterStatus("partially_paid")}
+          onClick={() => updateFilter("filterStatus", "partially_paid", setFilterStatus)}
         >
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -780,7 +812,13 @@ const InvoiceHead = () => {
         <div className="flex flex-wrap gap-4">
           <DatePicker
             selected={startDate}
-            onChange={(date) => setStartDate(date)}
+            onChange={(date) =>
+              updateFilter(
+                "createdDate",
+                date ? toLocalDateStr(date) : "",
+                () => setStartDate(date)
+              )
+            }
             dateFormat="dd-MM-yyyy"
             placeholderText="dd-mm-yyyy"
             showMonthDropdown
@@ -793,7 +831,7 @@ const InvoiceHead = () => {
           <select
             className="px-4 py-2 rounded-md bg-white border text-gray-600"
             value={filterAssignTo}
-            onChange={(e) => setFilterAssignTo(e.target.value)}
+            onChange={(e) => updateFilter("assignTo", e.target.value, setFilterAssignTo)}
           >
             <option value="">All Users</option>
             {[...new Set(invoices.map((inv) => inv.assignTo?._id))].map((userId) => {
@@ -808,7 +846,7 @@ const InvoiceHead = () => {
           <select
             className="px-4 py-2 rounded-md bg-white border text-gray-600"
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={(e) => updateFilter("filterStatus", e.target.value, setFilterStatus)}
           >
             <option value="">All Status</option>
             <option value="paid">Paid</option>
