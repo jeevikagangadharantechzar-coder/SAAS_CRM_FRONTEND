@@ -1,16 +1,63 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
-  ArrowLeft, Calendar, FileText, Mail, Paperclip, Tag, Clock,
-  User, Building, Building2, DollarSign, CheckCircle, XCircle, AlertCircle,
-  Download, Eye, ChevronRight, ChevronLeft, Phone, MapPin, Globe, Briefcase,
-  BookOpen, X, FileImage, File as FileIcon, Plus, Edit, RefreshCw, Archive, Save,
-  Sparkles, Activity, Send, AlertTriangle
+  ArrowLeft,
+  Calendar,
+  FileText,
+  Mail,
+  Paperclip,
+  Tag,
+  Clock,
+  User,
+  Building,
+  Building2,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Download,
+  Eye,
+  ChevronRight,
+  ChevronLeft,
+  Phone,
+  MapPin,
+  Globe,
+  Briefcase,
+  BookOpen,
+  X,
+  FileImage,
+  File as FileIcon,
+  Plus,
+  Edit,
+  RefreshCw,
+  Archive,
+  Save,
+  Sparkles,
+  Activity,
+  Send,
+  AlertTriangle,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
+  Legend,
+} from "recharts";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import PhoneInput from "react-phone-input-2";
@@ -92,9 +139,18 @@ const getFileExtension = (filename = "") =>
 const getFileCategory = (name = "", mimeType = "") => {
   const ext = getFileExtension(name);
   const mime = mimeType.toLowerCase();
-  if (mime.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+  if (
+    mime.startsWith("image/") ||
+    ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
+  )
+    return "image";
   if (mime === "application/pdf" || ext === "pdf") return "pdf";
-  if (mime === "text/plain" || mime === "text/csv" || ["txt", "csv"].includes(ext)) return "text";
+  if (
+    mime === "text/plain" ||
+    mime === "text/csv" ||
+    ["txt", "csv"].includes(ext)
+  )
+    return "text";
   return "other";
 };
 
@@ -121,7 +177,7 @@ const FILE_STYLES = {
 // Deal Analysis Scoring Engine & Stage Actions (Reused from Deal Analysis & Intelligence module)
 // ─────────────────────────────────────────────
 const STAGE_ACTIONS = {
-  "Qualification": {
+  Qualification: {
     actions: ["Manage Follow-ups & History", "Send Proposal"],
     nextStep: "Move to Proposal Sent",
     label: "Need Attention",
@@ -145,11 +201,11 @@ const STAGE_ACTIONS = {
     actions: ["Review Loss Reasons"],
     nextStep: "Analyze Loss",
     label: "Deal Lost",
-  }
+  },
 };
 
 const STAGE_BASE_SCORES = {
-  "Qualification": 0,
+  Qualification: 0,
   "Proposal Sent-Negotiation": 15,
   "Invoice Sent": 40,
   "Closed Won": 100,
@@ -173,7 +229,9 @@ const getDaysSinceUpdate = (updatedAt) => {
 
 const calculateFollowUpScore = (deal) => {
   if (!deal || !deal.followUpDate) return 0;
-  const daysUntilFollowUp = Math.ceil((new Date(deal.followUpDate) - new Date()) / (1000 * 60 * 60 * 24));
+  const daysUntilFollowUp = Math.ceil(
+    (new Date(deal.followUpDate) - new Date()) / (1000 * 60 * 60 * 24),
+  );
   if (daysUntilFollowUp < -365) return -50;
   if (daysUntilFollowUp < -90) return -40;
   if (daysUntilFollowUp < -30) return -35;
@@ -207,7 +265,15 @@ const calculateStageScore = (deal) => {
   return STAGE_BASE_SCORES[deal.stage] || 0;
 };
 
-const calculateDealAnalysisScore = (deal, weights = { followUpWeight: 25, activityWeight: 25, valueWeight: 20, stageWeight: 30 }) => {
+const calculateDealAnalysisScore = (
+  deal,
+  weights = {
+    followUpWeight: 25,
+    activityWeight: 25,
+    valueWeight: 20,
+    stageWeight: 30,
+  },
+) => {
   if (!deal) return 0;
   if (deal.stage === "Closed Won") return 100;
   if (deal.stage === "Closed Lost") return 0;
@@ -219,10 +285,10 @@ const calculateDealAnalysisScore = (deal, weights = { followUpWeight: 25, activi
   const stageScore = calculateStageScore(deal);
 
   const weightedScore =
-    (followUpScore * (weights.followUpWeight / 100)) +
-    (valueScore * (weights.valueWeight / 100)) +
-    (stageScore * (weights.stageWeight / 100)) +
-    (activityScore * (weights.activityWeight / 100));
+    followUpScore * (weights.followUpWeight / 100) +
+    valueScore * (weights.valueWeight / 100) +
+    stageScore * (weights.stageWeight / 100) +
+    activityScore * (weights.activityWeight / 100);
 
   const finalScore = baseScore + weightedScore;
   return Math.max(0, Math.min(100, Math.round(finalScore)));
@@ -232,32 +298,58 @@ const getDealAnalysisFactors = (deal) => {
   if (!deal) return [];
   const factors = [];
   const followUpScore = calculateFollowUpScore(deal);
-  if (followUpScore !== 0) factors.push({ factor: "Follow-up Recency", impact: followUpScore });
+  if (followUpScore !== 0)
+    factors.push({ factor: "Follow-up Recency", impact: followUpScore });
   const activityScore = calculateActivityScore(deal);
-  if (activityScore !== 0) factors.push({ factor: "Activity Gap", impact: activityScore });
+  if (activityScore !== 0)
+    factors.push({ factor: "Activity Gap", impact: activityScore });
   const valueScore = calculateValueScore(deal);
-  if (valueScore !== 0) factors.push({ factor: "Deal Value Tier", impact: valueScore });
+  if (valueScore !== 0)
+    factors.push({ factor: "Deal Value Tier", impact: valueScore });
   const stageScore = calculateStageScore(deal);
-  if (stageScore !== 0) factors.push({ factor: "Stage Bonus", impact: stageScore });
+  if (stageScore !== 0)
+    factors.push({ factor: "Stage Bonus", impact: stageScore });
   return factors;
 };
 
-const getWeightedScoreBreakdown = (deal, weights = { followUpWeight: 25, activityWeight: 25, valueWeight: 20, stageWeight: 30 }) => {
+const getWeightedScoreBreakdown = (
+  deal,
+  weights = {
+    followUpWeight: 25,
+    activityWeight: 25,
+    valueWeight: 20,
+    stageWeight: 30,
+  },
+) => {
   if (!deal) return { base: 50, components: [], total: 50 };
 
   if (deal.stage === "Closed Won") {
     return {
       base: 100,
-      components: [{ name: "Closed Won Status", detail: "Deal successfully won and closed", pts: 100 }],
-      total: 100
+      components: [
+        {
+          name: "Closed Won Status",
+          detail: "Deal successfully won and closed",
+          pts: 100,
+        },
+      ],
+      total: 100,
     };
   }
 
   if (deal.stage === "Closed Lost") {
     return {
       base: 0,
-      components: [{ name: "Closed Lost Status", detail: deal.lossReason ? `Loss Reason: ${deal.lossReason}` : "Deal closed lost", pts: 0 }],
-      total: 0
+      components: [
+        {
+          name: "Closed Lost Status",
+          detail: deal.lossReason
+            ? `Loss Reason: ${deal.lossReason}`
+            : "Deal closed lost",
+          pts: 0,
+        },
+      ],
+      total: 0,
     };
   }
 
@@ -278,17 +370,22 @@ const getWeightedScoreBreakdown = (deal, weights = { followUpWeight: 25, activit
     components.push({
       name: `Stage Bonus ("${deal.stage}")`,
       detail: `30% weight of ${stageRaw} stage pts`,
-      pts: stagePts
+      pts: stagePts,
     });
   }
 
   if (deal.followUpDate) {
-    const daysUntil = Math.ceil((new Date(deal.followUpDate) - new Date()) / 86400000);
-    const detailText = daysUntil < 0 ? `${Math.abs(daysUntil)} day(s) overdue` : `Scheduled in ${daysUntil} day(s)`;
+    const daysUntil = Math.ceil(
+      (new Date(deal.followUpDate) - new Date()) / 86400000,
+    );
+    const detailText =
+      daysUntil < 0
+        ? `${Math.abs(daysUntil)} day(s) overdue`
+        : `Scheduled in ${daysUntil} day(s)`;
     components.push({
       name: "Follow-up Recency",
       detail: `${detailText} (25% weight of ${followUpRaw >= 0 ? "+" : ""}${followUpRaw} pts)`,
-      pts: followUpPts
+      pts: followUpPts,
     });
   }
 
@@ -297,7 +394,7 @@ const getWeightedScoreBreakdown = (deal, weights = { followUpWeight: 25, activit
     components.push({
       name: "Activity Gap",
       detail: `Last updated ${daysInactive} day(s) ago (25% weight)`,
-      pts: activityPts
+      pts: activityPts,
     });
   }
 
@@ -306,11 +403,14 @@ const getWeightedScoreBreakdown = (deal, weights = { followUpWeight: 25, activit
     components.push({
       name: "Deal Value Tier",
       detail: `Value ${deal.currency || "USD"} ${numericVal.toLocaleString()} (20% weight)`,
-      pts: valuePts
+      pts: valuePts,
     });
   }
 
-  const total = Math.max(0, Math.min(100, base + stagePts + followUpPts + activityPts + valuePts));
+  const total = Math.max(
+    0,
+    Math.min(100, base + stagePts + followUpPts + activityPts + valuePts),
+  );
 
   return { base, components, total };
 };
@@ -327,21 +427,69 @@ const PROPOSAL_STATUS_STYLES = {
 // `activeTab === "activity"` panel). Keys must match dealDetail.controller.js's
 // `getActivityLog` event `type` field exactly.
 const ACTIVITY_TYPE_META = {
-  stage_change:            { icon: Tag,         bg: "bg-indigo-100", iconColor: "text-indigo-600" },
-  assignee_changed:        { icon: User,        bg: "bg-violet-100", iconColor: "text-violet-600" },
-  followup:                { icon: Calendar,    bg: "bg-purple-100", iconColor: "text-purple-600" },
-  attachment_uploaded:     { icon: Paperclip,   bg: "bg-blue-100",   iconColor: "text-blue-600" },
-  note_added:              { icon: Edit,        bg: "bg-yellow-100", iconColor: "text-yellow-600" },
-  proposal_sent:           { icon: FileText,    bg: "bg-teal-100",   iconColor: "text-teal-600" },
-  proposal_status_changed: { icon: FileText,    bg: "bg-teal-100",   iconColor: "text-teal-600" },
-  invoice_created:         { icon: DollarSign,  bg: "bg-green-100",  iconColor: "text-green-600" },
-  invoice_status_changed:  { icon: DollarSign,  bg: "bg-green-100",  iconColor: "text-green-600" },
-  meeting_scheduled:       { icon: Calendar,    bg: "bg-pink-100",   iconColor: "text-pink-600" },
-  meeting_cancelled:       { icon: XCircle,     bg: "bg-red-100",    iconColor: "text-red-600" },
-  email_sent:              { icon: Mail,        bg: "bg-cyan-100",   iconColor: "text-cyan-600" },
-  email_scheduled:         { icon: Mail,        bg: "bg-cyan-100",   iconColor: "text-cyan-600" },
-  email_cancelled:         { icon: XCircle,     bg: "bg-red-100",    iconColor: "text-red-600" },
-  default:                 { icon: Clock,       bg: "bg-slate-100",  iconColor: "text-slate-600" },
+  stage_change: {
+    icon: Tag,
+    bg: "bg-indigo-100",
+    iconColor: "text-indigo-600",
+  },
+  assignee_changed: {
+    icon: User,
+    bg: "bg-violet-100",
+    iconColor: "text-violet-600",
+  },
+  followup: {
+    icon: Calendar,
+    bg: "bg-purple-100",
+    iconColor: "text-purple-600",
+  },
+  attachment_uploaded: {
+    icon: Paperclip,
+    bg: "bg-blue-100",
+    iconColor: "text-blue-600",
+  },
+  note_added: { icon: Edit, bg: "bg-yellow-100", iconColor: "text-yellow-600" },
+  proposal_sent: {
+    icon: FileText,
+    bg: "bg-teal-100",
+    iconColor: "text-teal-600",
+  },
+  proposal_status_changed: {
+    icon: FileText,
+    bg: "bg-teal-100",
+    iconColor: "text-teal-600",
+  },
+  invoice_created: {
+    icon: DollarSign,
+    bg: "bg-green-100",
+    iconColor: "text-green-600",
+  },
+  invoice_status_changed: {
+    icon: DollarSign,
+    bg: "bg-green-100",
+    iconColor: "text-green-600",
+  },
+  meeting_scheduled: {
+    icon: Calendar,
+    bg: "bg-pink-100",
+    iconColor: "text-pink-600",
+  },
+  meeting_cancelled: {
+    icon: XCircle,
+    bg: "bg-red-100",
+    iconColor: "text-red-600",
+  },
+  email_sent: { icon: Mail, bg: "bg-cyan-100", iconColor: "text-cyan-600" },
+  email_scheduled: {
+    icon: Mail,
+    bg: "bg-cyan-100",
+    iconColor: "text-cyan-600",
+  },
+  email_cancelled: {
+    icon: XCircle,
+    bg: "bg-red-100",
+    iconColor: "text-red-600",
+  },
+  default: { icon: Clock, bg: "bg-slate-100", iconColor: "text-slate-600" },
 };
 
 // ─────────────────────────────────────────────
@@ -486,8 +634,12 @@ const NotesPopup = ({ deal, onClose }) => {
           <div className="flex items-center gap-3 min-w-0">
             <BookOpen size={20} className="text-slate-500 flex-shrink-0" />
             <div className="min-w-0">
-              <span className="font-medium text-slate-900 text-sm block">Notes</span>
-              <span className="text-xs text-slate-500">{formatNotesMeta(deal)}</span>
+              <span className="font-medium text-slate-900 text-sm block">
+                Notes
+              </span>
+              <span className="text-xs text-slate-500">
+                {formatNotesMeta(deal)}
+              </span>
             </div>
           </div>
           <button
@@ -499,7 +651,9 @@ const NotesPopup = ({ deal, onClose }) => {
           </button>
         </div>
         <div className="flex-1 overflow-auto p-5">
-          <p className="text-slate-800 whitespace-pre-wrap break-words">{deal.notes}</p>
+          <p className="text-slate-800 whitespace-pre-wrap break-words">
+            {deal.notes}
+          </p>
         </div>
       </div>
     </div>
@@ -521,9 +675,13 @@ function Pipeline_modal_view() {
   // Swipe navigation between deals — the ordered list of {_id, dealName}
   // this deal was opened from (All Deals table, Rejected Deals, or a
   // Pipeline kanban column), passed via navigation state by the caller.
-  const dealSequence = useMemo(() => location.state?.dealSequence || [], [location.state]);
+  const dealSequence = useMemo(
+    () => location.state?.dealSequence || [],
+    [location.state],
+  );
   const dealSequenceIndex = dealSequence.findIndex((d) => d._id === dealId);
-  const prevDealInfo = dealSequenceIndex > 0 ? dealSequence[dealSequenceIndex - 1] : null;
+  const prevDealInfo =
+    dealSequenceIndex > 0 ? dealSequence[dealSequenceIndex - 1] : null;
   const nextDealInfo =
     dealSequenceIndex >= 0 && dealSequenceIndex < dealSequence.length - 1
       ? dealSequence[dealSequenceIndex + 1]
@@ -532,6 +690,35 @@ function Pipeline_modal_view() {
   const swipeContainerRef = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
   const [isSwipeAnimating, setIsSwipeAnimating] = useState(false);
+
+  // Tracks which dealId `deal`/`isLoading`/the swipe transform currently
+  // correspond to. When the route moves to a NEW dealId, this is caught and
+  // reacted to RIGHT HERE, synchronously, during this same render — not via
+  // a useLayoutEffect that runs one render pass later. This is React's own
+  // documented pattern for "adjusting state when a prop changes" (call a
+  // setter directly in the render body, guarded by a condition comparing
+  // against the previous value): React sees the update, throws away this
+  // render's output before it's ever committed, and immediately re-runs the
+  // component with the corrected state. A useLayoutEffect gets to the same
+  // "no visible flash" result, but only by first committing the stale render
+  // to the DOM and then correcting it with a second commit before paint —
+  // two renders/commits for one visual frame. This collapses it to one.
+  const [syncedDealId, setSyncedDealId] = useState(dealId);
+  if (dealId !== syncedDealId) {
+    setSyncedDealId(dealId);
+    setSwipeX(0);
+    setIsSwipeAnimating(false);
+
+    const prefetched = location.state?.prefetchedDeal;
+    if (prefetched && prefetched._id === dealId) {
+      setDeal(prefetched);
+      setIsLoading(false);
+    } else {
+      setDeal(null);
+      setIsLoading(true);
+    }
+  }
+
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   // Live offset shared by both the mouse-drag and trackpad-wheel paths, read
@@ -621,6 +808,7 @@ function Pipeline_modal_view() {
       setIsSwipeTransitioning(true);
       lastSwipeDirectionRef.current = direction;
 
+      setDeal(null);
       const token = getAuthToken();
       const prefetchPromise = axios
         .get(`${API_URL}/deals/${target._id}`, {
@@ -635,7 +823,9 @@ function Pipeline_modal_view() {
         prefetchPromise,
         new Promise((resolve) => setTimeout(resolve, MAX_PREFETCH_WAIT_MS)),
       ]);
-      const minExitWait = new Promise((resolve) => setTimeout(resolve, SWIPE_DURATION_MS));
+      const minExitWait = new Promise((resolve) =>
+        setTimeout(resolve, SWIPE_DURATION_MS),
+      );
 
       Promise.all([boundedPrefetch, minExitWait]).then(([prefetchedDeal]) => {
         navigate(`/${tenantSlug}/Pipelineview/${target._id}`, {
@@ -643,7 +833,7 @@ function Pipeline_modal_view() {
         });
       });
     },
-    [nextDealInfo, prevDealInfo, navigate, tenantSlug, dealSequence, API_URL]
+    [nextDealInfo, prevDealInfo, navigate, tenantSlug, dealSequence, API_URL],
   );
 
   useEffect(() => {
@@ -734,7 +924,10 @@ function Pipeline_modal_view() {
     // (autoscroll) or right-click (context menu) shouldn't be hijacked into
     // a swipe gesture.
     if (e.button !== 0) return;
-    if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+    if (
+      e.target.closest("input, textarea, select, button, a, [contenteditable]")
+    )
+      return;
     isDraggingRef.current = true;
     setIsSwipeAnimating(false);
     dragStartXRef.current = e.clientX;
@@ -752,23 +945,53 @@ function Pipeline_modal_view() {
   // Stable ([] deps): everything it reads is a ref or a plain numeric
   // constant, never a value that goes stale, so it never needs to be
   // recreated — which matters for the callback-ref attachment below.
+  //
+  // recentHorizontalIntentUntilRef bridges a gap that no amount of state-
+  // timing fixes elsewhere in this component can reach: a real two-finger
+  // trackpad swipe is never perfectly axis-aligned, so individual wheel
+  // events mid-gesture can have deltaY momentarily exceed deltaX just from
+  // natural finger drift. Judging horizontal-vs-vertical per event alone
+  // meant THAT one event skipped preventDefault entirely (see below) —
+  // which is enough for Chromium's own compositor-level "swipe to navigate
+  // back/forward" gesture recognizer to see an un-intercepted event and
+  // render its native cached-page-snapshot transition, completely outside
+  // React. That native preview is what actually looked like "the current
+  // deal's details briefly reappear" — a browser-level animation this
+  // component never ran and can't cancel once started, not a React re-render
+  // race. Once a wheel event is clearly horizontal, treat the next 150ms as
+  // still mid-gesture and keep suppressing the browser regardless of any one
+  // event's own axis, while still leaving a brand-new, genuinely vertical
+  // scroll (no recent horizontal event to inherit the window from) alone.
+  const recentHorizontalIntentUntilRef = useRef(0);
+
   const handleWheelEvent = useCallback((e) => {
-    const usingShiftFallback = e.shiftKey && Math.abs(e.deltaX) < Math.abs(e.deltaY);
-    const isHorizontalIntent = usingShiftFallback || Math.abs(e.deltaX) >= Math.abs(e.deltaY);
-    // Plain vertical page-scroll (no shift, deltaY-dominant) — leave it alone.
-    if (!isHorizontalIntent) return;
+    // While locked (mid swipe-transition) or actively dragging, swallow
+    // EVERY wheel event unconditionally — don't check its own deltaX/deltaY
+    // axis. Trailing trackpad momentum can decay into a deltaY-dominant
+    // event at any point; if even one such event reaches the browser
+    // un-prevented, Chromium's native swipe-navigate gesture takes over and
+    // renders its own snapshot preview of the CURRENT (old) deal — which is
+    // exactly the "current deal briefly reappears" symptom, and it happens
+    // entirely outside our own animation/state code.
+    if (isSwipeLockedRef.current || isDraggingRef.current) {
+      e.preventDefault();
+      return;
+    }
 
-    // Always suppress the browser's own horizontal-scroll / swipe-to-
-    // navigate-back-forward gesture for anything shaped like a deliberate
-    // horizontal swipe — even while we're about to ignore it ourselves
-    // (locked mid-transition, or already dragging). Skipping this when
-    // locked was the actual bug: those un-prevented trailing wheel events
-    // let Chrome's native trackpad-swipe navigation take over instead,
-    // producing an instant, unanimated jump between deals that our own
-    // animation code never even ran for.
+    const usingShiftFallback =
+      e.shiftKey && Math.abs(e.deltaX) < Math.abs(e.deltaY);
+    const isHorizontalIntent =
+      usingShiftFallback || Math.abs(e.deltaX) >= Math.abs(e.deltaY);
+    const now = performance.now();
+    const isMidHorizontalGesture = now < recentHorizontalIntentUntilRef.current;
+
+    if (!isHorizontalIntent && !isMidHorizontalGesture) return;
+
+    if (isHorizontalIntent) {
+      recentHorizontalIntentUntilRef.current = now + 300; // widened from 150ms
+    }
+
     e.preventDefault();
-
-    if (isSwipeLockedRef.current || isDraggingRef.current) return;
 
     const rawDelta = usingShiftFallback ? e.deltaY : e.deltaX;
     const offset = swipeOffsetRef.current + rawDelta;
@@ -823,7 +1046,7 @@ function Pipeline_modal_view() {
         node.addEventListener("wheel", handleWheelEvent, { passive: false });
       }
     },
-    [handleWheelEvent]
+    [handleWheelEvent],
   );
 
   // Deal Score — provisional placeholder score shown top-right in the header
@@ -836,7 +1059,10 @@ function Pipeline_modal_view() {
   const [isActivityLoading, setIsActivityLoading] = useState(false);
 
   // Details tab — pending Tasks & Targets highlight banner
-  const [highlights, setHighlights] = useState({ pendingTasks: [], pendingTargets: [] });
+  const [highlights, setHighlights] = useState({
+    pendingTasks: [],
+    pendingTargets: [],
+  });
 
   // Notes tab
   const [notes, setNotes] = useState([]);
@@ -868,7 +1094,8 @@ function Pipeline_modal_view() {
 
   // Meeting tab — reuses the real Meetings page's own hook, so create,
   // alarms, and toasts behave identically to the actual Meetings page.
-  const { createMeeting, cancelMeeting, googleConfigured, zoomConfigured } = useMeetings();
+  const { createMeeting, cancelMeeting, googleConfigured, zoomConfigured } =
+    useMeetings();
 
   // Use Lost Deal Modal hook — same one CreateDeal.jsx uses, so switching a
   // deal to Closed Lost always captures a reason regardless of which screen
@@ -892,7 +1119,7 @@ function Pipeline_modal_view() {
     followUpDate: null,
     followUpComment: "",
     previousOutcome: "",
-    previousNotes: ""
+    previousNotes: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [followUpPage, setFollowUpPage] = useState(1);
@@ -926,21 +1153,6 @@ function Pipeline_modal_view() {
     return false;
   };
 
-  // Reset the exit transform BEFORE the browser paints the freshly-mounted
-  // (key={dealId}) card, so it never has a chance to render with the stale
-  // inline transform/transition left over from the previous card's exit —
-  // that's what was making the CSS entry @keyframes animation and the old
-  // inline transform fight over the same property on first paint, with
-  // whichever one "won" depending on how much main-thread work happened to
-  // land between the DOM mutation and the passive-effect reset. A plain
-  // useEffect runs after paint, which is what created that window;
-  // useLayoutEffect runs synchronously after the DOM mutation but before
-  // the browser paints, so there's no stale value to ever be visible.
-  useLayoutEffect(() => {
-    setSwipeX(0);
-    setIsSwipeAnimating(false);
-  }, [dealId]);
-
   useEffect(() => {
     if (!dealId) return;
     setIsSwipeTransitioning(false);
@@ -953,14 +1165,10 @@ function Pipeline_modal_view() {
       isSwipeLockedRef.current = false;
     }, SWIPE_COOLDOWN_MS);
 
-    // A swipe transition prefetches the target deal before navigating here —
-    // when that data is already in hand, use it immediately instead of
-    // re-fetching and showing a loading state for data we already have.
+    // The layout effect above already used the prefetched deal, if any, was
+    // available in time — only need an actual fetch here when it wasn't.
     const prefetched = location.state?.prefetchedDeal;
-    if (prefetched && prefetched._id === dealId) {
-      setDeal(prefetched);
-      setIsLoading(false);
-    } else {
+    if (!prefetched || prefetched._id !== dealId) {
       fetchDealDetails();
     }
 
@@ -977,14 +1185,16 @@ function Pipeline_modal_view() {
         return;
       }
 
-     const response = await axios.get(`${API_URL}/deals/${dealId}`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
+      const response = await axios.get(`${API_URL}/deals/${dealId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setDeal(response.data);
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to fetch deal details:", err);
-        toast.error(err.response?.data?.message || "Failed to load deal details");
+        toast.error(
+          err.response?.data?.message || "Failed to load deal details",
+        );
       }
     } finally {
       setIsLoading(false);
@@ -994,7 +1204,9 @@ function Pipeline_modal_view() {
   // ── Deal Details page additions: score, activity, notes, highlights,
   // proposals, invoices, meetings, emails — each a live read against its own
   // backend module, never duplicated/cached beyond this component's state.
-  const authHeader = () => ({ headers: { Authorization: `Bearer ${getAuthToken()}` } });
+  const authHeader = () => ({
+    headers: { Authorization: `Bearer ${getAuthToken()}` },
+  });
 
   // Upload new attachments directly from this tab — same
   // PATCH /deals/update-deal/:id endpoint the Create/Edit Deal form already
@@ -1009,9 +1221,14 @@ function Pipeline_modal_view() {
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("attachments", f));
       await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
-        headers: { Authorization: `Bearer ${getAuthToken()}`, "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
-      toast.success(files.length > 1 ? "Attachments uploaded" : "Attachment uploaded");
+      toast.success(
+        files.length > 1 ? "Attachments uploaded" : "Attachment uploaded",
+      );
       fetchDealDetails();
       fetchActivity();
     } catch (err) {
@@ -1024,7 +1241,10 @@ function Pipeline_modal_view() {
 
   const fetchDealScore = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/deals/${dealId}/score`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/score`,
+        authHeader(),
+      );
       setDealScore(res.data.score);
     } catch (err) {
       console.error("Failed to fetch deal score:", err);
@@ -1033,8 +1253,14 @@ function Pipeline_modal_view() {
 
   const fetchHighlights = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/deals/${dealId}/highlights`, authHeader());
-      setHighlights({ pendingTasks: res.data.pendingTasks || [], pendingTargets: res.data.pendingTargets || [] });
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/highlights`,
+        authHeader(),
+      );
+      setHighlights({
+        pendingTasks: res.data.pendingTasks || [],
+        pendingTargets: res.data.pendingTargets || [],
+      });
     } catch (err) {
       console.error("Failed to fetch deal highlights:", err);
     }
@@ -1043,7 +1269,10 @@ function Pipeline_modal_view() {
   const fetchActivity = useCallback(async () => {
     try {
       setIsActivityLoading(true);
-      const res = await axios.get(`${API_URL}/deals/${dealId}/activity`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/activity`,
+        authHeader(),
+      );
       setActivityFeed(res.data.activity || []);
     } catch (err) {
       console.error("Failed to fetch activity log:", err);
@@ -1056,7 +1285,10 @@ function Pipeline_modal_view() {
   const fetchNotes = useCallback(async () => {
     try {
       setIsNotesLoading(true);
-      const res = await axios.get(`${API_URL}/deals/${dealId}/notes`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/notes`,
+        authHeader(),
+      );
       setNotes(res.data.notes || []);
     } catch (err) {
       console.error("Failed to fetch notes:", err);
@@ -1070,7 +1302,11 @@ function Pipeline_modal_view() {
     if (!newNoteText.trim()) return;
     try {
       setIsAddingNote(true);
-      const res = await axios.post(`${API_URL}/deals/${dealId}/notes`, { text: newNoteText.trim() }, authHeader());
+      const res = await axios.post(
+        `${API_URL}/deals/${dealId}/notes`,
+        { text: newNoteText.trim() },
+        authHeader(),
+      );
       setNotes((prev) => [res.data.note, ...prev]);
       setNewNoteText("");
       toast.success("Note added");
@@ -1086,7 +1322,10 @@ function Pipeline_modal_view() {
   const fetchDealProposals = useCallback(async () => {
     try {
       setIsProposalsLoading(true);
-      const res = await axios.get(`${API_URL}/deals/${dealId}/proposals`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/proposals`,
+        authHeader(),
+      );
       setDealProposals(res.data || []);
     } catch (err) {
       console.error("Failed to fetch proposals:", err);
@@ -1101,20 +1340,33 @@ function Pipeline_modal_view() {
   // identical to changing it on the real Proposal page.
   const handleProposalStatusChange = async (proposalId, newStatus) => {
     try {
-      await axios.put(`${API_URL}/proposal/updatestatus/${proposalId}`, { status: newStatus }, authHeader());
-      setDealProposals((prev) => prev.map((p) => (p._id === proposalId ? { ...p, status: newStatus } : p)));
+      await axios.put(
+        `${API_URL}/proposal/updatestatus/${proposalId}`,
+        { status: newStatus },
+        authHeader(),
+      );
+      setDealProposals((prev) =>
+        prev.map((p) =>
+          p._id === proposalId ? { ...p, status: newStatus } : p,
+        ),
+      );
       toast.success("Proposal status updated");
       fetchActivity();
     } catch (err) {
       console.error("Failed to update proposal status:", err);
-      toast.error(err.response?.data?.error || "Failed to update proposal status");
+      toast.error(
+        err.response?.data?.error || "Failed to update proposal status",
+      );
     }
   };
 
   const fetchDealInvoices = useCallback(async () => {
     try {
       setIsInvoicesLoading(true);
-      const res = await axios.get(`${API_URL}/deals/${dealId}/invoices`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/invoices`,
+        authHeader(),
+      );
       setDealInvoices(res.data || []);
     } catch (err) {
       console.error("Failed to fetch invoices:", err);
@@ -1127,7 +1379,10 @@ function Pipeline_modal_view() {
   const fetchDealMeetings = useCallback(async () => {
     try {
       setIsMeetingsLoading(true);
-      const res = await axios.get(`${API_URL}/deals/${dealId}/meetings`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/meetings`,
+        authHeader(),
+      );
       setDealMeetings(res.data || []);
     } catch (err) {
       console.error("Failed to fetch meetings:", err);
@@ -1140,7 +1395,10 @@ function Pipeline_modal_view() {
   const fetchDealEmails = useCallback(async () => {
     try {
       setIsEmailsLoading(true);
-      const res = await axios.get(`${API_URL}/deals/${dealId}/emails`, authHeader());
+      const res = await axios.get(
+        `${API_URL}/deals/${dealId}/emails`,
+        authHeader(),
+      );
       setDealEmails(res.data || []);
     } catch (err) {
       console.error("Failed to fetch emails:", err);
@@ -1168,10 +1426,18 @@ function Pipeline_modal_view() {
   const handleSendInvoiceEmail = async (invoiceId) => {
     try {
       setSendingInvoiceEmailId(invoiceId);
-      await axios.post(`${API_URL}/invoices/sendEmail/${invoiceId}`, {}, authHeader());
+      await axios.post(
+        `${API_URL}/invoices/sendEmail/${invoiceId}`,
+        {},
+        authHeader(),
+      );
       toast.success("Invoice email sent");
       try {
-        await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, { stage: "Invoice Sent" }, authHeader());
+        await axios.patch(
+          `${API_URL}/deals/update-deal/${dealId}`,
+          { stage: "Invoice Sent" },
+          authHeader(),
+        );
         fetchDealDetails();
       } catch (_) {}
       fetchDealInvoices();
@@ -1221,17 +1487,40 @@ function Pipeline_modal_view() {
     if (activeTab === "deal_score") {
       if (activityFeed.length === 0 && !isActivityLoading) fetchActivity();
       if (notes.length === 0 && !isNotesLoading) fetchNotes();
-      if (dealProposals.length === 0 && !isProposalsLoading) fetchDealProposals();
+      if (dealProposals.length === 0 && !isProposalsLoading)
+        fetchDealProposals();
       if (dealInvoices.length === 0 && !isInvoicesLoading) fetchDealInvoices();
       if (dealMeetings.length === 0 && !isMeetingsLoading) fetchDealMeetings();
       if (dealEmails.length === 0 && !isEmailsLoading) fetchDealEmails();
     }
-    if (activeTab === "activity" && activityFeed.length === 0 && !isActivityLoading) fetchActivity();
-    if (activeTab === "notes" && notes.length === 0 && !isNotesLoading) fetchNotes();
-    if (activeTab === "proposal" && dealProposals.length === 0 && !isProposalsLoading) fetchDealProposals();
-    if (activeTab === "invoice" && dealInvoices.length === 0 && !isInvoicesLoading) fetchDealInvoices();
-    if (activeTab === "meeting" && dealMeetings.length === 0 && !isMeetingsLoading) fetchDealMeetings();
-    if (activeTab === "email" && dealEmails.length === 0 && !isEmailsLoading) fetchDealEmails();
+    if (
+      activeTab === "activity" &&
+      activityFeed.length === 0 &&
+      !isActivityLoading
+    )
+      fetchActivity();
+    if (activeTab === "notes" && notes.length === 0 && !isNotesLoading)
+      fetchNotes();
+    if (
+      activeTab === "proposal" &&
+      dealProposals.length === 0 &&
+      !isProposalsLoading
+    )
+      fetchDealProposals();
+    if (
+      activeTab === "invoice" &&
+      dealInvoices.length === 0 &&
+      !isInvoicesLoading
+    )
+      fetchDealInvoices();
+    if (
+      activeTab === "meeting" &&
+      dealMeetings.length === 0 &&
+      !isMeetingsLoading
+    )
+      fetchDealMeetings();
+    if (activeTab === "email" && dealEmails.length === 0 && !isEmailsLoading)
+      fetchDealEmails();
   }, [activeTab, dealId]);
 
   // Handle schedule follow-up
@@ -1242,7 +1531,10 @@ function Pipeline_modal_view() {
         toast.error("Please select an outcome for the previous follow-up");
         return;
       }
-      if (!followUpData.previousNotes || followUpData.previousNotes.trim() === "") {
+      if (
+        !followUpData.previousNotes ||
+        followUpData.previousNotes.trim() === ""
+      ) {
         toast.error("Please provide notes for the previous follow-up");
         return;
       }
@@ -1272,25 +1564,34 @@ function Pipeline_modal_view() {
         // Include the previous follow-up data if rescheduling
         previousFollowUpDate: deal.followUpDate || null,
         previousOutcome: followUpData.previousOutcome || "",
-        previousNotes: followUpData.previousNotes || ""
+        previousNotes: followUpData.previousNotes || "",
       };
 
       const response = await axios.post(
-  `${API_URL}/deals/schedule-followup/${dealId}`, 
-  payload,
-  { headers: { Authorization: `Bearer ${token}` } }
-);
+        `${API_URL}/deals/schedule-followup/${dealId}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-      toast.success(response.data.message || "Follow-up scheduled successfully");
+      toast.success(
+        response.data.message || "Follow-up scheduled successfully",
+      );
       setIsFollowUpModalOpen(false);
-      setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
-      
+      setFollowUpData({
+        followUpDate: null,
+        followUpComment: "",
+        previousOutcome: "",
+        previousNotes: "",
+      });
+
       // Refresh deal details to show updated follow-up
       fetchDealDetails();
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to schedule follow-up:", err);
-        toast.error(err.response?.data?.message || "Failed to schedule follow-up");
+        toast.error(
+          err.response?.data?.message || "Failed to schedule follow-up",
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -1303,7 +1604,10 @@ function Pipeline_modal_view() {
       toast.error("Please select an outcome for the previous follow-up");
       return;
     }
-    if (!followUpData.previousNotes || followUpData.previousNotes.trim() === "") {
+    if (
+      !followUpData.previousNotes ||
+      followUpData.previousNotes.trim() === ""
+    ) {
       toast.error("Please provide notes for the previous follow-up");
       return;
     }
@@ -1319,25 +1623,34 @@ function Pipeline_modal_view() {
 
       const payload = {
         outcome: followUpData.previousOutcome,
-        notes: followUpData.previousNotes
+        notes: followUpData.previousNotes,
       };
 
       const response = await axios.post(
         `${API_URL}/deals/${dealId}/complete-followup`,
         payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      toast.success(response.data.message || "Follow-up completed successfully");
+      toast.success(
+        response.data.message || "Follow-up completed successfully",
+      );
       setIsFollowUpModalOpen(false);
-      setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
-      
+      setFollowUpData({
+        followUpDate: null,
+        followUpComment: "",
+        previousOutcome: "",
+        previousNotes: "",
+      });
+
       // Refresh deal details
       fetchDealDetails();
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to complete follow-up:", err);
-        toast.error(err.response?.data?.message || "Failed to complete follow-up");
+        toast.error(
+          err.response?.data?.message || "Failed to complete follow-up",
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -1345,77 +1658,87 @@ function Pipeline_modal_view() {
   };
 
   // ── Download handler ────────────────────────────────────────
-  const downloadFile = useCallback(async (filePath, fileName) => {
-    if (!filePath) return toast.error("File path is missing");
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        toast.error("Please login to continue");
-        navigate("/login");
-        return;
-      }
+  const downloadFile = useCallback(
+    async (filePath, fileName) => {
+      if (!filePath) return toast.error("File path is missing");
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          toast.error("Please login to continue");
+          navigate("/login");
+          return;
+        }
 
-      const params = new URLSearchParams({ filePath });
-      const res = await axios.get(`${API_URL}/files/download?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob",
-      });
+        const params = new URLSearchParams({ filePath });
+        const res = await axios.get(`${API_URL}/files/download?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        });
 
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", fileName || filePath.split("/").pop() || "file");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success("File downloaded successfully");
-    } catch (err) {
-      if (!handleAuthError(err)) {
-        console.error("Download failed:", err);
-        toast.error(err.response?.data?.message || "Failed to download file");
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute(
+          "download",
+          fileName || filePath.split("/").pop() || "file",
+        );
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("File downloaded successfully");
+      } catch (err) {
+        if (!handleAuthError(err)) {
+          console.error("Download failed:", err);
+          toast.error(err.response?.data?.message || "Failed to download file");
+        }
       }
-    }
-  }, [API_URL, navigate]);
+    },
+    [API_URL, navigate],
+  );
 
   // ── Preview handler ─────────────────────────────────────────
-  const openPreview = useCallback(async (file, idx) => {
-    if (!file.path) return toast.error("File path is missing");
-    setPreviewLoading(idx);
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        toast.error("Please login to continue");
-        navigate("/login");
-        return;
+  const openPreview = useCallback(
+    async (file, idx) => {
+      if (!file.path) return toast.error("File path is missing");
+      setPreviewLoading(idx);
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          toast.error("Please login to continue");
+          navigate("/login");
+          return;
+        }
+
+        const params = new URLSearchParams({ filePath: file.path });
+        const res = await axios.get(`${API_URL}/files/preview?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        });
+
+        const contentType =
+          res.headers["content-type"] || "application/octet-stream";
+        const blobUrl = window.URL.createObjectURL(
+          new Blob([res.data], { type: contentType }),
+        );
+
+        setPreviewFile({
+          url: blobUrl,
+          name: file.name || file.path?.split("/").pop() || "file",
+          size: file.size || 0,
+          category: getFileCategory(file.name, file.type),
+        });
+      } catch (err) {
+        if (!handleAuthError(err)) {
+          console.error("Preview failed:", err);
+          toast.error(err.response?.data?.message || "Failed to load preview");
+        }
+      } finally {
+        setPreviewLoading(null);
       }
-
-      const params = new URLSearchParams({ filePath: file.path });
-      const res = await axios.get(`${API_URL}/files/preview?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob",
-      });
-
-      const contentType = res.headers["content-type"] || "application/octet-stream";
-      const blobUrl = window.URL.createObjectURL(
-        new Blob([res.data], { type: contentType })
-      );
-
-      setPreviewFile({
-        url: blobUrl,
-        name: file.name || file.path?.split("/").pop() || "file",
-        size: file.size || 0,
-        category: getFileCategory(file.name, file.type),
-      });
-    } catch (err) {
-      if (!handleAuthError(err)) {
-        console.error("Preview failed:", err);
-        toast.error(err.response?.data?.message || "Failed to load preview");
-      }
-    } finally {
-      setPreviewLoading(null);
-    }
-  }, [API_URL, navigate]);
+    },
+    [API_URL, navigate],
+  );
 
   const closePreview = useCallback(() => {
     if (previewFile?.url) window.URL.revokeObjectURL(previewFile.url);
@@ -1426,11 +1749,21 @@ function Pipeline_modal_view() {
   const parseDealValue = (val) => {
     if (!val) return { amount: "", currency: "INR" };
     const match = String(val).match(/^([\d,]+)\s*([A-Za-z]+)$/);
-    if (!match) return { amount: String(val).replace(/,/g, ""), currency: "INR" };
-    return { amount: match[1].replace(/,/g, ""), currency: match[2].toUpperCase() };
+    if (!match)
+      return { amount: String(val).replace(/,/g, ""), currency: "INR" };
+    return {
+      amount: match[1].replace(/,/g, ""),
+      currency: match[2].toUpperCase(),
+    };
   };
 
-  const DEAL_STAGES = ["Qualification", "Proposal Sent-Negotiation", "Invoice Sent", "Closed Won", "Closed Lost"];
+  const DEAL_STAGES = [
+    "Qualification",
+    "Proposal Sent-Negotiation",
+    "Invoice Sent",
+    "Closed Won",
+    "Closed Lost",
+  ];
 
   const startEditDetails = () => {
     const { amount, currency } = parseDealValue(deal.value);
@@ -1464,12 +1797,18 @@ function Pipeline_modal_view() {
     setEditFormData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "email" || name === "alternativeEmail") {
-      setEditErrors((prev) => ({ ...prev, [name]: !!value && !validateEmail(value) }));
+      setEditErrors((prev) => ({
+        ...prev,
+        [name]: !!value && !validateEmail(value),
+      }));
     }
     if (name === "phoneNumber" || name === "alternativeNumber") {
       setEditErrors((prev) => ({
         ...prev,
-        [name]: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
+        [name]:
+          !!value &&
+          !isEffectivelyEmptyPhone(value) &&
+          !validatePhoneNumber(value),
       }));
     }
   };
@@ -1492,13 +1831,16 @@ function Pipeline_modal_view() {
         notes: editFormData.notes,
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
-          ? `+${editFormData.phoneNumber}`
-          : editFormData.phoneNumber,
+        phoneNumber:
+          editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
+            ? `+${editFormData.phoneNumber}`
+            : editFormData.phoneNumber,
         alternativeEmail: editFormData.alternativeEmail,
-        alternativeNumber: editFormData.alternativeNumber && !editFormData.alternativeNumber.startsWith("+")
-          ? `+${editFormData.alternativeNumber}`
-          : editFormData.alternativeNumber,
+        alternativeNumber:
+          editFormData.alternativeNumber &&
+          !editFormData.alternativeNumber.startsWith("+")
+            ? `+${editFormData.alternativeNumber}`
+            : editFormData.alternativeNumber,
         clientType: editFormData.clientType,
         address: editFormData.address.trim(),
         country: editFormData.country.trim(),
@@ -1508,7 +1850,7 @@ function Pipeline_modal_view() {
       const response = await axios.patch(
         `${API_URL}/deals/update-deal/${dealId}`,
         payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       setDeal(response.data.deal);
@@ -1532,7 +1874,7 @@ function Pipeline_modal_view() {
       await axios.patch(
         `${API_URL}/deals/update-deal/${dealId}`,
         { stage: "Closed Won" },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       toast.success("Deal status updated to Closed Won!");
       fetchDealDetails();
@@ -1543,18 +1885,29 @@ function Pipeline_modal_view() {
     }
   };
 
-  const handleLostDealConfirm = useCallback(async (lossData) => {
-    if (lossData?.reason) {
-      await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
-    }
-  }, [editFormData]);
+  const handleLostDealConfirm = useCallback(
+    async (lossData) => {
+      if (lossData?.reason) {
+        await performSaveDetails({
+          lossReason: lossData.reason,
+          lossNotes: lossData.notes || "",
+        });
+      }
+    },
+    [editFormData],
+  );
 
   const saveDetails = async () => {
-    if (!editFormData.dealName.trim()) return toast.error("Deal Name is required");
-    if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
+    if (!editFormData.dealName.trim())
+      return toast.error("Deal Name is required");
+    if (!editFormData.companyName.trim())
+      return toast.error("Company Name is required");
     if (editFormData.email && !validateEmail(editFormData.email))
       return toast.error("Please enter a valid email address");
-    if (editFormData.alternativeEmail && !validateEmail(editFormData.alternativeEmail))
+    if (
+      editFormData.alternativeEmail &&
+      !validateEmail(editFormData.alternativeEmail)
+    )
       return toast.error("Please enter a valid alternative email address");
     if (
       editFormData.phoneNumber &&
@@ -1643,12 +1996,24 @@ function Pipeline_modal_view() {
     }
   };
 
-  // Only show the full-page loader on a genuinely empty first load. Once a
-  // deal has rendered once, subsequent fetches (swipe navigation, edits,
-  // background revalidation) keep the existing layout mounted and update
-  // in place instead of tearing the whole page down — this is what removed
-  // the flash/glitch between deals.
-  if (isLoading && !deal) {
+  // Backstop against a separate, narrower race: fetchDealDetails() closes
+  // over the dealId of the render that started it, with no staleness check.
+  // If the user swipes to dealId B while dealId A's fetch is still in
+  // flight, A's response can land after B is already current and call
+  // setDeal with A's data. Checking `deal._id` against the route's current
+  // `dealId` here means that response's data can never be shown under the
+  // wrong id, regardless of arrival order. The far more common "previous
+  // deal flashes back on swipe" case no longer reaches this at all — it's
+  // resolved synchronously during render, above, before `deal` can ever hold
+  // a mismatched value in the first place.
+  const dealMismatched = deal && deal._id !== dealId;
+
+  // Only show the full-page loader on a genuinely empty first load (or a
+  // dealId mismatch, above). Once a deal has rendered once, subsequent
+  // fetches (swipe navigation, edits, background revalidation) keep the
+  // existing layout mounted and update in place instead of tearing the
+  // whole page down — this is what removed the flash/glitch between deals.
+  if (dealMismatched || (isLoading && !deal)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -1661,24 +2026,10 @@ function Pipeline_modal_view() {
 
   if (!deal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
-        <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md w-full">
-          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <XCircle className="text-rose-600" size={32} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">
-            Deal Not Found
-          </h2>
-          <p className="text-slate-600 mb-6">
-            The deal you're looking for doesn't exist or may have been removed.
-          </p>
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back to Pipeline
-          </button>
+      <div className="min-h-screen w-full bg-gray-50 p-4 md:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading deal details...</p>
         </div>
       </div>
     );
@@ -1691,15 +2042,12 @@ function Pipeline_modal_view() {
     <div
       className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4"
       style={{
-        // overscroll-behavior only has any effect on an element that is
-        // itself a scroll container on that axis — without overflow-x set,
-        // this was a no-op, leaving preventDefault() in the wheel handler as
-        // the only thing stopping the browser's native swipe-navigate
-        // gesture. overflow-x: hidden both makes the property meaningful and
-        // clips the ±100%-translated sliding card so it can never create a
-        // horizontal scrollbar mid-swipe.
         overflowX: "hidden",
-        overscrollBehaviorX: "contain",
+        overscrollBehaviorX: "none", // was "contain"
+        touchAction: "pan-y", // extra belt-and-braces: tells the browser
+        // this element only wants vertical panning,
+        // so it won't hand horizontal gestures to
+        // its own navigation heuristics at all
       }}
     >
       <ToastContainer position="top-right" autoClose={3000} />
@@ -1751,7 +2099,11 @@ function Pipeline_modal_view() {
       {/* Invoice creation/edit — the exact same modal the real Invoice page
           uses, prefilled with this deal so its own send/paid/partially-paid
           logic doesn't need to be duplicated here. */}
-      <InvoiceModal onInvoiceSaved={handleInvoiceSaved} editingInvoice={editingInvoiceForModal} presetDeal={deal} />
+      <InvoiceModal
+        onInvoiceSaved={handleInvoiceSaved}
+        editingInvoice={editingInvoiceForModal}
+        presetDeal={deal}
+      />
 
       {/* Meeting scheduling — the exact same modal the real Meetings page
           uses. */}
@@ -1787,7 +2139,12 @@ function Pipeline_modal_view() {
             className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
             onClick={() => {
               setIsFollowUpModalOpen(false);
-              setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
+              setFollowUpData({
+                followUpDate: null,
+                followUpComment: "",
+                previousOutcome: "",
+                previousNotes: "",
+              });
             }}
           />
 
@@ -1798,12 +2155,19 @@ function Pipeline_modal_view() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Clock className="text-purple-600" size={20} />
-                      {deal.followUpDate ? "Reschedule Follow-up" : "Schedule First Follow-up"}
+                      {deal.followUpDate
+                        ? "Reschedule Follow-up"
+                        : "Schedule First Follow-up"}
                     </h3>
                     <button
                       onClick={() => {
                         setIsFollowUpModalOpen(false);
-                        setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
+                        setFollowUpData({
+                          followUpDate: null,
+                          followUpComment: "",
+                          previousOutcome: "",
+                          previousNotes: "",
+                        });
                       }}
                       className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
                     >
@@ -1820,7 +2184,7 @@ function Pipeline_modal_view() {
                           <CheckCircle size={16} className="text-gray-500" />
                           Complete Previous Follow-up
                         </h4>
-                        
+
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1828,26 +2192,41 @@ function Pipeline_modal_view() {
                             </label>
                             <select
                               value={followUpData.previousOutcome}
-                              onChange={(e) => setFollowUpData(prev => ({ ...prev, previousOutcome: e.target.value }))}
+                              onChange={(e) =>
+                                setFollowUpData((prev) => ({
+                                  ...prev,
+                                  previousOutcome: e.target.value,
+                                }))
+                              }
                               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition"
                             >
                               <option value="">Select outcome...</option>
                               <option value="Completed">Completed</option>
-                              <option value="Missed">Missed / No Response</option>
+                              <option value="Missed">
+                                Missed / No Response
+                              </option>
                               <option value="Rescheduled">Rescheduled</option>
-                              <option value="Client No-Show">Client No-Show</option>
+                              <option value="Client No-Show">
+                                Client No-Show
+                              </option>
                               <option value="Cancelled">Cancelled</option>
                             </select>
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Outcome Notes <span className="text-red-500">*</span>
+                              Outcome Notes{" "}
+                              <span className="text-red-500">*</span>
                             </label>
                             <textarea
                               rows={3}
                               value={followUpData.previousNotes}
-                              onChange={(e) => setFollowUpData(prev => ({ ...prev, previousNotes: e.target.value }))}
+                              onChange={(e) =>
+                                setFollowUpData((prev) => ({
+                                  ...prev,
+                                  previousNotes: e.target.value,
+                                }))
+                              }
                               placeholder="Reason for missing, or summary of the conversation..."
                               className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
                             />
@@ -1858,16 +2237,22 @@ function Pipeline_modal_view() {
 
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900 mb-4">
-                        {deal.followUpDate ? "Schedule Next Follow-up" : "Schedule Follow-up"}
+                        {deal.followUpDate
+                          ? "Schedule Next Follow-up"
+                          : "Schedule Follow-up"}
                       </h4>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Follow-up Date & Time <span className="text-red-500">*</span>
+                        Follow-up Date & Time{" "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <DatePicker
                           selected={followUpData.followUpDate}
                           onChange={(date) => {
-                            setFollowUpData(prev => ({ ...prev, followUpDate: date }));
+                            setFollowUpData((prev) => ({
+                              ...prev,
+                              followUpDate: date,
+                            }));
                           }}
                           showTimeSelect
                           timeFormat="HH:mm"
@@ -1896,7 +2281,10 @@ function Pipeline_modal_view() {
                         rows={4}
                         value={followUpData.followUpComment}
                         onChange={(e) => {
-                          setFollowUpData(prev => ({ ...prev, followUpComment: e.target.value }));
+                          setFollowUpData((prev) => ({
+                            ...prev,
+                            followUpComment: e.target.value,
+                          }));
                         }}
                         placeholder="Enter meeting agenda, discussion points, or specific items to cover..."
                         className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
@@ -1910,7 +2298,12 @@ function Pipeline_modal_view() {
                     type="button"
                     onClick={() => {
                       setIsFollowUpModalOpen(false);
-                      setFollowUpData({ followUpDate: null, followUpComment: "", previousOutcome: "", previousNotes: "" });
+                      setFollowUpData({
+                        followUpDate: null,
+                        followUpComment: "",
+                        previousOutcome: "",
+                        previousNotes: "",
+                      });
                     }}
                     className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors order-3 sm:order-1"
                   >
@@ -1945,7 +2338,9 @@ function Pipeline_modal_view() {
                     ) : (
                       <>
                         <Calendar size={16} />
-                        {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
+                        {deal.followUpDate
+                          ? "Reschedule Follow-up"
+                          : "Schedule Follow-up"}
                       </>
                     )}
                   </button>
@@ -1964,12 +2359,14 @@ function Pipeline_modal_view() {
           lastSwipeDirectionRef.current === "next"
             ? "deal-slide-in-right"
             : lastSwipeDirectionRef.current === "prev"
-            ? "deal-slide-in-left"
-            : ""
+              ? "deal-slide-in-left"
+              : ""
         }`}
         style={{
           transform: `translateX(${swipeX}px)`,
-          transition: isSwipeAnimating ? `transform ${SWIPE_DURATION_MS}ms ease` : "none",
+          transition: isSwipeAnimating
+            ? `transform ${SWIPE_DURATION_MS}ms ease`
+            : "none",
           cursor: prevDealInfo || nextDealInfo ? "grab" : "default",
           willChange: "transform",
           overscrollBehaviorX: "contain",
@@ -2033,13 +2430,17 @@ function Pipeline_modal_view() {
                   currentScore >= 70
                     ? "bg-green-50 text-green-700 border-green-200"
                     : currentScore >= 40
-                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                    : "bg-red-50 text-red-700 border-red-200"
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : "bg-red-50 text-red-700 border-red-200"
                 }`}
                 title="Deal Analysis Score"
               >
-                <span className="text-2xl font-bold leading-none">{currentScore}</span>
-                <span className="text-[11px] font-medium uppercase tracking-wide mt-1">Deal Score</span>
+                <span className="text-2xl font-bold leading-none">
+                  {currentScore}
+                </span>
+                <span className="text-[11px] font-medium uppercase tracking-wide mt-1">
+                  Deal Score
+                </span>
               </div>
             );
           })()}
@@ -2164,7 +2565,11 @@ function Pipeline_modal_view() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content Column */}
-          <div className={activeTab === "deal_score" ? "lg:col-span-3" : "lg:col-span-2"}>
+          <div
+            className={
+              activeTab === "deal_score" ? "lg:col-span-3" : "lg:col-span-2"
+            }
+          >
             {/* Deal Score Tab */}
             {activeTab === "deal_score" && (
               <div className="space-y-6 animate-fade-in">
@@ -2176,25 +2581,38 @@ function Pipeline_modal_view() {
                         <Sparkles size={14} className="text-amber-500" />
                         <span>Deal Score & Health Analysis</span>
                       </div>
-                      <h2 className="text-xl font-bold text-slate-900">{deal.dealName}</h2>
-                      <p className="text-sm text-slate-500">{deal.companyName || "No Company Specified"}</p>
+                      <h2 className="text-xl font-bold text-slate-900">
+                        {deal.dealName}
+                      </h2>
+                      <p className="text-sm text-slate-500">
+                        {deal.companyName || "No Company Specified"}
+                      </p>
                     </div>
 
                     {/* Score & Health Status Badge (Derived 100% from Deal Analysis STAGE_ACTIONS) */}
                     {(() => {
                       const analysisScore = calculateDealAnalysisScore(deal);
-                      const stageConfig = STAGE_ACTIONS[deal.stage] || STAGE_ACTIONS["Qualification"];
+                      const stageConfig =
+                        STAGE_ACTIONS[deal.stage] ||
+                        STAGE_ACTIONS["Qualification"];
                       const statusLabel = stageConfig.label;
 
-                      let badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+                      let badgeStyle =
+                        "bg-blue-50 text-blue-700 border-blue-200";
                       if (statusLabel === "Need Attention") {
-                        badgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
+                        badgeStyle =
+                          "bg-amber-50 text-amber-700 border-amber-200";
                       } else if (statusLabel === "Follow-up Needed") {
                         badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
                       } else if (statusLabel === "Payment Pending") {
-                        badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
-                      } else if (statusLabel === "Deal Closed" || statusLabel === "Converted") {
-                        badgeStyle = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                        badgeStyle =
+                          "bg-purple-50 text-purple-700 border-purple-200";
+                      } else if (
+                        statusLabel === "Deal Closed" ||
+                        statusLabel === "Converted"
+                      ) {
+                        badgeStyle =
+                          "bg-emerald-100 text-emerald-800 border-emerald-300";
                       } else if (statusLabel === "Deal Lost") {
                         badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
                       }
@@ -2205,10 +2623,14 @@ function Pipeline_modal_view() {
                             <span className="block text-3xl font-extrabold text-slate-900">
                               {analysisScore}
                             </span>
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Out of 100</span>
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                              Out of 100
+                            </span>
                           </div>
                           <div>
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border ${badgeStyle}`}>
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border ${badgeStyle}`}
+                            >
                               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                               {statusLabel}
                             </span>
@@ -2224,25 +2646,39 @@ function Pipeline_modal_view() {
                   {/* Key Deal Metadata Row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-sm">
                     <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-400 block font-medium">Stage</span>
-                      <span className="font-semibold text-slate-800">{deal.stage || "Qualification"}</span>
+                      <span className="text-xs text-slate-400 block font-medium">
+                        Stage
+                      </span>
+                      <span className="font-semibold text-slate-800">
+                        {deal.stage || "Qualification"}
+                      </span>
                     </div>
                     <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-400 block font-medium">Deal Value</span>
+                      <span className="text-xs text-slate-400 block font-medium">
+                        Deal Value
+                      </span>
                       <span className="font-semibold text-slate-800">
                         {formatCurrencyValue(deal.value)}
                       </span>
                     </div>
                     <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-400 block font-medium">Follow-Up Date</span>
+                      <span className="text-xs text-slate-400 block font-medium">
+                        Follow-Up Date
+                      </span>
                       <span className="font-semibold text-slate-800">
-                        {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : "Not Scheduled"}
+                        {deal.followUpDate
+                          ? new Date(deal.followUpDate).toLocaleDateString()
+                          : "Not Scheduled"}
                       </span>
                     </div>
                     <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-100">
-                      <span className="text-xs text-slate-400 block font-medium">Assigned To</span>
+                      <span className="text-xs text-slate-400 block font-medium">
+                        Assigned To
+                      </span>
                       <span className="font-semibold text-slate-800 truncate block">
-                        {deal.assignTo ? `${deal.assignTo.firstName || ""} ${deal.assignTo.lastName || ""}`.trim() : "Unassigned"}
+                        {deal.assignTo
+                          ? `${deal.assignTo.firstName || ""} ${deal.assignTo.lastName || ""}`.trim()
+                          : "Unassigned"}
                       </span>
                     </div>
                   </div>
@@ -2254,7 +2690,9 @@ function Pipeline_modal_view() {
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                     {(() => {
                       const breakdown = getWeightedScoreBreakdown(deal);
-                      const positiveComponents = breakdown.components.filter((c) => c.pts >= 0);
+                      const positiveComponents = breakdown.components.filter(
+                        (c) => c.pts >= 0,
+                      );
 
                       return (
                         <>
@@ -2276,8 +2714,12 @@ function Pipeline_modal_view() {
                             {/* Base Score Row */}
                             <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">
                               <div className="flex items-center gap-2">
-                                <span className="text-slate-400 font-bold">●</span>
-                                <span className="font-medium text-slate-700">Base Deal Score</span>
+                                <span className="text-slate-400 font-bold">
+                                  ●
+                                </span>
+                                <span className="font-medium text-slate-700">
+                                  Base Deal Score
+                                </span>
                               </div>
                               <span className="font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
                                 +{breakdown.base} pts
@@ -2286,12 +2728,21 @@ function Pipeline_modal_view() {
 
                             {/* Component Score Rows */}
                             {positiveComponents.map((item, idx) => (
-                              <div key={`pos-c-${idx}`} className="flex items-center justify-between p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/70">
+                              <div
+                                key={`pos-c-${idx}`}
+                                className="flex items-center justify-between p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/70"
+                              >
                                 <div className="flex items-center gap-2">
-                                  <span className="text-emerald-500 font-bold">✓</span>
+                                  <span className="text-emerald-500 font-bold">
+                                    ✓
+                                  </span>
                                   <div>
-                                    <span className="font-semibold text-slate-800 block">{item.name}</span>
-                                    <span className="text-[10px] text-slate-500 block">{item.detail}</span>
+                                    <span className="font-semibold text-slate-800 block">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 block">
+                                      {item.detail}
+                                    </span>
                                   </div>
                                 </div>
                                 <span className="font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded text-[11px]">
@@ -2319,28 +2770,45 @@ function Pipeline_modal_view() {
                       <div className="p-1.5 bg-amber-100 rounded-lg text-amber-600">
                         <AlertCircle size={16} />
                       </div>
-                      <h3 className="text-sm font-bold text-slate-900">Areas Requiring Attention</h3>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Areas Requiring Attention
+                      </h3>
                     </div>
                     <ul className="space-y-2 text-xs text-slate-700">
                       {(() => {
                         const breakdown = getWeightedScoreBreakdown(deal);
-                        const negativeComponents = breakdown.components.filter((c) => c.pts < 0);
+                        const negativeComponents = breakdown.components.filter(
+                          (c) => c.pts < 0,
+                        );
 
                         const extraConcerns = [];
                         if (!deal.followUpDate) {
-                          extraConcerns.push("No upcoming follow-up date currently scheduled");
+                          extraConcerns.push(
+                            "No upcoming follow-up date currently scheduled",
+                          );
                         }
                         if (highlights?.pendingTasks?.length > 0) {
-                          extraConcerns.push(`${highlights.pendingTasks.length} pending task(s) require action`);
+                          extraConcerns.push(
+                            `${highlights.pendingTasks.length} pending task(s) require action`,
+                          );
                         }
-                        if (dealInvoices.some((i) => i.status !== "paid" && i.status !== "Paid")) {
-                          extraConcerns.push("Unpaid invoice(s) pending payment confirmation");
+                        if (
+                          dealInvoices.some(
+                            (i) => i.status !== "paid" && i.status !== "Paid",
+                          )
+                        ) {
+                          extraConcerns.push(
+                            "Unpaid invoice(s) pending payment confirmation",
+                          );
                         }
                         if (deal.stage === "Closed Lost" && deal.lossReason) {
                           extraConcerns.push(`Loss Reason: ${deal.lossReason}`);
                         }
 
-                        if (negativeComponents.length === 0 && extraConcerns.length === 0) {
+                        if (
+                          negativeComponents.length === 0 &&
+                          extraConcerns.length === 0
+                        ) {
                           return (
                             <li className="text-slate-400 italic py-4 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
                               No immediate risk areas or penalties flagged.
@@ -2351,12 +2819,21 @@ function Pipeline_modal_view() {
                         return (
                           <>
                             {negativeComponents.map((item, idx) => (
-                              <li key={`neg-c-${idx}`} className="flex items-start justify-between gap-2 p-2 bg-rose-50/50 rounded-lg border border-rose-100/70">
+                              <li
+                                key={`neg-c-${idx}`}
+                                className="flex items-start justify-between gap-2 p-2 bg-rose-50/50 rounded-lg border border-rose-100/70"
+                              >
                                 <div className="flex items-start gap-2">
-                                  <span className="text-rose-500 font-bold mt-0.5">⚠</span>
+                                  <span className="text-rose-500 font-bold mt-0.5">
+                                    ⚠
+                                  </span>
                                   <div>
-                                    <span className="font-semibold text-slate-800 block">{item.name}</span>
-                                    <span className="text-[10px] text-slate-500 block">{item.detail}</span>
+                                    <span className="font-semibold text-slate-800 block">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 block">
+                                      {item.detail}
+                                    </span>
                                   </div>
                                 </div>
                                 <span className="font-bold text-rose-700 bg-rose-100/70 px-2 py-0.5 rounded text-[11px]">
@@ -2365,8 +2842,13 @@ function Pipeline_modal_view() {
                               </li>
                             ))}
                             {extraConcerns.map((item, idx) => (
-                              <li key={`neg-e-${idx}`} className="flex items-start gap-2 p-2 bg-amber-50/50 rounded-lg border border-amber-100/70">
-                                <span className="text-amber-500 font-bold mt-0.5">⚠</span>
+                              <li
+                                key={`neg-e-${idx}`}
+                                className="flex items-start gap-2 p-2 bg-amber-50/50 rounded-lg border border-amber-100/70"
+                              >
+                                <span className="text-amber-500 font-bold mt-0.5">
+                                  ⚠
+                                </span>
                                 <span className="text-slate-700">{item}</span>
                               </li>
                             ))}
@@ -2380,7 +2862,9 @@ function Pipeline_modal_view() {
                 {/* Section 3: Next Best Action & Suggested Next Step (Exact Deal Analysis Match) */}
                 <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-white rounded-xl shadow-sm border border-blue-100 p-5">
                   {(() => {
-                    const stageConfig = STAGE_ACTIONS[deal.stage] || STAGE_ACTIONS["Qualification"];
+                    const stageConfig =
+                      STAGE_ACTIONS[deal.stage] ||
+                      STAGE_ACTIONS["Qualification"];
                     const suggestedNextStep = stageConfig.nextStep;
                     const availableActions = stageConfig.actions || [];
 
@@ -2392,11 +2876,16 @@ function Pipeline_modal_view() {
                               Next Best Action
                             </span>
                             <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                              Current Stage: <span className="text-indigo-600">{deal.stage || "Qualification"}</span>
+                              Current Stage:{" "}
+                              <span className="text-indigo-600">
+                                {deal.stage || "Qualification"}
+                              </span>
                             </h4>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] text-slate-400 block uppercase font-medium">Suggested Next Step</span>
+                            <span className="text-[10px] text-slate-400 block uppercase font-medium">
+                              Suggested Next Step
+                            </span>
                             <span className="text-xs font-bold text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-full inline-block mt-0.5">
                               {suggestedNextStep}
                             </span>
@@ -2493,17 +2982,22 @@ function Pipeline_modal_view() {
                       <Activity size={16} className="text-blue-600" />
                       <span>Deal Analysis & Statistical Visualizations</span>
                     </span>
-                    <span className="text-xs font-normal text-slate-400">3 Interactive Charts</span>
+                    <span className="text-xs font-normal text-slate-400">
+                      3 Interactive Charts
+                    </span>
                   </h3>
 
                   {/* 3 Presentation Charts Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
                     {/* Chart 1: Deal Analysis Score Factors BarChart */}
                     <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-1">Deal Analysis Score Breakdown</h4>
-                        <p className="text-[11px] text-slate-500 mb-3">Impacts from Deal Analysis Engine</p>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                          Deal Analysis Score Breakdown
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mb-3">
+                          Impacts from Deal Analysis Engine
+                        </p>
                       </div>
                       {(() => {
                         const stageBase = calculateStageScore(deal);
@@ -2514,24 +3008,66 @@ function Pipeline_modal_view() {
                         const scoreFactorsData = [
                           { name: "Base", pts: 50, color: "#94a3b8" },
                           { name: "Stage", pts: stageBase, color: "#3b82f6" },
-                          { name: "Follow-up", pts: Math.abs(followUpImpact), color: followUpImpact < 0 ? "#ef4444" : "#10b981" },
-                          { name: "Activity", pts: Math.abs(activityImpact), color: activityImpact < 0 ? "#f59e0b" : "#10b981" },
-                          { name: "Value Tier", pts: valueTierImpact, color: "#8b5cf6" },
+                          {
+                            name: "Follow-up",
+                            pts: Math.abs(followUpImpact),
+                            color: followUpImpact < 0 ? "#ef4444" : "#10b981",
+                          },
+                          {
+                            name: "Activity",
+                            pts: Math.abs(activityImpact),
+                            color: activityImpact < 0 ? "#f59e0b" : "#10b981",
+                          },
+                          {
+                            name: "Value Tier",
+                            pts: valueTierImpact,
+                            color: "#8b5cf6",
+                          },
                         ];
 
                         return (
                           <div className="h-44 w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={scoreFactorsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                              <BarChart
+                                data={scoreFactorsData}
+                                margin={{
+                                  top: 10,
+                                  right: 10,
+                                  left: -25,
+                                  bottom: 0,
+                                }}
+                              >
+                                <XAxis
+                                  dataKey="name"
+                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
+                                <YAxis
+                                  allowDecimals={false}
+                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
-                                  formatter={(value, name) => [`${value} pts`, name]}
+                                  contentStyle={{
+                                    backgroundColor: "#0f172a",
+                                    borderRadius: "0.5rem",
+                                    border: "none",
+                                    color: "#fff",
+                                    fontSize: "11px",
+                                  }}
+                                  formatter={(value, name) => [
+                                    `${value} pts`,
+                                    name,
+                                  ]}
                                 />
                                 <Bar dataKey="pts" radius={[4, 4, 0, 0]}>
                                   {scoreFactorsData.map((entry, index) => (
-                                    <Cell key={`score-cell-${index}`} fill={entry.color} />
+                                    <Cell
+                                      key={`score-cell-${index}`}
+                                      fill={entry.color}
+                                    />
                                   ))}
                                 </Bar>
                               </BarChart>
@@ -2544,8 +3080,12 @@ function Pipeline_modal_view() {
                     {/* Chart 2: Positive vs Attention Factors PieChart */}
                     <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-1">Health Factors Ratio</h4>
-                        <p className="text-[11px] text-slate-500 mb-3">Positive points vs penalties</p>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                          Health Factors Ratio
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mb-3">
+                          Positive points vs penalties
+                        </p>
                       </div>
                       {(() => {
                         const stageBase = calculateStageScore(deal);
@@ -2553,12 +3093,27 @@ function Pipeline_modal_view() {
                         const activityImpact = calculateActivityScore(deal);
                         const valueTierImpact = calculateValueScore(deal);
 
-                        const positivePts = 50 + stageBase + (followUpImpact > 0 ? followUpImpact : 0) + (activityImpact > 0 ? activityImpact : 0) + valueTierImpact;
-                        const penaltyPts = (followUpImpact < 0 ? Math.abs(followUpImpact) : 0) + (activityImpact < 0 ? Math.abs(activityImpact) : 0);
+                        const positivePts =
+                          50 +
+                          stageBase +
+                          (followUpImpact > 0 ? followUpImpact : 0) +
+                          (activityImpact > 0 ? activityImpact : 0) +
+                          valueTierImpact;
+                        const penaltyPts =
+                          (followUpImpact < 0 ? Math.abs(followUpImpact) : 0) +
+                          (activityImpact < 0 ? Math.abs(activityImpact) : 0);
 
                         const healthPieData = [
-                          { name: "Positive Points", value: positivePts, color: "#10b981" },
-                          { name: "Penalties", value: penaltyPts > 0 ? penaltyPts : 1, color: penaltyPts > 0 ? "#ef4444" : "#e2e8f0" },
+                          {
+                            name: "Positive Points",
+                            value: positivePts,
+                            color: "#10b981",
+                          },
+                          {
+                            name: "Penalties",
+                            value: penaltyPts > 0 ? penaltyPts : 1,
+                            color: penaltyPts > 0 ? "#ef4444" : "#e2e8f0",
+                          },
                         ];
 
                         return (
@@ -2575,13 +3130,25 @@ function Pipeline_modal_view() {
                                   dataKey="value"
                                 >
                                   {healthPieData.map((entry, index) => (
-                                    <Cell key={`pie-cell-${index}`} fill={entry.color} />
+                                    <Cell
+                                      key={`pie-cell-${index}`}
+                                      fill={entry.color}
+                                    />
                                   ))}
                                 </Pie>
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#0f172a",
+                                    borderRadius: "0.5rem",
+                                    border: "none",
+                                    color: "#fff",
+                                    fontSize: "11px",
+                                  }}
                                 />
-                                <Legend iconSize={8} wrapperStyle={{ fontSize: "10px" }} />
+                                <Legend
+                                  iconSize={8}
+                                  wrapperStyle={{ fontSize: "10px" }}
+                                />
                               </PieChart>
                             </ResponsiveContainer>
                           </div>
@@ -2592,31 +3159,86 @@ function Pipeline_modal_view() {
                     {/* Chart 3: Activity Breakdown BarChart */}
                     <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-1">Activity Volume</h4>
-                        <p className="text-[11px] text-slate-500 mb-3">Logged CRM activities</p>
+                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                          Activity Volume
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mb-3">
+                          Logged CRM activities
+                        </p>
                       </div>
                       {(() => {
                         const chartData = [
-                          { name: "Meetings", count: dealMeetings.length, color: "#ec4899" },
-                          { name: "Proposals", count: dealProposals.length, color: "#14b8a6" },
-                          { name: "Invoices", count: dealInvoices.length, color: "#22c55e" },
-                          { name: "Emails", count: dealEmails.length, color: "#06b6d4" },
-                          { name: "Notes", count: notes.length, color: "#eab308" },
-                          { name: "Tasks", count: highlights?.pendingTasks?.length || 0, color: "#6366f1" },
+                          {
+                            name: "Meetings",
+                            count: dealMeetings.length,
+                            color: "#ec4899",
+                          },
+                          {
+                            name: "Proposals",
+                            count: dealProposals.length,
+                            color: "#14b8a6",
+                          },
+                          {
+                            name: "Invoices",
+                            count: dealInvoices.length,
+                            color: "#22c55e",
+                          },
+                          {
+                            name: "Emails",
+                            count: dealEmails.length,
+                            color: "#06b6d4",
+                          },
+                          {
+                            name: "Notes",
+                            count: notes.length,
+                            color: "#eab308",
+                          },
+                          {
+                            name: "Tasks",
+                            count: highlights?.pendingTasks?.length || 0,
+                            color: "#6366f1",
+                          },
                         ];
 
                         return (
                           <div className="h-44 w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                              <BarChart
+                                data={chartData}
+                                margin={{
+                                  top: 10,
+                                  right: 10,
+                                  left: -25,
+                                  bottom: 0,
+                                }}
+                              >
+                                <XAxis
+                                  dataKey="name"
+                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
+                                <YAxis
+                                  allowDecimals={false}
+                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#0f172a",
+                                    borderRadius: "0.5rem",
+                                    border: "none",
+                                    color: "#fff",
+                                    fontSize: "11px",
+                                  }}
                                 />
                                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                                   {chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                    <Cell
+                                      key={`cell-${index}`}
+                                      fill={entry.color}
+                                    />
                                   ))}
                                 </Bar>
                               </BarChart>
@@ -2625,30 +3247,40 @@ function Pipeline_modal_view() {
                         );
                       })()}
                     </div>
-
                   </div>
 
                   {/* Pipeline Stage Progress Visual */}
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-500 mb-3">Pipeline Stage Progress</h4>
+                    <h4 className="text-xs font-semibold text-slate-500 mb-3">
+                      Pipeline Stage Progress
+                    </h4>
                     <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                       {DEAL_STAGES.map((stg, index) => {
-                        const currentStageIdx = DEAL_STAGES.indexOf(deal.stage || "Qualification");
+                        const currentStageIdx = DEAL_STAGES.indexOf(
+                          deal.stage || "Qualification",
+                        );
                         const isCurrent = deal.stage === stg;
                         const isPassed = index < currentStageIdx;
 
                         let dotStyle = "bg-slate-200 text-slate-400";
-                        if (isCurrent) dotStyle = "bg-blue-600 text-white ring-4 ring-blue-100";
-                        else if (isPassed) dotStyle = "bg-emerald-500 text-white";
+                        if (isCurrent)
+                          dotStyle =
+                            "bg-blue-600 text-white ring-4 ring-blue-100";
+                        else if (isPassed)
+                          dotStyle = "bg-emerald-500 text-white";
 
                         return (
                           <div key={stg} className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${dotStyle}`}>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${dotStyle}`}
+                            >
                               {isPassed ? "✓" : index + 1}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <span className={`text-xs font-medium ${isCurrent ? "text-blue-600 font-bold" : isPassed ? "text-slate-800" : "text-slate-400"}`}>
+                                <span
+                                  className={`text-xs font-medium ${isCurrent ? "text-blue-600 font-bold" : isPassed ? "text-slate-800" : "text-slate-400"}`}
+                                >
                                   {stg}
                                 </span>
                                 {isCurrent && (
@@ -2672,28 +3304,46 @@ function Pipeline_modal_view() {
                       <Clock size={16} className="text-slate-500" />
                       <span>Recent Activity Log</span>
                     </span>
-                    <button onClick={() => setActiveTab("activity")} className="text-xs text-blue-600 hover:underline font-medium">
+                    <button
+                      onClick={() => setActiveTab("activity")}
+                      className="text-xs text-blue-600 hover:underline font-medium"
+                    >
                       View All Activity →
                     </button>
                   </h3>
 
                   {activityFeed.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-4 text-center">No recent activity recorded.</p>
+                    <p className="text-xs text-slate-400 italic py-4 text-center">
+                      No recent activity recorded.
+                    </p>
                   ) : (
                     <div className="space-y-3">
                       {activityFeed.slice(0, 4).map((event, idx) => {
-                        const meta = ACTIVITY_TYPE_META[event.type] || ACTIVITY_TYPE_META.default;
+                        const meta =
+                          ACTIVITY_TYPE_META[event.type] ||
+                          ACTIVITY_TYPE_META.default;
                         const IconComp = meta.icon;
                         return (
-                          <div key={idx} className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                            <div className={`p-2 rounded-lg flex-shrink-0 ${meta.bg}`}>
+                          <div
+                            key={idx}
+                            className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100"
+                          >
+                            <div
+                              className={`p-2 rounded-lg flex-shrink-0 ${meta.bg}`}
+                            >
                               <IconComp size={14} className={meta.iconColor} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-slate-800">{event.description}</p>
+                              <p className="font-medium text-slate-800">
+                                {event.description}
+                              </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
-                                {event.timestamp ? new Date(event.timestamp).toLocaleString() : "Recently"}
-                                {event.performedBy?.name ? ` • by ${event.performedBy.name}` : ""}
+                                {event.timestamp
+                                  ? new Date(event.timestamp).toLocaleString()
+                                  : "Recently"}
+                                {event.performedBy?.name
+                                  ? ` • by ${event.performedBy.name}`
+                                  : ""}
                               </p>
                             </div>
                           </div>
@@ -2708,492 +3358,570 @@ function Pipeline_modal_view() {
             {/* Details Card */}
             {activeTab === "details" && (
               <>
-
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
-                <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Deal Details
-                    </h2>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Comprehensive information about this deal
-                    </p>
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                  <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">
+                        Deal Details
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Comprehensive information about this deal
+                      </p>
+                    </div>
+                    {!isEditingDetails && (
+                      <button
+                        onClick={startEditDetails}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                      >
+                        <Edit size={15} />
+                        Edit
+                      </button>
+                    )}
                   </div>
-                  {!isEditingDetails && (
-                    <button
-                      onClick={startEditDetails}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
-                    >
-                      <Edit size={15} />
-                      Edit
-                    </button>
-                  )}
-                </div>
-                <div className="p-6">
-                  {!isEditingDetails ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Deal Information */}
-                      <div className="space-y-5">
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
-                            Deal Information
-                          </h3>
-                          <div className="space-y-4">
-                            <div className="flex items-center text-slate-700">
-                              <Tag size={18} className="mr-3 text-slate-500" />
-                              <div>
-                                <p className="text-sm font-medium">Deal Name</p>
-                                <p className="text-slate-900">{deal.dealName}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center text-slate-700">
-                              <DollarSign
-                                size={18}
-                                className="mr-3 text-slate-500"
-                              />
-                              <div>
-                                <p className="text-sm font-medium">Value</p>
-                                <p className="text-slate-900">
-                                  {formatCurrencyValue(deal.value)}
-                                </p>
-                              </div>
-                            </div>
-                            {deal.notes && (
-                              <button
-                                type="button"
-                                onClick={() => setIsNotesPopupOpen(true)}
-                                className="w-full flex items-start text-left text-slate-700 hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1 transition-colors group"
-                              >
-                                <BookOpen
-                                  size={18}
-                                  className="mr-3 mt-0.5 text-slate-500 flex-shrink-0 group-hover:text-blue-600 transition-colors"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium group-hover:text-blue-600 transition-colors">
-                                    Notes
-                                  </p>
-                                  <p className="text-slate-900 truncate">{deal.notes}</p>
-                                  <p className="text-xs text-slate-500 mt-0.5">
-                                    {formatNotesMeta(deal)}
-                                  </p>
-                                </div>
-                              </button>
-                            )}
-                            {deal.followUpDate && (
+                  <div className="p-6">
+                    {!isEditingDetails ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Deal Information */}
+                        <div className="space-y-5">
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                              Deal Information
+                            </h3>
+                            <div className="space-y-4">
                               <div className="flex items-center text-slate-700">
-                                <Clock
+                                <Tag
                                   size={18}
                                   className="mr-3 text-slate-500"
                                 />
                                 <div>
                                   <p className="text-sm font-medium">
-                                    Follow-up Date
+                                    Deal Name
                                   </p>
                                   <p className="text-slate-900">
-                                    {deal.followUpDate ? (
-                                      <>
-                                        {new Date(
-                                          deal.followUpDate
-                                        ).toLocaleDateString("en-US", {
-                                          weekday: "short",
-                                          year: "numeric",
-                                          month: "short",
-                                          day: "numeric",
-                                        })}
-                                        <span className="text-slate-500 ml-2">
-                                          •{" "}
-                                          {new Date(
-                                            deal.followUpDate
-                                          ).toLocaleTimeString("en-US", {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                            hour12: true,
-                                          })}
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="text-slate-400">
-                                        Not set
-                                      </span>
-                                    )}
+                                    {deal.dealName}
                                   </p>
-                                  {deal.followUpComment && (
-                                    <p className="text-sm text-slate-600 mt-2">
-                                      <span className="font-medium">Notes:</span>{" "}
-                                      {deal.followUpComment}
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <DollarSign
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Value</p>
+                                  <p className="text-slate-900">
+                                    {formatCurrencyValue(deal.value)}
+                                  </p>
+                                </div>
+                              </div>
+                              {deal.notes && (
+                                <button
+                                  type="button"
+                                  onClick={() => setIsNotesPopupOpen(true)}
+                                  className="w-full flex items-start text-left text-slate-700 hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1 transition-colors group"
+                                >
+                                  <BookOpen
+                                    size={18}
+                                    className="mr-3 mt-0.5 text-slate-500 flex-shrink-0 group-hover:text-blue-600 transition-colors"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium group-hover:text-blue-600 transition-colors">
+                                      Notes
                                     </p>
-                                  )}
+                                    <p className="text-slate-900 truncate">
+                                      {deal.notes}
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                      {formatNotesMeta(deal)}
+                                    </p>
+                                  </div>
+                                </button>
+                              )}
+                              {deal.followUpDate && (
+                                <div className="flex items-center text-slate-700">
+                                  <Clock
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Follow-up Date
+                                    </p>
+                                    <p className="text-slate-900">
+                                      {deal.followUpDate ? (
+                                        <>
+                                          {new Date(
+                                            deal.followUpDate,
+                                          ).toLocaleDateString("en-US", {
+                                            weekday: "short",
+                                            year: "numeric",
+                                            month: "short",
+                                            day: "numeric",
+                                          })}
+                                          <span className="text-slate-500 ml-2">
+                                            •{" "}
+                                            {new Date(
+                                              deal.followUpDate,
+                                            ).toLocaleTimeString("en-US", {
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                              hour12: true,
+                                            })}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className="text-slate-400">
+                                          Not set
+                                        </span>
+                                      )}
+                                    </p>
+                                    {deal.followUpComment && (
+                                      <p className="text-sm text-slate-600 mt-2">
+                                        <span className="font-medium">
+                                          Notes:
+                                        </span>{" "}
+                                        {deal.followUpComment}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Company Information */}
-                      <div className="space-y-5">
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
-                            Company Information
-                          </h3>
-                          <div className="space-y-4">
-                            <div className="flex items-center text-slate-700">
-                              <Building
-                                size={18}
-                                className="mr-3 text-slate-500"
-                              />
-                              <div>
-                                <p className="text-sm font-medium">
-                                  Company Name
-                                </p>
-                                <p className="text-slate-900">
-                                  {deal.companyName || "Not specified"}
-                                </p>
-                              </div>
-                            </div>
-                            {deal.email && (
+                        {/* Company Information */}
+                        <div className="space-y-5">
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                              Company Information
+                            </h3>
+                            <div className="space-y-4">
                               <div className="flex items-center text-slate-700">
-                                <Mail size={18} className="mr-3 text-slate-500" />
-                                <div>
-                                  <p className="text-sm font-medium">Email</p>
-                                  <a
-                                    href={`mailto:${deal.email}`}
-                                    className="text-blue-600 hover:underline text-slate-900"
-                                  >
-                                    {deal.email}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-                            {deal.phoneNumber && (
-                              <div className="flex items-center text-slate-700">
-                                <Phone
+                                <Building
                                   size={18}
                                   className="mr-3 text-slate-500"
                                 />
                                 <div>
                                   <p className="text-sm font-medium">
-                                    Phone Number
+                                    Company Name
                                   </p>
-                                  <a
-                                    href={`tel:${deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}`}
-                                    className="text-blue-600 hover:underline text-slate-900"
-                                  >
-                                    {deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}
-                                  </a>
+                                  <p className="text-slate-900">
+                                    {deal.companyName || "Not specified"}
+                                  </p>
                                 </div>
                               </div>
-                            )}
-                            {deal.alternativeEmail && (
-                              <div className="flex items-center text-slate-700">
-                                <Mail size={18} className="mr-3 text-slate-500" />
-                                <div>
-                                  <p className="text-sm font-medium">Alternative Email</p>
-                                  <a
-                                    href={`mailto:${deal.alternativeEmail}`}
-                                    className="text-blue-600 hover:underline text-slate-900"
-                                  >
-                                    {deal.alternativeEmail}
-                                  </a>
+                              {deal.email && (
+                                <div className="flex items-center text-slate-700">
+                                  <Mail
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">Email</p>
+                                    <a
+                                      href={`mailto:${deal.email}`}
+                                      className="text-blue-600 hover:underline text-slate-900"
+                                    >
+                                      {deal.email}
+                                    </a>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                            {deal.alternativeNumber && (
+                              )}
+                              {deal.phoneNumber && (
+                                <div className="flex items-center text-slate-700">
+                                  <Phone
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Phone Number
+                                    </p>
+                                    <a
+                                      href={`tel:${deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}`}
+                                      className="text-blue-600 hover:underline text-slate-900"
+                                    >
+                                      {deal.phoneNumber.startsWith("+")
+                                        ? deal.phoneNumber
+                                        : `+${deal.phoneNumber}`}
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
+                              {deal.alternativeEmail && (
+                                <div className="flex items-center text-slate-700">
+                                  <Mail
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Alternative Email
+                                    </p>
+                                    <a
+                                      href={`mailto:${deal.alternativeEmail}`}
+                                      className="text-blue-600 hover:underline text-slate-900"
+                                    >
+                                      {deal.alternativeEmail}
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
+                              {deal.alternativeNumber && (
+                                <div className="flex items-center text-slate-700">
+                                  <Phone
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Alternative Number
+                                    </p>
+                                    <a
+                                      href={`tel:${deal.alternativeNumber.startsWith("+") ? deal.alternativeNumber : `+${deal.alternativeNumber}`}`}
+                                      className="text-blue-600 hover:underline text-slate-900"
+                                    >
+                                      {deal.alternativeNumber.startsWith("+")
+                                        ? deal.alternativeNumber
+                                        : `+${deal.alternativeNumber}`}
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
                               <div className="flex items-center text-slate-700">
-                                <Phone
+                                <Building2
                                   size={18}
                                   className="mr-3 text-slate-500"
                                 />
                                 <div>
                                   <p className="text-sm font-medium">
-                                    Alternative Number
+                                    Client Type
                                   </p>
-                                  <a
-                                    href={`tel:${deal.alternativeNumber.startsWith("+") ? deal.alternativeNumber : `+${deal.alternativeNumber}`}`}
-                                    className="text-blue-600 hover:underline text-slate-900"
-                                  >
-                                    {deal.alternativeNumber.startsWith("+") ? deal.alternativeNumber : `+${deal.alternativeNumber}`}
-                                  </a>
+                                  <p className="text-slate-900">
+                                    {deal.clientType || "Not specified"}
+                                  </p>
                                 </div>
                               </div>
-                            )}
-                            <div className="flex items-center text-slate-700">
-                              <Building2 size={18} className="mr-3 text-slate-500" />
-                              <div>
-                                <p className="text-sm font-medium">Client Type</p>
-                                <p className="text-slate-900">{deal.clientType || "Not specified"}</p>
+                              <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Address</p>
+                                  <p className="text-slate-900">
+                                    {deal.address || "Not specified"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center text-slate-700">
-                              <MapPin size={18} className="mr-3 text-slate-500" />
-                              <div>
-                                <p className="text-sm font-medium">Address</p>
-                                <p className="text-slate-900">{deal.address || "Not specified"}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center text-slate-700">
-                              <Globe size={18} className="mr-3 text-slate-500" />
-                              <div>
-                                <p className="text-sm font-medium">Country</p>
-                                <p className="text-slate-900">{deal.country || "Not specified"}</p>
+                              <div className="flex items-center text-slate-700">
+                                <Globe
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Country</p>
+                                  <p className="text-slate-900">
+                                    {deal.country || "Not specified"}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Deal Information (edit) */}
-                        <div className="space-y-4">
-                          <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
-                            Deal Information
-                          </h3>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Deal Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              name="dealName"
-                              value={editFormData.dealName}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Value
-                            </label>
-                            <div className="flex gap-2">
-                              <select
-                                name="currency"
-                                value={editFormData.currency}
+                    ) : (
+                      <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Deal Information (edit) */}
+                          <div className="space-y-4">
+                            <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                              Deal Information
+                            </h3>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Deal Name{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                name="dealName"
+                                value={editFormData.dealName}
                                 onChange={handleEditChange}
-                                className="border border-slate-300 rounded-lg px-2 py-2 text-sm bg-white w-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Value
+                              </label>
+                              <div className="flex gap-2">
+                                <select
+                                  name="currency"
+                                  value={editFormData.currency}
+                                  onChange={handleEditChange}
+                                  className="border border-slate-300 rounded-lg px-2 py-2 text-sm bg-white w-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                >
+                                  {currencyOptions.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                      {c.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  value={editFormData.dealValue}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "" || /^[0-9]+$/.test(val)) {
+                                      handleEditChange({
+                                        target: {
+                                          name: "dealValue",
+                                          value: val,
+                                        },
+                                      });
+                                    }
+                                  }}
+                                  placeholder="Enter deal value"
+                                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition min-w-0"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Stage
+                              </label>
+                              <select
+                                name="stage"
+                                value={editFormData.stage}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               >
-                                {currencyOptions.map((c) => (
-                                  <option key={c.code} value={c.code}>{c.label}</option>
+                                {DEAL_STAGES.map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
                                 ))}
                               </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Notes
+                              </label>
+                              <textarea
+                                name="notes"
+                                rows={4}
+                                value={editFormData.notes}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Company Information (edit) */}
+                          <div className="space-y-4">
+                            <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                              Company Information
+                            </h3>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Company Name{" "}
+                                <span className="text-red-500">*</span>
+                              </label>
                               <input
-                                value={editFormData.dealValue}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val === "" || /^[0-9]+$/.test(val)) {
-                                    handleEditChange({ target: { name: "dealValue", value: val } });
+                                name="companyName"
+                                value={editFormData.companyName}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Email
+                              </label>
+                              <input
+                                type="email"
+                                name="email"
+                                value={editFormData.email}
+                                onChange={handleEditChange}
+                                placeholder="name@example.com"
+                                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                                  editErrors.email
+                                    ? "border-red-500"
+                                    : "border-slate-300"
+                                }`}
+                              />
+                              {editErrors.email && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Invalid email format
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Phone Number
+                              </label>
+                              <div
+                                className={`border rounded-lg ${
+                                  editErrors.phoneNumber
+                                    ? "border-red-500"
+                                    : "border-slate-300"
+                                }`}
+                              >
+                                <PhoneInput
+                                  country={"in"}
+                                  preferredCountries={["in"]}
+                                  countryCodeEditable={false}
+                                  value={editFormData.phoneNumber}
+                                  onChange={(phone) =>
+                                    handleEditChange({
+                                      target: {
+                                        name: "phoneNumber",
+                                        value: phone,
+                                      },
+                                    })
                                   }
-                                }}
-                                placeholder="Enter deal value"
-                                className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition min-w-0"
+                                  specialLabel=""
+                                  inputStyle={phoneInputStyle}
+                                  buttonStyle={phoneButtonStyle}
+                                />
+                              </div>
+                              {editErrors.phoneNumber && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Invalid phone number format
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Alternative Email
+                              </label>
+                              <input
+                                type="email"
+                                name="alternativeEmail"
+                                value={editFormData.alternativeEmail}
+                                onChange={handleEditChange}
+                                placeholder="alt@example.com"
+                                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                                  editErrors.alternativeEmail
+                                    ? "border-red-500"
+                                    : "border-slate-300"
+                                }`}
+                              />
+                              {editErrors.alternativeEmail && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Invalid email format
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Alternative Number
+                              </label>
+                              <div
+                                className={`border rounded-lg ${
+                                  editErrors.alternativeNumber
+                                    ? "border-red-500"
+                                    : "border-slate-300"
+                                }`}
+                              >
+                                <PhoneInput
+                                  country={"in"}
+                                  preferredCountries={["in"]}
+                                  countryCodeEditable={false}
+                                  value={editFormData.alternativeNumber}
+                                  onChange={(phone) =>
+                                    handleEditChange({
+                                      target: {
+                                        name: "alternativeNumber",
+                                        value: phone,
+                                      },
+                                    })
+                                  }
+                                  specialLabel=""
+                                  inputStyle={phoneInputStyle}
+                                  buttonStyle={phoneButtonStyle}
+                                />
+                              </div>
+                              {editErrors.alternativeNumber && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Invalid phone number format
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Client Type
+                              </label>
+                              <select
+                                name="clientType"
+                                value={editFormData.clientType}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select Client Type</option>
+                                <option value="B2B">B2B</option>
+                                <option value="B2C">B2C</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Address
+                              </label>
+                              <input
+                                name="address"
+                                value={editFormData.address}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Stage
-                            </label>
-                            <select
-                              name="stage"
-                              value={editFormData.stage}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                            >
-                              {DEAL_STAGES.map((s) => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Notes
-                            </label>
-                            <textarea
-                              name="notes"
-                              rows={4}
-                              value={editFormData.notes}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
-                            />
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Country
+                              </label>
+                              <select
+                                name="country"
+                                value={editFormData.country}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select Country</option>
+                                {countries.map((c) => (
+                                  <option key={c} value={c}>
+                                    {c}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Company Information (edit) */}
-                        <div className="space-y-4">
-                          <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
-                            Company Information
-                          </h3>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Company Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              name="companyName"
-                              value={editFormData.companyName}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Email
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={editFormData.email}
-                              onChange={handleEditChange}
-                              placeholder="name@example.com"
-                              className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
-                                editErrors.email ? "border-red-500" : "border-slate-300"
-                              }`}
-                            />
-                            {editErrors.email && (
-                              <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={cancelEditDetails}
+                            disabled={isSavingDetails}
+                            className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveDetails}
+                            disabled={isSavingDetails}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isSavingDetails ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
+                            ) : (
+                              <Save size={16} />
                             )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Phone Number
-                            </label>
-                            <div
-                              className={`border rounded-lg ${
-                                editErrors.phoneNumber ? "border-red-500" : "border-slate-300"
-                              }`}
-                            >
-                              <PhoneInput
-                                country={"in"}
-                                preferredCountries={["in"]}
-                                countryCodeEditable={false}
-                                value={editFormData.phoneNumber}
-                                onChange={(phone) =>
-                                  handleEditChange({ target: { name: "phoneNumber", value: phone } })
-                                }
-                                specialLabel=""
-                                inputStyle={phoneInputStyle}
-                                buttonStyle={phoneButtonStyle}
-                              />
-                            </div>
-                            {editErrors.phoneNumber && (
-                              <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Alternative Email
-                            </label>
-                            <input
-                              type="email"
-                              name="alternativeEmail"
-                              value={editFormData.alternativeEmail}
-                              onChange={handleEditChange}
-                              placeholder="alt@example.com"
-                              className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
-                                editErrors.alternativeEmail ? "border-red-500" : "border-slate-300"
-                              }`}
-                            />
-                            {editErrors.alternativeEmail && (
-                              <p className="text-red-500 text-xs mt-1">Invalid email format</p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Alternative Number
-                            </label>
-                            <div
-                              className={`border rounded-lg ${
-                                editErrors.alternativeNumber ? "border-red-500" : "border-slate-300"
-                              }`}
-                            >
-                              <PhoneInput
-                                country={"in"}
-                                preferredCountries={["in"]}
-                                countryCodeEditable={false}
-                                value={editFormData.alternativeNumber}
-                                onChange={(phone) =>
-                                  handleEditChange({ target: { name: "alternativeNumber", value: phone } })
-                                }
-                                specialLabel=""
-                                inputStyle={phoneInputStyle}
-                                buttonStyle={phoneButtonStyle}
-                              />
-                            </div>
-                            {editErrors.alternativeNumber && (
-                              <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Client Type
-                            </label>
-                            <select
-                              name="clientType"
-                              value={editFormData.clientType}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                            >
-                              <option value="">Select Client Type</option>
-                              <option value="B2B">B2B</option>
-                              <option value="B2C">B2C</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Address
-                            </label>
-                            <input
-                              name="address"
-                              value={editFormData.address}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Country
-                            </label>
-                            <select
-                              name="country"
-                              value={editFormData.country}
-                              onChange={handleEditChange}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                            >
-                              <option value="">Select Country</option>
-                              {countries.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                          </div>
+                            Save Changes
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={cancelEditDetails}
-                          disabled={isSavingDetails}
-                          className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={saveDetails}
-                          disabled={isSavingDetails}
-                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                          {isSavingDetails ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
-                          ) : (
-                            <Save size={16} />
-                          )}
-                          Save Changes
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
               </>
             )}
 
@@ -3226,7 +3954,10 @@ function Pipeline_modal_view() {
                       multiple
                       className="hidden"
                       disabled={isUploadingAttachment}
-                      onChange={(e) => { handleUploadAttachments(e.target.files); e.target.value = ""; }}
+                      onChange={(e) => {
+                        handleUploadAttachments(e.target.files);
+                        e.target.value = "";
+                      }}
                     />
                   </label>
                 </div>
@@ -3234,7 +3965,10 @@ function Pipeline_modal_view() {
                   {deal.attachments && deal.attachments.length > 0 ? (
                     <ul className="space-y-3">
                       {deal.attachments.map((file, idx) => {
-                        const fileName = file.name || file.path?.split("/").pop() || `File ${idx + 1}`;
+                        const fileName =
+                          file.name ||
+                          file.path?.split("/").pop() ||
+                          `File ${idx + 1}`;
                         const filePath = file.path || "";
                         const mimeType = file.type || "";
                         const cat = getFileCategory(fileName, mimeType);
@@ -3249,7 +3983,9 @@ function Pipeline_modal_view() {
                           >
                             {/* File info */}
                             <div className="flex items-center min-w-0 flex-1">
-                              <div className={`p-3 rounded-lg mr-4 flex-shrink-0 ${style.bg}`}>
+                              <div
+                                className={`p-3 rounded-lg mr-4 flex-shrink-0 ${style.bg}`}
+                              >
                                 <FileText size={20} className={style.icon} />
                               </div>
                               <div className="min-w-0">
@@ -3258,18 +3994,28 @@ function Pipeline_modal_view() {
                                 </p>
                                 <p className="text-xs text-slate-500 mt-0.5">
                                   {cat.toUpperCase()}
-                                  {file.size > 0 && <span> • {formatFileSize(file.size)}</span>}
+                                  {file.size > 0 && (
+                                    <span> • {formatFileSize(file.size)}</span>
+                                  )}
                                   {file.source && (
-                                    <span className={`ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${
-                                      file.source === "lead"
-                                        ? "bg-purple-100 text-purple-700"
-                                        : "bg-blue-100 text-blue-700"
-                                    }`}>
+                                    <span
+                                      className={`ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${
+                                        file.source === "lead"
+                                          ? "bg-purple-100 text-purple-700"
+                                          : "bg-blue-100 text-blue-700"
+                                      }`}
+                                    >
                                       {file.source}
                                     </span>
                                   )}
                                   {file.uploadedAt && (
-                                    <span> • {new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                    <span>
+                                      {" "}
+                                      •{" "}
+                                      {new Date(
+                                        file.uploadedAt,
+                                      ).toLocaleDateString()}
+                                    </span>
                                   )}
                                 </p>
                               </div>
@@ -3303,7 +4049,9 @@ function Pipeline_modal_view() {
                                 title="Download file"
                               >
                                 <Download size={15} />
-                                <span className="hidden sm:inline">Download</span>
+                                <span className="hidden sm:inline">
+                                  Download
+                                </span>
                               </button>
                             </div>
                           </li>
@@ -3315,7 +4063,9 @@ function Pipeline_modal_view() {
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Paperclip size={24} className="text-slate-400" />
                       </div>
-                      <p className="text-slate-500 font-medium">No attachments found</p>
+                      <p className="text-slate-500 font-medium">
+                        No attachments found
+                      </p>
                       <p className="text-slate-400 text-sm mt-1">
                         Files uploaded with this deal will appear here
                       </p>
@@ -3340,7 +4090,9 @@ function Pipeline_modal_view() {
                   {isActivityLoading ? (
                     <p className="text-sm text-slate-500">Loading activity…</p>
                   ) : activityFeed.length === 0 ? (
-                    <p className="text-sm text-slate-500">No activity recorded yet.</p>
+                    <p className="text-sm text-slate-500">
+                      No activity recorded yet.
+                    </p>
                   ) : (
                     <div className="relative">
                       {/* Connecting line — runs behind every icon, center to
@@ -3350,7 +4102,9 @@ function Pipeline_modal_view() {
                         <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-slate-200" />
                       )}
                       {activityFeed.map((event, idx) => {
-                        const meta = ACTIVITY_TYPE_META[event.type] || ACTIVITY_TYPE_META.default;
+                        const meta =
+                          ACTIVITY_TYPE_META[event.type] ||
+                          ACTIVITY_TYPE_META.default;
                         const Icon = meta.icon;
                         return (
                           <div
@@ -3358,19 +4112,31 @@ function Pipeline_modal_view() {
                             className={`flex items-start ${idx !== activityFeed.length - 1 ? "mb-8" : ""}`}
                           >
                             <div className="flex-shrink-0">
-                              <div className={`relative z-10 w-10 h-10 ${meta.bg} rounded-full flex items-center justify-center`}>
+                              <div
+                                className={`relative z-10 w-10 h-10 ${meta.bg} rounded-full flex items-center justify-center`}
+                              >
                                 <Icon size={16} className={meta.iconColor} />
                               </div>
                             </div>
                             <div className="ml-4">
-                              <h3 className="text-sm font-medium text-slate-900">{event.description}</h3>
+                              <h3 className="text-sm font-medium text-slate-900">
+                                {event.description}
+                              </h3>
                               <p className="text-sm text-slate-500 mt-1">
-                                {event.performedBy?.name ? `${event.performedBy.name} — ` : ""}
+                                {event.performedBy?.name
+                                  ? `${event.performedBy.name} — `
+                                  : ""}
                                 {event.timestamp
-                                  ? new Date(event.timestamp).toLocaleString("en-US", {
-                                      month: "long", day: "numeric", year: "numeric",
-                                      hour: "2-digit", minute: "2-digit",
-                                    })
+                                  ? new Date(event.timestamp).toLocaleString(
+                                      "en-US",
+                                      {
+                                        month: "long",
+                                        day: "numeric",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      },
+                                    )
                                   : ""}
                               </p>
                             </div>
@@ -3421,7 +4187,7 @@ function Pipeline_modal_view() {
                           onClick={() => {
                             setFollowUpData({
                               followUpDate: new Date(deal.followUpDate),
-                              followUpComment: deal.followUpComment || ""
+                              followUpComment: deal.followUpComment || "",
                             });
                             setIsFollowUpModalOpen(true);
                           }}
@@ -3440,22 +4206,28 @@ function Pipeline_modal_view() {
                             <div className="mt-1 flex items-center gap-2">
                               <Calendar size={18} className="text-purple-500" />
                               <span className="text-lg font-semibold text-slate-900">
-                                {new Date(deal.followUpDate).toLocaleDateString("en-US", {
-                                  weekday: "long",
-                                  month: "long",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
+                                {new Date(deal.followUpDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    weekday: "long",
+                                    month: "long",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}
                               </span>
                             </div>
                             <div className="mt-1 flex items-center gap-2">
                               <Clock size={18} className="text-purple-500" />
                               <span className="text-lg font-semibold text-slate-900">
-                                {new Date(deal.followUpDate).toLocaleTimeString("en-US", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })}
+                                {new Date(deal.followUpDate).toLocaleTimeString(
+                                  "en-US",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  },
+                                )}
                               </span>
                             </div>
                           </div>
@@ -3502,309 +4274,401 @@ function Pipeline_modal_view() {
                   )}
 
                   {/* Past Follow-ups - Sorted Most Recent First */}
-                  {deal.followUpHistory && (() => {
-                    const filteredHistory = deal.followUpHistory.filter(h => h.action !== "Scheduled");
-                    if (filteredHistory.length === 0) return null;
+                  {deal.followUpHistory &&
+                    (() => {
+                      const filteredHistory = deal.followUpHistory.filter(
+                        (h) => h.action !== "Scheduled",
+                      );
+                      if (filteredHistory.length === 0) return null;
 
-                    return (
-                      <div className="mt-8">
-                        <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                          <Archive size={16} className="text-slate-600" />
-                          Past Follow-ups ({filteredHistory.length})
-                        </h3>
+                      return (
+                        <div className="mt-8">
+                          <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <Archive size={16} className="text-slate-600" />
+                            Past Follow-ups ({filteredHistory.length})
+                          </h3>
 
-                        <div className="space-y-4">
-                          {/* Sort the history array by date in descending order (most recent first) */}
-                          {(() => {
-                            const sortedHistory = [...filteredHistory].sort((a, b) => {
-                              const dateA = a.date ? new Date(a.date).getTime() : 0;
-                              const dateB = b.date ? new Date(b.date).getTime() : 0;
-                              return dateB - dateA;
-                            });
-                          
-                          const totalPages = Math.ceil(sortedHistory.length / ITEMS_PER_PAGE);
-                          const startIndex = (followUpPage - 1) * ITEMS_PER_PAGE;
-                          const currentItems = sortedHistory.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+                          <div className="space-y-4">
+                            {/* Sort the history array by date in descending order (most recent first) */}
+                            {(() => {
+                              const sortedHistory = [...filteredHistory].sort(
+                                (a, b) => {
+                                  const dateA = a.date
+                                    ? new Date(a.date).getTime()
+                                    : 0;
+                                  const dateB = b.date
+                                    ? new Date(b.date).getTime()
+                                    : 0;
+                                  return dateB - dateA;
+                                },
+                              );
 
-                          return (
-                            <>
-                              {currentItems.map((followUp, index) => {
-                                const actionDate = followUp.date
-                                  ? new Date(followUp.date)
-                                  : null;
-                                const scheduledDate = followUp.followUpDate
-                                  ? new Date(followUp.followUpDate)
-                                  : null;
+                              const totalPages = Math.ceil(
+                                sortedHistory.length / ITEMS_PER_PAGE,
+                              );
+                              const startIndex =
+                                (followUpPage - 1) * ITEMS_PER_PAGE;
+                              const currentItems = sortedHistory.slice(
+                                startIndex,
+                                startIndex + ITEMS_PER_PAGE,
+                              );
 
-                                const outcome = followUp.outcome || (followUp.action === "Scheduled" ? "Scheduled" : followUp.action) || "Completed";
+                              return (
+                                <>
+                                  {currentItems.map((followUp, index) => {
+                                    const actionDate = followUp.date
+                                      ? new Date(followUp.date)
+                                      : null;
+                                    const scheduledDate = followUp.followUpDate
+                                      ? new Date(followUp.followUpDate)
+                                      : null;
 
-                                return (
-                                  <div
-                                    key={index}
-                                    className="border border-slate-200 rounded-xl p-5 hover:bg-slate-50 transition"
-                                  >
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <div className="flex items-center gap-3">
-                                          <div
-                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                              outcome === "Successful" ||
-                                              outcome === "Completed"
-                                                ? "bg-green-100"
-                                                : outcome === "Rescheduled"
-                                                  ? "bg-yellow-100"
-                                                  : outcome === "Cancelled"
-                                                    ? "bg-red-100"
-                                                    : outcome === "Created" ||
-                                                      outcome === "Updated"
-                                                      ? "bg-blue-100"
-                                                      : "bg-gray-100"
-                                            }`}
-                                          >
-                                            {outcome === "Successful" ||
-                                            outcome === "Completed" ? (
-                                              <CheckCircle
-                                                size={20}
-                                                className="text-green-600"
-                                              />
-                                            ) : outcome === "Rescheduled" ? (
-                                              <RefreshCw
-                                                size={20}
-                                                className="text-yellow-600"
-                                              />
-                                            ) : outcome === "Cancelled" ? (
-                                              <XCircle
-                                                size={20}
-                                                className="text-red-600"
-                                              />
-                                            ) : outcome === "Created" ? (
-                                              <Plus
-                                                size={20}
-                                                className="text-blue-600"
-                                              />
-                                            ) : outcome === "Updated" ? (
-                                              <Edit
-                                                size={20}
-                                                className="text-blue-600"
-                                              />
-                                            ) : (
-                                              <CheckCircle
-                                                size={20}
-                                                className="text-gray-600"
-                                              />
-                                            )}
-                                          </div>
+                                    const outcome =
+                                      followUp.outcome ||
+                                      (followUp.action === "Scheduled"
+                                        ? "Scheduled"
+                                        : followUp.action) ||
+                                      "Completed";
+
+                                    return (
+                                      <div
+                                        key={index}
+                                        className="border border-slate-200 rounded-xl p-5 hover:bg-slate-50 transition"
+                                      >
+                                        <div className="flex justify-between items-start">
                                           <div>
-                                            <h4 className="font-medium text-slate-900">
-                                              Follow-up {outcome}
-                                            </h4>
-                                            <div className="flex items-center gap-4 mt-1">
-                                              {actionDate ? (
-                                                <>
-                                                  <div className="flex items-center gap-1 text-sm text-slate-600">
-                                                    <span className="font-medium text-slate-700 mr-1">Logged:</span>
-                                                    <Calendar size={14} />
-                                                    <span>
-                                                      {actionDate.toLocaleDateString(
-                                                        "en-US",
-                                                        {
-                                                          month: "short",
-                                                          day: "numeric",
-                                                          year: "numeric",
-                                                        }
-                                                      )}
+                                            <div className="flex items-center gap-3">
+                                              <div
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                                  outcome === "Successful" ||
+                                                  outcome === "Completed"
+                                                    ? "bg-green-100"
+                                                    : outcome === "Rescheduled"
+                                                      ? "bg-yellow-100"
+                                                      : outcome === "Cancelled"
+                                                        ? "bg-red-100"
+                                                        : outcome ===
+                                                              "Created" ||
+                                                            outcome ===
+                                                              "Updated"
+                                                          ? "bg-blue-100"
+                                                          : "bg-gray-100"
+                                                }`}
+                                              >
+                                                {outcome === "Successful" ||
+                                                outcome === "Completed" ? (
+                                                  <CheckCircle
+                                                    size={20}
+                                                    className="text-green-600"
+                                                  />
+                                                ) : outcome ===
+                                                  "Rescheduled" ? (
+                                                  <RefreshCw
+                                                    size={20}
+                                                    className="text-yellow-600"
+                                                  />
+                                                ) : outcome === "Cancelled" ? (
+                                                  <XCircle
+                                                    size={20}
+                                                    className="text-red-600"
+                                                  />
+                                                ) : outcome === "Created" ? (
+                                                  <Plus
+                                                    size={20}
+                                                    className="text-blue-600"
+                                                  />
+                                                ) : outcome === "Updated" ? (
+                                                  <Edit
+                                                    size={20}
+                                                    className="text-blue-600"
+                                                  />
+                                                ) : (
+                                                  <CheckCircle
+                                                    size={20}
+                                                    className="text-gray-600"
+                                                  />
+                                                )}
+                                              </div>
+                                              <div>
+                                                <h4 className="font-medium text-slate-900">
+                                                  Follow-up {outcome}
+                                                </h4>
+                                                <div className="flex items-center gap-4 mt-1">
+                                                  {actionDate ? (
+                                                    <>
+                                                      <div className="flex items-center gap-1 text-sm text-slate-600">
+                                                        <span className="font-medium text-slate-700 mr-1">
+                                                          Logged:
+                                                        </span>
+                                                        <Calendar size={14} />
+                                                        <span>
+                                                          {actionDate.toLocaleDateString(
+                                                            "en-US",
+                                                            {
+                                                              month: "short",
+                                                              day: "numeric",
+                                                              year: "numeric",
+                                                            },
+                                                          )}
+                                                        </span>
+                                                      </div>
+                                                      <div className="flex items-center gap-1 text-sm text-slate-600">
+                                                        <Clock size={14} />
+                                                        <span>
+                                                          {actionDate.toLocaleTimeString(
+                                                            "en-US",
+                                                            {
+                                                              hour: "2-digit",
+                                                              minute: "2-digit",
+                                                              hour12: true,
+                                                            },
+                                                          )}
+                                                        </span>
+                                                      </div>
+                                                    </>
+                                                  ) : (
+                                                    <span className="text-sm text-slate-500">
+                                                      Date not available
                                                     </span>
-                                                  </div>
-                                                  <div className="flex items-center gap-1 text-sm text-slate-600">
-                                                    <Clock size={14} />
-                                                    <span>
-                                                      {actionDate.toLocaleTimeString(
-                                                        "en-US",
-                                                        {
-                                                          hour: "2-digit",
-                                                          minute: "2-digit",
-                                                          hour12: true,
-                                                        }
-                                                      )}
-                                                    </span>
-                                                  </div>
-                                                </>
-                                              ) : (
-                                                <span className="text-sm text-slate-500">
-                                                  Date not available
-                                                </span>
-                                              )}
+                                                  )}
+                                                </div>
+
+                                                {/* Show when it was scheduled for (if different from action date) */}
+                                                {scheduledDate &&
+                                                  actionDate &&
+                                                  Math.abs(
+                                                    scheduledDate.getTime() -
+                                                      actionDate.getTime(),
+                                                  ) > 1000 && (
+                                                    <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                                                      <span>
+                                                        Scheduled for:{" "}
+                                                      </span>
+                                                      <span className="font-medium">
+                                                        {scheduledDate.toLocaleDateString(
+                                                          "en-US",
+                                                          {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                          },
+                                                        )}
+                                                      </span>
+                                                      <span className="mx-1">
+                                                        at
+                                                      </span>
+                                                      <span className="font-medium">
+                                                        {scheduledDate.toLocaleTimeString(
+                                                          "en-US",
+                                                          {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                          },
+                                                        )}
+                                                      </span>
+                                                    </div>
+                                                  )}
+                                              </div>
                                             </div>
 
-                                            {/* Show when it was scheduled for (if different from action date) */}
-                                            {scheduledDate && actionDate &&
-                                              Math.abs(scheduledDate.getTime() - actionDate.getTime()) > 1000 && (
-                                                <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
-                                                  <span>Scheduled for: </span>
-                                                  <span className="font-medium">
-                                                    {scheduledDate.toLocaleDateString(
-                                                      "en-US",
-                                                      {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                      }
+                                            <div className="mt-4">
+                                              <p className="text-sm font-medium text-slate-700 mb-2">
+                                                Agenda / Plan
+                                              </p>
+                                              <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
+                                                <p className="text-slate-700">
+                                                  {followUp.followUpComment || (
+                                                    <span className="text-slate-400 italic">
+                                                      No agenda provided
+                                                    </span>
+                                                  )}
+                                                </p>
+                                              </div>
+                                            </div>
+
+                                            {followUp.action !==
+                                              "Scheduled" && (
+                                              <div className="mt-4">
+                                                <p className="text-sm font-medium text-slate-700 mb-2">
+                                                  Meeting Summary
+                                                </p>
+                                                <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                                                  <p className="text-slate-700">
+                                                    {followUp.notes || (
+                                                      <span className="text-slate-400 italic">
+                                                        No summary provided
+                                                      </span>
                                                     )}
-                                                  </span>
-                                                  <span className="mx-1">at</span>
-                                                  <span className="font-medium">
-                                                    {scheduledDate.toLocaleTimeString(
-                                                      "en-US",
-                                                      {
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                      }
-                                                    )}
-                                                  </span>
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            )}
+
+                                            {followUp.changedBy &&
+                                              (followUp.changedBy.firstName ||
+                                                followUp.changedBy
+                                                  .lastName) && (
+                                                <div className="mt-4">
+                                                  <p className="text-sm font-medium text-slate-700">
+                                                    Updated by
+                                                  </p>
+                                                  <div className="flex items-center gap-2 mt-1">
+                                                    <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                                                      <User
+                                                        size={14}
+                                                        className="text-slate-600"
+                                                      />
+                                                    </div>
+                                                    <span className="text-sm text-slate-700">
+                                                      {followUp.changedBy
+                                                        .firstName ||
+                                                        "User"}{" "}
+                                                      {followUp.changedBy
+                                                        .lastName || ""}
+                                                    </span>
+                                                  </div>
                                                 </div>
                                               )}
                                           </div>
-                                        </div>
 
-                                        <div className="mt-4">
-                                          <p className="text-sm font-medium text-slate-700 mb-2">
-                                            Agenda / Plan
+                                          <div className="text-right">
+                                            <span
+                                              className={`text-xs px-3 py-1 rounded-full font-medium ${
+                                                outcome === "Successful" ||
+                                                outcome === "Completed"
+                                                  ? "bg-green-100 text-green-800"
+                                                  : outcome === "Rescheduled"
+                                                    ? "bg-yellow-100 text-yellow-800"
+                                                    : outcome === "Cancelled"
+                                                      ? "bg-red-100 text-red-800"
+                                                      : outcome === "Created" ||
+                                                          outcome === "Updated"
+                                                        ? "bg-blue-100 text-blue-800"
+                                                        : "bg-gray-100 text-gray-800"
+                                              }`}
+                                            >
+                                              {outcome}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {totalPages > 1 && (
+                                    <div className="flex items-center justify-between border-t border-slate-200 bg-white pt-6 mt-6">
+                                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                                        <div>
+                                          <p className="text-sm text-slate-700">
+                                            Showing{" "}
+                                            <span className="font-medium">
+                                              {startIndex + 1}
+                                            </span>{" "}
+                                            to{" "}
+                                            <span className="font-medium">
+                                              {Math.min(
+                                                startIndex + ITEMS_PER_PAGE,
+                                                sortedHistory.length,
+                                              )}
+                                            </span>{" "}
+                                            of{" "}
+                                            <span className="font-medium">
+                                              {sortedHistory.length}
+                                            </span>{" "}
+                                            results
                                           </p>
-                                          <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                                            <p className="text-slate-700">
-                                              {followUp.followUpComment || <span className="text-slate-400 italic">No agenda provided</span>}
-                                            </p>
-                                          </div>
                                         </div>
-
-                                        {followUp.action !== "Scheduled" && (
-                                          <div className="mt-4">
-                                            <p className="text-sm font-medium text-slate-700 mb-2">
-                                              Meeting Summary
-                                            </p>
-                                            <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-                                              <p className="text-slate-700">
-                                                {followUp.notes || <span className="text-slate-400 italic">No summary provided</span>}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {followUp.changedBy && (followUp.changedBy.firstName || followUp.changedBy.lastName) && (
-                                          <div className="mt-4">
-                                            <p className="text-sm font-medium text-slate-700">
-                                              Updated by
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                              <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                                                <User
-                                                  size={14}
-                                                  className="text-slate-600"
-                                                />
-                                              </div>
-                                              <span className="text-sm text-slate-700">
-                                                {followUp.changedBy.firstName || "User"}{" "}
-                                                {followUp.changedBy.lastName || ""}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      <div className="text-right">
-                                        <span
-                                          className={`text-xs px-3 py-1 rounded-full font-medium ${
-                                            outcome === "Successful" ||
-                                            outcome === "Completed"
-                                              ? "bg-green-100 text-green-800"
-                                              : outcome === "Rescheduled"
-                                                ? "bg-yellow-100 text-yellow-800"
-                                                : outcome === "Cancelled"
-                                                  ? "bg-red-100 text-red-800"
-                                                  : outcome === "Created" ||
-                                                    outcome === "Updated"
-                                                    ? "bg-blue-100 text-blue-800"
-                                                    : "bg-gray-100 text-gray-800"
-                                          }`}
-                                        >
-                                          {outcome}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {totalPages > 1 && (
-                                <div className="flex items-center justify-between border-t border-slate-200 bg-white pt-6 mt-6">
-                                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                                    <div>
-                                      <p className="text-sm text-slate-700">
-                                        Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + ITEMS_PER_PAGE, sortedHistory.length)}</span> of <span className="font-medium">{sortedHistory.length}</span> results
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                                        <button
-                                          onClick={() => setFollowUpPage(p => Math.max(1, p - 1))}
-                                          disabled={followUpPage === 1}
-                                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
-                                        >
-                                          <span className="sr-only">Previous</span>
-                                          <ChevronLeft size={16} />
-                                        </button>
-                                        
-                                        {Array.from({ length: totalPages }).map((_, i) => (
-                                          <button
-                                            key={i}
-                                            onClick={() => setFollowUpPage(i + 1)}
-                                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0 transition-colors ${
-                                              followUpPage === i + 1 
-                                                ? 'z-10 bg-purple-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600' 
-                                                : 'text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50'
-                                            }`}
+                                        <div>
+                                          <nav
+                                            className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                                            aria-label="Pagination"
                                           >
-                                            {i + 1}
-                                          </button>
-                                        ))}
-                                        
+                                            <button
+                                              onClick={() =>
+                                                setFollowUpPage((p) =>
+                                                  Math.max(1, p - 1),
+                                                )
+                                              }
+                                              disabled={followUpPage === 1}
+                                              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+                                            >
+                                              <span className="sr-only">
+                                                Previous
+                                              </span>
+                                              <ChevronLeft size={16} />
+                                            </button>
+
+                                            {Array.from({
+                                              length: totalPages,
+                                            }).map((_, i) => (
+                                              <button
+                                                key={i}
+                                                onClick={() =>
+                                                  setFollowUpPage(i + 1)
+                                                }
+                                                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0 transition-colors ${
+                                                  followUpPage === i + 1
+                                                    ? "z-10 bg-purple-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600"
+                                                    : "text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+                                                }`}
+                                              >
+                                                {i + 1}
+                                              </button>
+                                            ))}
+
+                                            <button
+                                              onClick={() =>
+                                                setFollowUpPage((p) =>
+                                                  Math.min(totalPages, p + 1),
+                                                )
+                                              }
+                                              disabled={
+                                                followUpPage === totalPages
+                                              }
+                                              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+                                            >
+                                              <span className="sr-only">
+                                                Next
+                                              </span>
+                                              <ChevronRight size={16} />
+                                            </button>
+                                          </nav>
+                                        </div>
+                                      </div>
+
+                                      {/* Mobile Pagination */}
+                                      <div className="flex flex-1 justify-between sm:hidden">
                                         <button
-                                          onClick={() => setFollowUpPage(p => Math.min(totalPages, p + 1))}
-                                          disabled={followUpPage === totalPages}
-                                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 transition-colors"
+                                          onClick={() =>
+                                            setFollowUpPage((p) =>
+                                              Math.max(1, p - 1),
+                                            )
+                                          }
+                                          disabled={followUpPage === 1}
+                                          className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                                         >
-                                          <span className="sr-only">Next</span>
-                                          <ChevronRight size={16} />
+                                          Previous
                                         </button>
-                                      </nav>
+                                        <button
+                                          onClick={() =>
+                                            setFollowUpPage((p) =>
+                                              Math.min(totalPages, p + 1),
+                                            )
+                                          }
+                                          disabled={followUpPage === totalPages}
+                                          className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                        >
+                                          Next
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                  
-                                  {/* Mobile Pagination */}
-                                  <div className="flex flex-1 justify-between sm:hidden">
-                                    <button
-                                      onClick={() => setFollowUpPage(p => Math.max(1, p - 1))}
-                                      disabled={followUpPage === 1}
-                                      className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                    >
-                                      Previous
-                                    </button>
-                                    <button
-                                      onClick={() => setFollowUpPage(p => Math.min(totalPages, p + 1))}
-                                      disabled={followUpPage === totalPages}
-                                      className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                    >
-                                      Next
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    );
-                  })()}
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      );
+                    })()}
                 </div>
               </div>
             )}
@@ -3813,7 +4677,9 @@ function Pipeline_modal_view() {
             {activeTab === "notes" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Notes
+                  </h2>
                   <p className="text-sm text-slate-600 mt-1">Newest first</p>
                 </div>
                 <div className="p-6 border-b border-slate-100">
@@ -3841,12 +4707,18 @@ function Pipeline_modal_view() {
                     <p className="text-sm text-slate-500">No notes yet.</p>
                   ) : (
                     notes.map((n) => (
-                      <div key={n._id} className={`p-4 rounded-lg border ${n.seed ? "bg-slate-50 border-slate-200" : "bg-white border-slate-200"}`}>
-                        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">{n.text}</p>
+                      <div
+                        key={n._id}
+                        className={`p-4 rounded-lg border ${n.seed ? "bg-slate-50 border-slate-200" : "bg-white border-slate-200"}`}
+                      >
+                        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">
+                          {n.text}
+                        </p>
                         <p className="text-xs text-slate-500 mt-2">
                           {n.seed ? "Original note — " : ""}
                           {n.createdBy?.name || "Unknown"}
-                          {n.createdAt && ` — ${new Date(n.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}`}
+                          {n.createdAt &&
+                            ` — ${new Date(n.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}`}
                         </p>
                       </div>
                     ))
@@ -3860,11 +4732,22 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Proposals</h2>
-                    <p className="text-sm text-slate-600 mt-1">Sent to this deal's contact</p>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Proposals
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Sent to this deal's contact
+                    </p>
                   </div>
                   <button
-                    onClick={() => navigate(`/${tenantSlug}/proposal/sendproposal`, { state: { presetDealId: deal._id, returnToDealId: deal._id } })}
+                    onClick={() =>
+                      navigate(`/${tenantSlug}/proposal/sendproposal`, {
+                        state: {
+                          presetDealId: deal._id,
+                          returnToDealId: deal._id,
+                        },
+                      })
+                    }
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
                   >
                     <Plus size={15} />
@@ -3886,7 +4769,11 @@ function Pipeline_modal_view() {
                       const goToProposal = () => {
                         if (p.status === "draft") {
                           navigate(`/${tenantSlug}/proposal/sendproposal`, {
-                            state: { proposal: p, isEditing: true, returnToDealId: deal._id },
+                            state: {
+                              proposal: p,
+                              isEditing: true,
+                              returnToDealId: deal._id,
+                            },
                           });
                         } else {
                           navigate(`/${tenantSlug}/proposal/view/${p._id}`);
@@ -3899,21 +4786,50 @@ function Pipeline_modal_view() {
                           className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
                         >
                           <div>
-                            <p className="text-sm font-medium text-slate-900">{p.title}</p>
+                            <p className="text-sm font-medium text-slate-900">
+                              {p.title}
+                            </p>
                             <p className="text-xs text-slate-500 mt-1">
-                              {p.createdAt && new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                              {p.lastUpdatedBy?.name ? ` — last updated by ${p.lastUpdatedBy.name}` : ""}
+                              {p.createdAt &&
+                                new Date(p.createdAt).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}
+                              {p.lastUpdatedBy?.name
+                                ? ` — last updated by ${p.lastUpdatedBy.name}`
+                                : ""}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="flex items-center gap-2 flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <select
                               value={p.status}
-                              onChange={(e) => handleProposalStatusChange(p._id, e.target.value)}
+                              onChange={(e) =>
+                                handleProposalStatusChange(
+                                  p._id,
+                                  e.target.value,
+                                )
+                              }
                               disabled={p.status === "draft"}
-                              title={p.status === "draft" ? "Send this draft first (it hasn't been emailed yet) before its status can change" : ""}
+                              title={
+                                p.status === "draft"
+                                  ? "Send this draft first (it hasn't been emailed yet) before its status can change"
+                                  : ""
+                              }
                               className={`text-xs font-medium px-2 py-1 rounded-full border capitalize ${p.status === "draft" ? "opacity-60 cursor-not-allowed" : "cursor-pointer"} ${PROPOSAL_STATUS_STYLES[p.status] || "bg-slate-100 text-slate-700 border-slate-200"}`}
                             >
-                              <option value="draft" disabled={p.status !== "draft"}>Draft</option>
+                              <option
+                                value="draft"
+                                disabled={p.status !== "draft"}
+                              >
+                                Draft
+                              </option>
                               <option value="sent">Sent</option>
                               <option value="no reply">No Reply</option>
                               <option value="rejection">Rejection</option>
@@ -3941,11 +4857,18 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Invoices</h2>
-                    <p className="text-sm text-slate-600 mt-1">Billed to this deal</p>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Invoices
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Billed to this deal
+                    </p>
                   </div>
                   <button
-                    onClick={() => { setEditingInvoiceForModal(null); openInvoiceModal(); }}
+                    onClick={() => {
+                      setEditingInvoiceForModal(null);
+                      openInvoiceModal();
+                    }}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
                   >
                     <Plus size={15} />
@@ -3961,31 +4884,44 @@ function Pipeline_modal_view() {
                     dealInvoices.map((inv) => (
                       <div
                         key={inv._id}
-                        onClick={() => { setEditingInvoiceForModal(inv); openInvoiceModal(); }}
+                        onClick={() => {
+                          setEditingInvoiceForModal(inv);
+                          openInvoiceModal();
+                        }}
                         className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
                       >
                         <div>
-                          <p className="text-sm font-medium text-slate-900">#{inv.invoicenumber}</p>
+                          <p className="text-sm font-medium text-slate-900">
+                            #{inv.invoicenumber}
+                          </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            {inv.dueDate && `Due ${new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                            {inv.amountPaid ? ` — ${inv.amountPaid} ${inv.currency} paid` : ""}
+                            {inv.dueDate &&
+                              `Due ${new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                            {inv.amountPaid
+                              ? ` — ${inv.amountPaid} ${inv.currency} paid`
+                              : ""}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <div
+                          className="flex items-center gap-2 flex-shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <button
                             onClick={() => handleSendInvoiceEmail(inv._id)}
                             disabled={sendingInvoiceEmailId === inv._id}
                             className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
                           >
-                            {sendingInvoiceEmailId === inv._id ? "Sending…" : "Send to Email"}
+                            {sendingInvoiceEmailId === inv._id
+                              ? "Sending…"
+                              : "Send to Email"}
                           </button>
                           <span
                             className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${
                               inv.status === "paid"
                                 ? "bg-green-100 text-green-700"
                                 : inv.status === "partially_paid"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-slate-100 text-slate-700"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-slate-100 text-slate-700"
                             }`}
                           >
                             {inv.status?.replace("_", " ")}
@@ -4003,8 +4939,12 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Meetings</h2>
-                    <p className="text-sm text-slate-600 mt-1">Scheduled with this deal's contact</p>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Meetings
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Scheduled with this deal's contact
+                    </p>
                   </div>
                   <button
                     onClick={() => setIsMeetingModalOpen(true)}
@@ -4018,10 +4958,14 @@ function Pipeline_modal_view() {
                   {isMeetingsLoading ? (
                     <p className="text-sm text-slate-500">Loading meetings…</p>
                   ) : dealMeetings.length === 0 ? (
-                    <p className="text-sm text-slate-500">No meetings scheduled yet.</p>
+                    <p className="text-sm text-slate-500">
+                      No meetings scheduled yet.
+                    </p>
                   ) : (
                     dealMeetings.map((m) => {
-                      const isUpcoming = m.status === "scheduled" && new Date(m.startDateTime) > new Date();
+                      const isUpcoming =
+                        m.status === "scheduled" &&
+                        new Date(m.startDateTime) > new Date();
                       return (
                         <div
                           key={m._id}
@@ -4029,17 +4973,35 @@ function Pipeline_modal_view() {
                           className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
                         >
                           <div>
-                            <p className="text-sm font-medium text-slate-900">{m.title}</p>
+                            <p className="text-sm font-medium text-slate-900">
+                              {m.title}
+                            </p>
                             <p className="text-xs text-slate-500 mt-1">
-                              {m.startDateTime && new Date(m.startDateTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                              {" — "}{m.provider === "zoom" ? "Zoom" : "Google Meet"}
+                              {m.startDateTime &&
+                                new Date(m.startDateTime).toLocaleString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
+                              {" — "}
+                              {m.provider === "zoom" ? "Zoom" : "Google Meet"}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="flex items-center gap-2 flex-shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {isUpcoming && (
                               <>
                                 <button
-                                  onClick={() => navigate(`/${tenantSlug}/meetings`)}
+                                  onClick={() =>
+                                    navigate(`/${tenantSlug}/meetings`)
+                                  }
                                   className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                                 >
                                   Edit
@@ -4069,11 +5031,29 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Emails</h2>
-                    <p className="text-sm text-slate-600 mt-1">Campaign sends to this deal's contact</p>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Emails
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Campaign sends to this deal's contact
+                    </p>
                   </div>
                   <button
-                    onClick={() => navigate(`/${tenantSlug}/create-email`, { state: { selectedContacts: deal.email ? [{ name: deal.dealName || deal.email, email: deal.email, type: "deal" }] : [] } })}
+                    onClick={() =>
+                      navigate(`/${tenantSlug}/create-email`, {
+                        state: {
+                          selectedContacts: deal.email
+                            ? [
+                                {
+                                  name: deal.dealName || deal.email,
+                                  email: deal.email,
+                                  type: "deal",
+                                },
+                              ]
+                            : [],
+                        },
+                      })
+                    }
                     disabled={!deal.email}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 disabled:opacity-50"
                   >
@@ -4085,19 +5065,35 @@ function Pipeline_modal_view() {
                   {isEmailsLoading ? (
                     <p className="text-sm text-slate-500">Loading emails…</p>
                   ) : dealEmails.length === 0 ? (
-                    <p className="text-sm text-slate-500">No emails sent to this contact yet.</p>
+                    <p className="text-sm text-slate-500">
+                      No emails sent to this contact yet.
+                    </p>
                   ) : (
                     dealEmails.map((e) => (
                       <div
                         key={e._id}
-                        onClick={() => navigate(`/${tenantSlug}/${e.status === "scheduled" ? "scheduled-emails" : "email-history"}`)}
+                        onClick={() =>
+                          navigate(
+                            `/${tenantSlug}/${e.status === "scheduled" ? "scheduled-emails" : "email-history"}`,
+                          )
+                        }
                         className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
                       >
                         <div>
-                          <p className="text-sm font-medium text-slate-900">{e.subject}</p>
+                          <p className="text-sm font-medium text-slate-900">
+                            {e.subject}
+                          </p>
                           <p className="text-xs text-slate-500 mt-1">
                             {(e.scheduledFor || e.createdAt) &&
-                              new Date(e.scheduledFor || e.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              new Date(
+                                e.scheduledFor || e.createdAt,
+                              ).toLocaleString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                           </p>
                         </div>
                         <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize flex-shrink-0">
@@ -4163,7 +5159,9 @@ function Pipeline_modal_view() {
                       className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors"
                     >
                       <Phone size={14} className="mr-2" />
-                      {deal.phoneNumber.startsWith("+") ? deal.phoneNumber : `+${deal.phoneNumber}`}
+                      {deal.phoneNumber.startsWith("+")
+                        ? deal.phoneNumber
+                        : `+${deal.phoneNumber}`}
                     </a>
                   )}
                   {deal.alternativeEmail && (
@@ -4197,7 +5195,7 @@ function Pipeline_modal_view() {
                       if (deal.followUpDate) {
                         setFollowUpData({
                           followUpDate: new Date(deal.followUpDate),
-                          followUpComment: deal.followUpComment || ""
+                          followUpComment: deal.followUpComment || "",
                         });
                       }
                       setIsFollowUpModalOpen(true);
@@ -4205,7 +5203,9 @@ function Pipeline_modal_view() {
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-slate-700 hover:bg-purple-50 rounded-lg transition-colors"
                   >
                     <Calendar size={16} className="text-purple-600" />
-                    {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
+                    {deal.followUpDate
+                      ? "Reschedule Follow-up"
+                      : "Schedule Follow-up"}
                   </button>
                 </div>
               </div>
