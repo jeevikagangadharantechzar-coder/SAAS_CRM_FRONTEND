@@ -291,33 +291,38 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
     const loginParams = configId
       ? { config_id: configId, response_type: "code", override_default_response_type: true,
           extras: { setup: {}, featurization: { registration_id: Date.now().toString() }, sessionInfoVersion: 2 } }
-      : { scope: "whatsapp_business_messaging,whatsapp_business_management", response_type: "code" };
+      : { scope: "whatsapp_business_messaging,whatsapp_business_management" };
 
-    window.FB.login(async (response) => {
+    window.FB.login((response) => {
       window.removeEventListener("message", handleMessage);
-      if (!response.authResponse?.code) {
+      if (!response.authResponse) {
         setConnecting(false);
         return;
       }
-      try {
-        const { data } = await api.post("/whatsapp/embedded-signup", {
-          code: response.authResponse.code,
-          ...(embeddedDataRef.current || {}),
-        });
-        if (data.selectPhone) {
-          setPhones(data.phones);
-          setOauthToken({ token: data.userToken, expiresAt: data.tokenExpiresAt });
-          setSelectedPhone(data.phones[0] || null);
-          setMode("phone-picker");
-        } else {
-          setWebhookInfo({ webhookUrl: data.webhookUrl, verifyToken: data.verifyToken });
-          onConnected();
+      (async () => {
+        try {
+          const payload = { ...(embeddedDataRef.current || {}) };
+          if (response.authResponse.code) {
+            payload.code = response.authResponse.code;
+          } else {
+            payload.userToken = response.authResponse.accessToken;
+          }
+          const { data } = await api.post("/whatsapp/embedded-signup", payload);
+          if (data.selectPhone) {
+            setPhones(data.phones);
+            setOauthToken({ token: data.userToken, expiresAt: data.tokenExpiresAt });
+            setSelectedPhone(data.phones[0] || null);
+            setMode("phone-picker");
+          } else {
+            setWebhookInfo({ webhookUrl: data.webhookUrl, verifyToken: data.verifyToken });
+            onConnected();
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || "Connection failed. Please try again.");
+        } finally {
+          setConnecting(false);
         }
-      } catch (err) {
-        setError(err.response?.data?.message || "Connection failed. Please try again.");
-      } finally {
-        setConnecting(false);
-      }
+      })();
     }, loginParams);
   };
 
