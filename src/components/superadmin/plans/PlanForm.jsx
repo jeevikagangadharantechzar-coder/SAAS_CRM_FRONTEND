@@ -57,8 +57,10 @@ const DEFAULT_FEATURES = {
   admin_access: true,
   email_chat: true,
   email_campaigns: true,
-  whatsapp_chat: true,
   analytics: true,
+  won_analysis: true,
+  loss_analysis: true,
+  deal_analysis: true,
   settings: true,
   streak_leaderboard: true,
   assigned_tasks: true,
@@ -71,6 +73,8 @@ const DEFAULT_FEATURES = {
   messages: true,
   chatbot: true,
   integration_facebook: true,
+  integration_instagram: true,
+  integration_whatsapp: true,
   integration_linkedin: true,
   integration_justdial: true,
   integration_indiamart: true,
@@ -108,17 +112,25 @@ const FEATURE_GROUPS = [
     features: [
       { key: "email_chat", label: "Email Chat", icon: Mail },
       { key: "email_campaigns", label: "Email Campaigns", icon: Send },
-      { key: "whatsapp_chat", label: "WhatsApp Chat", icon: MessageCircle },
       { key: "messages", label: "Internal Messages", icon: MessageSquare },
       { key: "chatbot", label: "AI Chatbot Assistant", icon: Bot },
     ],
   },
   {
-    title: "Reports & Engagement",
+    title: "Team Analytics & Engagement",
     icon: BarChart3,
     features: [
-      { key: "analytics", label: "Analytics", icon: PieChart },
+      { key: "analytics", label: "Team Analytics", icon: PieChart },
       { key: "streak_leaderboard", label: "Streak Leaderboard", icon: Trophy },
+    ],
+  },
+  {
+    title: "Analysis",
+    icon: PieChart,
+    features: [
+      { key: "won_analysis", label: "Won Analysis", icon: PieChart },
+      { key: "loss_analysis", label: "Loss Analysis", icon: PieChart },
+      { key: "deal_analysis", label: "Deal Analysis", icon: PieChart },
     ],
   },
   {
@@ -144,12 +156,20 @@ const FEATURE_GROUPS = [
     title: "Lead Source Integrations",
     icon: Link2,
     features: [
-      { key: "integration_facebook", label: "Facebook & Instagram", icon: Facebook },
       { key: "integration_linkedin", label: "LinkedIn", icon: Linkedin },
       { key: "integration_justdial", label: "Justdial", icon: Webhook },
       { key: "integration_indiamart", label: "IndiaMART", icon: Globe },
       { key: "integration_99acres", label: "99acres", icon: Webhook },
       { key: "integration_sulekha", label: "Sulekha", icon: Webhook },
+    ],
+  },
+  {
+    title: "Meta Integrations",
+    icon: Link2,
+    features: [
+      { key: "integration_facebook", label: "Facebook", icon: Facebook },
+      { key: "integration_instagram", label: "Instagram", icon: Link2 },
+      { key: "integration_whatsapp", label: "WhatsApp", icon: MessageCircle },
     ],
   },
   {
