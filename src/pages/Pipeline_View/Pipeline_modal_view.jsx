@@ -1182,24 +1182,28 @@ function Pipeline_modal_view() {
         return;
       }
 
+      const sourceData = editFormData || deal || {};
+
       const payload = {
-        dealName: editFormData.dealName.trim(),
-        dealValue: editFormData.dealValue,
-        currency: editFormData.currency,
-        stage: editFormData.stage,
-        notes: editFormData.notes,
-        companyName: editFormData.companyName.trim(),
-        email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
-          ? `+${editFormData.phoneNumber}`
-          : editFormData.phoneNumber,
-        alternativeEmail: editFormData.alternativeEmail,
-        alternativeNumber: editFormData.alternativeNumber && !editFormData.alternativeNumber.startsWith("+")
-          ? `+${editFormData.alternativeNumber}`
-          : editFormData.alternativeNumber,
-        clientType: editFormData.clientType,
-        address: editFormData.address.trim(),
-        country: editFormData.country.trim(),
+        dealName: (sourceData.dealName || "").trim(),
+        dealValue: sourceData.dealValue || "",
+        currency: sourceData.currency || "USD",
+        stage: extraFields.lossReason ? "Closed Lost" : (sourceData.stage || "Qualification"),
+        notes: sourceData.notes || "",
+        companyName: (sourceData.companyName || "").trim(),
+        email: sourceData.email || "",
+        phoneNumber:
+          sourceData.phoneNumber && !String(sourceData.phoneNumber).startsWith("+")
+            ? `+${sourceData.phoneNumber}`
+            : sourceData.phoneNumber || "",
+        alternativeEmail: sourceData.alternativeEmail || "",
+        alternativeNumber:
+          sourceData.alternativeNumber && !String(sourceData.alternativeNumber).startsWith("+")
+            ? `+${sourceData.alternativeNumber}`
+            : sourceData.alternativeNumber || "",
+        clientType: sourceData.clientType || "",
+        address: (sourceData.address || "").trim(),
+        country: (sourceData.country || "").trim(),
         ...extraFields,
       };
 
@@ -1209,10 +1213,15 @@ function Pipeline_modal_view() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setDeal(response.data.deal);
+      if (response.data?.deal) {
+        setDeal(response.data.deal);
+      } else {
+        setDeal((prev) => ({ ...prev, ...payload }));
+      }
       setIsEditingDetails(false);
       setEditFormData(null);
-      toast.success(response.data.message || "Deal updated successfully");
+      toast.success(extraFields.lossReason ? "Deal marked as Closed Lost & updated successfully" : (response.data?.message || "Deal updated successfully"));
+      fetchDealDetails();
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to update deal:", err);
@@ -1243,9 +1252,25 @@ function Pipeline_modal_view() {
 
   const handleLostDealConfirm = useCallback(async (lossData) => {
     if (lossData?.reason) {
-      await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+      try {
+        const token = localStorage.getItem("token");
+        await axios.post(
+          `${API_URL}/deals/lost-reason`,
+          {
+            dealId: deal._id,
+            reason: lossData.reason,
+            notes: lossData.notes || "",
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error("Failed to post lost deal reason:", err);
+      } finally {
+        await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+        fetchActivity();
+      }
     }
-  }, [editFormData]);
+  }, [deal, editFormData, performSaveDetails]);
 
   const saveDetails = async () => {
     if (!editFormData.dealName.trim()) return toast.error("Deal Name is required");
@@ -1270,7 +1295,7 @@ function Pipeline_modal_view() {
     // Moving into Closed Lost always needs a reason, same as the Create/Edit
     // Deal form — intercept the save and collect it before writing anything.
     if (editFormData.stage === "Closed Lost" && deal.stage !== "Closed Lost") {
-      openLostDealModal(deal._id, handleLostDealConfirm);
+      openLostDealModal(deal, handleLostDealConfirm);
       return;
     }
 
@@ -1421,7 +1446,9 @@ function Pipeline_modal_view() {
         onReasonChange={setLossReason}
         onNotesChange={setLossNotes}
         onConfirm={validateLostDeal}
-        title="Update Loss Reason"
+        title="Reason for Lost Deal"
+        confirmText="Confirm & Move to Closed Lost"
+        cancelText="Cancel"
         dealName={deal.dealName}
         isLoading={lostModalLoading}
       />
