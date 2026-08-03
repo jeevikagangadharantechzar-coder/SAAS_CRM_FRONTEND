@@ -17,7 +17,6 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { getNames } from "country-list";
 import useLostDealModal from "../LostDealModal/LossDeal";
-import LostDealModal from "../LostDealModal/ModalLoss";
 import { useModal } from "../../context/ModalContext";
 import InvoiceModal from "../invoice/InvoiceModal.jsx";
 import MeetingModal from "../meetings/MeetingModal.jsx";
@@ -532,6 +531,7 @@ function Pipeline_modal_view() {
   const swipeContainerRef = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
   const [isSwipeAnimating, setIsSwipeAnimating] = useState(false);
+  const isMouseDownRef = useRef(false);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   // Live offset shared by both the mouse-drag and trackpad-wheel paths, read
@@ -661,6 +661,7 @@ function Pipeline_modal_view() {
   // "released below threshold" snap-back and for self-healing a drag that
   // got stuck true (see handleMouseMove below).
   const cancelDrag = useCallback(() => {
+    isMouseDownRef.current = false;
     isDraggingRef.current = false;
     swipeOffsetRef.current = 0;
     setIsSwipeAnimating(true);
@@ -690,29 +691,29 @@ function Pipeline_modal_view() {
   // correctly even if the cursor moves outside the card while held down.
   useEffect(() => {
     const handleMouseMove = (e) => {
-      if (!isDraggingRef.current || isSwipeLockedRef.current) return;
-      // Self-heal a stuck drag: the ONLY thing that normally clears
-      // isDraggingRef is a window "mouseup", which is well known to not
-      // reliably fire if the button is released outside the browser window
-      // (alt-tabbing mid-drag, releasing over an OS element, or over the
-      // PDF-preview iframe this page renders). If that happens, every later
-      // mouse movement — with no button even held — would otherwise keep
-      // computing a fake offset from the old drag-start point and could
-      // fire a bogus navigation in a direction unrelated to anything the
-      // user actually did. e.buttons is a live bitmask of what's currently
-      // held; if the primary button isn't in it, this isn't a real drag
-      // anymore regardless of what isDraggingRef says.
+      if (!isMouseDownRef.current || isSwipeLockedRef.current) return;
       if ((e.buttons & 1) === 0) {
         cancelDrag();
         return;
       }
       const offset = e.clientX - dragStartXRef.current;
+      if (!isDraggingRef.current) {
+        if (Math.abs(offset) > 8) {
+          isDraggingRef.current = true;
+          setIsSwipeAnimating(false);
+        } else {
+          return;
+        }
+      }
       swipeOffsetRef.current = offset;
       setSwipeX(offset);
     };
-    const handleMouseUp = () => finishDrag();
-    // Covers alt-tab / window-focus-loss mid-drag, which also doesn't
-    // reliably deliver a "mouseup" — same stuck-drag failure mode as above.
+    const handleMouseUp = () => {
+      if (isMouseDownRef.current) {
+        isMouseDownRef.current = false;
+        finishDrag();
+      }
+    };
     const handleBlur = () => cancelDrag();
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -725,18 +726,12 @@ function Pipeline_modal_view() {
     };
   }, [finishDrag, cancelDrag]);
 
-  // Click-and-drag with any mouse (wired, wireless, or trackpad-as-mouse):
-  // works regardless of whether the device has any horizontal scroll
-  // capability at all, so it's the universal fallback.
   const handleSwipeMouseDown = (e) => {
     if (isSwipeLockedRef.current) return;
-    // Only the primary (left) button starts a drag — a middle-click
-    // (autoscroll) or right-click (context menu) shouldn't be hijacked into
-    // a swipe gesture.
     if (e.button !== 0) return;
-    if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
-    isDraggingRef.current = true;
-    setIsSwipeAnimating(false);
+    if (e.target.closest("input, textarea, select, button, a, [contenteditable], [role='button'], label, svg, path")) return;
+    isMouseDownRef.current = true;
+    isDraggingRef.current = false;
     dragStartXRef.current = e.clientX;
   };
 
@@ -885,6 +880,7 @@ function Pipeline_modal_view() {
     openModal: openLostDealModal,
     closeModal: closeLostDealModal,
     validateAndExecute: validateLostDeal,
+    renderModal: renderLostDealModal,
   } = useLostDealModal();
   const [activeTab, setActiveTab] = useState("details");
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
@@ -1596,27 +1592,17 @@ function Pipeline_modal_view() {
     }
   };
 
+  // Now treated as an onSuccess callback by the centralized LossDeal.jsx modal
   const handleLostDealConfirm = useCallback(async (lossData) => {
     if (lossData?.reason) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.post(
-          `${API_URL}/deals/lost-reason`,
-          {
-            dealId: deal._id,
-            reason: lossData.reason,
-            notes: lossData.notes || "",
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } catch (err) {
-        console.error("Failed to post lost deal reason:", err);
-      } finally {
-        await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
-        fetchActivity();
-      }
+      // The API call to /deals/lost-reason is already done by the modal hook.
+      // The backend has already marked the deal as Closed Lost.
+      // We just need to save any OTHER details the user might have edited,
+      // and update the local UI activity feed.
+      await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+      fetchActivity();
     }
-  }, [deal, editFormData, performSaveDetails]);
+  }, [performSaveDetails, fetchActivity]);
 
   const saveDetails = async () => {
     if (!editFormData.dealName.trim()) return toast.error("Deal Name is required");
@@ -1640,8 +1626,16 @@ function Pipeline_modal_view() {
 
     // Moving into Closed Lost always needs a reason, same as the Create/Edit
     // Deal form — intercept the save and collect it before writing anything.
-    if (editFormData.stage === "Closed Lost" && deal.stage !== "Closed Lost") {
-      openLostDealModal(deal, handleLostDealConfirm);
+    if (editFormData.stage === "Closed Lost") {
+      openLostDealModal(
+        {
+          _id: deal._id,
+          dealName: editFormData.dealName || deal.dealName,
+          lossReason: editFormData.lossReason || deal.lossReason,
+          lossNotes: editFormData.lossNotes || deal.lossNotes,
+        },
+        handleLostDealConfirm
+      );
       return;
     }
 
@@ -1834,22 +1828,7 @@ function Pipeline_modal_view() {
         initialAttendees={deal.email ? [deal.email] : []}
       />
 
-      <LostDealModal
-        isOpen={lostModalOpen}
-        onClose={closeLostDealModal}
-        lossReason={lossReason}
-        lossNotes={lossNotes}
-        validationError={validationError}
-        LOSS_REASONS={LOSS_REASONS}
-        onReasonChange={setLossReason}
-        onNotesChange={setLossNotes}
-        onConfirm={validateLostDeal}
-        title="Reason for Lost Deal"
-        confirmText="Confirm & Move to Closed Lost"
-        cancelText="Cancel"
-        dealName={deal.dealName}
-        isLoading={lostModalLoading}
-      />
+      {renderLostDealModal()}
 
       {/* Follow-up Modal */}
       {isFollowUpModalOpen && (
@@ -2136,116 +2115,7 @@ function Pipeline_modal_view() {
         </div>
       )}
 
-      {isEditTimeModalOpen && (
-        <div className="fixed inset-0 z-[50] overflow-y-auto">
-          <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
-            onClick={() => {
-              setIsEditTimeModalOpen(false);
-              setEditTimeData({ newTime: null, editReason: "" });
-            }}
-          />
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4">
-              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-md">
-                <div className="bg-white px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Clock className="text-blue-600" size={20} />
-                      Edit Follow-up Time
-                    </h3>
-                    <button
-                      onClick={() => {
-                        setIsEditTimeModalOpen(false);
-                        setEditTimeData({ newTime: null, editReason: "" });
-                      }}
-                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
-                    >
-                      <X size={20} className="text-gray-500" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white px-6 py-6">
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        New Time <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <DatePicker
-                          selected={editTimeData.newTime}
-                          onChange={(date) => {
-                            setEditTimeData(prev => ({ ...prev, newTime: date }));
-                          }}
-                          showTimeSelect
-                          showTimeSelectOnly
-                          timeIntervals={15}
-                          timeCaption="Time"
-                          dateFormat="h:mm aa"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition pl-10"
-                        />
-                        <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Select a new time for the existing follow-up on {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : ""}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Reason for editing <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={editTimeData.editReason}
-                        onChange={(e) => {
-                          setEditTimeData(prev => ({ ...prev, editReason: e.target.value }));
-                        }}
-                        placeholder="Why are you editing the time? (mandatory)"
-                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditTimeModalOpen(false);
-                      setEditTimeData({ newTime: null, editReason: "" });
-                    }}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleEditFollowUpTime}
-                    disabled={isSubmitting || !editTimeData.newTime || !editTimeData.editReason?.trim()}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Clock size={16} />
-                        Update Time
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div
+     <div
         key={dealId}
         ref={attachSwipeContainerRef}
         onMouseDown={handleSwipeMouseDown}
@@ -2759,7 +2629,7 @@ function Pipeline_modal_view() {
                               return (
                                 <button
                                   key={idx}
-                                  onClick={openLostDealModal}
+                                  onClick={() => openLostDealModal(deal, handleLostDealConfirm)}
                                   className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
                                 >
                                   <AlertTriangle size={14} />

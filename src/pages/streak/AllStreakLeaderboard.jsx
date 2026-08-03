@@ -453,8 +453,8 @@ const AllStreakLeaderboard = () => {
                     key={id}
                     onClick={() => setFilterMode(id)}
                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${filterMode === id
-                        ? "bg-white text-orange-600 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                      ? "bg-white text-orange-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
                       }`}
                   >
                     {label}
@@ -532,8 +532,8 @@ const AllStreakLeaderboard = () => {
                         <div
                           onClick={() => { setSelectedMonth(""); setDropdownOpen(false); }}
                           className={`px-4 py-2.5 text-sm cursor-pointer flex items-center gap-2 border-b border-gray-100 ${!selectedMonth
-                              ? "bg-orange-50 text-orange-700 font-medium"
-                              : "text-gray-600 hover:bg-gray-50"
+                            ? "bg-orange-50 text-orange-700 font-medium"
+                            : "text-gray-600 hover:bg-gray-50"
                             }`}
                         >
                           <FiCalendar className="w-3.5 h-3.5" />
@@ -547,8 +547,8 @@ const AllStreakLeaderboard = () => {
                               key={opt.value}
                               onClick={() => { setSelectedMonth(opt.value); setDropdownOpen(false); }}
                               className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${selectedMonth === opt.value
-                                  ? "bg-orange-50 text-orange-700 font-medium"
-                                  : "text-gray-700 hover:bg-gray-50"
+                                ? "bg-orange-50 text-orange-700 font-medium"
+                                : "text-gray-700 hover:bg-gray-50"
                                 }`}
                             >
                               {opt.label}
@@ -663,8 +663,8 @@ const AllStreakLeaderboard = () => {
                     <tr
                       key={performer.id}
                       className={`border-b border-gray-50 transition-colors ${isCurrentUser && !isAdmin
-                          ? "bg-blue-50/50 hover:bg-blue-100/50"
-                          : "hover:bg-orange-50/30"
+                        ? "bg-blue-50/50 hover:bg-blue-100/50"
+                        : "hover:bg-orange-50/30"
                         }`}
                     >
                       <td className="py-5 px-6">
