@@ -808,6 +808,8 @@ function Pipeline_modal_view() {
       setSwipeX(direction === "next" ? width : -width);
       setIsSwipeTransitioning(true);
       lastSwipeDirectionRef.current = direction;
+setDeal(null);
+
 
       const token = getAuthToken();
       const prefetchPromise = axios
