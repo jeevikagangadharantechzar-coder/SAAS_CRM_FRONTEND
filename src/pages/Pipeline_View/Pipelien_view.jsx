@@ -638,8 +638,12 @@ const STAGES = [
     };
 
     // Handle view click - navigate to pipeline view page with dealId parameter
-    const handleViewClick = (deal) => {
-      navigate(`/${tenantSlug}/Pipelineview/${deal._id}`);
+    const handleViewClick = (deal, columnDeals = []) => {
+      navigate(`/${tenantSlug}/Pipelineview/${deal._id}`, {
+        state: {
+          dealSequence: columnDeals.map((d) => ({ _id: d._id, dealName: d.dealName })),
+        },
+      });
     };
 
     const hasActiveFilters =
@@ -1027,6 +1031,7 @@ const STAGES = [
                 key={deal._id}
                 deal={deal}
                 stageId={id}
+                columnDeals={deals}
                 moveDeal={moveDeal}
                 onEdit={onEdit}
                 onDelete={onDelete}
@@ -1052,6 +1057,7 @@ const STAGES = [
   function DealCard({
     deal,
     stageId,
+    columnDeals = [],
     moveDeal,
     onEdit,
     onDelete,
@@ -1183,7 +1189,7 @@ const STAGES = [
                   <button
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => {
-                      onView(deal);
+                      onView(deal, columnDeals);
                       setMenuOpen(false);
                     }}
                   >
@@ -1208,7 +1214,7 @@ const STAGES = [
         <div className={`text-center ${canEditDelete ? "pr-6" : ""}`}>
           <h3
             className="text-md font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800 transition-colors"
-            onClick={() => onView(deal)}
+            onClick={() => onView(deal, columnDeals)}
           >
             {deal.dealName}
           </h3>

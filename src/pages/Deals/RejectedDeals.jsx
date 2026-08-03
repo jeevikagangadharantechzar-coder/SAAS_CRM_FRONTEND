@@ -334,7 +334,18 @@ export default function RejectedDeals() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-700 text-sm">{deal.dealName || "Unnamed Deal"}</span>
+                        <button
+                          onClick={() =>
+                            navigate(`/${tenantSlug}/Pipelineview/${deal._id}`, {
+                              state: {
+                                dealSequence: deals.map((d) => ({ _id: d._id, dealName: d.dealName })),
+                              },
+                            })
+                          }
+                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-sm text-left"
+                        >
+                          {deal.dealName || "Unnamed Deal"}
+                        </button>
                         <span className="text-gray-400 text-xs">{deal.email || "-"}</span>
                       </div>
                     </td>

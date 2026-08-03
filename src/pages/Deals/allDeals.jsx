@@ -820,7 +820,11 @@ function AllDealsComponent() {
 
 /* ── Handle Deal Name Click Function ─────────────────────── */
   const handleDealNameClick = (dealId) => {
-    navigate(`/${tenantSlug}/Pipelineview/${dealId}${location.search}`);
+    navigate(`/${tenantSlug}/Pipelineview/${dealId}${location.search}`, {
+      state: {
+        dealSequence: filteredDeals.map((d) => ({ _id: d._id, dealName: d.dealName })),
+      },
+    });
   };
 
   if (loading) {
@@ -1203,7 +1207,6 @@ function AllDealsComponent() {
                 const hasFollowUp = deal.followUpDate;
                 const isToday = isFollowUpToday(deal.followUpDate);
                 const isOverdue = isFollowUpOverdue(deal.followUpDate);
-                const isTerminal = deal.stage === "Rejected" || deal.stage === "Closed Won";
 
                 const rejectedByName = deal.rejectedBy ? `${deal.rejectedBy.firstName || ""} ${deal.rejectedBy.lastName || ""}`.trim() : "";
                 const wonByName = deal.wonBy ? `${deal.wonBy.firstName || ""} ${deal.wonBy.lastName || ""}`.trim() : "";
@@ -1220,10 +1223,7 @@ function AllDealsComponent() {
                 return (
                   <tr
                     key={deal._id}
-                    className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50 ${
-                      isTerminal ? "pointer-events-none select-none"
-                      : ""
-                    }`}
+                    className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50`}
                   >
                     <td className={`px-6 py-4 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
                       idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
