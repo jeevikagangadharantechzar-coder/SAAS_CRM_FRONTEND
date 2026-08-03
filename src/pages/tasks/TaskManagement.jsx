@@ -12,7 +12,7 @@ import {
   Calendar, X, Edit2, StickyNote,
   FileText, Briefcase, Bell, ArrowRightLeft, Check, ChevronDown, ChevronUp, History,
   Users, Building2, Phone, Mail, LayoutGrid, List, Trophy, Award, XCircle, 
-  TrendingUp, Flag, Activity, Target, AlertCircle, Info, CheckCheck
+  TrendingUp, Flag, Activity, Target, AlertCircle, Info, CheckCheck, Search
 } from "lucide-react";
 
 import TaskPipelineView from "./TaskPipelineView";
@@ -700,6 +700,9 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("leads");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [leadStatusFilter, setLeadStatusFilter] = useState("");
+  const [dealStageFilter, setDealStageFilter] = useState("");
 
   useEffect(() => {
     if (!userId) { setData(null); return; }
@@ -726,13 +729,24 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
 
   if (!data) return null;
 
-  const leadsList = (data.leads.list || []).filter((l) => !["Converted", "Rejected"].includes(l.status) || selectedLeadIds.includes(l._id));
+  let leadsList = (data.leads.list || []).filter((l) => !["Converted", "Rejected"].includes(l.status) || selectedLeadIds.includes(l._id));
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    leadsList = leadsList.filter((l) => l.leadName?.toLowerCase().includes(q) || l.companyName?.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q));
+  }
+  if (leadStatusFilter) {
+    leadsList = leadsList.filter((l) => l.status === leadStatusFilter);
+  }
   const leads = { ...data.leads, list: leadsList, total: leadsList.length };
-  // A deal that's already Closed Won/Lost is done — linking a task to it just
-  // recreates the "stale, already-resolved" card the fix above works around.
-  // Every already-linked deal stays visible even if closed, so an existing
-  // link doesn't silently disappear from view.
-  const dealsList = (data.deals.list || []).filter((d) => !["Closed Won", "Closed Lost"].includes(d.stage) || selectedDealIds.includes(d._id));
+  
+  let dealsList = (data.deals.list || []).filter((d) => !["Closed Won", "Closed Lost"].includes(d.stage) || selectedDealIds.includes(d._id));
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    dealsList = dealsList.filter((d) => d.dealName?.toLowerCase().includes(q) || d.companyName?.toLowerCase().includes(q));
+  }
+  if (dealStageFilter) {
+    dealsList = dealsList.filter((d) => d.stage === dealStageFilter);
+  }
   const deals = { ...data.deals, list: dealsList, total: dealsList.length };
 
   return (
@@ -769,6 +783,47 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
           className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-all ${tab === "deals" ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500"}`}>
           Deals ({deals.total})
         </button>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="flex gap-2 shrink-0">
+        <div className="relative flex-1">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder={tab === "leads" ? "Search leads..." : "Search deals..."} 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-7 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30"
+          />
+        </div>
+        {tab === "leads" && (
+          <select 
+            value={leadStatusFilter} 
+            onChange={(e) => setLeadStatusFilter(e.target.value)}
+            className="w-24 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+          >
+            <option value="">All Status</option>
+            <option value="Hot">Hot</option>
+            <option value="Warm">Warm</option>
+            <option value="Cold">Cold</option>
+            <option value="Junk">Junk</option>
+          </select>
+        )}
+        {tab === "deals" && (
+          <select 
+            value={dealStageFilter} 
+            onChange={(e) => setDealStageFilter(e.target.value)}
+            className="w-28 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+          >
+            <option value="">All Stages</option>
+            <option value="Qualification">Qualification</option>
+            <option value="Proposal Sent-Negotiation">Proposal Sent-Negotiation</option>
+            <option value="Invoice Sent">Invoice Sent</option>
+            <option value="Closed Won">Deal Closed</option>
+            <option value="Closed Lost">Deal Lost</option>
+          </select>
+        )}
       </div>
 
       {/* List */}

@@ -28,7 +28,6 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Import Lost Deal components
 import useLostDealModal from "../LostDealModal/LossDeal";
-import LostDealModal from "../LostDealModal/ModalLoss";
 import ReassignmentModal from "../components/ReassignmentModal";
 
 // Email validation function
@@ -176,6 +175,7 @@ export default function CreateDeal() {
     validateAndExecute: validateLostDeal,
     handleLostDealSubmit,
     resetModal,
+    renderModal: renderLostDealModal,
   } = useLostDealModal();
 
   const [formData, setFormData] = useState({
@@ -218,7 +218,6 @@ export default function CreateDeal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [countries] = useState(getNames());
   const [previewFile, setPreviewFile] = useState(null);
-  const [pendingFormData, setPendingFormData] = useState(null);
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
   const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
   const [pendingSubmitData, setPendingSubmitData] = useState(null);
@@ -466,22 +465,8 @@ export default function CreateDeal() {
     }
   };
 
-/* ── Handle Lost Deal Confirm Function ─────────────────────── */
-  const handleLostDealConfirm = useCallback(
-    async (lossData) => {
-      if (lossData && lossData.reason && pendingFormData) {
-        const updatedFormData = {
-          ...pendingFormData,
-          lossReason: lossData.reason,
-          lossNotes: lossData.notes || "",
-        };
-        setFormData(updatedFormData);
-        await submitDealData(updatedFormData);
-        setPendingFormData(null);
-      }
-    },
-    [pendingFormData]
-  );
+  // Removed handleLostDealConfirm as it suffered from stale closure issues.
+  // The logic is now inlined in handleSubmit to perfectly capture the current formData.
 
   const submitDealData = async (formDataToSubmit) => {
     setIsSubmitting(true);
@@ -577,7 +562,30 @@ export default function CreateDeal() {
         });
         toast.success("Deal created successfully");
       }
-      setTimeout(() => navigate(`/${tenantSlug}/deals`), 2000);
+
+      if (formDataToSubmit.stage === "Closed Lost" && formDataToSubmit.lossReason) {
+        const savedDealId =
+          isEditMode && existingDeal
+            ? existingDeal._id
+            : response.data?.data?._id || response.data?.deal?._id || response.data?._id;
+        if (savedDealId) {
+          try {
+            await axios.post(
+              `${API_URL}/deals/lost-reason`,
+              {
+                dealId: savedDealId,
+                reason: formDataToSubmit.lossReason,
+                notes: formDataToSubmit.lossNotes || "",
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (lostReasonErr) {
+            console.error("Error creating LostDealReason record:", lostReasonErr);
+          }
+        }
+      }
+
+      setTimeout(() => navigate(`/${tenantSlug}/Pipelineview`), 2000);
     } catch (err) {
       console.error("Deal operation error:", err);
       if (err.response?.data?.message) {
@@ -647,10 +655,27 @@ export default function CreateDeal() {
     }
 
     if (formData.stage === "Closed Lost" && !formData.lossReason) {
-      setPendingFormData(formData);
       const tempDealId =
         isEditMode && existingDeal ? existingDeal._id : "new-deal";
-      openLostDealModal(tempDealId, handleLostDealConfirm);
+      openLostDealModal(
+        {
+          _id: tempDealId,
+          dealName: formData.dealName,
+          lossReason: formData.lossReason,
+          lossNotes: formData.lossNotes,
+        },
+        async (lossData) => {
+          if (lossData && lossData.reason) {
+            const updatedFormData = {
+              ...formData,
+              lossReason: lossData.reason,
+              lossNotes: lossData.notes || "",
+            };
+            setFormData(updatedFormData);
+            await submitDealData(updatedFormData);
+          }
+        }
+      );
       return;
     }
 
@@ -791,24 +816,7 @@ export default function CreateDeal() {
         pauseOnHover
       />
 
-      <LostDealModal
-        isOpen={lostModalOpen}
-        onClose={() => {
-          closeLostDealModal();
-          setPendingFormData(null);
-        }}
-        lossReason={lossReason}
-        lossNotes={lossNotes}
-        validationError={validationError}
-        LOSS_REASONS={LOSS_REASONS}
-        onReasonChange={setLossReason}
-        onNotesChange={setLossNotes}
-        onConfirm={validateLostDeal}
-        title={isEditMode ? "Update Loss Reason" : "Add Loss Reason"}
-        confirmText={isEditMode ? "Update Deal" : "Create Deal"}
-        dealName={formData.dealName}
-        isLoading={modalLoading}
-      />
+      {renderLostDealModal()}
 
       <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-100">
         {/* Header */}
@@ -1285,12 +1293,6 @@ export default function CreateDeal() {
 
       {previewFile && <PreviewModal file={previewFile} onClose={closePreview} />}
 
-      <LostDealModal
-        isOpen={lostModalOpen}
-        onClose={closeLostDealModal}
-        onSubmit={handleLostDealSubmit}
-        dealId={dealIdForLostModal}
-      />
       <ReassignmentModal
         isOpen={reassignmentModalOpen}
         onClose={() => setReassignmentModalOpen(false)}
