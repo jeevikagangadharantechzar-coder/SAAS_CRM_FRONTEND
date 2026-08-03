@@ -90,7 +90,7 @@ import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
 import WhatsAppCallback from "./pages/integrations/WhatsAppCallback";
 import InstagramCallback from "./pages/integrations/InstagramCallback";
-import WhatsAppChat from "./pages/whatsapp/WhatsAppChat";
+import WhatsAppChat from "./pages/WhatsApp/WhatsAppChat";
 import InstagramInbox from "./pages/instagram/InstagramInbox";
 import FacebookInbox from "./pages/facebook/FacebookInbox";
 import MessagesPage from "./pages/Messages/MessagesPage";
