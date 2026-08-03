@@ -17,7 +17,6 @@
 
   // Import the Lost Deal components
   import useLostDealModal from "../LostDealModal/LossDeal";
-  import LostDealModal from "../LostDealModal/ModalLoss";
 
 const STAGES = [
     {
@@ -174,7 +173,7 @@ const STAGES = [
       setLossNotes,
       openModal: openLostDealModal,
       closeModal: closeLostDealModal,
-      validateAndExecute: validateLostDealForm,  // <-- CHANGE TO THIS
+      renderModal: renderLostDealModal,
       resetModal,
       isLoading: isModalLoading,
       setIsLoading: setModalLoading,
@@ -355,91 +354,45 @@ const STAGES = [
       return deal.assignedTo && deal.assignedTo._id === userId;
     };
 
-  // Function to mark deal as lost – UPDATED to accept previousStage
+  // Function to mark deal as lost locally (API is now handled by LossDeal modal)
   const markDealAsLost = useCallback(async (dealId, reason, notes, prevStage) => {
-    try {
-      const token = localStorage.getItem("token");
-      setModalLoading(true);
-
-      console.log("Saving lost deal with:", { dealId, reason, notes, prevStage });
-
-      const response = await axios.post(
-        `${API_URL}/deals/lost-reason`,
-        {
-          dealId,
-          reason,
-          notes,
-          // CRITICAL: send the previous stage
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      console.log("API Response:", response.data);
-
-      if (response.data.success) {
-        // Update local state
-        setColumns((prevColumns) => {
-          const newColumns = { ...prevColumns };
-          
-          // Find and remove deal from its current stage
-          let movedDeal = null;
-          Object.keys(newColumns).forEach(stage => {
-            const index = newColumns[stage].findIndex(deal => deal._id === dealId);
-            if (index !== -1) {
-              movedDeal = { ...newColumns[stage][index] };
-              newColumns[stage] = newColumns[stage].filter(deal => deal._id !== dealId);
-            }
-          });
-          
-          // Add deal to Closed Lost stage with loss info and stageLostAt
-          if (movedDeal) {
-            newColumns["Closed Lost"] = [
-              ...(newColumns["Closed Lost"] || []),
-              {
-                ...movedDeal,
-                stage: "Closed Lost",
-                lossReason: reason,
-                lossNotes: notes,
-                stageLostAt: prevStage // store in local state as well
-              }
-            ];
-          }
-          
-          return newColumns;
-        });
-
-        toast.success(response.data.message || "Deal marked as Closed Lost successfully");
-        closeLostDealModal();
-        setPreviousStage(null); // reset after success
-      } else {
-        toast.error(response.data.message || "Failed to mark deal as lost");
-      }
-    } catch (error) {
-      console.error("Error marking deal as lost:", error);
+    // Update local state directly since the modal hook already made the API call successfully
+    setColumns((prevColumns) => {
+      const newColumns = { ...prevColumns };
       
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        
-        if (error.response.status === 404) {
-          toast.error("API endpoint not found. Please check backend routes.");
-        } else {
-          toast.error(error.response.data?.message || `Server error: ${error.response.status}`);
+      // Find and remove deal from its current stage
+      let movedDeal = null;
+      Object.keys(newColumns).forEach(stage => {
+        const index = newColumns[stage].findIndex(deal => deal._id === dealId);
+        if (index !== -1) {
+          movedDeal = { ...newColumns[stage][index] };
+          newColumns[stage] = newColumns[stage].filter(deal => deal._id !== dealId);
         }
-      } else if (error.request) {
-        toast.error("No response from server. Please check your connection.");
-      } else {
-        toast.error("Error: " + error.message);
+      });
+      
+      // Add deal to Closed Lost stage with loss info and stageLostAt
+      if (movedDeal) {
+        newColumns["Closed Lost"] = [
+          ...(newColumns["Closed Lost"] || []),
+          {
+            ...movedDeal,
+            stage: "Closed Lost",
+            lossReason: reason,
+            lossNotes: notes,
+            stageLostAt: prevStage // store in local state as well
+          }
+        ];
       }
-    } finally {
-      setModalLoading(false);
-    }
-  }, [API_URL, closeLostDealModal, setModalLoading]);
+      
+      return newColumns;
+    });
+
+    toast.success("Deal marked as Closed Lost successfully");
+    setPreviousStage(null); // reset after success
+  }, []);
 
   // NEW FUNCTION: Open lost deal modal with action
-  const openLostDealModalWithAction = useCallback((deal) => {
+  const openLostDealModalWithAction = useCallback((deal, fromStage) => {
     // Create the action that will be executed when form is validated
     const action = async (lossData) => {
       console.log("Executing lost deal action with data:", lossData);
@@ -447,7 +400,7 @@ const STAGES = [
         lossData.dealId, 
         lossData.reason, 
         lossData.notes, 
-        previousStage
+        fromStage || previousStage
       );
     };
     
@@ -464,7 +417,7 @@ const STAGES = [
       const deal = columns[fromStage].find((d) => d._id === dealId);
       if (deal) {
         setPreviousStage(fromStage); // store the stage it's coming from
-        openLostDealModalWithAction(deal); // CHANGED: was openLostDealModal
+        openLostDealModalWithAction(deal, fromStage); // pass fromStage directly to avoid stale closure
       }
       return;
     }
@@ -557,12 +510,6 @@ const STAGES = [
         fetchData();
       }
     }
-
-    // Handle confirm in modal – UPDATED to pass previousStage
-    const handleConfirmLostDeal = useCallback(async () => {
-      console.log("handleConfirmLostDeal called");
-      await validateLostDealForm();
-    }, [validateLostDealForm]);
 
     // Handle delete confirmation
     const handleDeleteClick = (deal) => {
@@ -780,26 +727,7 @@ const STAGES = [
           </DialogContent>
         </Dialog>
 
-        {/* Lost Deal Modal */}
-        <LostDealModal
-          isOpen={lostModalOpen}
-          onClose={() => {
-            closeLostDealModal();
-            setPreviousStage(null); // reset on close
-          }}
-          lossReason={lossReason}
-          lossNotes={lossNotes}
-          validationError={validationError}
-          LOSS_REASONS={LOSS_REASONS}
-          onReasonChange={setLossReason}
-          onNotesChange={setLossNotes}
-          onConfirm={handleConfirmLostDeal}
-          title="Reason for Lost Deal"
-          confirmText="Confirm & Move to Closed Lost"
-          cancelText="Cancel"
-          dealName={lostDealName}
-          isLoading={isModalLoading}
-        />
+        {renderLostDealModal()}
 
         {/* Linked Work Modal */}
         <LinkedWorkModal 

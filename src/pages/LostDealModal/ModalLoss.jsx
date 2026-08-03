@@ -68,7 +68,7 @@ const LostDealModal = ({
 
           <div className="space-y-4 py-4">
             <p className="text-sm text-gray-600">
-              Please select a reason for marking this deal as Closed Lost.
+              Please select or enter a reason for marking this deal as Closed Lost.
               <span className="text-red-500 ml-1">*Required</span>
             </p>
 
@@ -77,12 +77,10 @@ const LostDealModal = ({
                 Loss Reason <span className="text-red-500">*</span>
               </label>
               <select
-                className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none transition ${
-                  validationError ? "border-red-300 ring-1 ring-red-300" : "border-gray-300"
-                }`}
+                className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none transition ${validationError ? "border-red-300 ring-1 ring-red-300" : "border-gray-300"
+                  }`}
                 value={lossReason}
                 onChange={(e) => onReasonChange?.(e.target.value)}
-                required
                 disabled={isLoading}
               >
                 <option value="">Select a reason</option>
@@ -133,9 +131,8 @@ const LostDealModal = ({
             </button>
             <button
               type="submit"
-              className={`px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none transition-colors font-medium ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
+              className={`px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none transition-colors font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               disabled={isLoading}
             >
               {isLoading ? (
