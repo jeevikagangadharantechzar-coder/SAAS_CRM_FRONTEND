@@ -577,6 +577,29 @@ export default function CreateDeal() {
         });
         toast.success("Deal created successfully");
       }
+
+      if (formDataToSubmit.stage === "Closed Lost" && formDataToSubmit.lossReason) {
+        const savedDealId =
+          isEditMode && existingDeal
+            ? existingDeal._id
+            : response.data?.data?._id || response.data?.deal?._id || response.data?._id;
+        if (savedDealId) {
+          try {
+            await axios.post(
+              `${API_URL}/deals/lost-reason`,
+              {
+                dealId: savedDealId,
+                reason: formDataToSubmit.lossReason,
+                notes: formDataToSubmit.lossNotes || "",
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (lostReasonErr) {
+            console.error("Error creating LostDealReason record:", lostReasonErr);
+          }
+        }
+      }
+
       setTimeout(() => navigate(`/${tenantSlug}/deals`), 2000);
     } catch (err) {
       console.error("Deal operation error:", err);
@@ -650,7 +673,15 @@ export default function CreateDeal() {
       setPendingFormData(formData);
       const tempDealId =
         isEditMode && existingDeal ? existingDeal._id : "new-deal";
-      openLostDealModal(tempDealId, handleLostDealConfirm);
+      openLostDealModal(
+        {
+          _id: tempDealId,
+          dealName: formData.dealName,
+          lossReason: formData.lossReason,
+          lossNotes: formData.lossNotes,
+        },
+        handleLostDealConfirm
+      );
       return;
     }
 
@@ -804,8 +835,9 @@ export default function CreateDeal() {
         onReasonChange={setLossReason}
         onNotesChange={setLossNotes}
         onConfirm={validateLostDeal}
-        title={isEditMode ? "Update Loss Reason" : "Add Loss Reason"}
-        confirmText={isEditMode ? "Update Deal" : "Create Deal"}
+        title="Reason for Lost Deal"
+        confirmText="Confirm & Move to Closed Lost"
+        cancelText="Cancel"
         dealName={formData.dealName}
         isLoading={modalLoading}
       />
@@ -1285,12 +1317,6 @@ export default function CreateDeal() {
 
       {previewFile && <PreviewModal file={previewFile} onClose={closePreview} />}
 
-      <LostDealModal
-        isOpen={lostModalOpen}
-        onClose={closeLostDealModal}
-        onSubmit={handleLostDealSubmit}
-        dealId={dealIdForLostModal}
-      />
       <ReassignmentModal
         isOpen={reassignmentModalOpen}
         onClose={() => setReassignmentModalOpen(false)}

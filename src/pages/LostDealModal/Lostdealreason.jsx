@@ -256,6 +256,37 @@ export default function LostDealAnalytics() {
       : deal.parsedValue) ??
     0;
 
+  const userRole = user?.role?.name || user?.role || "";
+  const isAdmin = ["Admin", "SuperAdmin", "Super Admin"].includes(userRole);
+  const tenantSlug = localStorage.getItem("tenantSlug") || "default";
+
+  // Tenant + currency scoped storage keys so each tenant stores its own threshold independently.
+  const thresholdKey = `highValueThreshold_${tenantSlug}`;
+  const thresholdCurrencyKey = `highValueThresholdCurrency_${tenantSlug}`;
+
+  const [highValueThreshold, setHighValueThreshold] = useState(() => {
+    const saved = localStorage.getItem(thresholdKey);
+    const savedCurrency = localStorage.getItem(thresholdCurrencyKey);
+    // Only use the saved threshold if it was set for THIS tenant's current currency.
+    // If currency changed or never set — return null (Admin must configure it).
+    if (saved && savedCurrency === userCurrency) return Number(saved);
+    return null;
+  });
+  const [tempThreshold, setTempThreshold] = useState("");
+
+  const saveThreshold = () => {
+    const val = Number(tempThreshold);
+    if (!val || val <= 0) {
+      toast.error("Please enter a valid amount greater than 0");
+      return;
+    }
+    setHighValueThreshold(val);
+    localStorage.setItem(thresholdKey, val);
+    localStorage.setItem(thresholdCurrencyKey, userCurrency);
+    toast.success("High-value threshold updated!");
+  };
+
+
   // --------------------------------------------------------------------
   // State
   // --------------------------------------------------------------------
@@ -283,26 +314,45 @@ export default function LostDealAnalytics() {
     stageAnalysis: [],
   });
 
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    reason: "",
-    assignedTo: "",
-    industry: "",
+  const [filters, setFilters] = useState(() => {
+    const saved = sessionStorage.getItem(`lossAnalysis_filters_${tenantSlug}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      startDate: "",
+      endDate: "",
+      reason: "",
+      assignedTo: "",
+      industry: "",
+    };
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState([]);
-  const [timeFrame, setTimeFrame] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [timeFrame, setTimeFrame] = useState(() => sessionStorage.getItem(`lossAnalysis_timeFrame_${tenantSlug}`) || "all");
+  const [searchQuery, setSearchQuery] = useState(() => sessionStorage.getItem(`lossAnalysis_searchQuery_${tenantSlug}`) || "");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [stagePage, setStagePage] = useState(1);
   const [stagesPerPage] = useState(5);
+  const [highValuePage, setHighValuePage] = useState(1);
+  const [highValuePerPage] = useState(6);
   const [selectedReasonModal, setSelectedReasonModal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [dealSortBy, setDealSortBy] = useState("date");
-  const [dealSortOrder, setDealSortOrder] = useState("desc");
+  const [dealSortBy, setDealSortBy] = useState(() => sessionStorage.getItem(`lossAnalysis_dealSortBy_${tenantSlug}`) || "date");
+  const [dealSortOrder, setDealSortOrder] = useState(() => sessionStorage.getItem(`lossAnalysis_dealSortOrder_${tenantSlug}`) || "desc");
+
+  // Persist filter states to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem(`lossAnalysis_filters_${tenantSlug}`, JSON.stringify(filters));
+    sessionStorage.setItem(`lossAnalysis_timeFrame_${tenantSlug}`, timeFrame);
+    sessionStorage.setItem(`lossAnalysis_searchQuery_${tenantSlug}`, searchQuery);
+    sessionStorage.setItem(`lossAnalysis_dealSortBy_${tenantSlug}`, dealSortBy);
+    sessionStorage.setItem(`lossAnalysis_dealSortOrder_${tenantSlug}`, dealSortOrder);
+  }, [filters, timeFrame, searchQuery, dealSortBy, dealSortOrder, tenantSlug]);
 
   //   date range toggle state
   const [showDateRange, setShowDateRange] = useState(false);
@@ -507,18 +557,29 @@ export default function LostDealAnalytics() {
   }, [stageCounts, stagePage, stagesPerPage]);
 
   const highValueDeals = useMemo(() => {
+    // Don't filter anything until Admin has explicitly set a threshold.
+    if (highValueThreshold === null) return [];
+    const minVal = Number(highValueThreshold);
     return parsedRecentDeals
-      .filter((deal) => deal.parsedValue >= 500000)
+      .filter((deal) => getDealPreferredValue(deal) >= minVal)
       .map((deal) => ({
         ...deal,
         recoverableValue:
-          deal.parsedValue * (getStageRecoveryRate(deal.stageLostAt) / 100),
+          getDealPreferredValue(deal) * (getStageRecoveryRate(deal.stageLostAt) / 100),
       }));
-  }, [parsedRecentDeals]);
+  }, [parsedRecentDeals, highValueThreshold]);
 
   const highValueTotal = useMemo(() => {
-    return highValueDeals.reduce((sum, deal) => sum + deal.parsedValue, 0);
+    return highValueDeals.reduce((sum, deal) => sum + getDealPreferredValue(deal), 0);
   }, [highValueDeals]);
+
+  const totalHighValuePages = Math.max(1, Math.ceil(highValueDeals.length / highValuePerPage));
+  const paginatedHighValueDeals = useMemo(() => {
+    // Clamp the page so we never slice out of bounds if the array shrinks
+    const validPage = Math.max(1, Math.min(highValuePage, totalHighValuePages));
+    const startIndex = (validPage - 1) * highValuePerPage;
+    return highValueDeals.slice(startIndex, startIndex + highValuePerPage);
+  }, [highValueDeals, highValuePage, highValuePerPage, totalHighValuePages]);
 
   const insights = useMemo(() => {
     if (!parsedRecentDeals.length) return [];
@@ -609,7 +670,6 @@ export default function LostDealAnalytics() {
     }
   }, [timeFrame, filters.startDate, filters.endDate]);
 
-  //  Client-side filtering (timeframe + search + dropdowns + date range)
   const filteredRecentDeals = useMemo(() => {
     let filtered = parsedRecentDeals;
 
@@ -712,7 +772,10 @@ export default function LostDealAnalytics() {
     setCurrentPage(1);
     setStagePage(1);
     setShowDateRange(false);
-    fetchAnalytics(timeFrame, clearedFilters);
+    setTimeFrame("all");
+    setDealSortBy("date");
+    setDealSortOrder("desc");
+    fetchAnalytics("all", clearedFilters);
   };
 
   const handleReasonClick = (reason) => {
@@ -1025,27 +1088,57 @@ export default function LostDealAnalytics() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-red-50 border border-red-100 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-red-100 rounded-lg text-red-600">
+            <div className="p-2 bg-red-100 rounded-lg text-red-600 shrink-0">
               <AlertTriangle size={18} />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-red-800 mb-1">High-Value Alert</h4>
               <p className="text-sm text-red-600 mb-2">
-                {highValueDeals.length} deals over ₹5L lost
+                {highValueThreshold === null
+                  ? "Threshold not set by Admin yet"
+                  : `${highValueDeals.length} deals over ${formatPreferredCurrency(highValueThreshold)} lost`}
               </p>
-              <button
-                onClick={() =>
-                  document
-                    .getElementById("high-value-deals")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="text-xs font-medium text-red-700 hover:text-red-800"
-              >
-                Review →
-              </button>
+              {/* Admin: inline threshold setter */}
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-red-400 text-xs font-semibold">
+                      {currencySymbol}
+                    </span>
+                    <input
+                      type="number"
+                      value={tempThreshold}
+                      onChange={(e) => setTempThreshold(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && saveThreshold()}
+                      placeholder="Set amount..."
+                      className="pl-6 pr-2 py-1 text-xs border border-red-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-red-400 w-28 text-gray-700"
+                    />
+                  </div>
+                  <button
+                    onClick={saveThreshold}
+                    disabled={!tempThreshold || Number(tempThreshold) <= 0}
+                    className="px-2.5 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
+                </div>
+              )}
+              {highValueThreshold !== null && (
+                <button
+                  onClick={() =>
+                    document
+                      .getElementById("high-value-deals")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="text-xs font-medium text-red-700 hover:text-red-800 mt-2 block"
+                >
+                  Review →
+                </button>
+              )}
             </div>
           </div>
         </div>
+
 
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
           <div className="flex items-start gap-3">
@@ -2028,26 +2121,85 @@ export default function LostDealAnalytics() {
       {/* Full Width Sections */}
       <div className="mt-6 space-y-6">
         {/* High Value Lost Deals */}
-        {/* <div
+        <div
           id="high-value-deals"
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-5"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Award size={18} className="text-amber-500" />
-              High-Value Lost Deals (₹5L+)
+              High-Value Lost Deals
+              {highValueThreshold !== null && (
+                <span className="text-base font-normal text-gray-500">
+                  (&gt; {formatPreferredCurrency(highValueThreshold)})
+                </span>
+              )}
             </h3>
-            <span className="text-sm text-gray-500">
-              Total: {formatCurrency(highValueTotal)}
-            </span>
+            <div className="flex items-center gap-4">
+              {isAdmin ? (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">{currencySymbol}</span>
+                    <input
+                      type="number"
+                      value={tempThreshold}
+                      onChange={(e) => setTempThreshold(e.target.value)}
+                      className="pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-36 text-sm"
+                      placeholder="Set amount..."
+                    />
+                  </div>
+                  <button
+                    onClick={saveThreshold}
+                    disabled={!tempThreshold || Number(tempThreshold) <= 0}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                highValueThreshold !== null ? (
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-lg font-medium">
+                    Set by Admin: {formatPreferredCurrency(highValueThreshold)}
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 text-sm rounded-lg font-medium">
+                    Admin has not configured threshold yet
+                  </span>
+                )
+              )}
+              {highValueThreshold !== null && (
+                <span className="text-sm font-semibold text-gray-600 border-l pl-4 border-gray-200">
+                  Total: {formatPreferredCurrency(highValueTotal)}
+                </span>
+              )}
+            </div>
           </div>
 
-          {highValueDeals.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {highValueDeals.slice(0, 5).map((deal, index) => {
+          {highValueThreshold === null ? (
+            <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+                <Award size={24} className="text-amber-400" />
+              </div>
+              {isAdmin ? (
+                <>
+                  <p className="font-semibold text-gray-700">Set your High-Value threshold to get started</p>
+                  <p className="text-sm text-gray-400">Enter an amount in {currencySymbol} above and click <strong>Save</strong>. Deals lost above that amount will appear here.</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-gray-700">Threshold not configured yet</p>
+                  <p className="text-sm text-gray-400">Please ask your Admin to set the high-value deal threshold amount.</p>
+                </>
+              )}
+            </div>
+          ) : highValueDeals.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {paginatedHighValueDeals.map((deal, index) => {
                 const stageLostAt = deal.stageLostAt || "Unknown";
                 const recoveryRate = getStageRecoveryRate(stageLostAt);
-                const recoverable = deal.parsedValue * (recoveryRate / 100);
+                const preferredVal = getDealPreferredValue(deal);
+                const recoverable = preferredVal * (recoveryRate / 100);
 
                 return (
                   <div
@@ -2080,7 +2232,7 @@ export default function LostDealAnalytics() {
                       <div>
                         <div className="text-sm text-gray-500">Value</div>
                         <div className="font-bold text-red-600">
-                          {formatCurrency(deal.parsedValue)}
+                          {formatPreferredCurrency(preferredVal)}
                         </div>
                       </div>
                       <div className="text-right">
@@ -2106,19 +2258,44 @@ export default function LostDealAnalytics() {
                         {deal.lossReason || "Not specified"}
                       </span>
                       <span className="text-xs font-medium text-green-600">
-                        {recoveryRate}% recoverable ({formatCurrency(recoverable)})
+                        {recoveryRate}% rec. ({formatPreferredCurrency(recoverable)})
                       </span>
                     </div>
                   </div>
                 );
               })}
-            </div>
+              </div>
+              {totalHighValuePages > 1 && (
+                <div className="flex items-center justify-between mt-4 border-t pt-4">
+                  <div className="text-sm text-gray-500">
+                    Showing {(Math.max(1, Math.min(highValuePage, totalHighValuePages)) - 1) * highValuePerPage + 1} to{" "}
+                    {Math.min(Math.max(1, Math.min(highValuePage, totalHighValuePages)) * highValuePerPage, highValueDeals.length)} of {highValueDeals.length}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setHighValuePage((p) => Math.max(1, p - 1))}
+                      disabled={highValuePage === 1}
+                      className="p-1 rounded border hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      onClick={() => setHighValuePage((p) => Math.min(totalHighValuePages, p + 1))}
+                      disabled={highValuePage === totalHighValuePages}
+                      className="p-1 rounded border hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="py-8 text-center text-gray-500">
               No high-value lost deals found
             </div>
           )}
-        </div> */}
+        </div>
 
         {/* Stage Intelligence Summary */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -513,9 +513,318 @@ function Pipeline_modal_view() {
   const API_URL = import.meta.env.VITE_API_URL;
   const { dealId, tenantSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [deal, setDeal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Swipe navigation between deals — the ordered list of {_id, dealName}
+  // this deal was opened from (All Deals table, Rejected Deals, or a
+  // Pipeline kanban column), passed via navigation state by the caller.
+  const dealSequence = useMemo(() => location.state?.dealSequence || [], [location.state]);
+  const dealSequenceIndex = dealSequence.findIndex((d) => d._id === dealId);
+  const prevDealInfo = dealSequenceIndex > 0 ? dealSequence[dealSequenceIndex - 1] : null;
+  const nextDealInfo =
+    dealSequenceIndex >= 0 && dealSequenceIndex < dealSequence.length - 1
+      ? dealSequence[dealSequenceIndex + 1]
+      : null;
+
+  const swipeContainerRef = useRef(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwipeAnimating, setIsSwipeAnimating] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  // Live offset shared by both the mouse-drag and trackpad-wheel paths, read
+  // synchronously on release/threshold so we never need swipeX itself as an
+  // effect dependency (which would churn the window listeners every pixel).
+  const swipeOffsetRef = useRef(0);
+  // Which way the last swipe went — drives which CSS entry-animation class
+  // the freshly-mounted (key={dealId}) card plays. A ref, not state: it's
+  // only ever read during the render already triggered by the dealId change.
+  const lastSwipeDirectionRef = useRef(null);
+  const wheelResetTimerRef = useRef(null);
+  // Hard gate on committing a second swipe. A single physical trackpad
+  // gesture keeps firing "momentum" wheel events for a few hundred ms after
+  // the fingers lift, and those events can re-cross the threshold a second
+  // time — this ref is checked (and set) synchronously the instant a swipe
+  // commits, so every trailing wheel/drag event is a flat no-op until the
+  // next deal has landed and settled. Refs (not state) because wheel events
+  // fire faster than React re-renders can be relied on to reflect in time.
+  const isSwipeLockedRef = useRef(false);
+  // nextDealInfo/prevDealInfo/completeSwipe are mirrored into refs so the
+  // native wheel listener (attached once per deal, see below) always reads
+  // their latest values without needing to be torn down and re-attached on
+  // every render — that churn is itself a way to drop or double-fire events.
+  const nextDealInfoRef = useRef(nextDealInfo);
+  const prevDealInfoRef = useRef(prevDealInfo);
+  const completeSwipeRef = useRef(null);
+  // True from the moment a swipe is committed until the incoming deal lands
+  // — drives a slim, fixed-position progress indicator so a slow background
+  // refresh after landing never looks like nothing is happening.
+  const [isSwipeTransitioning, setIsSwipeTransitioning] = useState(false);
+
+  const SWIPE_THRESHOLD = 90;
+  const SWIPE_WHEEL_THRESHOLD = 120;
+  // Exit-animation duration — navigation never happens before this elapses,
+  // so the exit always gets to finish playing.
+  const SWIPE_DURATION_MS = 220;
+  // Absolute ceiling on how much *extra* time (beyond the exit animation) we
+  // give the prefetch to resolve before navigating anyway. Previously
+  // navigation fired on a blind SWIPE_DURATION_MS timer regardless of the
+  // fetch, so any prefetch slower than that landed the user on a page still
+  // showing the OLD deal's data (just routed to the new dealId), which then
+  // popped to the correct data with zero animation whenever the fetch
+  // eventually resolved — the actual cause of "old deal lingers, then jumps"
+  // reports, independent of any gesture/animation bug. Waiting up to this
+  // ceiling means the common case (a same-datacenter API call) lands with
+  // correct data already in hand, while genuinely slow responses are capped
+  // rather than silently deferred forever.
+  const MAX_PREFETCH_WAIT_MS = 400;
+  // How long to keep new input locked out after a deal lands, to drain any
+  // trailing trackpad momentum events left over from the gesture that
+  // triggered the swipe in the first place.
+  const SWIPE_COOLDOWN_MS = 350;
+
+  useEffect(() => {
+    nextDealInfoRef.current = nextDealInfo;
+    prevDealInfoRef.current = prevDealInfo;
+  });
+
+  // Complete a swipe: slide the current card fully off-screen in the swipe
+  // direction, then navigate the instant that animation finishes — never
+  // later than SWIPE_DURATION_MS, no matter how slow the network is. The
+  // target deal is prefetched in parallel purely as an optimization: if it
+  // resolves in time, the destination renders with correct data immediately;
+  // if not, we navigate anyway and the normal fetch fills it in a moment
+  // later in place (no spinner, no blocking — see the isLoading guard below).
+  const completeSwipe = useCallback(
+    (direction) => {
+      if (isSwipeLockedRef.current) return;
+      const target = direction === "next" ? nextDealInfo : prevDealInfo;
+      swipeOffsetRef.current = 0;
+      if (!target) {
+        setIsSwipeAnimating(true);
+        setSwipeX(0);
+        return;
+      }
+      // Lock immediately — every wheel/drag event from here until the next
+      // deal settles is ignored, so one gesture can only ever fire once.
+      isSwipeLockedRef.current = true;
+      if (wheelResetTimerRef.current) {
+        clearTimeout(wheelResetTimerRef.current);
+        wheelResetTimerRef.current = null;
+      }
+      // Exit continues in the same direction the card was swiped.
+      const width = swipeContainerRef.current?.offsetWidth || window.innerWidth;
+      setIsSwipeAnimating(true);
+      setSwipeX(direction === "next" ? width : -width);
+      setIsSwipeTransitioning(true);
+      lastSwipeDirectionRef.current = direction;
+
+      const token = getAuthToken();
+      const prefetchPromise = axios
+        .get(`${API_URL}/deals/${target._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => res.data)
+        .catch(() => undefined);
+      // Race the prefetch against a ceiling so a slow response can't push
+      // navigation out indefinitely, then always wait out the exit animation
+      // too (Promise.all — never navigate before either finishes).
+      const boundedPrefetch = Promise.race([
+        prefetchPromise,
+        new Promise((resolve) => setTimeout(resolve, MAX_PREFETCH_WAIT_MS)),
+      ]);
+      const minExitWait = new Promise((resolve) => setTimeout(resolve, SWIPE_DURATION_MS));
+
+      Promise.all([boundedPrefetch, minExitWait]).then(([prefetchedDeal]) => {
+        navigate(`/${tenantSlug}/Pipelineview/${target._id}`, {
+          state: { dealSequence, prefetchedDeal },
+        });
+      });
+    },
+    [nextDealInfo, prevDealInfo, navigate, tenantSlug, dealSequence, API_URL]
+  );
+
+  useEffect(() => {
+    completeSwipeRef.current = completeSwipe;
+  });
+
+  // The incoming card's entry is a plain CSS @keyframes animation (see the
+  // `key={dealId}` + className on the swipe container below) instead of a
+  // JS-driven "jump off-screen, then animate back" trick — that trick relied
+  // on two chained requestAnimationFrame calls landing in separate paints,
+  // which isn't guaranteed and was the source of the visible jerk/pop.
+  // A keyframe animation plays reliably on mount with no such race.
+
+  // Cancel a drag without committing a navigation — used both for a normal
+  // "released below threshold" snap-back and for self-healing a drag that
+  // got stuck true (see handleMouseMove below).
+  const cancelDrag = useCallback(() => {
+    isDraggingRef.current = false;
+    swipeOffsetRef.current = 0;
+    setIsSwipeAnimating(true);
+    setSwipeX(0);
+  }, []);
+
+  const finishDrag = useCallback(() => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    if (isSwipeLockedRef.current) {
+      setSwipeX(0);
+      return;
+    }
+    const currentX = swipeOffsetRef.current;
+    if (currentX > SWIPE_THRESHOLD && nextDealInfo) {
+      completeSwipe("next");
+    } else if (currentX < -SWIPE_THRESHOLD && prevDealInfo) {
+      completeSwipe("prev");
+    } else {
+      swipeOffsetRef.current = 0;
+      setIsSwipeAnimating(true);
+      setSwipeX(0);
+    }
+  }, [nextDealInfo, prevDealInfo, completeSwipe]);
+
+  // Track the drag with window-level listeners so the swipe still tracks
+  // correctly even if the cursor moves outside the card while held down.
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current || isSwipeLockedRef.current) return;
+      // Self-heal a stuck drag: the ONLY thing that normally clears
+      // isDraggingRef is a window "mouseup", which is well known to not
+      // reliably fire if the button is released outside the browser window
+      // (alt-tabbing mid-drag, releasing over an OS element, or over the
+      // PDF-preview iframe this page renders). If that happens, every later
+      // mouse movement — with no button even held — would otherwise keep
+      // computing a fake offset from the old drag-start point and could
+      // fire a bogus navigation in a direction unrelated to anything the
+      // user actually did. e.buttons is a live bitmask of what's currently
+      // held; if the primary button isn't in it, this isn't a real drag
+      // anymore regardless of what isDraggingRef says.
+      if ((e.buttons & 1) === 0) {
+        cancelDrag();
+        return;
+      }
+      const offset = e.clientX - dragStartXRef.current;
+      swipeOffsetRef.current = offset;
+      setSwipeX(offset);
+    };
+    const handleMouseUp = () => finishDrag();
+    // Covers alt-tab / window-focus-loss mid-drag, which also doesn't
+    // reliably deliver a "mouseup" — same stuck-drag failure mode as above.
+    const handleBlur = () => cancelDrag();
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("blur", handleBlur);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [finishDrag, cancelDrag]);
+
+  // Click-and-drag with any mouse (wired, wireless, or trackpad-as-mouse):
+  // works regardless of whether the device has any horizontal scroll
+  // capability at all, so it's the universal fallback.
+  const handleSwipeMouseDown = (e) => {
+    if (isSwipeLockedRef.current) return;
+    // Only the primary (left) button starts a drag — a middle-click
+    // (autoscroll) or right-click (context menu) shouldn't be hijacked into
+    // a swipe gesture.
+    if (e.button !== 0) return;
+    if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+    isDraggingRef.current = true;
+    setIsSwipeAnimating(false);
+    dragStartXRef.current = e.clientX;
+  };
+
+  // Native (non-passive) wheel handler so we can call preventDefault() —
+  // React's onWheel is passive by default and silently ignores
+  // preventDefault, which let the browser's own horizontal-scroll/
+  // back-forward gesture fight with ours on trackpads. Two input styles are
+  // supported:
+  //  - A trackpad's native horizontal two-finger swipe (deltaX-dominant).
+  //  - Shift+wheel on a plain external mouse with only a vertical wheel —
+  //    the standard OS/browser convention for "scroll sideways" when there's
+  //    no horizontal wheel or tilt hardware at all.
+  // Stable ([] deps): everything it reads is a ref or a plain numeric
+  // constant, never a value that goes stale, so it never needs to be
+  // recreated — which matters for the callback-ref attachment below.
+  const handleWheelEvent = useCallback((e) => {
+    const usingShiftFallback = e.shiftKey && Math.abs(e.deltaX) < Math.abs(e.deltaY);
+    const isHorizontalIntent = usingShiftFallback || Math.abs(e.deltaX) >= Math.abs(e.deltaY);
+    // Plain vertical page-scroll (no shift, deltaY-dominant) — leave it alone.
+    if (!isHorizontalIntent) return;
+
+    // Always suppress the browser's own horizontal-scroll / swipe-to-
+    // navigate-back-forward gesture for anything shaped like a deliberate
+    // horizontal swipe — even while we're about to ignore it ourselves
+    // (locked mid-transition, or already dragging). Skipping this when
+    // locked was the actual bug: those un-prevented trailing wheel events
+    // let Chrome's native trackpad-swipe navigation take over instead,
+    // producing an instant, unanimated jump between deals that our own
+    // animation code never even ran for.
+    e.preventDefault();
+
+    if (isSwipeLockedRef.current || isDraggingRef.current) return;
+
+    const rawDelta = usingShiftFallback ? e.deltaY : e.deltaX;
+    const offset = swipeOffsetRef.current + rawDelta;
+    swipeOffsetRef.current = offset;
+    setIsSwipeAnimating(false);
+    setSwipeX(offset);
+
+    if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
+
+    if (offset > SWIPE_WHEEL_THRESHOLD && nextDealInfoRef.current) {
+      swipeOffsetRef.current = 0;
+      completeSwipeRef.current?.("next");
+      return;
+    }
+    if (offset < -SWIPE_WHEEL_THRESHOLD && prevDealInfoRef.current) {
+      swipeOffsetRef.current = 0;
+      completeSwipeRef.current?.("prev");
+      return;
+    }
+
+    wheelResetTimerRef.current = setTimeout(() => {
+      swipeOffsetRef.current = 0;
+      setIsSwipeAnimating(true);
+      setSwipeX(0);
+    }, 200);
+  }, []);
+
+  // Attach the wheel listener via a CALLBACK ref, not a useLayoutEffect
+  // keyed on dealId. That was the actual cause of "swipe does nothing until
+  // I click Next once": on first page load, isLoading/deal start out as
+  // true/null, so the component's very first render returns the loading
+  // spinner — the real swipe container never mounts that pass, so
+  // swipeContainerRef.current is still null when the effect runs, and it
+  // bails out immediately. Once the fetch resolves and the real content
+  // renders, dealId (the effect's only dependency) hasn't actually changed
+  // since that first, wasted run — so React correctly does NOT re-run an
+  // effect whose dependencies are unchanged, and the listener is never
+  // attached for that first deal at all. Only navigating to a genuinely
+  // different dealId (e.g. clicking "Next Deal") changes the dependency and
+  // finally attaches it — matching exactly what was reported. A callback
+  // ref has no such gap: React invokes it the instant the real DOM node is
+  // created or destroyed, regardless of what any other state happens to be
+  // doing at the time.
+  const attachSwipeContainerRef = useCallback(
+    (node) => {
+      const previousNode = swipeContainerRef.current;
+      if (previousNode && previousNode !== node) {
+        previousNode.removeEventListener("wheel", handleWheelEvent);
+      }
+      swipeContainerRef.current = node;
+      if (node) {
+        node.addEventListener("wheel", handleWheelEvent, { passive: false });
+      }
+    },
+    [handleWheelEvent]
+  );
 
   // Deal Score — provisional placeholder score shown top-right in the header
   const [dealScore, setDealScore] = useState(null);
@@ -579,11 +888,16 @@ function Pipeline_modal_view() {
   } = useLostDealModal();
   const [activeTab, setActiveTab] = useState("details");
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [isEditTimeModalOpen, setIsEditTimeModalOpen] = useState(false);
   const [followUpData, setFollowUpData] = useState({
     followUpDate: null,
     followUpComment: "",
     previousOutcome: "",
     previousNotes: ""
+  });
+  const [editTimeData, setEditTimeData] = useState({
+    newTime: null,
+    editReason: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [followUpPage, setFollowUpPage] = useState(1);
@@ -617,8 +931,45 @@ function Pipeline_modal_view() {
     return false;
   };
 
+  // Reset the exit transform BEFORE the browser paints the freshly-mounted
+  // (key={dealId}) card, so it never has a chance to render with the stale
+  // inline transform/transition left over from the previous card's exit —
+  // that's what was making the CSS entry @keyframes animation and the old
+  // inline transform fight over the same property on first paint, with
+  // whichever one "won" depending on how much main-thread work happened to
+  // land between the DOM mutation and the passive-effect reset. A plain
+  // useEffect runs after paint, which is what created that window;
+  // useLayoutEffect runs synchronously after the DOM mutation but before
+  // the browser paints, so there's no stale value to ever be visible.
+  useLayoutEffect(() => {
+    setSwipeX(0);
+    setIsSwipeAnimating(false);
+  }, [dealId]);
+
   useEffect(() => {
-    if (dealId) fetchDealDetails();
+    if (!dealId) return;
+    setIsSwipeTransitioning(false);
+
+    // Keep new swipe input locked out for a short cooldown after landing,
+    // to drain any trailing trackpad-momentum wheel events left over from
+    // the gesture that triggered this navigation — otherwise one of those
+    // leftover events can immediately re-trigger a second hop.
+    const unlockTimer = setTimeout(() => {
+      isSwipeLockedRef.current = false;
+    }, SWIPE_COOLDOWN_MS);
+
+    // A swipe transition prefetches the target deal before navigating here —
+    // when that data is already in hand, use it immediately instead of
+    // re-fetching and showing a loading state for data we already have.
+    const prefetched = location.state?.prefetchedDeal;
+    if (prefetched && prefetched._id === dealId) {
+      setDeal(prefetched);
+      setIsLoading(false);
+    } else {
+      fetchDealDetails();
+    }
+
+    return () => clearTimeout(unlockTimer);
   }, [dealId]);
 
   const fetchDealDetails = async () => {
@@ -998,6 +1349,45 @@ function Pipeline_modal_view() {
     }
   };
 
+  const handleEditFollowUpTime = async () => {
+    if (!editTimeData.newTime) {
+      toast.error("Please select a new time");
+      return;
+    }
+    if (!editTimeData.editReason || !editTimeData.editReason.trim()) {
+      toast.error("Reason for editing is mandatory");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+      const response = await axios.patch(
+        `${API_URL}/deals/edit-followup-time/${dealId}`,
+        {
+          newTime: editTimeData.newTime.toISOString(),
+          editReason: editTimeData.editReason,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(response.data.message || "Follow-up time updated successfully");
+      setIsEditTimeModalOpen(false);
+      setEditTimeData({ newTime: null, editReason: "" });
+      fetchDealDetails();
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Failed to update follow-up time:", err);
+        toast.error(err.response?.data?.message || "Failed to update follow-up time");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // ── Download handler ────────────────────────────────────────
   const downloadFile = useCallback(async (filePath, fileName) => {
     if (!filePath) return toast.error("File path is missing");
@@ -1138,24 +1528,28 @@ function Pipeline_modal_view() {
         return;
       }
 
+      const sourceData = editFormData || deal || {};
+
       const payload = {
-        dealName: editFormData.dealName.trim(),
-        dealValue: editFormData.dealValue,
-        currency: editFormData.currency,
-        stage: editFormData.stage,
-        notes: editFormData.notes,
-        companyName: editFormData.companyName.trim(),
-        email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
-          ? `+${editFormData.phoneNumber}`
-          : editFormData.phoneNumber,
-        alternativeEmail: editFormData.alternativeEmail,
-        alternativeNumber: editFormData.alternativeNumber && !editFormData.alternativeNumber.startsWith("+")
-          ? `+${editFormData.alternativeNumber}`
-          : editFormData.alternativeNumber,
-        clientType: editFormData.clientType,
-        address: editFormData.address.trim(),
-        country: editFormData.country.trim(),
+        dealName: (sourceData.dealName || "").trim(),
+        dealValue: sourceData.dealValue || "",
+        currency: sourceData.currency || "USD",
+        stage: extraFields.lossReason ? "Closed Lost" : (sourceData.stage || "Qualification"),
+        notes: sourceData.notes || "",
+        companyName: (sourceData.companyName || "").trim(),
+        email: sourceData.email || "",
+        phoneNumber:
+          sourceData.phoneNumber && !String(sourceData.phoneNumber).startsWith("+")
+            ? `+${sourceData.phoneNumber}`
+            : sourceData.phoneNumber || "",
+        alternativeEmail: sourceData.alternativeEmail || "",
+        alternativeNumber:
+          sourceData.alternativeNumber && !String(sourceData.alternativeNumber).startsWith("+")
+            ? `+${sourceData.alternativeNumber}`
+            : sourceData.alternativeNumber || "",
+        clientType: sourceData.clientType || "",
+        address: (sourceData.address || "").trim(),
+        country: (sourceData.country || "").trim(),
         ...extraFields,
       };
 
@@ -1165,10 +1559,15 @@ function Pipeline_modal_view() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setDeal(response.data.deal);
+      if (response.data?.deal) {
+        setDeal(response.data.deal);
+      } else {
+        setDeal((prev) => ({ ...prev, ...payload }));
+      }
       setIsEditingDetails(false);
       setEditFormData(null);
-      toast.success(response.data.message || "Deal updated successfully");
+      toast.success(extraFields.lossReason ? "Deal marked as Closed Lost & updated successfully" : (response.data?.message || "Deal updated successfully"));
+      fetchDealDetails();
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to update deal:", err);
@@ -1199,9 +1598,25 @@ function Pipeline_modal_view() {
 
   const handleLostDealConfirm = useCallback(async (lossData) => {
     if (lossData?.reason) {
-      await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+      try {
+        const token = localStorage.getItem("token");
+        await axios.post(
+          `${API_URL}/deals/lost-reason`,
+          {
+            dealId: deal._id,
+            reason: lossData.reason,
+            notes: lossData.notes || "",
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error("Failed to post lost deal reason:", err);
+      } finally {
+        await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+        fetchActivity();
+      }
     }
-  }, [editFormData]);
+  }, [deal, editFormData, performSaveDetails]);
 
   const saveDetails = async () => {
     if (!editFormData.dealName.trim()) return toast.error("Deal Name is required");
@@ -1226,7 +1641,7 @@ function Pipeline_modal_view() {
     // Moving into Closed Lost always needs a reason, same as the Create/Edit
     // Deal form — intercept the save and collect it before writing anything.
     if (editFormData.stage === "Closed Lost" && deal.stage !== "Closed Lost") {
-      openLostDealModal(deal._id, handleLostDealConfirm);
+      openLostDealModal(deal, handleLostDealConfirm);
       return;
     }
 
@@ -1297,7 +1712,12 @@ function Pipeline_modal_view() {
     }
   };
 
-  if (isLoading) {
+  // Only show the full-page loader on a genuinely empty first load. Once a
+  // deal has rendered once, subsequent fetches (swipe navigation, edits,
+  // background revalidation) keep the existing layout mounted and update
+  // in place instead of tearing the whole page down — this is what removed
+  // the flash/glitch between deals.
+  if (isLoading && !deal) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -1337,8 +1757,55 @@ function Pipeline_modal_view() {
   const StageIcon = stageConfig.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4"
+      style={{
+        // overscroll-behavior only has any effect on an element that is
+        // itself a scroll container on that axis — without overflow-x set,
+        // this was a no-op, leaving preventDefault() in the wheel handler as
+        // the only thing stopping the browser's native swipe-navigate
+        // gesture. overflow-x: hidden both makes the property meaningful and
+        // clips the ±100%-translated sliding card so it can never create a
+        // horizontal scrollbar mid-swipe.
+        overflowX: "hidden",
+        overscrollBehaviorX: "contain",
+      }}
+    >
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Swipe animation keyframes. The entry animations play once whenever
+          the swipe container below remounts (its key is the dealId), and
+          both end at translateX(0) — matching the container's resting
+          inline transform — so there's no snap when the animation hands
+          off to the static style. */}
+      <style>{`
+        @keyframes swipeProgressBar {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+        @keyframes dealSlideInFromRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes dealSlideInFromLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .deal-slide-in-right { animation: dealSlideInFromRight ${SWIPE_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .deal-slide-in-left { animation: dealSlideInFromLeft ${SWIPE_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1); }
+      `}</style>
+
+      {/* Swipe transition progress bar — fixed in place (independent of the
+          sliding card below) so a slower fetch never leaves the screen
+          blank between the exit and entry animations. */}
+      {isSwipeTransitioning && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] z-[60] bg-blue-100 overflow-hidden">
+          <div
+            className="h-full w-1/4 bg-blue-500 rounded-r-full"
+            style={{ animation: "swipeProgressBar 0.9s ease-in-out infinite" }}
+          />
+        </div>
+      )}
 
       {/* Preview Modal */}
       {previewFile && (
@@ -1377,7 +1844,9 @@ function Pipeline_modal_view() {
         onReasonChange={setLossReason}
         onNotesChange={setLossNotes}
         onConfirm={validateLostDeal}
-        title="Update Loss Reason"
+        title="Reason for Lost Deal"
+        confirmText="Confirm & Move to Closed Lost"
+        cancelText="Cancel"
         dealName={deal.dealName}
         isLoading={lostModalLoading}
       />
@@ -1558,7 +2027,243 @@ function Pipeline_modal_view() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto">
+      {isEditTimeModalOpen && (
+        <div className="fixed inset-0 z-[50] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              setIsEditTimeModalOpen(false);
+              setEditTimeData({ newTime: null, editReason: "" });
+            }}
+          />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-md">
+                <div className="bg-white px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="text-blue-600" size={20} />
+                      Edit Follow-up Time
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsEditTimeModalOpen(false);
+                        setEditTimeData({ newTime: null, editReason: "" });
+                      }}
+                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white px-6 py-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Time <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          selected={editTimeData.newTime}
+                          onChange={(date) => {
+                            setEditTimeData(prev => ({ ...prev, newTime: date }));
+                          }}
+                          showTimeSelect
+                          showTimeSelectOnly
+                          timeIntervals={15}
+                          timeCaption="Time"
+                          dateFormat="h:mm aa"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition pl-10"
+                        />
+                        <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select a new time for the existing follow-up on {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for editing <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editTimeData.editReason}
+                        onChange={(e) => {
+                          setEditTimeData(prev => ({ ...prev, editReason: e.target.value }));
+                        }}
+                        placeholder="Why are you editing the time? (mandatory)"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditTimeModalOpen(false);
+                      setEditTimeData({ newTime: null, editReason: "" });
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEditFollowUpTime}
+                    disabled={isSubmitting || !editTimeData.newTime || !editTimeData.editReason?.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} />
+                        Update Time
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditTimeModalOpen && (
+        <div className="fixed inset-0 z-[50] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              setIsEditTimeModalOpen(false);
+              setEditTimeData({ newTime: null, editReason: "" });
+            }}
+          />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-md">
+                <div className="bg-white px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="text-blue-600" size={20} />
+                      Edit Follow-up Time
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsEditTimeModalOpen(false);
+                        setEditTimeData({ newTime: null, editReason: "" });
+                      }}
+                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white px-6 py-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Time <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          selected={editTimeData.newTime}
+                          onChange={(date) => {
+                            setEditTimeData(prev => ({ ...prev, newTime: date }));
+                          }}
+                          showTimeSelect
+                          showTimeSelectOnly
+                          timeIntervals={15}
+                          timeCaption="Time"
+                          dateFormat="h:mm aa"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition pl-10"
+                        />
+                        <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select a new time for the existing follow-up on {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for editing <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editTimeData.editReason}
+                        onChange={(e) => {
+                          setEditTimeData(prev => ({ ...prev, editReason: e.target.value }));
+                        }}
+                        placeholder="Why are you editing the time? (mandatory)"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditTimeModalOpen(false);
+                      setEditTimeData({ newTime: null, editReason: "" });
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEditFollowUpTime}
+                    disabled={isSubmitting || !editTimeData.newTime || !editTimeData.editReason?.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} />
+                        Update Time
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        key={dealId}
+        ref={attachSwipeContainerRef}
+        onMouseDown={handleSwipeMouseDown}
+        className={`max-w-6xl mx-auto select-none ${
+          lastSwipeDirectionRef.current === "next"
+            ? "deal-slide-in-right"
+            : lastSwipeDirectionRef.current === "prev"
+            ? "deal-slide-in-left"
+            : ""
+        }`}
+        style={{
+          transform: `translateX(${swipeX}px)`,
+          transition: isSwipeAnimating ? `transform ${SWIPE_DURATION_MS}ms ease` : "none",
+          cursor: prevDealInfo || nextDealInfo ? "grab" : "default",
+          willChange: "transform",
+          overscrollBehaviorX: "contain",
+        }}
+      >
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div>
@@ -1573,7 +2278,17 @@ function Pipeline_modal_view() {
               <ChevronRight size={16} className="mx-2" />
               <span className="text-slate-500">View Deal</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {prevDealInfo && (
+                <button
+                  onClick={() => completeSwipe("prev")}
+                  title={`Previous deal: ${prevDealInfo.dealName}`}
+                  className="hidden sm:flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors max-w-[110px]"
+                >
+                  <ChevronLeft size={14} className="shrink-0" />
+                  <span className="truncate">{prevDealInfo.dealName}</span>
+                </button>
+              )}
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
                 {deal.dealName}
               </h1>
@@ -1585,6 +2300,16 @@ function Pipeline_modal_view() {
                   {stageConfig.label}
                 </span>
               </div>
+              {nextDealInfo && (
+                <button
+                  onClick={() => completeSwipe("next")}
+                  title={`Next deal: ${nextDealInfo.dealName}`}
+                  className="hidden sm:flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors max-w-[110px]"
+                >
+                  <span className="truncate">{nextDealInfo.dealName}</span>
+                  <ChevronRight size={14} className="shrink-0" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -2090,7 +2815,16 @@ function Pipeline_modal_view() {
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#ffffff",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    fontSize: "11px",
+                                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                                  }}
+                                  itemStyle={{ color: "#1e293b", fontSize: "11px", fontWeight: 600 }}
+                                  labelStyle={{ color: "#0f172a", fontWeight: 700, marginBottom: "2px" }}
                                   formatter={(value, name) => [`${value} pts`, name]}
                                 />
                                 <Bar dataKey="pts" radius={[4, 4, 0, 0]}>
@@ -2143,7 +2877,16 @@ function Pipeline_modal_view() {
                                   ))}
                                 </Pie>
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#ffffff",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    fontSize: "11px",
+                                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                                  }}
+                                  itemStyle={{ color: "#1e293b", fontSize: "11px", fontWeight: 600 }}
+                                  labelStyle={{ color: "#0f172a", fontWeight: 700, marginBottom: "2px" }}
                                 />
                                 <Legend iconSize={8} wrapperStyle={{ fontSize: "10px" }} />
                               </PieChart>
@@ -2176,7 +2919,17 @@ function Pipeline_modal_view() {
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#ffffff",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    fontSize: "11px",
+                                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                                  }}
+                                  itemStyle={{ color: "#1e293b", fontSize: "11px", fontWeight: 600 }}
+                                  labelStyle={{ color: "#0f172a", fontWeight: 700, marginBottom: "2px" }}
+                                  formatter={(value, name) => [`${value} logged`, name]}
                                 />
                                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                                   {chartData.map((entry, index) => (
@@ -2244,12 +2997,12 @@ function Pipeline_modal_view() {
                   {activityFeed.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-4 text-center">No recent activity recorded.</p>
                   ) : (
-                    <div className="space-y-3">
-                      {activityFeed.slice(0, 4).map((event, idx) => {
+                    <div className="space-y-3 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                      {activityFeed.map((event, idx) => {
                         const meta = ACTIVITY_TYPE_META[event.type] || ACTIVITY_TYPE_META.default;
                         const IconComp = meta.icon;
                         return (
-                          <div key={idx} className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                          <div key={idx} className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                             <div className={`p-2 rounded-lg flex-shrink-0 ${meta.bg}`}>
                               <IconComp size={14} className={meta.iconColor} />
                             </div>
@@ -2981,19 +3734,34 @@ function Pipeline_modal_view() {
                           <Clock size={16} className="text-purple-600" />
                           Upcoming Follow-up
                         </h3>
-                        <button
-                          onClick={() => {
-                            setFollowUpData({
-                              followUpDate: new Date(deal.followUpDate),
-                              followUpComment: deal.followUpComment || ""
-                            });
-                            setIsFollowUpModalOpen(true);
-                          }}
-                          className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
-                        >
-                          <Edit size={14} />
-                          Reschedule
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => {
+                              setEditTimeData({
+                                newTime: new Date(deal.followUpDate),
+                                editReason: ""
+                              });
+                              setIsEditTimeModalOpen(true);
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                          >
+                            <Clock size={14} />
+                            Edit Time
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFollowUpData({
+                                followUpDate: new Date(deal.followUpDate),
+                                followUpComment: deal.followUpComment || ""
+                              });
+                              setIsFollowUpModalOpen(true);
+                            }}
+                            className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                          >
+                            <Edit size={14} />
+                            Reschedule
+                          </button>
+                        </div>
                       </div>
                       <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3243,11 +4011,11 @@ function Pipeline_modal_view() {
                                         {followUp.action !== "Scheduled" && (
                                           <div className="mt-4">
                                             <p className="text-sm font-medium text-slate-700 mb-2">
-                                              Meeting Summary
+                                              {followUp.action === "Updated" ? "Reason for Edit" : "Meeting Summary"}
                                             </p>
                                             <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
                                               <p className="text-slate-700">
-                                                {followUp.notes || <span className="text-slate-400 italic">No summary provided</span>}
+                                                {followUp.notes || <span className="text-slate-400 italic">No {followUp.action === "Updated" ? "reason" : "summary"} provided</span>}
                                               </p>
                                             </div>
                                           </div>

@@ -174,6 +174,13 @@ const handleLogout = async () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Helper to build tenant-aware notification API URL
+  const getNotifApiUrl = (path = "") => {
+    const tenantSlug = localStorage.getItem("tenantSlug");
+    const base = tenantSlug ? `${API_SI}/${tenantSlug}/api/notifications` : `${API_URL}/notifications`;
+    return path ? `${base}/${path}` : base;
+  };
+
   // Handle notification click — mark as read in state + DB and navigate
   const handleNotificationClick = (n) => {
     setNotifications((prev) =>
@@ -184,30 +191,13 @@ const handleLogout = async () => {
     setShowNotifications(false);
     // Persist read status to DB
     if (n._id && !n._id.toString().includes("-")) {
-      axios.patch(`${API_URL}/notifications/read/${n._id}`, {}, {
+      axios.patch(getNotifApiUrl(`read/${n._id}`), {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).catch(() => {});
     }
-    // Navigate based on notification type
+    // Navigate to Notifications page
     const tenantSlug = localStorage.getItem("tenantSlug");
-    if (n.type === "task") {
-      if (isAdmin) {
-        navigate(`/${tenantSlug}/task-management`);
-      } else {
-        const filter = n.meta?.taskApproved ? "Task Approved" : "All";
-        navigate(`/${tenantSlug}/assigned-tasks`, { state: { filter } });
-      }
-    } else if (
-      ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign", "reason_note"].includes(n.type)
-    ) {
-      if (isAdmin) {
-        const openReassign = n.type === "reason_note" || (n.type === "target_expired" && n.meta?.needsReassign);
-        navigate(`/${tenantSlug}/target-management`, { state: openReassign ? { mainView: "reasonNotes" } : { mainView: "notifications" } });
-      } else {
-        const targetId = n.meta?.targetId;
-        navigate(`/${tenantSlug}/my-targets`, { state: { expandTargetId: targetId } });
-      }
-    }
+    navigate(tenantSlug ? `/${tenantSlug}/dashboard/notifications` : "/dashboard/notifications");
   };
 
   // Delete a single notification
@@ -215,7 +205,7 @@ const handleLogout = async () => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((notif) => notif._id !== n._id));
     if (n._id && !n._id.toString().includes("-")) {
-      axios.delete(`${API_URL}/notifications/${n._id}`, {
+      axios.delete(getNotifApiUrl(n._id), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).catch(() => {});
     }
@@ -228,7 +218,7 @@ const handleLogout = async () => {
     if (unreadIds.length > 0) {
       Promise.all(
         unreadIds.map((id) =>
-          axios.patch(`${API_URL}/notifications/read/${id}`, {}, {
+          axios.patch(getNotifApiUrl(`read/${id}`), {}, {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           }).catch(() => {})
         )
@@ -241,7 +231,7 @@ const handleLogout = async () => {
     const ids = notifications.filter((n) => n._id && !n._id.toString().includes("-")).map((n) => n._id);
     setNotifications([]);
     if (ids.length > 0) {
-      axios.delete(`${API_URL}/notifications/bulk`, {
+      axios.delete(getNotifApiUrl("bulk"), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         data: { ids },
       }).catch(() => {});
@@ -359,9 +349,9 @@ const handleLogout = async () => {
               className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative transition-colors"
             >
               <Bell size={22} className="text-gray-600 dark:text-gray-300" />
-              {notifications.filter((n) => !n.read).length > 0 && (
+              {notifications.filter((n) => !n.read && !n.isRead).length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  {notifications.filter((n) => !n.read).length}
+                  {notifications.filter((n) => !n.read && !n.isRead).length}
                 </span>
               )}
             </button>
