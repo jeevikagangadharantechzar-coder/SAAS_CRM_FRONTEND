@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target, Filter, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -172,6 +172,7 @@ function AllDealsComponent() {
   });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
+  const [showFilters, setShowFilters] = useState(searchParams.get("showFilters") === "true");
 
   // General-purpose Start/End Date filter — available to every role (unlike
   // the sales-only Custom Range panel above). Plain createdAt range, no deal
@@ -836,23 +837,34 @@ function AllDealsComponent() {
   }
 
   return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 tour-deals-header">
-        <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="p-6">
+      {/* Compact Toolbar Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-deals-header">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
+          <button
+            onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
+            className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
+          >
+            <Filter className="w-4 h-4" />
+            <span>Deals Filter</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between md:justify-end gap-2 mt-3 md:mt-0 w-full md:w-auto">
           <button
             onClick={startTour}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 tour-finish"
+            className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+            title="Take Tour"
           >
-            <Eye className="w-4 h-4" /> Take Tour
+            <Eye className="w-4 h-4" />
           </button>
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <button
-              onClick={() => navigate(`/${tenantSlug}/deals/rejected`)}
-              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+              onClick={() => navigate(`/${tenantSlug}/createDeal`)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2 tour-create-deal"
             >
-              <Ban className="w-4 h-4" /> Reject Deals
+              <Plus className="w-4 h-4" /> Create Deal
             </button>
           )}
           {userRole === "Admin" && (
@@ -866,25 +878,27 @@ function AllDealsComponent() {
               />
               <button
                 onClick={handleDownloadTemplate}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                title="Download an Excel template with all required columns"
+                className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                title="Download Template"
               >
-                <FileSpreadsheet className="w-4 h-4" /> Download Template
+                <FileSpreadsheet className="w-4 h-4" />
               </button>
               <button
                 onClick={handleImportButtonClick}
                 disabled={importing}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-60"
+                title={importing ? "Importing..." : "Import"}
               >
-                <Download className="w-4 h-4" /> {importing ? "Importing..." : "Import"}
+                <Download className="w-4 h-4" />
               </button>
               <div className="relative inline-block text-left" ref={exportMenuRef}>
                 <button
                   onClick={() => setExportMenuOpen((prev) => !prev)}
                   disabled={exporting}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                  className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-60"
+                  title={exporting ? "Exporting..." : "Export"}
                 >
-                  <Upload className="w-4 h-4" /> {exporting ? "Exporting..." : "Export"}
+                  <Upload className="w-4 h-4" />
                 </button>
 
                 {exportMenuOpen && (
@@ -914,14 +928,6 @@ function AllDealsComponent() {
               </div>
             </>
           )}
-          {(userRole === "Admin" || userRole === "Sales") && (
-            <button
-              onClick={() => navigate(`/${tenantSlug}/createDeal`)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 tour-create-deal"
-            >
-              <Plus className="w-4 h-4" /> Create Deal
-            </button>
-          )}
         </div>
       </div>
 
@@ -942,9 +948,10 @@ function AllDealsComponent() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-4 tour-filters">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
+      {/* Collapsible Filters */}
+      {showFilters && (
+        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 tour-filters">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
           <select
             value={filters.stage}
             onChange={(e) =>
@@ -1177,6 +1184,8 @@ function AllDealsComponent() {
           </div>
         )}
       </div>
+    )}
+
       {showTodayOnly && (
         <div className="mb-3 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
           <Calendar size={12} />
@@ -1235,11 +1244,7 @@ function AllDealsComponent() {
                         >
                           {deal.dealName || "-"}
                         </button>
-                        {deal.stage === "Rejected" ? (
-                          <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
-                            {rejectedBadgeText}
-                          </span>
-                        ) : deal.stage === "Closed Won" ? (
+                        {deal.stage === "Closed Won" ? (
                           <span title={wonBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {wonBadgeText}
                           </span>
@@ -1534,14 +1539,7 @@ function AllDealsComponent() {
                   >
                     <Edit size={16} className="mr-2" /> Edit
                   </button>
-                  {userRole === "Admin" && !activeIsTerminal && (
-                    <button
-                      onClick={() => handleRejectClick(activeDeal)}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 w-full text-left text-red-600"
-                    >
-                      <Ban size={16} className="mr-2" /> Reject
-                    </button>
-                  )}
+
                 </>
               );
             })()}
