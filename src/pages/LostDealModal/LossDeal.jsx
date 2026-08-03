@@ -39,15 +39,27 @@ export default function useLostDealModal() {
 
   const openModal = useCallback((deal, action) => {
     console.log("Opening modal for deal:", deal);
-    // Handle both cases: if deal is an object with _id, or just an id string
+    // Ignore React synthetic event objects passed via direct onClick={openModal}
+    if (deal && (deal.nativeEvent || typeof deal.preventDefault === "function")) {
+      setDealId(null);
+      setDealName("");
+      setPendingAction(null);
+      setModalOpen(true);
+      return;
+    }
+
     if (typeof deal === 'object' && deal !== null) {
-      setDealId(deal._id);
+      setDealId(deal._id || null);
       setDealName(deal.dealName || "");
+      if (deal.lossReason) setLossReason(deal.lossReason);
+      if (deal.lossNotes) setLossNotes(deal.lossNotes);
     } else {
-      setDealId(deal);
+      setDealId(deal || null);
       setDealName("");
     }
-    setPendingAction(() => action);
+    if (typeof action === "function") {
+      setPendingAction(() => action);
+    }
     setModalOpen(true);
   }, []);
 

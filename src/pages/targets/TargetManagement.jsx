@@ -15,7 +15,7 @@ import {
   Calendar, CheckCircle, Briefcase, Mail,
   Clock, Award, ChevronDown, ChevronUp, Building2, Check, MessageSquare, Pencil,
   LayoutGrid, List, Bell, Flag, ArrowRightLeft, AlertCircle, UserCheck,
-  ChevronLeft, ChevronRight, Trophy, XCircle, Activity, Info, CheckCheck
+  ChevronLeft, ChevronRight, Trophy, XCircle, Activity, Info, CheckCheck, Search
 } from "lucide-react";
 
 import TargetPipelineView from "./TargetPipelineView";
@@ -144,6 +144,9 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("leads");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [leadStatusFilter, setLeadStatusFilter] = useState("");
+  const [dealStageFilter, setDealStageFilter] = useState("");
 
   useEffect(() => {
     if (!userId) { setData(null); return; }
@@ -169,10 +172,24 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
 
   if (!data) return null;
 
-  const leadsList = (data.leads.list || []).filter((l) => !["Converted", "Rejected"].includes(l.status) || selectedLeads.has(l._id));
-  const dealsList = (data.deals.list || []).filter((d) => !["Closed Won", "Closed Lost"].includes(d.stage) || selectedDeals.has(d._id));
-  
+  let leadsList = (data.leads.list || []).filter((l) => !["Converted", "Rejected"].includes(l.status) || selectedLeads.has(l._id));
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    leadsList = leadsList.filter((l) => l.leadName?.toLowerCase().includes(q) || l.companyName?.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q));
+  }
+  if (leadStatusFilter) {
+    leadsList = leadsList.filter((l) => l.status === leadStatusFilter);
+  }
   const leads = { ...data.leads, list: leadsList, total: leadsList.length };
+
+  let dealsList = (data.deals.list || []).filter((d) => !["Closed Won", "Closed Lost"].includes(d.stage) || selectedDeals.has(d._id));
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    dealsList = dealsList.filter((d) => d.dealName?.toLowerCase().includes(q) || d.companyName?.toLowerCase().includes(q));
+  }
+  if (dealStageFilter) {
+    dealsList = dealsList.filter((d) => d.stage === dealStageFilter);
+  }
   const deals = { ...data.deals, list: dealsList, total: dealsList.length };
 
   const allLeadsSelected = leads.list.length > 0 && leads.list.every(l => selectedLeads.has(l._id));
@@ -212,6 +229,47 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
           className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-all ${tab === "deals" ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500"}`}>
           Deals ({deals.total})
         </button>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="flex gap-2 shrink-0">
+        <div className="relative flex-1">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder={tab === "leads" ? "Search leads..." : "Search deals..."} 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-7 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30"
+          />
+        </div>
+        {tab === "leads" && (
+          <select 
+            value={leadStatusFilter} 
+            onChange={(e) => setLeadStatusFilter(e.target.value)}
+            className="w-24 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+          >
+            <option value="">All Status</option>
+            <option value="Hot">Hot</option>
+            <option value="Warm">Warm</option>
+            <option value="Cold">Cold</option>
+            <option value="Junk">Junk</option>
+          </select>
+        )}
+        {tab === "deals" && (
+          <select 
+            value={dealStageFilter} 
+            onChange={(e) => setDealStageFilter(e.target.value)}
+            className="w-28 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+          >
+            <option value="">All Stages</option>
+            <option value="Qualification">Qualification</option>
+            <option value="Proposal Sent-Negotiation">Proposal Sent-Negotiation</option>
+            <option value="Invoice Sent">Invoice Sent</option>
+            <option value="Closed Won">Deal Closed</option>
+            <option value="Closed Lost">Deal Lost</option>
+          </select>
+        )}
       </div>
 
       {/* List */}

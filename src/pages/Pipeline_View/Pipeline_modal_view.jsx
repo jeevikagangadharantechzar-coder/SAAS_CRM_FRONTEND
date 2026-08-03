@@ -888,11 +888,16 @@ function Pipeline_modal_view() {
   } = useLostDealModal();
   const [activeTab, setActiveTab] = useState("details");
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [isEditTimeModalOpen, setIsEditTimeModalOpen] = useState(false);
   const [followUpData, setFollowUpData] = useState({
     followUpDate: null,
     followUpComment: "",
     previousOutcome: "",
     previousNotes: ""
+  });
+  const [editTimeData, setEditTimeData] = useState({
+    newTime: null,
+    editReason: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [followUpPage, setFollowUpPage] = useState(1);
@@ -1344,6 +1349,45 @@ function Pipeline_modal_view() {
     }
   };
 
+  const handleEditFollowUpTime = async () => {
+    if (!editTimeData.newTime) {
+      toast.error("Please select a new time");
+      return;
+    }
+    if (!editTimeData.editReason || !editTimeData.editReason.trim()) {
+      toast.error("Reason for editing is mandatory");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+      const response = await axios.patch(
+        `${API_URL}/deals/edit-followup-time/${dealId}`,
+        {
+          newTime: editTimeData.newTime.toISOString(),
+          editReason: editTimeData.editReason,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(response.data.message || "Follow-up time updated successfully");
+      setIsEditTimeModalOpen(false);
+      setEditTimeData({ newTime: null, editReason: "" });
+      fetchDealDetails();
+    } catch (err) {
+      if (!handleAuthError(err)) {
+        console.error("Failed to update follow-up time:", err);
+        toast.error(err.response?.data?.message || "Failed to update follow-up time");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // ── Download handler ────────────────────────────────────────
   const downloadFile = useCallback(async (filePath, fileName) => {
     if (!filePath) return toast.error("File path is missing");
@@ -1484,24 +1528,28 @@ function Pipeline_modal_view() {
         return;
       }
 
+      const sourceData = editFormData || deal || {};
+
       const payload = {
-        dealName: editFormData.dealName.trim(),
-        dealValue: editFormData.dealValue,
-        currency: editFormData.currency,
-        stage: editFormData.stage,
-        notes: editFormData.notes,
-        companyName: editFormData.companyName.trim(),
-        email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
-          ? `+${editFormData.phoneNumber}`
-          : editFormData.phoneNumber,
-        alternativeEmail: editFormData.alternativeEmail,
-        alternativeNumber: editFormData.alternativeNumber && !editFormData.alternativeNumber.startsWith("+")
-          ? `+${editFormData.alternativeNumber}`
-          : editFormData.alternativeNumber,
-        clientType: editFormData.clientType,
-        address: editFormData.address.trim(),
-        country: editFormData.country.trim(),
+        dealName: (sourceData.dealName || "").trim(),
+        dealValue: sourceData.dealValue || "",
+        currency: sourceData.currency || "USD",
+        stage: extraFields.lossReason ? "Closed Lost" : (sourceData.stage || "Qualification"),
+        notes: sourceData.notes || "",
+        companyName: (sourceData.companyName || "").trim(),
+        email: sourceData.email || "",
+        phoneNumber:
+          sourceData.phoneNumber && !String(sourceData.phoneNumber).startsWith("+")
+            ? `+${sourceData.phoneNumber}`
+            : sourceData.phoneNumber || "",
+        alternativeEmail: sourceData.alternativeEmail || "",
+        alternativeNumber:
+          sourceData.alternativeNumber && !String(sourceData.alternativeNumber).startsWith("+")
+            ? `+${sourceData.alternativeNumber}`
+            : sourceData.alternativeNumber || "",
+        clientType: sourceData.clientType || "",
+        address: (sourceData.address || "").trim(),
+        country: (sourceData.country || "").trim(),
         ...extraFields,
       };
 
@@ -1511,10 +1559,15 @@ function Pipeline_modal_view() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setDeal(response.data.deal);
+      if (response.data?.deal) {
+        setDeal(response.data.deal);
+      } else {
+        setDeal((prev) => ({ ...prev, ...payload }));
+      }
       setIsEditingDetails(false);
       setEditFormData(null);
-      toast.success(response.data.message || "Deal updated successfully");
+      toast.success(extraFields.lossReason ? "Deal marked as Closed Lost & updated successfully" : (response.data?.message || "Deal updated successfully"));
+      fetchDealDetails();
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to update deal:", err);
@@ -1545,9 +1598,25 @@ function Pipeline_modal_view() {
 
   const handleLostDealConfirm = useCallback(async (lossData) => {
     if (lossData?.reason) {
-      await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+      try {
+        const token = localStorage.getItem("token");
+        await axios.post(
+          `${API_URL}/deals/lost-reason`,
+          {
+            dealId: deal._id,
+            reason: lossData.reason,
+            notes: lossData.notes || "",
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error("Failed to post lost deal reason:", err);
+      } finally {
+        await performSaveDetails({ lossReason: lossData.reason, lossNotes: lossData.notes || "" });
+        fetchActivity();
+      }
     }
-  }, [editFormData]);
+  }, [deal, editFormData, performSaveDetails]);
 
   const saveDetails = async () => {
     if (!editFormData.dealName.trim()) return toast.error("Deal Name is required");
@@ -1572,7 +1641,7 @@ function Pipeline_modal_view() {
     // Moving into Closed Lost always needs a reason, same as the Create/Edit
     // Deal form — intercept the save and collect it before writing anything.
     if (editFormData.stage === "Closed Lost" && deal.stage !== "Closed Lost") {
-      openLostDealModal(deal._id, handleLostDealConfirm);
+      openLostDealModal(deal, handleLostDealConfirm);
       return;
     }
 
@@ -1775,7 +1844,9 @@ function Pipeline_modal_view() {
         onReasonChange={setLossReason}
         onNotesChange={setLossNotes}
         onConfirm={validateLostDeal}
-        title="Update Loss Reason"
+        title="Reason for Lost Deal"
+        confirmText="Confirm & Move to Closed Lost"
+        cancelText="Cancel"
         dealName={deal.dealName}
         isLoading={lostModalLoading}
       />
@@ -1946,6 +2017,224 @@ function Pipeline_modal_view() {
                       <>
                         <Calendar size={16} />
                         {deal.followUpDate ? "Reschedule Follow-up" : "Schedule Follow-up"}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditTimeModalOpen && (
+        <div className="fixed inset-0 z-[50] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              setIsEditTimeModalOpen(false);
+              setEditTimeData({ newTime: null, editReason: "" });
+            }}
+          />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-md">
+                <div className="bg-white px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="text-blue-600" size={20} />
+                      Edit Follow-up Time
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsEditTimeModalOpen(false);
+                        setEditTimeData({ newTime: null, editReason: "" });
+                      }}
+                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white px-6 py-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Time <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          selected={editTimeData.newTime}
+                          onChange={(date) => {
+                            setEditTimeData(prev => ({ ...prev, newTime: date }));
+                          }}
+                          showTimeSelect
+                          showTimeSelectOnly
+                          timeIntervals={15}
+                          timeCaption="Time"
+                          dateFormat="h:mm aa"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition pl-10"
+                        />
+                        <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select a new time for the existing follow-up on {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for editing <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editTimeData.editReason}
+                        onChange={(e) => {
+                          setEditTimeData(prev => ({ ...prev, editReason: e.target.value }));
+                        }}
+                        placeholder="Why are you editing the time? (mandatory)"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditTimeModalOpen(false);
+                      setEditTimeData({ newTime: null, editReason: "" });
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEditFollowUpTime}
+                    disabled={isSubmitting || !editTimeData.newTime || !editTimeData.editReason?.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} />
+                        Update Time
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditTimeModalOpen && (
+        <div className="fixed inset-0 z-[50] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              setIsEditTimeModalOpen(false);
+              setEditTimeData({ newTime: null, editReason: "" });
+            }}
+          />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-md">
+                <div className="bg-white px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="text-blue-600" size={20} />
+                      Edit Follow-up Time
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsEditTimeModalOpen(false);
+                        setEditTimeData({ newTime: null, editReason: "" });
+                      }}
+                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white px-6 py-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Time <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          selected={editTimeData.newTime}
+                          onChange={(date) => {
+                            setEditTimeData(prev => ({ ...prev, newTime: date }));
+                          }}
+                          showTimeSelect
+                          showTimeSelectOnly
+                          timeIntervals={15}
+                          timeCaption="Time"
+                          dateFormat="h:mm aa"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition pl-10"
+                        />
+                        <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select a new time for the existing follow-up on {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for editing <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editTimeData.editReason}
+                        onChange={(e) => {
+                          setEditTimeData(prev => ({ ...prev, editReason: e.target.value }));
+                        }}
+                        placeholder="Why are you editing the time? (mandatory)"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditTimeModalOpen(false);
+                      setEditTimeData({ newTime: null, editReason: "" });
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEditFollowUpTime}
+                    disabled={isSubmitting || !editTimeData.newTime || !editTimeData.editReason?.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} />
+                        Update Time
                       </>
                     )}
                   </button>
@@ -2526,7 +2815,16 @@ function Pipeline_modal_view() {
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#ffffff",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    fontSize: "11px",
+                                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                                  }}
+                                  itemStyle={{ color: "#1e293b", fontSize: "11px", fontWeight: 600 }}
+                                  labelStyle={{ color: "#0f172a", fontWeight: 700, marginBottom: "2px" }}
                                   formatter={(value, name) => [`${value} pts`, name]}
                                 />
                                 <Bar dataKey="pts" radius={[4, 4, 0, 0]}>
@@ -2579,7 +2877,16 @@ function Pipeline_modal_view() {
                                   ))}
                                 </Pie>
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#ffffff",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    fontSize: "11px",
+                                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                                  }}
+                                  itemStyle={{ color: "#1e293b", fontSize: "11px", fontWeight: 600 }}
+                                  labelStyle={{ color: "#0f172a", fontWeight: 700, marginBottom: "2px" }}
                                 />
                                 <Legend iconSize={8} wrapperStyle={{ fontSize: "10px" }} />
                               </PieChart>
@@ -2612,7 +2919,17 @@ function Pipeline_modal_view() {
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                  contentStyle={{ backgroundColor: "#0f172a", borderRadius: "0.5rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                  contentStyle={{
+                                    backgroundColor: "#ffffff",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    fontSize: "11px",
+                                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                                  }}
+                                  itemStyle={{ color: "#1e293b", fontSize: "11px", fontWeight: 600 }}
+                                  labelStyle={{ color: "#0f172a", fontWeight: 700, marginBottom: "2px" }}
+                                  formatter={(value, name) => [`${value} logged`, name]}
                                 />
                                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                                   {chartData.map((entry, index) => (
@@ -2680,12 +2997,12 @@ function Pipeline_modal_view() {
                   {activityFeed.length === 0 ? (
                     <p className="text-xs text-slate-400 italic py-4 text-center">No recent activity recorded.</p>
                   ) : (
-                    <div className="space-y-3">
-                      {activityFeed.slice(0, 4).map((event, idx) => {
+                    <div className="space-y-3 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                      {activityFeed.map((event, idx) => {
                         const meta = ACTIVITY_TYPE_META[event.type] || ACTIVITY_TYPE_META.default;
                         const IconComp = meta.icon;
                         return (
-                          <div key={idx} className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                          <div key={idx} className="flex items-start gap-3 text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                             <div className={`p-2 rounded-lg flex-shrink-0 ${meta.bg}`}>
                               <IconComp size={14} className={meta.iconColor} />
                             </div>
@@ -3417,19 +3734,34 @@ function Pipeline_modal_view() {
                           <Clock size={16} className="text-purple-600" />
                           Upcoming Follow-up
                         </h3>
-                        <button
-                          onClick={() => {
-                            setFollowUpData({
-                              followUpDate: new Date(deal.followUpDate),
-                              followUpComment: deal.followUpComment || ""
-                            });
-                            setIsFollowUpModalOpen(true);
-                          }}
-                          className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
-                        >
-                          <Edit size={14} />
-                          Reschedule
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => {
+                              setEditTimeData({
+                                newTime: new Date(deal.followUpDate),
+                                editReason: ""
+                              });
+                              setIsEditTimeModalOpen(true);
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                          >
+                            <Clock size={14} />
+                            Edit Time
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFollowUpData({
+                                followUpDate: new Date(deal.followUpDate),
+                                followUpComment: deal.followUpComment || ""
+                              });
+                              setIsFollowUpModalOpen(true);
+                            }}
+                            className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                          >
+                            <Edit size={14} />
+                            Reschedule
+                          </button>
+                        </div>
                       </div>
                       <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3679,11 +4011,11 @@ function Pipeline_modal_view() {
                                         {followUp.action !== "Scheduled" && (
                                           <div className="mt-4">
                                             <p className="text-sm font-medium text-slate-700 mb-2">
-                                              Meeting Summary
+                                              {followUp.action === "Updated" ? "Reason for Edit" : "Meeting Summary"}
                                             </p>
                                             <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
                                               <p className="text-slate-700">
-                                                {followUp.notes || <span className="text-slate-400 italic">No summary provided</span>}
+                                                {followUp.notes || <span className="text-slate-400 italic">No {followUp.action === "Updated" ? "reason" : "summary"} provided</span>}
                                               </p>
                                             </div>
                                           </div>
