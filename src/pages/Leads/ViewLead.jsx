@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import WhatsAppMessageModal from "../../components/whatsapp/WhatsAppMessageModal";
 import axios from "axios";
 import {
-  ArrowLeft, ChevronRight, User, Mail, Phone, Building, Building2,
+  ArrowLeft, ChevronRight, ChevronLeft, User, Mail, Phone, Building, Building2,
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
   Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2,
@@ -508,6 +508,259 @@ const ViewLead = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
 
+  // Swipe navigation between leads — the ordered list of {_id, leadName}
+  // this lead was opened from (Leads table), passed via navigation state by
+  // the caller. Mirrors the same pattern used on the Deal Details page.
+  const leadSequence = useMemo(
+    () => location.state?.leadSequence || [],
+    [location.state],
+  );
+  const leadSequenceIndex = leadSequence.findIndex((l) => l._id === id);
+  const prevLeadInfo =
+    leadSequenceIndex > 0 ? leadSequence[leadSequenceIndex - 1] : null;
+  const nextLeadInfo =
+    leadSequenceIndex >= 0 && leadSequenceIndex < leadSequence.length - 1
+      ? leadSequence[leadSequenceIndex + 1]
+      : null;
+
+  const swipeContainerRef = useRef(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwipeAnimating, setIsSwipeAnimating] = useState(false);
+
+  // Tracks which lead id `lead` and the swipe transform currently correspond
+  // to. When the route moves to a NEW id (via a completed swipe), this is
+  // caught and reacted to synchronously during this same render — see the
+  // identical pattern (and its rationale) on the Deal Details page.
+  const [syncedLeadId, setSyncedLeadId] = useState(id);
+  if (id !== syncedLeadId) {
+    setSyncedLeadId(id);
+    setSwipeX(0);
+    setIsSwipeAnimating(false);
+
+    const prefetched = location.state?.prefetchedLead;
+    if (prefetched && prefetched._id === id) {
+      setLead(prefetched);
+    } else {
+      setLead(null);
+    }
+  }
+
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const swipeOffsetRef = useRef(0);
+  const lastSwipeDirectionRef = useRef(null);
+  const wheelResetTimerRef = useRef(null);
+  const isSwipeLockedRef = useRef(false);
+  const nextLeadInfoRef = useRef(nextLeadInfo);
+  const prevLeadInfoRef = useRef(prevLeadInfo);
+  const completeSwipeRef = useRef(null);
+  const [isSwipeTransitioning, setIsSwipeTransitioning] = useState(false);
+
+  const SWIPE_THRESHOLD = 90;
+  const SWIPE_WHEEL_THRESHOLD = 120;
+  const SWIPE_DURATION_MS = 220;
+  const MAX_PREFETCH_WAIT_MS = 400;
+  // How long to keep new input locked out after a lead lands, to drain any
+  // trailing trackpad momentum events left over from the gesture that
+  // triggered the swipe in the first place.
+  const SWIPE_COOLDOWN_MS = 350;
+
+  useEffect(() => {
+    nextLeadInfoRef.current = nextLeadInfo;
+    prevLeadInfoRef.current = prevLeadInfo;
+  });
+
+  // Landing: once the route has settled on this id, clear the transition
+  // indicator and release the swipe lock (after a short cooldown) so the
+  // next gesture can commit. Without this, isSwipeTransitioning and
+  // isSwipeLockedRef would stay stuck from the first swipe onward — the
+  // progress bar never disappears and further swipes silently no-op.
+  useEffect(() => {
+    if (!id) return;
+    setIsSwipeTransitioning(false);
+
+    const unlockTimer = setTimeout(() => {
+      isSwipeLockedRef.current = false;
+    }, SWIPE_COOLDOWN_MS);
+
+    return () => clearTimeout(unlockTimer);
+  }, [id]);
+
+  const completeSwipe = useCallback(
+    (direction) => {
+      if (isSwipeLockedRef.current) return;
+      const target = direction === "next" ? nextLeadInfo : prevLeadInfo;
+      swipeOffsetRef.current = 0;
+      if (!target) {
+        setIsSwipeAnimating(true);
+        setSwipeX(0);
+        return;
+      }
+      isSwipeLockedRef.current = true;
+      if (wheelResetTimerRef.current) {
+        clearTimeout(wheelResetTimerRef.current);
+        wheelResetTimerRef.current = null;
+      }
+      const width = swipeContainerRef.current?.offsetWidth || window.innerWidth;
+      setIsSwipeAnimating(true);
+      setSwipeX(direction === "next" ? width : -width);
+      setIsSwipeTransitioning(true);
+      lastSwipeDirectionRef.current = direction;
+      setLead(null);
+
+      const token = localStorage.getItem("token");
+      const prefetchPromise = axios
+        .get(`${API_URL}/leads/getLead/${target._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => res.data)
+        .catch(() => undefined);
+      const boundedPrefetch = Promise.race([
+        prefetchPromise,
+        new Promise((resolve) => setTimeout(resolve, MAX_PREFETCH_WAIT_MS)),
+      ]);
+      const minExitWait = new Promise((resolve) =>
+        setTimeout(resolve, SWIPE_DURATION_MS),
+      );
+
+      Promise.all([boundedPrefetch, minExitWait]).then(([prefetchedLead]) => {
+        navigate(`/${tenantSlug}/leads/view/${target._id}${location.search}`, {
+          state: { leadSequence, prefetchedLead },
+        });
+      });
+    },
+    [nextLeadInfo, prevLeadInfo, navigate, tenantSlug, leadSequence, location.search],
+  );
+
+  useEffect(() => {
+    completeSwipeRef.current = completeSwipe;
+  });
+
+  const cancelDrag = useCallback(() => {
+    isDraggingRef.current = false;
+    swipeOffsetRef.current = 0;
+    setIsSwipeAnimating(true);
+    setSwipeX(0);
+  }, []);
+
+  const finishDrag = useCallback(() => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    if (isSwipeLockedRef.current) {
+      setSwipeX(0);
+      return;
+    }
+    const currentX = swipeOffsetRef.current;
+    if (currentX > SWIPE_THRESHOLD && nextLeadInfo) {
+      completeSwipe("next");
+    } else if (currentX < -SWIPE_THRESHOLD && prevLeadInfo) {
+      completeSwipe("prev");
+    } else {
+      swipeOffsetRef.current = 0;
+      setIsSwipeAnimating(true);
+      setSwipeX(0);
+    }
+  }, [nextLeadInfo, prevLeadInfo, completeSwipe]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current || isSwipeLockedRef.current) return;
+      if ((e.buttons & 1) === 0) {
+        cancelDrag();
+        return;
+      }
+      const offset = e.clientX - dragStartXRef.current;
+      swipeOffsetRef.current = offset;
+      setSwipeX(offset);
+    };
+    const handleMouseUp = () => finishDrag();
+    const handleBlur = () => cancelDrag();
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("blur", handleBlur);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [finishDrag, cancelDrag]);
+
+  const handleSwipeMouseDown = (e) => {
+    if (isSwipeLockedRef.current) return;
+    if (e.button !== 0) return;
+    if (
+      e.target.closest("input, textarea, select, button, a, [contenteditable]")
+    )
+      return;
+    isDraggingRef.current = true;
+    setIsSwipeAnimating(false);
+    dragStartXRef.current = e.clientX;
+  };
+
+  const recentHorizontalIntentUntilRef = useRef(0);
+
+  const handleWheelEvent = useCallback((e) => {
+    if (isSwipeLockedRef.current || isDraggingRef.current) {
+      e.preventDefault();
+      return;
+    }
+
+    const usingShiftFallback =
+      e.shiftKey && Math.abs(e.deltaX) < Math.abs(e.deltaY);
+    const isHorizontalIntent =
+      usingShiftFallback || Math.abs(e.deltaX) >= Math.abs(e.deltaY);
+    const now = performance.now();
+    const isMidHorizontalGesture = now < recentHorizontalIntentUntilRef.current;
+
+    if (!isHorizontalIntent && !isMidHorizontalGesture) return;
+
+    if (isHorizontalIntent) {
+      recentHorizontalIntentUntilRef.current = now + 300;
+    }
+
+    e.preventDefault();
+
+    const rawDelta = usingShiftFallback ? e.deltaY : e.deltaX;
+    const offset = swipeOffsetRef.current + rawDelta;
+    swipeOffsetRef.current = offset;
+    setIsSwipeAnimating(false);
+    setSwipeX(offset);
+
+    if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current);
+
+    if (offset > SWIPE_WHEEL_THRESHOLD && nextLeadInfoRef.current) {
+      swipeOffsetRef.current = 0;
+      completeSwipeRef.current?.("next");
+      return;
+    }
+    if (offset < -SWIPE_WHEEL_THRESHOLD && prevLeadInfoRef.current) {
+      swipeOffsetRef.current = 0;
+      completeSwipeRef.current?.("prev");
+      return;
+    }
+
+    wheelResetTimerRef.current = setTimeout(() => {
+      swipeOffsetRef.current = 0;
+      setIsSwipeAnimating(true);
+      setSwipeX(0);
+    }, 200);
+  }, []);
+
+  const attachSwipeContainerRef = useCallback(
+    (node) => {
+      const previousNode = swipeContainerRef.current;
+      if (previousNode && previousNode !== node) {
+        previousNode.removeEventListener("wheel", handleWheelEvent);
+      }
+      swipeContainerRef.current = node;
+      if (node) {
+        node.addEventListener("wheel", handleWheelEvent, { passive: false });
+      }
+    },
+    [handleWheelEvent],
+  );
+
   // Follow-up notes state
   const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -880,8 +1133,63 @@ const ViewLead = () => {
   const canReject = userRole === "Admin" && !isTerminal;
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div
+      className="min-h-screen py-8 px-4"
+      style={{
+        overflowX: "hidden",
+        overscrollBehaviorX: "none",
+        touchAction: "pan-y",
+      }}
+    >
+      {/* Swipe animation keyframes — see the identical pattern on the Deal
+          Details page for the full rationale. */}
+      <style>{`
+        @keyframes leadSwipeProgressBar {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+        @keyframes leadSlideInFromRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes leadSlideInFromLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .lead-slide-in-right { animation: leadSlideInFromRight ${SWIPE_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .lead-slide-in-left { animation: leadSlideInFromLeft ${SWIPE_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1); }
+      `}</style>
+
+      {isSwipeTransitioning && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] z-[60] bg-blue-100 overflow-hidden">
+          <div
+            className="h-full w-1/4 bg-blue-500 rounded-r-full"
+            style={{ animation: "leadSwipeProgressBar 0.9s ease-in-out infinite" }}
+          />
+        </div>
+      )}
+
+      <div
+        key={id}
+        ref={attachSwipeContainerRef}
+        onMouseDown={handleSwipeMouseDown}
+        className={`max-w-6xl mx-auto select-none ${
+          lastSwipeDirectionRef.current === "next"
+            ? "lead-slide-in-right"
+            : lastSwipeDirectionRef.current === "prev"
+              ? "lead-slide-in-left"
+              : ""
+        }`}
+        style={{
+          transform: `translateX(${swipeX}px)`,
+          transition: isSwipeAnimating
+            ? `transform ${SWIPE_DURATION_MS}ms ease`
+            : "none",
+          cursor: prevLeadInfo || nextLeadInfo ? "grab" : "default",
+          willChange: "transform",
+          overscrollBehaviorX: "contain",
+        }}
+      >
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div>
@@ -897,9 +1205,29 @@ const ViewLead = () => {
               <span className="text-slate-500">View Lead</span>
             </div>
             <div className="flex items-center gap-4">
+              {prevLeadInfo && (
+                <button
+                  onClick={() => completeSwipe("prev")}
+                  title={`Previous lead: ${prevLeadInfo.leadName}`}
+                  className="hidden sm:flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors max-w-[110px]"
+                >
+                  <ChevronLeft size={14} className="shrink-0" />
+                  <span className="truncate">{prevLeadInfo.leadName}</span>
+                </button>
+              )}
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
                 {lead.leadName}
               </h1>
+              {nextLeadInfo && (
+                <button
+                  onClick={() => completeSwipe("next")}
+                  title={`Next lead: ${nextLeadInfo.leadName}`}
+                  className="hidden sm:flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors max-w-[110px]"
+                >
+                  <span className="truncate">{nextLeadInfo.leadName}</span>
+                  <ChevronRight size={14} className="shrink-0" />
+                </button>
+              )}
               {lead.status === "Converted" && (
                 <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
                   Converted
