@@ -151,7 +151,11 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
         params,
       });
 
-      const rows = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+      let rows = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+      // To satisfy the dashboard requirement: "who has converted large number in total and fastest first"
+      // Re-sort the available rows so the top performer is always the one with most converted leads
+      rows = [...rows].sort((a, b) => b.convertedLeads !== a.convertedLeads ? b.convertedLeads - a.convertedLeads : b.conversionRate - a.conversionRate);
+      
       const top  = rows[0] || null;
       if (top) {
         setTopPerformer(top);
