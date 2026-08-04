@@ -795,6 +795,24 @@ const updateFilter = (key, value, setter) => {
     }
   };
 
+  const handleTrashClick = async (lead) => {
+    setMenuOpen(null);
+    if (!window.confirm("Are you sure you want to move this lead to trash?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `${API_URL}/leads/${lead._id}/trash`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Lead moved to trash");
+      setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to move lead to trash");
+    }
+  };
+
   // Convert Modal
   const openConvertModal = (lead) => {
     setSelectedLead(lead);
@@ -1743,6 +1761,18 @@ const updateFilter = (key, value, setter) => {
                             className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
                           >
                             <Ban className="w-4 h-4 mr-2" /> Reject
+                          </button>
+                        )}
+
+                        {userRole === "Admin" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTrashClick(lead);
+                            }}
+                            className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
                           </button>
                         )}
                       </div>,

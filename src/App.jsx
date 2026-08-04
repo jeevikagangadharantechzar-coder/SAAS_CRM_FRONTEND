@@ -45,6 +45,7 @@ import RejectedLeads from "./pages/Leads/RejectedLeads";
 import CreateLeads from "./pages/Leads/CreateLeads";
 import { AllDeals } from "./pages/Deals/allDeals";
 import RejectedDeals from "./pages/Deals/RejectedDeals";
+import TrashPage from "./pages/Trash/TrashPage";
 import DealsDocument from "./pages/Deals/DealsDocument";
 import CreateDeal from "./pages/Deals/CreateDeal";
 import Pipeline_view from "./pages/Pipeline_View/Pipelien_view";
@@ -249,6 +250,7 @@ function App() {
                       </Route>
                       <Route path="leaderboard" element={<AllStreakLeaderboard />} />
                       <Route path="dashboard/notifications" element={<NotificationsPage />} />
+                      <Route path="trash" element={<TrashPage />} />
 
                       {/* campaigns */}
                       <Route path="mass-email" element={<MassEmail />} />
