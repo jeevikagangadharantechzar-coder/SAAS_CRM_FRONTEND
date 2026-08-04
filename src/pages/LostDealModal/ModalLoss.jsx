@@ -1,12 +1,28 @@
 import React from "react";
 
+const DEFAULT_LOSS_REASONS = [
+  "Price too high",
+  "No follow-up",
+  "Competitor chosen",
+  "No client decision",
+  "Requirements mismatch",
+  "Budget constraints",
+  "Timing issues",
+  "Lost to internal solution",
+  "Poor product fit",
+  "Communication breakdown",
+  "Ghosted/No Reply",
+  "Feature Missing",
+  "Competitor (Zoho)",
+];
+
 const LostDealModal = ({
   isOpen,
   onClose,
   lossReason,
   lossNotes,
   validationError,
-  LOSS_REASONS,
+  LOSS_REASONS = DEFAULT_LOSS_REASONS,
   onReasonChange,
   onNotesChange,
   onConfirm,
@@ -18,15 +34,18 @@ const LostDealModal = ({
 }) => {
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    console.log("Modal confirm clicked");
-    onConfirm();
+  const reasonsList = (LOSS_REASONS && LOSS_REASONS.length > 0) ? LOSS_REASONS : DEFAULT_LOSS_REASONS;
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    console.log("Modal submit triggered");
+    onConfirm?.();
   };
 
   return (
     <div className="fixed inset-0 backdrop-blur-md bg-black/30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div className="p-6">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
@@ -35,6 +54,7 @@ const LostDealModal = ({
               )}
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
               aria-label="Close"
@@ -48,7 +68,7 @@ const LostDealModal = ({
 
           <div className="space-y-4 py-4">
             <p className="text-sm text-gray-600">
-              Please select a reason for marking this deal as Closed Lost.
+              Please select or enter a reason for marking this deal as Closed Lost.
               <span className="text-red-500 ml-1">*Required</span>
             </p>
 
@@ -57,16 +77,14 @@ const LostDealModal = ({
                 Loss Reason <span className="text-red-500">*</span>
               </label>
               <select
-                className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none transition ${
-                  validationError ? "border-red-300 ring-1 ring-red-300" : "border-gray-300"
-                }`}
+                className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none transition ${validationError ? "border-red-300 ring-1 ring-red-300" : "border-gray-300"
+                  }`}
                 value={lossReason}
-                onChange={(e) => onReasonChange(e.target.value)}
-                required
+                onChange={(e) => onReasonChange?.(e.target.value)}
                 disabled={isLoading}
               >
                 <option value="">Select a reason</option>
-                {LOSS_REASONS.map((reason, index) => (
+                {reasonsList.map((reason, index) => (
                   <option key={index} value={reason}>
                     {reason}
                   </option>
@@ -93,7 +111,7 @@ const LostDealModal = ({
                 placeholder="Add any additional notes or details about why the deal was lost..."
                 rows="3"
                 value={lossNotes}
-                onChange={(e) => onNotesChange(e.target.value)}
+                onChange={(e) => onNotesChange?.(e.target.value)}
                 disabled={isLoading}
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -112,11 +130,9 @@ const LostDealModal = ({
               {cancelText}
             </button>
             <button
-              type="button"
-              className={`px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none transition-colors font-medium ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
-              onClick={handleConfirm}
+              type="submit"
+              className={`px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-300 focus:outline-none transition-colors font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -132,7 +148,7 @@ const LostDealModal = ({
               )}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

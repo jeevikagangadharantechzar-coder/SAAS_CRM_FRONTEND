@@ -88,12 +88,19 @@ import ResetPassword from "./pages/password/ResetPassword";
 import Integrations from "./pages/integrations/Integrations";
 import FacebookCallback from "./pages/integrations/FacebookCallback";
 import LinkedInCallback from "./pages/integrations/LinkedInCallback";
+import WhatsAppCallback from "./pages/integrations/WhatsAppCallback";
+import InstagramCallback from "./pages/integrations/InstagramCallback";
+import WhatsAppChat from "./pages/WhatsApp/WhatsAppChat";
+import InstagramInbox from "./pages/instagram/InstagramInbox";
+import FacebookInbox from "./pages/facebook/FacebookInbox";
 import MessagesPage from "./pages/Messages/MessagesPage";
 import DeviceRequests from "./pages/security/DeviceRequests";
 import LiveLocations from "./pages/security/LiveLocations";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -180,26 +187,28 @@ function App() {
   return (
     <SocketProvider userId={user?._id}>
       <TargetSocketProvider userId={user?._id}>
-        <FreeTrialProvider userId={user?._id}>
-          <NotificationProvider>
-            <BrowserRouter>
-              <div className="min-h-screen">
-                <TrialReminderBanner />
-                <TrialExpiredModal />
-                <Routes>
-                  {/* PUBLIC */}
-                  <Route path="/" element={<SuperAdminLogin />} />
-                  <Route path="/login" element={<SuperAdminLogin />} />
-                  <Route path="/:tenantSlug/login" element={<Login />} />
-                  <Route path="/:tenantSlug/upgrade" element={<UpgradePlan />} />
-                  <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
-                  <Route path="/contact" element={<WebsiteContactForm />} />
-                  <Route path="/:tenantSlug/contact" element={<WebsiteContactForm />} />
-                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/reset-password/:token" element={<ResetPassword />} />
-                  <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
-                  <Route path="/integrations/facebook/callback" element={<FacebookCallback />} />
-                  <Route path="/integrations/linkedin/callback" element={<LinkedInCallback />} />
+      <FreeTrialProvider userId={user?._id}>
+      <NotificationProvider>
+        <BrowserRouter>
+          <div className="min-h-screen">
+            <TrialReminderBanner />
+            <TrialExpiredModal />
+            <Routes>
+              {/* PUBLIC */}
+              <Route path="/" element={<SuperAdminLogin />} />
+              <Route path="/login" element={<SuperAdminLogin />} />
+              <Route path="/:tenantSlug/login" element={<Login />} />
+              <Route path="/:tenantSlug/upgrade" element={<UpgradePlan />} />
+              <Route path="/:tenantSlug/plans" element={<ViewPlans />} />
+              <Route path="/contact" element={<WebsiteContactForm />} />
+              <Route path="/:tenantSlug/contact" element={<WebsiteContactForm />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/:tenantSlug/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/integrations/facebook/callback"   element={<FacebookCallback />} />
+              <Route path="/integrations/linkedin/callback"   element={<LinkedInCallback />} />
+              <Route path="/integrations/whatsapp/callback"  element={<WhatsAppCallback />} />
+              <Route path="/integrations/instagram/callback" element={<InstagramCallback />} />
 
                   {/* SUPERADMIN PORTAL */}
                   <Route path="/superadmin/login" element={<Navigate to="/" replace />} />
@@ -228,9 +237,13 @@ function App() {
                       <Route index element={<Navigate to="dashboard" replace />} />
 
                       {/* COMMON ROUTES */}
-                      <Route element={<PrivateRoute planFeature="analytics" />}>
+                      <Route element={<PrivateRoute planFeature="deal_analysis" />}>
                         <Route path="DealAnalysis" element={<DealIntelligenceDashboard />} />
+                      </Route>
+                      <Route element={<PrivateRoute planFeature="loss_analysis" />}>
                         <Route path="LossAnalysis" element={<LostDealAnalytics />} />
+                      </Route>
+                      <Route element={<PrivateRoute planFeature="won_analysis" />}>
                         <Route path="cltv/dashboard" element={<CLVDashboard />} />
                         <Route path="cltv/client/:companyName" element={<ClientCLVDetails />} />
                       </Route>
@@ -350,8 +363,19 @@ function App() {
 
                       {/* INTEGRATIONS */}
                       <Route path="integrations" element={<Integrations />} />
-                      <Route path="integrations/facebook/callback" element={<FacebookCallback />} />
-                      <Route path="integrations/linkedin/callback" element={<LinkedInCallback />} />
+                      <Route path="integrations/facebook/callback"   element={<FacebookCallback />} />
+                      <Route path="integrations/linkedin/callback"   element={<LinkedInCallback />} />
+                      <Route path="integrations/whatsapp/callback"  element={<WhatsAppCallback />} />
+                      <Route path="integrations/instagram/callback" element={<InstagramCallback />} />
+
+                      {/* WHATSAPP CHAT */}
+                      <Route path="whatsapp" element={<WhatsAppChat />} />
+
+                      {/* INSTAGRAM INBOX */}
+                      <Route path="instagram" element={<InstagramInbox />} />
+
+                      {/* FACEBOOK INBOX */}
+                      <Route path="facebook" element={<FacebookInbox />} />
                     </Route>
                   </Route>
 
@@ -396,12 +420,12 @@ function App() {
                     <Route path="/email-history" element={<div />} />
                     <Route path="/meetings" element={<div />} />
                   </Route>
-                </Routes>
-                <ToastContainer />
-              </div>
-            </BrowserRouter>
-          </NotificationProvider>
-        </FreeTrialProvider>
+            </Routes>
+            <ToastContainer />
+          </div>
+        </BrowserRouter>
+      </NotificationProvider>
+      </FreeTrialProvider>
       </TargetSocketProvider>
     </SocketProvider>
   );

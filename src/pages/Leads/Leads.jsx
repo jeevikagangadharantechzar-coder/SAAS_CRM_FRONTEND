@@ -396,16 +396,21 @@ const updateFilter = (key, value, setter) => {
     return () => socket.off("lead_rejected", handler);
   }, [userRole]);
 
-  // When Admin converts one of the sales person's leads to a deal, it disappears
-  // from their own account immediately too — the read-only copy is Admin-only.
+  // When Admin converts one of the sales person's leads to a deal, reflect that
+  // live: Sales sees it flip to "Converted" (it's still their lead), any other
+  // non-Admin/non-Sales role loses visibility the same way getAllLead does.
   // (Also fires for the sales person's own conversions — harmless no-op there
-  // since handleConvertDeal already removed it optimistically.)
+  // since handleConvertDeal already applied the same update optimistically.)
   useEffect(() => {
     if (userRole === "Admin") return;
     const socket = getSocket();
     if (!socket) return;
     const handler = ({ leadId }) => {
-      setLeads((prev) => prev.filter((l) => l._id !== leadId));
+      if (userRole === "Sales") {
+        setLeads((prev) => prev.map((l) => (l._id === leadId ? { ...l, status: "Converted" } : l)));
+      } else {
+        setLeads((prev) => prev.filter((l) => l._id !== leadId));
+      }
     };
     socket.on("lead_converted", handler);
     return () => socket.off("lead_converted", handler);
@@ -828,10 +833,10 @@ const updateFilter = (key, value, setter) => {
         autoClose: 3000,
       });
 
-      // The lead always keeps a "Converted" copy server-side, but only Admin's
-      // own account can see it — the sales person never sees a copy of their
-      // own (or anyone else's) conversions.
-      if (userRole === "Admin") {
+      // The lead always keeps a "Converted" copy server-side. Admin sees every
+      // conversion; a Sales user sees it too, but only for their own leads
+      // (getAllLead already scopes non-Admins to leads assigned to them).
+      if (userRole === "Admin" || userRole === "Sales") {
         setLeads((prev) => prev.map((l) => (l._id === selectedLead._id ? { ...l, status: "Converted" } : l)));
       } else {
         setLeads((prev) => prev.filter((l) => l._id !== selectedLead._id));

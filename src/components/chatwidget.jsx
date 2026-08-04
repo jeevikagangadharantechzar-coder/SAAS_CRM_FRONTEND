@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import VoiceButton from './VoiceMicButton';
 import {
-  Phone, MessageCircle, PhoneCall, Clock, CheckCircle, User
+  Phone, MessageCircle, PhoneCall, Clock, CheckCircle, User, Trophy
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -112,11 +112,10 @@ const ContactPickerCard = ({ matches, onPick }) => (
       >
         <div className="flex-1 min-w-0 mr-3">
           {/* type badge */}
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium mr-2 ${
-            m.type === 'lead'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-purple-100 text-purple-700'
-          }`}>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium mr-2 ${m.type === 'lead'
+            ? 'bg-green-100 text-green-700'
+            : 'bg-purple-100 text-purple-700'
+            }`}>
             {m.type === 'lead' ? ' Lead' : ' Deal'}
           </span>
           <span className="text-xs font-semibold text-gray-800">{m.name}</span>
@@ -141,17 +140,51 @@ const ContactPickerCard = ({ matches, onPick }) => (
 
 // ─── Main ChatWidget ──────────────────────────────────────────────────────────
 export default function ChatWidget() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const tenantSlug = location.pathname.split('/')[1] || '';
+
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hello! I'm Ziya, your Sales AI Assistant . I can help you with deals, leads, users, and analytics!",
-      sender: 'bot',
-      timestamp: new Date()
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('ziya_chat_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+      } catch (e) {
+        console.error("Failed to parse chat history", e);
+      }
     }
-  ]);
+    return [
+      {
+        id: Date.now(),
+        text: "Hello! I'm Ziya, your Sales AI Assistant . I can help you with deals, leads, users, and analytics!",
+        sender: 'bot',
+        timestamp: new Date()
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ziya_chat_history', JSON.stringify(messages));
+  }, [messages]);
+
+  const handleCloseAndClear = (e) => {
+    e?.stopPropagation();
+    setIsOpen(false);
+    setIsMinimized(true);
+    localStorage.removeItem('ziya_chat_history');
+    setMessages([
+      {
+        id: Date.now(),
+        text: "Hello! I'm Ziya, your Sales AI Assistant . I can help you with deals, leads, users, and analytics!",
+        sender: 'bot',
+        timestamp: new Date()
+      }
+    ]);
+  };
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [expandedMessageId, setExpandedMessageId] = useState(null);
@@ -160,12 +193,10 @@ export default function ChatWidget() {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [callStartTime, setCallStartTime] = useState(null);
 
-  const location  = useLocation();
-  const navigate  = useNavigate();
   const messagesEndRef = useRef(null);
-  const inputRef       = useRef(null);
-  const timerRef       = useRef(null);
-  const heartbeatRef   = useRef(null);
+  const inputRef = useRef(null);
+  const timerRef = useRef(null);
+  const heartbeatRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -254,9 +285,9 @@ export default function ChatWidget() {
 
     const phoneNumber = result.lead?.phone || result.callLog?.phoneNumber;
     if (phoneNumber) {
-      const msg        = encodeURIComponent('Hello, I am following up from CRM');
+      const msg = encodeURIComponent('Hello, I am following up from CRM');
       const desktopUrl = `whatsapp://send?phone=${phoneNumber}&text=${msg}`;
-      const webUrl     = `https://web.whatsapp.com/send?phone=${phoneNumber}&text=${msg}`;
+      const webUrl = `https://web.whatsapp.com/send?phone=${phoneNumber}&text=${msg}`;
 
       const iframe = document.createElement('iframe');
       iframe.style.display = 'none';
@@ -364,7 +395,7 @@ export default function ChatWidget() {
 
     return true;
   };
-/* ── Send Message Handler ─────────────────────── */
+  /* ── Send Message Handler ─────────────────────── */
   const sendMessage = async (text, forceGet = false) => {
     if (!text.trim()) return;
 
@@ -387,8 +418,8 @@ export default function ChatWidget() {
         return;
       }
 
-      const lowerText    = text.toLowerCase().trim();
-      const words        = text.split(' ').filter(w => w.length > 0);
+      const lowerText = text.toLowerCase().trim();
+      const words = text.split(' ').filter(w => w.length > 0);
       const originalWords = text.split(' ');
       let enhancedMessage = text;
 
@@ -401,21 +432,21 @@ export default function ChatWidget() {
       } else if (lowerText.startsWith('lead ') && !lowerText.includes('leads ')) {
         enhancedMessage = text;
       } else if (lowerText.includes('deals won') || (lowerText.includes('won') && lowerText.includes('deal'))) {
-        enhancedMessage = 'deals won';
+        enhancedMessage = text;
       } else if (lowerText.includes('deals lost') || (lowerText.includes('lost') && lowerText.includes('deal'))) {
-        enhancedMessage = 'deals lost';
+        enhancedMessage = text;
       } else if (lowerText.includes('open deals') || (lowerText.includes('open') && lowerText.includes('deal'))) {
-        enhancedMessage = 'open deals';
+        enhancedMessage = text;
       } else if (lowerText.includes('my deals') || lowerText === 'my deals') {
-        enhancedMessage = 'my deals';
+        enhancedMessage = text;
       } else if (lowerText.includes('hot leads') || (lowerText.includes('hot') && lowerText.includes('lead'))) {
-        enhancedMessage = 'hot leads';
+        enhancedMessage = text;
       } else if (lowerText.includes('warm leads') || (lowerText.includes('warm') && lowerText.includes('lead'))) {
-        enhancedMessage = 'warm leads';
+        enhancedMessage = text;
       } else if (lowerText.includes('cold leads') || (lowerText.includes('cold') && lowerText.includes('lead'))) {
-        enhancedMessage = 'cold leads';
+        enhancedMessage = text;
       } else if (lowerText.includes('my leads') || lowerText === 'my leads') {
-        enhancedMessage = 'my leads';
+        enhancedMessage = text;
       } else {
         const looksLikePersonName = (
           words.length >= 1 && words.length <= 3 &&
@@ -427,7 +458,7 @@ export default function ChatWidget() {
       }
 
       const payload = { message: enhancedMessage, currentPage: location.pathname };
-      const useGet  = forceGet || enhancedMessage.length < 40;
+      const useGet = forceGet || enhancedMessage.length < 40;
 
       const res = await fetch(
         useGet
@@ -455,16 +486,16 @@ export default function ChatWidget() {
       setLoading(false);
     }
   };
-/* ── Submit Handler ─────────────────────── */
+  /* ── Submit Handler ─────────────────────── */
   const handleSubmit = (e) => { e.preventDefault(); sendMessage(inputText, false); };
 
   /* ── Quick Actions ─────────────────────── */
   const quickActions = [
-    { label: " CALL",       query: "call " },
-    { label: " Deal Closed",  query: "deals won" },
+    { label: " CALL", query: "call " },
+    { label: " Deal Closed", query: "deals won" },
     { label: " Deal Lost", query: "deals lost" },
     { label: " Open Deals", query: "open deals" },
-    { label: " Hot Leads",  query: "hot leads" },
+    { label: " Hot Leads", query: "hot leads" },
     { label: " Warm Leads", query: "warm leads" },
     { label: " Cold Leads", query: "cold leads" },
   ];
@@ -498,7 +529,7 @@ export default function ChatWidget() {
                 </p>
               </div>
             </div>
-            <button onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} className="p-1 hover:bg-white/20 rounded">✕</button>
+            <button onClick={handleCloseAndClear} className="p-1 hover:bg-white/20 rounded">✕</button>
           </div>
         </div>
         <div className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => setIsMinimized(false)}>
@@ -543,12 +574,12 @@ export default function ChatWidget() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" /></svg>
           </button>
           <button
-            onClick={() => setMessages([{ id: 1, text: "Hello! I'm your ZIYA CRM Assistant. How can I help you today?", sender: 'bot', timestamp: new Date() }])}
+            onClick={() => { localStorage.removeItem('ziya_chat_history'); setMessages([{ id: Date.now(), text: "Hello! I'm Ziya, your Sales AI Assistant . I can help you with deals, leads, users, and analytics!", sender: 'bot', timestamp: new Date() }]); }}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Clear chat"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </button>
-          <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Close">
+          <button onClick={handleCloseAndClear} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Close">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -558,13 +589,12 @@ export default function ChatWidget() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl p-4 ${
-              message.sender === 'user'
-                ? 'bg-blue-600 text-white rounded-br-none shadow-md'
-                : message.isError
-                  ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-none shadow-sm'
-                  : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
-            }`}>
+            <div className={`max-w-[85%] rounded-2xl p-4 ${message.sender === 'user'
+              ? 'bg-blue-600 text-white rounded-br-none shadow-md'
+              : message.isError
+                ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-none shadow-sm'
+                : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+              }`}>
               <div className="flex items-center mb-2">
                 {message.sender === 'bot' && (
                   <div className="w-2 h-3 flex items-center justify-center mr-10">
@@ -584,19 +614,40 @@ export default function ChatWidget() {
               {/* Intent badges */}
               {message.intent === 'deals-by-salesperson' && <div className="text-xs mb-2 p-1 rounded bg-purple-100 text-purple-800 inline-block"> Deals by salesperson</div>}
               {message.intent === 'leads-by-salesperson' && <div className="text-xs mb-2 p-1 rounded bg-purple-100 text-purple-800 inline-block"> Leads by salesperson</div>}
-              {message.intent === 'deal-search'           && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Specific deal search</div>}
-              {message.intent === 'lead-search'           && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Specific lead search</div>}
-              {message.intent === 'deals-by-company'      && <div className="text-xs mb-2 p-1 rounded bg-indigo-100 text-indigo-800 inline-block"> Deals by company</div>}
-              {message.intent === 'leads-by-company'      && <div className="text-xs mb-2 p-1 rounded bg-indigo-100 text-indigo-800 inline-block"> Leads by company</div>}
-              {message.intent === 'deals-won'             && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> Deal closed</div>}
-              {message.intent === 'deals-lost'            && <div className="text-xs mb-2 p-1 rounded bg-red-100 text-red-800 inline-block"> Deal lost</div>}
-              {message.intent === 'deals-open'            && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Open deals</div>}
-              {message.intent === 'my-deals'              && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> My deals</div>}
-              {message.intent === 'leads-hot'             && <div className="text-xs mb-2 p-1 rounded bg-orange-100 text-orange-800 inline-block"> Hot leads</div>}
-              {message.intent === 'leads-warm'            && <div className="text-xs mb-2 p-1 rounded bg-yellow-100 text-yellow-800 inline-block"> Warm leads</div>}
-              {message.intent === 'leads-cold'            && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Cold leads</div>}
-              {message.intent === 'my-leads'              && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> My leads</div>}
+              {message.intent === 'deal-search' && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Specific deal search</div>}
+              {message.intent === 'lead-search' && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Specific lead search</div>}
+              {message.intent === 'deals-by-company' && <div className="text-xs mb-2 p-1 rounded bg-indigo-100 text-indigo-800 inline-block"> Deals by company</div>}
+              {message.intent === 'leads-by-company' && <div className="text-xs mb-2 p-1 rounded bg-indigo-100 text-indigo-800 inline-block"> Leads by company</div>}
+              {message.intent === 'deals-won' && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> Deal closed</div>}
+              {message.intent === 'deals-lost' && <div className="text-xs mb-2 p-1 rounded bg-red-100 text-red-800 inline-block"> Deal lost</div>}
+              {message.intent === 'deals-open' && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Open deals</div>}
+              {message.intent === 'my-deals' && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> My deals</div>}
+              {message.intent === 'leads-hot' && <div className="text-xs mb-2 p-1 rounded bg-orange-100 text-orange-800 inline-block"> Hot leads</div>}
+              {message.intent === 'leads-warm' && <div className="text-xs mb-2 p-1 rounded bg-yellow-100 text-yellow-800 inline-block"> Warm leads</div>}
+              {message.intent === 'leads-cold' && <div className="text-xs mb-2 p-1 rounded bg-blue-100 text-blue-800 inline-block"> Cold leads</div>}
+              {message.intent === 'my-leads' && <div className="text-xs mb-2 p-1 rounded bg-green-100 text-green-800 inline-block"> My leads</div>}
 
+              {message.intent === 'deal-analysis' && (
+                <div className="mt-2 mb-2">
+                  <button onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/DealAnalysis`); }} className="px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm w-full text-center">
+                    View Deal Analysis Dashboard
+                  </button>
+                </div>
+              )}
+              {message.intent === 'won-analysis' && (
+                <div className="mt-2 mb-2">
+                  <button onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/DealAnalysis`); }} className="px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm w-full text-center">
+                    View Win Rates & Metrics
+                  </button>
+                </div>
+              )}
+              {message.intent === 'loss-analysis' && (
+                <div className="mt-2 mb-2">
+                  <button onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/LossAnalysis`); }} className="px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm w-full text-center">
+                    View Loss Analysis Dashboard
+                  </button>
+                </div>
+              )}
               {/* ── Multiple matches picker ── */}
               {message.pickerMatches && (
                 <ContactPickerCard
@@ -641,35 +692,137 @@ export default function ChatWidget() {
               {message.data && Array.isArray(message.data) && message.data.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <div className="text-xs font-medium mb-2 text-gray-600">
-                     Found {message.data.length} {message.intent?.includes('lead') ? 'leads' : 'deals'}:
+                    Found {message.data.length} {
+                      message.data[0]?.type === 'lead' ? 'leads' :
+                        message.data[0]?.type === 'deal' ? 'deals' :
+                          message.data[0]?.type === 'invoice' ? 'invoices' :
+                            message.data[0]?.type === 'task' ? 'tasks' :
+                              message.data[0]?.type === 'target' ? 'targets' :
+                                message.data[0]?.type === 'user' ? 'users' :
+                                  message.data[0]?.type === 'clv_client' ? 'clients' : 'records'
+                    }:
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                     {(expandedMessageId === message.id ? message.data : message.data.slice(0, 5)).map((item, idx) => {
-                      const isDeal      = item.stage || item.value;
-                      const statusText  = isDeal ? item.stage : item.status;
-                      const badgeColor  =
-                        statusText?.toLowerCase().includes('won')  ? 'bg-green-100 text-green-800' :
-                        statusText?.toLowerCase().includes('lost') || statusText?.toLowerCase().includes('junk') ? 'bg-red-100 text-red-800' :
-                        statusText?.toLowerCase().includes('hot')  ? 'bg-red-100 text-red-800' :
-                        statusText?.toLowerCase().includes('warm') ? 'bg-yellow-100 text-yellow-800' :
-                        statusText?.toLowerCase().includes('cold') ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800';
+                      const statusText = item.status || item.stage || (item.type === 'user' ? (item.isActive ? 'Active' : 'Inactive') : null);
+                      const badgeColor = item.statusColor || (
+                        statusText?.toLowerCase().includes('won') || statusText?.toLowerCase() === 'paid' || statusText?.toLowerCase() === 'completed' || statusText?.toLowerCase() === 'active' ? 'bg-green-100 text-green-800' :
+                          statusText?.toLowerCase().includes('lost') || statusText?.toLowerCase().includes('junk') || statusText?.toLowerCase() === 'unpaid' || statusText?.toLowerCase() === 'rejected' || statusText?.toLowerCase() === 'inactive' ? 'bg-red-100 text-red-800' :
+                            statusText?.toLowerCase().includes('hot') || statusText?.toLowerCase() === 'partially_paid' || statusText?.toLowerCase() === 'partially paid' ? 'bg-orange-100 text-orange-800' :
+                              statusText?.toLowerCase().includes('warm') || statusText?.toLowerCase() === 'pending' || statusText?.toLowerCase() === 'in progress' ? 'bg-yellow-100 text-yellow-800' :
+                                statusText?.toLowerCase().includes('cold') ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                      );
                       return (
                         <div key={item._id || idx} className="text-xs p-3 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors">
                           <div className="font-semibold truncate mb-1 flex items-center justify-between">
-                            <span>{item.name || item.leadName || item.dealName || `Record ${idx + 1}`}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${badgeColor}`}>{statusText === "Closed Won" ? "Deal Closed" : statusText === "Closed Lost" ? "Deal Lost" : statusText}</span>
+                            {item.type === 'attachment' && item.path ? (
+                              <a href={item.path.startsWith('http') ? item.path : `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}/${item.path.replace(/^\//, '')}`} download={item.name || "attachment"} className="text-blue-600 hover:underline flex items-center gap-1">
+                                📎 {item.name || `Attachment ${idx + 1}`}
+                              </a>
+                            ) : item.type === 'task' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/task-management`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.title || `Task ${idx + 1}`}
+                              </span>
+                            ) : item.type === 'target' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/target-management`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.title || `Target ${idx + 1}`}
+                              </span>
+                            ) : item.type === 'lead' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/leads/view/${item._id}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.leadName || `Lead ${idx + 1}`}
+                              </span>
+                            ) : item.type === 'deal' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/Pipelineview/${item._id}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.dealName || `Deal ${idx + 1}`}
+                              </span>
+                            ) : item.type === 'proposal' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/proposal/view/${item._id}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.title || `Proposal ${idx + 1}`}
+                              </span>
+                            ) : item.type === 'invoice' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/invoices/${item._id}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.invoiceNumber || `Invoice ${idx + 1}`}
+                              </span>
+                            ) : item.type === 'clv_client' ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/cltv/client/${encodeURIComponent(item.companyName || "")}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.companyName || `Client ${idx + 1}`}
+                              </span>
+                            ) : (
+                              <span>{item.name || item.title || item.leadName || item.dealName || item.invoiceNumber || `Record ${idx + 1}`}</span>
+                            )}
+                            {statusText && (
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] ${badgeColor}`}>
+                                {statusText === "Closed Won" ? "Deal Closed" : statusText === "Closed Lost" ? "Deal Lost" : statusText}
+                              </span>
+                            )}
                           </div>
                           {(item.company || item.companyName) && <div className="text-gray-600 mb-1"> {item.company || item.companyName}</div>}
-                          {(item.phone  || item.phoneNumber)  && <div className="text-gray-600 mb-1"> {item.phone  || item.phoneNumber}</div>}
-                          {item.value && <div className="text-green-600 font-medium mb-1"> ${Number(item.value).toLocaleString()}</div>}
-                          <div className="text-gray-600 mt-2 pt-2 border-t border-gray-200">
-                            <span className="font-medium"> Handled by: </span>
-                            <span className="text-blue-600">
-                              {item.handledBy || item.owner ||
-                                (item.assignTo ? `${item.assignTo.firstName} ${item.assignTo.lastName}` : 'Unassigned')}
-                            </span>
-                          </div>
+                          {(item.phone || item.phoneNumber) && <div className="text-gray-600 mb-1"> {item.phone || item.phoneNumber}</div>}
+                          {item.lossReason && <div className="text-red-500 mb-1 font-medium"> Reason: {item.lossReason}</div>}
+                          {item.value && <div className="text-green-600 font-medium mb-1"> {item.value}</div>}
+                          {item.score !== undefined && item.type === 'deal' && (
+                            <div className="text-indigo-600 font-medium mb-1 flex items-center gap-1">
+                              <span>🎯</span> Deal Score: {item.score}/100
+                            </div>
+                          )}
+                          {item.lossReason && item.type === 'deal' && (
+                            <div className="text-red-700 font-medium text-xs mt-2 bg-red-50 p-2 rounded border border-red-100">
+                              <span className="font-semibold">Reason:</span> {item.lossReason}
+                              {item.lossNotes && <div className="text-red-500 font-normal mt-1">{item.lossNotes}</div>}
+                            </div>
+                          )}
+                          {item.total && <div className="text-green-600 font-medium mb-1"> {item.total} {item.currency}</div>}
+                          {item.dueDate && <div className="text-gray-500 mb-1"> Due: {new Date(item.dueDate).toLocaleDateString()}</div>}
+                          {item.priority && <div className="text-gray-500 mb-1"> Priority: {item.priority}</div>}
+
+                          {item.type === 'target' && (
+                            <div className="mt-3 mb-2 space-y-2 bg-white p-2 rounded border border-gray-100">
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-semibold text-gray-700">Leads Converted</span>
+                                <span className="text-gray-500">{item.actualLeadsConverted} / {item.targetLeads}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, item.targetLeads > 0 ? (item.actualLeadsConverted / item.targetLeads) * 100 : (item.actualLeadsConverted > 0 ? 100 : 0))}%` }}></div>
+                              </div>
+
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-semibold text-gray-700">Deals Closed</span>
+                                <span className="text-gray-500">{item.actualDealsClosed} / {item.targetDeals}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, item.targetDeals > 0 ? (item.actualDealsClosed / item.targetDeals) * 100 : (item.actualDealsClosed > 0 ? 100 : 0))}%` }}></div>
+                              </div>
+
+                              <div className="flex justify-between items-center text-[10px] mt-2 pt-2 border-t border-gray-100">
+                                <span className="text-gray-600">Calls: <span className="font-medium text-gray-800">{item.actualCalls}</span> / {item.targetCalls}</span>
+                                <span className="text-gray-600">Meetings: <span className="font-medium text-gray-800">{item.actualMeetings}</span> / {item.targetMeetings}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {item.type === 'user' && item.performanceScore !== undefined && (
+                            <div className="mt-3 mb-2 space-y-1 bg-white p-2 rounded border border-gray-100">
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-semibold text-gray-700">Performance Score</span>
+                                <span className="text-gray-500 font-medium">{item.performanceScore}/100</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, Math.max(0, item.performanceScore))}%` }}></div>
+                              </div>
+                            </div>
+                          )}
+
+                          {item.type !== 'user' && (
+                            <div className="text-gray-600 mt-2 pt-2 border-t border-gray-200">
+                              <span className="font-medium"> Handled by: </span>
+                              <span className="text-blue-600">
+                                {item.handledBy || item.owner ||
+                                  (item.assignTo ? `${item.assignTo.firstName} ${item.assignTo.lastName}` :
+                                    item.assignedTo ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}` : 'Unassigned')}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -679,9 +832,27 @@ export default function ChatWidget() {
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium py-2 px-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                           {expandedMessageId === message.id
                             ? 'Show less'
-                            : `View all ${message.data.length} ${message.intent?.includes('lead') ? 'leads' : 'deals'}`}
+                            : `View all ${message.data.length} ${message.data[0]?.type === 'lead' ? 'leads' :
+                              message.data[0]?.type === 'deal' ? 'deals' :
+                                message.data[0]?.type === 'invoice' ? 'invoices' :
+                                  message.data[0]?.type === 'task' ? 'tasks' :
+                                    message.data[0]?.type === 'target' ? 'targets' :
+                                      message.data[0]?.type === 'user' ? 'users' : 'records'
+                            }`}
                         </button>
                       </div>
+                    )}
+                    {message.intent === 'leaderboard' && (
+                      <button
+                        onClick={() => {
+                          setIsOpen(false);
+                          navigate(`/${tenantSlug}/leaderboard`);
+                        }}
+                        className="mt-2 w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors border border-purple-200 shadow-sm"
+                      >
+                        <Trophy size={16} />
+                        View Leaderboard
+                      </button>
                     )}
                   </div>
                 </div>
