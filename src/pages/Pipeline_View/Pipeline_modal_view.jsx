@@ -5,7 +5,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -668,6 +668,7 @@ function Pipeline_modal_view() {
   const { dealId, tenantSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const pipelineListPath = `/${tenantSlug}/deals${location.search}`;
 
   const [deal, setDeal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -2385,13 +2386,13 @@ function Pipeline_modal_view() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div>
             <div className="flex items-center text-slate-600 mb-3">
-              <button
-                onClick={() => navigate(-1)}
+              <Link
+                to={pipelineListPath}
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft size={16} className="mr-1" />
                 Back to Pipeline
-              </button>
+              </Link>
               <ChevronRight size={16} className="mx-2" />
               <span className="text-slate-500">View Deal</span>
             </div>
