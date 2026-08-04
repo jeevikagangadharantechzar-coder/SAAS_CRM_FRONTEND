@@ -32,8 +32,10 @@ const FEATURE_LABELS = {
   admin_access:       "Admin Access",
   email_chat:         "Email Chat",
   email_campaigns:    "Email Campaigns",
-  whatsapp_chat:      "WhatsApp Chat",
-  analytics:          "Analytics",
+  analytics:          "Team Analytics",
+  won_analysis:       "Won Analysis",
+  loss_analysis:      "Loss Analysis",
+  deal_analysis:      "Deal Analysis",
   settings:           "Settings",
   streak_leaderboard: "Streak Leaderboard",
   assigned_tasks:     "Assigned Tasks",
@@ -45,6 +47,9 @@ const FEATURE_LABELS = {
   schedule_view:      "Calendar",
   messages:           "Messages",
   chatbot:            "AI Chatbot",
+  integration_facebook: "Facebook",
+  integration_instagram: "Instagram",
+  integration_whatsapp: "WhatsApp Integration",
 };
 
 export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
