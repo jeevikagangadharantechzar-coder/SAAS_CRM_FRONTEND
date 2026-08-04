@@ -790,7 +790,7 @@ const AdminDashboard = () => {
     if (preset === "today") return getTodayRange();
     if (preset === "7days") return getLast7Range();
     if (preset === "month") return getMonthRange(month, year);
-    if (preset === "year") return getYearRange(year);
+    if (preset === "year") return month === -1 ? getYearRange(year) : getMonthRange(month, year);
     return getLast7Range();
   }, [activePreset, selectedMonth, selectedYear]);
 
@@ -799,7 +799,10 @@ const AdminDashboard = () => {
     if (activePreset === "today") { const d = new Date(); d.setDate(d.getDate() - 1); return { start: formatDate(d), end: formatDate(d) }; }
     if (activePreset === "7days") { const e = new Date(); e.setDate(e.getDate() - 7); const s = new Date(); s.setDate(s.getDate() - 13); return { start: formatDate(s), end: formatDate(e) }; }
     if (activePreset === "month") { const d = new Date(selectedYear, selectedMonth, 1); d.setMonth(d.getMonth() - 1); return getMonthRange(d.getMonth(), d.getFullYear()); }
-    if (activePreset === "year") return getYearRange(selectedYear - 1);
+    if (activePreset === "year") {
+      if (selectedMonth === -1) return getYearRange(selectedYear - 1);
+      const d = new Date(selectedYear, selectedMonth, 1); d.setMonth(d.getMonth() - 1); return getMonthRange(d.getMonth(), d.getFullYear());
+    }
     return getLast7Range();
   }, [activePreset, selectedMonth, selectedYear]);
 
@@ -996,7 +999,14 @@ const AdminDashboard = () => {
           <p className="text-gray-600 mt-1">{t("dashboard.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={activePreset} onValueChange={setActivePreset}>
+          <Select
+            value={activePreset}
+            onValueChange={(v) => {
+              setActivePreset(v);
+              if (v === "year") setSelectedMonth(-1);
+              else if (v === "month" && selectedMonth === -1) setSelectedMonth(new Date().getMonth());
+            }}
+          >
             <SelectTrigger className="w-[160px] bg-white border"><SelectValue placeholder={t("dashboard.period.label")} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
@@ -1010,6 +1020,7 @@ const AdminDashboard = () => {
             <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
               <SelectTrigger className="w-[130px]"><SelectValue placeholder={t("dashboard.period.month")} /></SelectTrigger>
               <SelectContent>
+                {activePreset === "year" && <SelectItem value="-1">All</SelectItem>}
                 {months.map((m, i) => <SelectItem key={i} value={String(i)}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
