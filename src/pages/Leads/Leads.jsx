@@ -1488,7 +1488,9 @@ const updateFilter = (key, value, setter) => {
                       <div className="flex flex-col min-w-0">
                         <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5 min-w-0">
                           <span
-                            onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}${location.search}`)}
+                            onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}${location.search}`, {
+                              state: { leadSequence: leads.map((l) => ({ _id: l._id, leadName: l.leadName })) },
+                            })}
                             className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none"
                           >
                             {lead.leadName || t("leads.table.unnamedLead")}
