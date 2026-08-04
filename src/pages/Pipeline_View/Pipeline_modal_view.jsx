@@ -719,7 +719,15 @@ function Pipeline_modal_view() {
     }
   }
 
-  if (typeof window !== "undefined") { window.__renderLog = window.__renderLog || []; window.__renderLog.push({ t: performance.now(), dealId, dealName: deal?.dealName, isLoading }); }
+  if (typeof window !== "undefined") {
+    window.__renderLog = window.__renderLog || [];
+    window.__renderLog.push({
+      t: performance.now(),
+      dealId,
+      dealName: deal?.dealName,
+      isLoading,
+    });
+  }
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   // Live offset shared by both the mouse-drag and trackpad-wheel paths, read
@@ -808,8 +816,7 @@ function Pipeline_modal_view() {
       setSwipeX(direction === "next" ? width : -width);
       setIsSwipeTransitioning(true);
       lastSwipeDirectionRef.current = direction;
-setDeal(null);
-
+      setDeal(null);
 
       const token = getAuthToken();
       const prefetchPromise = axios
@@ -2028,24 +2035,10 @@ setDeal(null);
 
   if (!deal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
-        <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md w-full">
-          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <XCircle className="text-rose-600" size={32} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">
-            Deal Not Found
-          </h2>
-          <p className="text-slate-600 mb-6">
-            The deal you're looking for doesn't exist or may have been removed.
-          </p>
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Back to Pipeline
-          </button>
+      <div className="min-h-screen w-full bg-gray-50 p-4 md:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading deal details...</p>
         </div>
       </div>
     );
