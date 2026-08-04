@@ -3,6 +3,7 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { MoreVertical, Eye } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const ItemTypes = {
   INVOICE: "INVOICE",
@@ -59,6 +60,16 @@ export default function InvoicePipelineView({
 
   const moveInvoice = (invoiceId, fromStage, toStage) => {
     if (fromStage === toStage) return;
+
+    if (fromStage === "paid") {
+      toast.error("Paid invoices cannot be moved to another status.");
+      return;
+    }
+
+    if (fromStage === "partially_paid" && toStage === "unpaid") {
+      toast.error("Partially paid invoices cannot be moved to Unpaid.");
+      return;
+    }
 
     // Call API handler from parent which will open the modal
     handleStatusChange(invoiceId, toStage);
@@ -173,6 +184,7 @@ function InvoiceCard({
   const [{ isDragging }, dragRef] = useDrag({
     type: ItemTypes.INVOICE,
     item: { id: invoice._id, from: stageId },
+    canDrag: invoice.status !== "paid",
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   });
 

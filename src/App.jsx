@@ -237,9 +237,13 @@ function App() {
                       <Route index element={<Navigate to="dashboard" replace />} />
 
                       {/* COMMON ROUTES */}
-                      <Route element={<PrivateRoute planFeature="analytics" />}>
+                      <Route element={<PrivateRoute planFeature="deal_analysis" />}>
                         <Route path="DealAnalysis" element={<DealIntelligenceDashboard />} />
+                      </Route>
+                      <Route element={<PrivateRoute planFeature="loss_analysis" />}>
                         <Route path="LossAnalysis" element={<LostDealAnalytics />} />
+                      </Route>
+                      <Route element={<PrivateRoute planFeature="won_analysis" />}>
                         <Route path="cltv/dashboard" element={<CLVDashboard />} />
                         <Route path="cltv/client/:companyName" element={<ClientCLVDetails />} />
                       </Route>
