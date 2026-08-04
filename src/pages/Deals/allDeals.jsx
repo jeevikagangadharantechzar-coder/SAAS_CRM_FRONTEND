@@ -156,9 +156,7 @@ function AllDealsComponent() {
   // below (no separate card). "Custom Range" toggles the two date inputs +
   // the Deal Won/Deal Lost/Pending Deal tick-box dropdown; once From, To, and
   // at least one type are set, it fetches matching deals from the backend
-  // (getAll with start/end/dealType) since the default fetch no longer
-  // returns previous-day Closed Won/Lost deals — those only come back into
-  // view through this search.
+  // (getAll with start/end/dealType) filtered specifically by wonAt/lostDate.
   const initDealTypes = (searchParams.get("dealType") || "").split(",").filter(Boolean);
   const [showCustomRange, setShowCustomRange] = useState(
     !!(searchParams.get("customFrom") || searchParams.get("customTo") || initDealTypes.length)
@@ -733,28 +731,6 @@ function AllDealsComponent() {
       return followUp.toDateString() === today.toDateString();
     })
     .filter((d) => {
-      // Sales-only: a Closed Won deal from a previous day stays out of the
-      // default view — only today's wins show at initial render. Older wins
-      // are still reachable through the Custom Range search (Deal Won +
-      // date range) or the general Date Range filter, which is why this
-      // check steps aside once either is active.
-      if (userRole === "Admin" || customRangeIds || dateFilterIds) return true;
-      if (d.stage !== "Closed Won") return true;
-      if (!d.wonAt) return true;
-      return new Date(d.wonAt).toDateString() === new Date().toDateString();
-    })
-    .filter((d) => {
-      // Sales-only: a Closed Lost deal from a previous day stays out of the
-      // default view — only today's losses show at initial render. Older
-      // losses are still reachable through the Custom Range search (Deal
-      // Lost + date range) or the general Date Range filter, which is why
-      // this check steps aside once either is active.
-      if (userRole === "Admin" || customRangeIds || dateFilterIds) return true;
-      if (d.stage !== "Closed Lost") return true;
-      if (!d.lostDate) return true;
-      return new Date(d.lostDate).toDateString() === new Date().toDateString();
-    })
-    .filter((d) => {
       if (activeWorkFilter === "task" && (!d.activeTasks || d.activeTasks.length === 0)) return false;
       if (activeWorkFilter === "target" && (!d.activeTargets || d.activeTargets.length === 0)) return false;
       return true;
@@ -967,20 +943,22 @@ function AllDealsComponent() {
             <option value="Closed Lost">Deal Lost</option>
           </select>
 
-          <select
-            value={filters.assignedTo}
-            onChange={(e) =>
-              updateFilter("assignedTo", e.target.value, (v) => setFilters((prev) => ({ ...prev, assignedTo: v })))
-            }
-            className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Assigned</option>
-            {users.map((u) => (
-              <option key={u._id} value={u._id}>
-                {u.firstName} {u.lastName}
-              </option>
-            ))}
-          </select>
+          {userRole === "Admin" && (
+            <select
+              value={filters.assignedTo}
+              onChange={(e) =>
+                updateFilter("assignedTo", e.target.value, (v) => setFilters((prev) => ({ ...prev, assignedTo: v })))
+              }
+              className="w-full border border-gray-300 rounded-md bg-white px-4 py-2 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Assigned</option>
+              {users.map((u) => (
+                <option key={u._id} value={u._id}>
+                  {u.firstName} {u.lastName}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={clientTypeFilter}
             onChange={(e) => updateFilter("clientType", e.target.value, setClientTypeFilter)}
