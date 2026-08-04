@@ -62,6 +62,7 @@ const CardBubbles = ({ seed = 0, count = 12, colorPalette = ["#F59E0B", "#FBBF24
 const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], startDate, endDate }) => {
   const [topPerformer, setTopPerformer] = useState(null);
   const [loading, setLoading]           = useState(true);
+  const [apiSuccess, setApiSuccess]     = useState(false);
   const [isAdmin, setIsAdmin]           = useState(false);
   const { t } = useTranslation();
 
@@ -123,14 +124,14 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
 
   // ── Step 1: Show fallback immediately when dashboard data arrives ──────────
   useEffect(() => {
-    if (deals.length > 0 || leads.length > 0) {
+    if ((deals.length > 0 || leads.length > 0) && !apiSuccess) {
       const fallback = computeFallback();
       if (fallback) {
         setTopPerformer(fallback);
         setLoading(false);
       }
     }
-  }, [deals, leads, computeFallback]);
+  }, [deals, leads, computeFallback, apiSuccess]);
 
   // ── Step 2: Fetch real data from backend using dashboard's date range ──────
   //    Re-runs whenever startDate or endDate changes (i.e. dashboard filter changes)
@@ -143,6 +144,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
       const params = {};
       if (startDate) params.startDate = startDate;
       if (endDate)   params.endDate   = endDate;
+      if (!startDate && !endDate) params.allTime = true;
 
       const { data } = await axios.get(`${API_URL}/streak/leaderboard`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -151,9 +153,13 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
 
       const rows = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
       const top  = rows[0] || null;
-      if (top) setTopPerformer(top);
+      if (top) {
+        setTopPerformer(top);
+        setApiSuccess(true);
+      }
     } catch {
       // backend unavailable — fallback already showing from deals/leads props
+      setApiSuccess(false);
     } finally {
       setLoading(false);
     }
@@ -161,9 +167,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
 
   // Re-fetch whenever the dashboard's resolved date range changes
   useEffect(() => {
-    if (startDate || endDate) {
-      fetchTopPerformer();
-    }
+    fetchTopPerformer();
   }, [startDate, endDate, fetchTopPerformer]);
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
@@ -210,7 +214,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
                 <Crown className="w-4 h-4 text-white" />
               </div>
               <span className="text-sm font-semibold text-gray-800">
-                {isAdmin ? t("leaderboard.topPerformer") : `📊 ${t("leaderboard.myPerformance")}`}
+                {t("leaderboard.topPerformer")}
               </span>
             </CardTitle>
           </div>
