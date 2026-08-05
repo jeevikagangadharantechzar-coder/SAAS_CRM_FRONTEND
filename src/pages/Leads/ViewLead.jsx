@@ -1350,7 +1350,7 @@ const ViewLead = () => {
                         </div>
                       </div>
                       <div className="space-y-5">
-                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">Lead Information</h3>
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide invisible">Client Information</h3>
                         <div className="space-y-4">
                           <InfoRow icon={<FileText size={18}/>} label="Requirement" value={lead.requirement || "Not specified"} />
                           <InfoRow icon={<MapPin size={18}/>}   label="Address"     value={lead.address || "Not specified"} />
@@ -1549,21 +1549,23 @@ const ViewLead = () => {
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
-                          <select
-                            name="assignTo"
-                            value={editFormData.assignTo}
-                            onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                          >
-                            {salesUsers.map((u) => (
-                              <option key={u._id} value={u._id}>
-                                {u.firstName} {u.lastName}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        {userRole !== "Sales" && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                            <select
+                              name="assignTo"
+                              value={editFormData.assignTo}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            >
+                              {salesUsers.map((u) => (
+                                <option key={u._id} value={u._id}>
+                                  {u.firstName} {u.lastName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </div>
 
