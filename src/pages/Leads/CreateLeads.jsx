@@ -719,13 +719,17 @@ export default function CreateLeads() {
           type: "select",
           options: ["Hot", "Warm", "Cold", "Junk"],
         },
-        {
-          name: "assignTo",
-          label: "Assign To",
-          icon: <User size={16} />,
-          type: "select",
-          options: getSalesUsersOptions(),
-        },
+        ...(userRole !== "Sales"
+          ? [
+              {
+                name: "assignTo",
+                label: "Assign To",
+                icon: <User size={16} />,
+                type: "select",
+                options: getSalesUsersOptions(),
+              },
+            ]
+          : []),
         {
           name: "followUpDate",
           label: "Follow-up Date",
