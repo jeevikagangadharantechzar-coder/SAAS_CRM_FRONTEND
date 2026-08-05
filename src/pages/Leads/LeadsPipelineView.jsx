@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
+import ReactDOM from "react-dom";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Loader2, MoreVertical, Edit, Calendar, Ban, Handshake, Flag, Target } from "lucide-react";
+import { Loader2, MoreVertical, Edit, Calendar, Ban, Handshake, Flag, Target, MessageSquarePlus, Eye } from "lucide-react";
 
 const ItemTypes = {
   LEAD: "LEAD",
@@ -39,8 +40,15 @@ const STAGES = [
     borderColor: "border-emerald-200",
   },
   {
+    id: "Rejected",
+    title: "Rejected",
+    color: "text-red-600",
+    bgColor: "bg-red-50",
+    borderColor: "border-red-200",
+  },
+  {
     id: "Junk",
-    title: "Junk / Rejected",
+    title: "Junk",
     color: "text-gray-600",
     bgColor: "bg-gray-100",
     borderColor: "border-gray-300",
@@ -55,6 +63,13 @@ export default function LeadsPipelineView({
   onLinkedWorkClick,
   userRole,
   userId,
+  onAddNoteClick,
+  onViewHistoryClick,
+  onFollowUpClick,
+  editingFollowUpId,
+  setEditingFollowUpId,
+  updateFollowUpDateInline,
+  followUpSavingId,
 }) {
   const API_URL = import.meta.env.VITE_API_URL;
   const [columns, setColumns] = useState({});
@@ -136,9 +151,16 @@ export default function LeadsPipelineView({
     const grouped = {};
     STAGES.forEach((s) => (grouped[s.id] = []));
     localLeads.forEach((lead) => {
-      // Sometimes rejected leads are marked as 'Rejected', map to 'Junk' visually
       let status = STAGES.find((s) => s.id === lead.status) ? lead.status : "Cold";
-      if (lead.status === "Rejected") status = "Junk";
+      if (lead.status === "Rejected") {
+        status = "Rejected";
+      } else if (lead.status === "Junk") {
+        if (lead.rejectionReason) {
+          status = "Rejected";
+        } else {
+          status = "Junk";
+        }
+      }
       if (!grouped[status]) grouped[status] = [];
       grouped[status].push(lead);
     });
@@ -147,6 +169,19 @@ export default function LeadsPipelineView({
 
   const moveLead = async (leadId, fromStage, toStage) => {
     if (fromStage === toStage) return;
+
+    if (toStage === "Rejected") {
+      if (userRole !== "Admin") {
+        toast.error("Only Admins can reject leads.");
+        fetchPipelineLeads();
+        return;
+      }
+      const leadObj = localLeads.find(l => l._id === leadId);
+      if (leadObj && onRejectClick) {
+        onRejectClick(leadObj);
+        return;
+      }
+    }
     
     setColumns((prev) => {
       let movedLead;
@@ -211,6 +246,13 @@ export default function LeadsPipelineView({
             onConvert={onConvertClick}
             onEdit={onEditClick}
             onLinkedWork={onLinkedWorkClick}
+            onAddNote={onAddNoteClick}
+            onViewHistory={onViewHistoryClick}
+            onEditFollowUp={onFollowUpClick}
+            editingFollowUpId={editingFollowUpId}
+            setEditingFollowUpId={setEditingFollowUpId}
+            updateFollowUpDateInline={updateFollowUpDateInline}
+            followUpSavingId={followUpSavingId}
           />
         ))}
       </div>
@@ -230,6 +272,13 @@ function Column({
   onConvert,
   onEdit,
   onLinkedWork,
+  onAddNote,
+  onViewHistory,
+  onEditFollowUp,
+  editingFollowUpId,
+  setEditingFollowUpId,
+  updateFollowUpDateInline,
+  followUpSavingId,
 }) {
   const [, dropRef] = useDrop({
     accept: ItemTypes.LEAD,
@@ -265,6 +314,13 @@ function Column({
               onConvert={onConvert}
               onEdit={onEdit}
               onLinkedWork={onLinkedWork}
+              onAddNote={onAddNote}
+              onViewHistory={onViewHistory}
+              onEditFollowUp={onEditFollowUp}
+              editingFollowUpId={editingFollowUpId}
+              setEditingFollowUpId={setEditingFollowUpId}
+              updateFollowUpDateInline={updateFollowUpDateInline}
+              followUpSavingId={followUpSavingId}
             />
           ))}
           {leads.length === 0 && (
@@ -278,10 +334,26 @@ function Column({
   );
 }
 
-function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) {
+function LeadCard({
+  lead,
+  stageId,
+  onReject,
+  onConvert,
+  onEdit,
+  onLinkedWork,
+  onAddNote,
+  onViewHistory,
+  onEditFollowUp,
+  editingFollowUpId,
+  setEditingFollowUpId,
+  updateFollowUpDateInline,
+  followUpSavingId,
+}) {
+  const isTerminal = stageId === "Rejected";
   const [{ isDragging }, dragRef] = useDrag({
     type: ItemTypes.LEAD,
     item: { id: lead._id, from: stageId },
+    canDrag: () => !isTerminal,
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   });
 
@@ -289,8 +361,8 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) 
     ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim()
     : "Unassigned";
 
-  const isTerminal = stageId === "Junk";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuRef = React.useRef(null);
 
   useEffect(() => {
@@ -306,9 +378,28 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) 
   return (
     <div
       ref={dragRef}
-      className={`border border-gray-200 p-3 rounded-xl shadow-sm bg-white hover:shadow-md transition-shadow relative ${isTerminal ? "" : "cursor-move"}`}
+      className={`border border-gray-200 p-3 rounded-xl shadow-sm bg-white hover:shadow-md transition-shadow relative ${isTerminal ? "pointer-events-none select-none opacity-65" : "cursor-move"}`}
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
+      {editingFollowUpId === lead._id && (
+        <input
+          ref={(el) => {
+            if (el) {
+              el.focus();
+              el.click();
+              if (typeof el.showPicker === "function") {
+                el.showPicker();
+              }
+            }
+          }}
+          type="date"
+          defaultValue={lead.followUpDate ? new Date(new Date(lead.followUpDate).getTime() - new Date(lead.followUpDate).getTimezoneOffset() * 60000).toISOString().split("T")[0] : ""}
+          className="absolute left-0 top-0 w-0 h-0 opacity-0"
+          onChange={(e) => updateFollowUpDateInline(lead._id, e.target.value)}
+          onBlur={() => setEditingFollowUpId(null)}
+        />
+      )}
+
       <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
         {/* Linked Work Icons */}
         {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
@@ -333,13 +424,34 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) 
         )}
 
         <button
-          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!menuOpen) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const menuHeight = 220; // Estimated max height of dropdown
+              const viewportHeight = window.innerHeight;
+              let top = rect.bottom + 4;
+              let left = rect.right - 208; // Align right edge
+              
+              if (top + menuHeight > viewportHeight) {
+                top = rect.top - menuHeight - 4;
+              }
+              if (left < 10) left = 10;
+              
+              setMenuPosition({ top, left });
+            }
+            setMenuOpen(!menuOpen);
+          }}
           className="p-1 rounded hover:bg-gray-100 text-gray-500"
         >
           <MoreVertical size={16} />
         </button>
-        {menuOpen && (
-          <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[9999]">
+        {menuOpen && ReactDOM.createPortal(
+          <div
+            className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
+            style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(lead._id); }}
               className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -347,10 +459,16 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) 
               <Edit className="w-4 h-4 mr-2" /> Edit Lead
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(lead._id); }}
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onAddNote(lead); }}
               className="flex items-center w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-100"
             >
-              <Calendar className="w-4 h-4 mr-2" /> Edit Follow-up
+              <MessageSquarePlus className="w-4 h-4 mr-2" /> Add Follow-up Note
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onViewHistory(lead); }}
+              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              <Eye className="w-4 h-4 mr-2" /> View History
             </button>
             {stageId !== "Converted" && (
               <button
@@ -368,7 +486,8 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) 
                 <Ban className="w-4 h-4 mr-2" /> Reject
               </button>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 
@@ -388,11 +507,16 @@ function LeadCard({ lead, stageId, onReject, onConvert, onEdit, onLinkedWork }) 
         </div>
         <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded">
           <span className="font-medium">Follow-up:</span>
-          <span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setEditingFollowUpId(lead._id); }}
+            className="text-blue-600 hover:underline font-medium inline-flex items-center gap-1 focus:outline-none"
+            title="Click to update follow-up date"
+          >
             {lead.followUpDate
               ? new Date(lead.followUpDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "-"}
-          </span>
+          </button>
         </div>
       </div>
     </div>

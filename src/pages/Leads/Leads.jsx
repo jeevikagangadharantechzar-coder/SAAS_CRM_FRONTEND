@@ -1446,6 +1446,13 @@ const updateFilter = (key, value, setter) => {
           }}
           userRole={userRole}
           userId={currentUserId}
+          onAddNoteClick={openAddNoteModal}
+          onViewHistoryClick={openHistoryModal}
+          onFollowUpClick={openFollowUpPicker}
+          editingFollowUpId={editingFollowUpId}
+          setEditingFollowUpId={setEditingFollowUpId}
+          updateFollowUpDateInline={updateFollowUpDateInline}
+          followUpSavingId={followUpSavingId}
         />
       ) : (
       <div className="overflow-x-auto tour-lead-table">
