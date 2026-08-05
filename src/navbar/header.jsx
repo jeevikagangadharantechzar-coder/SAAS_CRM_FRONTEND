@@ -181,7 +181,30 @@ const handleLogout = async () => {
     return path ? `${base}/${path}` : base;
   };
 
-  // Handle notification click — mark as read in state + DB and navigate
+  // Target-family notification types (target.controller.js /
+  // targetNotificationService.js) — none of these carry a per-item route,
+  // only the list pages below exist.
+  const TARGET_NOTIF_TYPES = ["target", "target_reminder", "target_due_today", "target_expired", "target_reassign", "reason_note"];
+
+  // Resolve the record a notification is actually about, from its type/meta,
+  // so clicking it opens that record instead of always the generic list.
+  const getNotificationTarget = (n) => {
+    if (n.type === "contact_form") {
+      return { path: "createleads", state: { contactFormData: n.meta } };
+    }
+    if (n.meta?.invoiceId) return { path: `invoices/${n.meta.invoiceId}` };
+    if (n.meta?.proposalId) return { path: `proposal/view/${n.meta.proposalId}` };
+    if (n.meta?.dealId && !n.meta?.taskId) return { path: `Pipelineview/${n.meta.dealId}` };
+    if (n.meta?.leadId && !n.meta?.taskId && !n.meta?.dealId) return { path: `leads/view/${n.meta.leadId}` };
+    // Task/Target notifications have no per-item page — send to the closest list.
+    if (n.meta?.taskId) return { path: isAdmin ? "task-management" : "assigned-tasks" };
+    if (TARGET_NOTIF_TYPES.includes(n.type)) return { path: isAdmin ? "target-management" : "my-targets" };
+    return null;
+  };
+
+  // Handle notification click — mark as read in state + DB and navigate to
+  // the page the notification came from (falls back to the general
+  // Notifications page when no specific record can be resolved).
   const handleNotificationClick = (n) => {
     setNotifications((prev) =>
       prev.map((notif) =>
@@ -195,9 +218,14 @@ const handleLogout = async () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).catch(() => {});
     }
-    // Navigate to Notifications page
     const tenantSlug = localStorage.getItem("tenantSlug");
-    navigate(tenantSlug ? `/${tenantSlug}/dashboard/notifications` : "/dashboard/notifications");
+    const withTenant = (path) => (tenantSlug ? `/${tenantSlug}/${path}` : `/${path}`);
+    const target = getNotificationTarget(n);
+    if (target) {
+      navigate(withTenant(target.path), target.state ? { state: target.state } : undefined);
+    } else {
+      navigate(withTenant("dashboard/notifications"));
+    }
   };
 
   // Delete a single notification
