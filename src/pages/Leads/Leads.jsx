@@ -453,7 +453,7 @@ const updateFilter = (key, value, setter) => {
     }
 
     // Follow-up filter
-    if (followUpFilter === "missed" || followUpFilter === "completed") {
+    if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
       params.append("followUpStatus", followUpFilter);
     }
 
@@ -476,22 +476,6 @@ const updateFilter = (key, value, setter) => {
       let leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
       let total = isNew ? data.totalLeads : leadsArr.length;
       let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
-
-      // "Today's Follow-ups" isn't a backend filter, so narrow the fetched
-      // page down to leads whose follow-up date is today's calendar day.
-      // (Only filters within the current server-side page, not globally.)
-      if (followUpFilter === "today") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        leadsArr = leadsArr.filter((lead) => {
-          if (!lead.followUpDate) return false;
-          const followUpDay = new Date(lead.followUpDate);
-          followUpDay.setHours(0, 0, 0, 0);
-          return followUpDay.getTime() === today.getTime();
-        });
-        total = leadsArr.length;
-        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
-      }
 
       // Filter by Lead Created Date
       if (dateFilterFrom || dateFilterTo) {
@@ -548,7 +532,7 @@ const updateFilter = (key, value, setter) => {
       if (sourceFilter) params.append("source", sourceFilter);
       if (clientTypeFilter) params.append("clientType", clientTypeFilter);
       if (assigneeFilter) params.append("assignee", assigneeFilter);
-      if (followUpFilter === "missed" || followUpFilter === "completed") {
+      if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
         params.append("followUpStatus", followUpFilter);
       }
       // Date filter applied client-side below
@@ -558,18 +542,6 @@ const updateFilter = (key, value, setter) => {
       });
       const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
       let exportRows = isNew ? data.leads : (Array.isArray(data) ? data : []);
-
-      // "today" has no backend filter (see fetchLeads), so narrow client-side.
-      if (followUpFilter === "today") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        exportRows = exportRows.filter((lead) => {
-          if (!lead.followUpDate) return false;
-          const followUpDay = new Date(lead.followUpDate);
-          followUpDay.setHours(0, 0, 0, 0);
-          return followUpDay.getTime() === today.getTime();
-        });
-      }
 
       // Filter by Lead Created Date for Export
       if (startDate || dateFilterFrom || endDate || dateFilterTo) {

@@ -824,7 +824,9 @@ const ViewLead = () => {
       leadName: lead.leadName || "",
       companyName: lead.companyName || "",
       email: lead.email || "",
+      alternateEmail: lead.alternateEmail || "",
       phoneNumber: lead.phoneNumber || "",
+      alternatePhoneNumber: lead.alternatePhoneNumber || "",
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
       notes: lead.notes || "",
@@ -856,10 +858,19 @@ const ViewLead = () => {
     if (name === "email") {
       setEditErrors((prev) => ({ ...prev, email: !!value && !validateEmail(value) }));
     }
+    if (name === "alternateEmail") {
+      setEditErrors((prev) => ({ ...prev, alternateEmail: !!value && !validateEmail(value) }));
+    }
     if (name === "phoneNumber") {
       setEditErrors((prev) => ({
         ...prev,
         phoneNumber: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
+      }));
+    }
+    if (name === "alternatePhoneNumber") {
+      setEditErrors((prev) => ({
+        ...prev,
+        alternatePhoneNumber: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
       }));
     }
   };
@@ -869,12 +880,20 @@ const ViewLead = () => {
     if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
     if (editFormData.email && !validateEmail(editFormData.email))
       return toast.error("Please enter a valid email address");
+    if (editFormData.alternateEmail && !validateEmail(editFormData.alternateEmail))
+      return toast.error("Please enter a valid alternate email address");
     if (
       editFormData.phoneNumber &&
       !isEffectivelyEmptyPhone(editFormData.phoneNumber) &&
       !validatePhoneNumber(editFormData.phoneNumber)
     )
       return toast.error("Please enter a valid phone number");
+    if (
+      editFormData.alternatePhoneNumber &&
+      !isEffectivelyEmptyPhone(editFormData.alternatePhoneNumber) &&
+      !validatePhoneNumber(editFormData.alternatePhoneNumber)
+    )
+      return toast.error("Please enter a valid alternate phone number");
 
     try {
       setIsSavingDetails(true);
@@ -884,9 +903,13 @@ const ViewLead = () => {
         leadName: editFormData.leadName.trim(),
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
+        alternateEmail: editFormData.alternateEmail,
         phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
           ? `+${editFormData.phoneNumber}`
           : editFormData.phoneNumber,
+        alternatePhoneNumber: editFormData.alternatePhoneNumber && !editFormData.alternatePhoneNumber.startsWith("+")
+          ? `+${editFormData.alternatePhoneNumber}`
+          : editFormData.alternatePhoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
         notes: editFormData.notes,
@@ -1405,10 +1428,18 @@ const ViewLead = () => {
                             value={lead.email
                               ? <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a>
                               : "N/A"} />
+                          <InfoRow icon={<Mail size={18}/>}     label="Alternate Email"
+                            value={lead.alternateEmail
+                              ? <a href={`mailto:${lead.alternateEmail}`} className="text-blue-600 hover:underline">{lead.alternateEmail}</a>
+                              : "Not specified"} />
                           <InfoRow icon={<Phone size={18}/>}    label="Phone"
                             value={lead.phoneNumber
                               ? <a href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`} className="text-blue-600 hover:underline">{lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}</a>
                               : "N/A"} />
+                          <InfoRow icon={<Phone size={18}/>}    label="Alternate Phone"
+                            value={lead.alternatePhoneNumber
+                              ? <a href={`tel:${lead.alternatePhoneNumber.startsWith("+") ? lead.alternatePhoneNumber : `+${lead.alternatePhoneNumber}`}`} className="text-blue-600 hover:underline">{lead.alternatePhoneNumber.startsWith("+") ? lead.alternatePhoneNumber : `+${lead.alternatePhoneNumber}`}</a>
+                              : "Not specified"} />
                           <InfoRow icon={<Building2 size={18}/>} label="Client Type" value={lead.clientType || "Not specified"} />
                           <InfoRow icon={<Globe size={18}/>}     label="Source"      value={lead.source || "Not specified"} />
                           <InfoRow icon={<Briefcase size={18}/>} label="Industry"    value={lead.industry || "Not specified"} />
@@ -1424,7 +1455,7 @@ const ViewLead = () => {
                           <InfoRow icon={<Globe size={18}/>}    label="Country"     value={lead.country || "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Follow-up Date" value={lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Created"     value={new Date(lead.createdAt).toLocaleDateString()} />
-                          {lead.assignTo && (
+                          {lead.assignTo && userRole !== "Sales" && (
                             <InfoRow icon={<User size={18}/>}   label="Assigned To"
                               value={`${lead.assignTo.firstName} ${lead.assignTo.lastName} (${lead.assignTo.email})`} />
                           )}
@@ -1532,6 +1563,22 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Email</label>
+                          <input
+                            type="email"
+                            name="alternateEmail"
+                            value={editFormData.alternateEmail}
+                            onChange={handleEditChange}
+                            placeholder="name@example.com"
+                            className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                              editErrors.alternateEmail ? "border-red-500" : "border-slate-300"
+                            }`}
+                          />
+                          {editErrors.alternateEmail && (
+                            <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                          )}
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                           <div
                             className={`border rounded-lg ${
@@ -1552,6 +1599,30 @@ const ViewLead = () => {
                             />
                           </div>
                           {editErrors.phoneNumber && (
+                            <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Phone</label>
+                          <div
+                            className={`border rounded-lg ${
+                              editErrors.alternatePhoneNumber ? "border-red-500" : "border-slate-300"
+                            }`}
+                          >
+                            <PhoneInput
+                              country={"in"}
+                              preferredCountries={["in"]}
+                              countryCodeEditable={false}
+                              value={editFormData.alternatePhoneNumber}
+                              onChange={(phone) =>
+                                handleEditChange({ target: { name: "alternatePhoneNumber", value: phone } })
+                              }
+                              specialLabel=""
+                              inputStyle={phoneInputStyle}
+                              buttonStyle={phoneButtonStyle}
+                            />
+                          </div>
+                          {editErrors.alternatePhoneNumber && (
                             <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
                           )}
                         </div>
