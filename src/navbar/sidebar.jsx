@@ -766,7 +766,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
           hasPermission={
             (isAdmin || userPermissions.deal_analysis || userPermissions.won_analysis || userPermissions.loss_analysis) &&
-            hasPlanFeature("analytics")
+            (hasPlanFeature("deal_analysis") || hasPlanFeature("won_analysis") || hasPlanFeature("loss_analysis"))
           }
         >
           <SmallLink
