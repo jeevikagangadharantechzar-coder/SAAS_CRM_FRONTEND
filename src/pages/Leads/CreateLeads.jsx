@@ -436,10 +436,7 @@ export default function CreateLeads() {
       console.log("Phone validation failed for:", formData.phoneNumber, "Country:", phoneCountryCode);
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = true;
-      newFieldErrors.email = "Email is required";
-    } else if (!validateEmailDomain(formData.email)) {
+    if (formData.email.trim() && !validateEmailDomain(formData.email)) {
       newErrors.email = true;
       newFieldErrors.email =
         "Please enter a valid email address with a proper domain (e.g., name@company.com)";
@@ -798,7 +795,7 @@ export default function CreateLeads() {
                     >
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                         {field.icon} {field.label}
-                        {(field.name === "leadName" || field.name === "companyName" || field.name === "phoneNumber" || field.name === "email") && (
+                        {(field.name === "leadName" || field.name === "companyName" || field.name === "phoneNumber") && (
                           <span className="text-red-500">*</span>
                         )}
                       </label>
