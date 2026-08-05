@@ -6,7 +6,7 @@ import {
   ArrowLeft, ChevronRight, ChevronLeft, User, Mail, Phone, Building, Building2,
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
-  Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2,
+  Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2, Plus,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
@@ -238,6 +238,17 @@ const STYLES = {
   text:  { bg: "bg-yellow-100", fg: "text-yellow-600", Icon: FileText  },
   other: { bg: "bg-blue-100",   fg: "text-blue-600",   Icon: File      },
 };
+
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
 
 // ─── Authenticated fetch → ArrayBuffer ───────
 const authFetch = async (filePath, signal) => {
@@ -507,6 +518,8 @@ const ViewLead = () => {
   const [activeTab,   setActiveTab]   = useState("details");
   const [previewFile, setPreviewFile] = useState(null);
   const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
+
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
 
   // Swipe navigation between leads — the ordered list of {_id, leadName}
   // this lead was opened from (Leads table), passed via navigation state by
@@ -1119,6 +1132,43 @@ const ViewLead = () => {
     setPreviewFile({ name: file.name, path: file.path, category: getCategory(file), mime: getMime(file) });
   }, []);
 
+/* ── Attachments: upload ─────────────────────── */
+  // updateLead always rebuilds attachments from `existingAttachments` (unlike
+  // deals' PATCH, which appends), so we must resend the lead's current
+  // attachments verbatim alongside the new files or this upload wipes them.
+  const handleUploadAttachments = async (files) => {
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    const totalFiles = (lead.attachments?.length || 0) + fileList.length;
+    if (totalFiles > 5) return toast.error("Maximum 5 attachments allowed");
+
+    if (fileList.some((file) => !ALLOWED_FILE_TYPES.includes(file.type)))
+      return toast.error("Only PDF, Image, Word, Excel files are allowed");
+
+    if (fileList.some((file) => file.size > 20 * 1024 * 1024))
+      return toast.error("Some files exceed the 20MB size limit");
+
+    try {
+      setIsUploadingAttachment(true);
+      const token = localStorage.getItem("token");
+      const dataToSend = new FormData();
+      fileList.forEach((file) => dataToSend.append("attachments", file));
+      dataToSend.append("existingAttachments", JSON.stringify(lead.attachments || []));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success(fileList.length > 1 ? "Attachments uploaded" : "Attachment uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload attachment");
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
   if (!lead) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex items-center gap-3 text-slate-600">
@@ -1350,7 +1400,7 @@ const ViewLead = () => {
                         </div>
                       </div>
                       <div className="space-y-5">
-                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">Lead Information</h3>
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide invisible">Client Information</h3>
                         <div className="space-y-4">
                           <InfoRow icon={<FileText size={18}/>} label="Requirement" value={lead.requirement || "Not specified"} />
                           <InfoRow icon={<MapPin size={18}/>}   label="Address"     value={lead.address || "Not specified"} />
@@ -1549,21 +1599,23 @@ const ViewLead = () => {
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
-                          <select
-                            name="assignTo"
-                            value={editFormData.assignTo}
-                            onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                          >
-                            {salesUsers.map((u) => (
-                              <option key={u._id} value={u._id}>
-                                {u.firstName} {u.lastName}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        {userRole !== "Sales" && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                            <select
+                              name="assignTo"
+                              value={editFormData.assignTo}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            >
+                              {salesUsers.map((u) => (
+                                <option key={u._id} value={u._id}>
+                                  {u.firstName} {u.lastName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1605,9 +1657,27 @@ const ViewLead = () => {
             {/* ── Attachments ── */}
             {activeTab === "attachments" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
-                <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
-                  <p className="text-sm text-slate-600 mt-1">Files and documents related to this lead</p>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
+                    <p className="text-sm text-slate-600 mt-1">Files and documents related to this lead</p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingAttachment ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Plus size={15} />
+                    {isUploadingAttachment ? "Uploading…" : "Upload"}
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingAttachment}
+                      onChange={(e) => {
+                        handleUploadAttachments(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                 </div>
                 <div className="p-6">
                   {lead.attachments?.length > 0 ? (

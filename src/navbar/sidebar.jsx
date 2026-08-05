@@ -31,6 +31,7 @@ import {
   LifeBuoy,
   Bell,
   Share2,
+  Trash2,
 } from "lucide-react";
 
 const WhatsAppIcon = ({ size = 18, color = "#475569" }) => (
@@ -651,6 +652,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             hasPermission={(isAdmin || userPermissions.deals_all) && hasPlanFeature("deals_all")}
           />
         </Collapsible>
+
+        {/* Trash — Admin-only, covers both trashed Leads and Deals via an
+            in-page toggle rather than two separate sidebar links. */}
+        <SidebarItem
+          to="trash"
+          icon={<Trash2 />}
+          label={t("sidebar.trash")}
+          hasPermission={isAdmin}
+          sidebarOpen={isOpen}
+        />
 
         {/* Document (Collapsible) — independent "documents" permission now,
             decoupled from Leads/Deals access (previously just an OR of

@@ -795,6 +795,25 @@ function AllDealsComponent() {
     }
   };
 
+/* ── Handle Trash Click Function ─────────────────────── */
+  const handleTrashClick = async (deal) => {
+    setOpenDropdownId(null);
+    if (!window.confirm("Are you sure you want to move this deal to trash?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `${API_URL}/deals/${deal._id}/trash`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Deal moved to trash");
+      setDeals((prev) => prev.filter((d) => d._id !== deal._id));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to move deal to trash");
+    }
+  };
+
 /* ── Handle Deal Name Click Function ─────────────────────── */
   const handleDealNameClick = (dealId) => {
     navigate(`/${tenantSlug}/Pipelineview/${dealId}${location.search}`, {
@@ -1518,6 +1537,14 @@ function AllDealsComponent() {
                     <Edit size={16} className="mr-2" /> Edit
                   </button>
 
+                  {userRole === "Admin" && (
+                    <button
+                      onClick={() => handleTrashClick(activeDeal)}
+                      className="flex items-center px-3 py-2 w-full text-left text-red-600 hover:bg-gray-100"
+                    >
+                      <Trash2 size={16} className="mr-2" /> Move to Trash
+                    </button>
+                  )}
                 </>
               );
             })()}
