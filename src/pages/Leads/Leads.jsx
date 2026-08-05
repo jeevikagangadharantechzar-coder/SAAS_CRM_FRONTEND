@@ -181,6 +181,7 @@ const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'pipeline'
   const [showFilters, setShowFilters] = useState(false);
+  const [pipelineTrigger, setPipelineTrigger] = useState(0);
 
   // Import / Export
   const importFileInputRef = useRef(null);
@@ -759,6 +760,7 @@ const updateFilter = (key, value, setter) => {
       setShowRejectModal(false);
       setLeadToReject(null);
       setRejectReason("");
+      setPipelineTrigger((prev) => prev + 1);
       fetchLeads();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
@@ -833,6 +835,7 @@ const updateFilter = (key, value, setter) => {
       }
       setConvertModalOpen(false);
       setSelectedLead(null);
+      setPipelineTrigger((prev) => prev + 1);
       fetchLeads();
 
     } catch (err) {
@@ -895,6 +898,7 @@ const updateFilter = (key, value, setter) => {
       );
 
       toast.success(t("leads.toast.followUpSuccess"));
+      setPipelineTrigger((prev) => prev + 1);
     } catch (err) {
       console.error("Follow-up update error:", err);
       toast.error(err.response?.data?.message || t("leads.toast.followUpFailed"));
@@ -999,6 +1003,7 @@ const updateFilter = (key, value, setter) => {
 
       toast.success("Follow-up note added");
       closeAddNoteModal();
+      setPipelineTrigger((prev) => prev + 1);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add follow-up note");
     } finally {
@@ -1026,6 +1031,7 @@ const updateFilter = (key, value, setter) => {
           prev.map((l) => (l._id === leadId ? { ...l, status: newStatus } : l))
         );
         toast.success(t("leads.toast.statusSuccess"));
+        setPipelineTrigger((prev) => prev + 1);
       }
     } catch (error) {
       toast.error(t("leads.toast.statusFailed"));
@@ -1425,6 +1431,8 @@ const updateFilter = (key, value, setter) => {
           setEditingFollowUpId={setEditingFollowUpId}
           updateFollowUpDateInline={updateFollowUpDateInline}
           followUpSavingId={followUpSavingId}
+          onLeadClick={(leadId) => navigate(`/${tenantSlug}/leads/view/${leadId}${location.search}`)}
+          pipelineTrigger={pipelineTrigger}
         />
       ) : (
       <div className="overflow-x-auto tour-lead-table">

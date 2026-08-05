@@ -70,11 +70,48 @@ export default function LeadsPipelineView({
   setEditingFollowUpId,
   updateFollowUpDateInline,
   followUpSavingId,
+  onLeadClick,
+  pipelineTrigger,
 }) {
   const API_URL = import.meta.env.VITE_API_URL;
   const [columns, setColumns] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [localLeads, setLocalLeads] = useState([]);
+  const scrollRef = React.useRef(null);
+
+  useEffect(() => {
+    function handleDrag(e) {
+      const container = scrollRef.current;
+      if (!container) return;
+
+      const { clientX, clientY } = e;
+      const { left, right } = container.getBoundingClientRect();
+      const scrollAmount = 20;
+
+      // Horizontal autoscrolling
+      if (clientX - left < 85 && clientX > 0) {
+        container.scrollLeft -= scrollAmount;
+      } else if (right - clientX < 85 && clientX < window.innerWidth) {
+        container.scrollLeft += scrollAmount;
+      }
+
+      // Vertical autoscrolling for individual columns
+      const cols = document.querySelectorAll(".column-body-scroll");
+      cols.forEach((col) => {
+        const rect = col.getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right) {
+          if (clientY - rect.top < 85 && clientY > rect.top) {
+            col.scrollTop -= scrollAmount;
+          } else if (rect.bottom - clientY < 85 && clientY < rect.bottom) {
+            col.scrollTop += scrollAmount;
+          }
+        }
+      });
+    }
+
+    window.addEventListener("dragover", handleDrag);
+    return () => window.removeEventListener("dragover", handleDrag);
+  }, []);
 
   const fetchPipelineLeads = useCallback(async () => {
     try {
@@ -136,16 +173,26 @@ export default function LeadsPipelineView({
 
       setLocalLeads(leadsArr);
     } catch (err) {
-      console.error("Fetch pipeline leads error:", err);
+      // console.error("Fetch pipeline leads error:", err);
       toast.error("Failed to load pipeline leads");
     } finally {
       setIsLoading(false);
     }
-  }, [filters, API_URL]);
+  }, [
+    filters.search,
+    filters.status,
+    filters.source,
+    filters.clientType,
+    filters.assignee,
+    filters.followUpStatus,
+    filters.startDate,
+    filters.endDate,
+    API_URL,
+  ]);
 
   useEffect(() => {
     fetchPipelineLeads();
-  }, [fetchPipelineLeads]);
+  }, [fetchPipelineLeads, pipelineTrigger]);
 
   useEffect(() => {
     const grouped = {};
@@ -182,7 +229,15 @@ export default function LeadsPipelineView({
         return;
       }
     }
-    
+
+    if (toStage === "Converted") {
+      const leadObj = localLeads.find(l => l._id === leadId);
+      if (leadObj && onConvertClick) {
+        onConvertClick(leadObj);
+        return;
+      }
+    }
+
     setColumns((prev) => {
       let movedLead;
       const next = { ...prev };
@@ -201,20 +256,19 @@ export default function LeadsPipelineView({
 
     try {
       const token = localStorage.getItem("token");
-      
+
       const formData = new FormData();
       formData.append("status", toStage);
 
       await axios.put(`${API_URL}/leads/updateLead/${leadId}`, formData, {
-        headers: { 
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}` 
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`
         },
       });
 
       fetchPipelineLeads();
     } catch (err) {
-      console.error("Failed to update lead status:", err);
       toast.error("Failed to update lead status");
       fetchPipelineLeads();
     }
@@ -231,7 +285,7 @@ export default function LeadsPipelineView({
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="mx-auto flex gap-4 overflow-x-auto pb-4 pt-2">
+      <div ref={scrollRef} className="mx-auto flex gap-4 overflow-x-auto pb-4 pt-2">
         {STAGES.map((stage) => (
           <Column
             key={stage.id}
@@ -253,6 +307,7 @@ export default function LeadsPipelineView({
             setEditingFollowUpId={setEditingFollowUpId}
             updateFollowUpDateInline={updateFollowUpDateInline}
             followUpSavingId={followUpSavingId}
+            onLeadClick={onLeadClick}
           />
         ))}
       </div>
@@ -279,6 +334,7 @@ function Column({
   setEditingFollowUpId,
   updateFollowUpDateInline,
   followUpSavingId,
+  onLeadClick,
 }) {
   const [, dropRef] = useDrop({
     accept: ItemTypes.LEAD,
@@ -302,7 +358,7 @@ function Column({
           </span>
         </h2>
       </div>
-      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1 column-body-scroll">
         <div className="flex flex-col gap-3 pb-2">
           {leads.map((lead) => (
             <LeadCard
@@ -321,6 +377,7 @@ function Column({
               setEditingFollowUpId={setEditingFollowUpId}
               updateFollowUpDateInline={updateFollowUpDateInline}
               followUpSavingId={followUpSavingId}
+              onLeadClick={onLeadClick}
             />
           ))}
           {leads.length === 0 && (
@@ -348,6 +405,7 @@ function LeadCard({
   setEditingFollowUpId,
   updateFollowUpDateInline,
   followUpSavingId,
+  onLeadClick,
 }) {
   const isTerminal = stageId === "Rejected";
   const [{ isDragging }, dragRef] = useDrag({
@@ -367,9 +425,13 @@ function LeadCard({
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMenuOpen(false);
+      if (
+        (menuRef.current && menuRef.current.contains(event.target)) ||
+        event.target.closest(".lead-card-dropdown")
+      ) {
+        return;
       }
+      setMenuOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -403,8 +465,8 @@ function LeadCard({
       <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
         {/* Linked Work Icons */}
         {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
-          <div 
-            className="flex items-center gap-1 mr-2 cursor-pointer bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200" 
+          <div
+            className="flex items-center gap-1 mr-2 cursor-pointer bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200"
             onClick={(e) => {
               e.stopPropagation();
               onLinkedWork({
@@ -432,12 +494,12 @@ function LeadCard({
               const viewportHeight = window.innerHeight;
               let top = rect.bottom + 4;
               let left = rect.right - 208; // Align right edge
-              
+
               if (top + menuHeight > viewportHeight) {
                 top = rect.top - menuHeight - 4;
               }
               if (left < 10) left = 10;
-              
+
               setMenuPosition({ top, left });
             }
             setMenuOpen(!menuOpen);
@@ -448,7 +510,7 @@ function LeadCard({
         </button>
         {menuOpen && ReactDOM.createPortal(
           <div
-            className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
+            className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1 lead-card-dropdown"
             style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -493,7 +555,11 @@ function LeadCard({
 
       <div className="flex justify-between items-start mb-2 pr-6">
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 line-clamp-1" title={lead.leadName}>
+          <h3
+            onClick={() => onLeadClick && onLeadClick(lead._id)}
+            className="text-sm font-semibold text-blue-600 hover:underline cursor-pointer line-clamp-1"
+            title={lead.leadName}
+          >
             {lead.leadName || "Unnamed Lead"}
           </h3>
           <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{lead.companyName || "No Company"}</p>
