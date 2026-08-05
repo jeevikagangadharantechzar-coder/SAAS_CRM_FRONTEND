@@ -724,8 +724,7 @@ export default function CreateDeal() {
 
   const handleBackClick = () => navigate(-1);
 
-  const showAssignToField =
-    userRole === "Admin" || (isEditMode && userRole === "Sales");
+  const showAssignToField = userRole === "Admin";
 
   const formFields = [
     {
@@ -1141,11 +1140,6 @@ export default function CreateDeal() {
                       </option>
                     ))}
                   </select>
-                  {userRole === "Sales" && isEditMode && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      You can reassign this deal to another sales user
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
