@@ -45,6 +45,7 @@ import {
   Activity,
   Send,
   AlertTriangle,
+  UserCheck,
 } from "lucide-react";
 import {
   BarChart,
@@ -1146,11 +1147,37 @@ function Pipeline_modal_view() {
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [countries] = useState(getNames());
+  const [userRole, setUserRole] = useState("");
+  const [salesUsers, setSalesUsers] = useState([]);
 
   // Helper function to get auth token
   const getAuthToken = () => {
     return localStorage.getItem("token");
   };
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      setUserRole(user.role?.name || "");
+    }
+  }, []);
+
+  // Assign To options — only Admins can reassign a deal, matching CreateDeal.jsx.
+  useEffect(() => {
+    if (userRole !== "Admin") return;
+    const fetchSalesUsers = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/users/sales`, {
+          headers: { Authorization: `Bearer ${getAuthToken()}` },
+        });
+        setSalesUsers(res.data.users || []);
+      } catch (err) {
+        console.error("Failed to fetch sales users:", err);
+      }
+    };
+    fetchSalesUsers();
+  }, [userRole, API_URL]);
 
   // Handle authentication errors
   const handleAuthError = (error) => {
@@ -1789,8 +1816,11 @@ function Pipeline_modal_view() {
       alternativeEmail: deal.alternativeEmail || "",
       alternativeNumber: deal.alternativeNumber || "",
       clientType: deal.clientType || "",
+      industry: deal.industry || "",
+      source: deal.source || "",
       address: deal.address || "",
       country: deal.country || "",
+      assignTo: deal.assignedTo?._id || "",
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -1852,8 +1882,11 @@ function Pipeline_modal_view() {
             ? `+${editFormData.alternativeNumber}`
             : editFormData.alternativeNumber,
         clientType: editFormData.clientType,
+        industry: editFormData.industry,
+        source: editFormData.source,
         address: editFormData.address.trim(),
         country: editFormData.country.trim(),
+        ...(userRole === "Admin" ? { assignTo: editFormData.assignTo } : {}),
         ...extraFields,
       };
 
@@ -2686,8 +2719,8 @@ function Pipeline_modal_view() {
                         Assigned To
                       </span>
                       <span className="font-semibold text-slate-800 truncate block">
-                        {deal.assignTo
-                          ? `${deal.assignTo.firstName || ""} ${deal.assignTo.lastName || ""}`.trim()
+                        {deal.assignedTo
+                          ? `${deal.assignedTo.firstName || ""} ${deal.assignedTo.lastName || ""}`.trim()
                           : "Unassigned"}
                       </span>
                     </div>
@@ -3496,6 +3529,24 @@ function Pipeline_modal_view() {
                                   </div>
                                 </div>
                               )}
+                              {userRole === "Admin" && (
+                                <div className="flex items-center text-slate-700">
+                                  <UserCheck
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Assign To
+                                    </p>
+                                    <p className="text-slate-900">
+                                      {deal.assignedTo
+                                        ? `${deal.assignedTo.firstName || ""} ${deal.assignedTo.lastName || ""}`.trim()
+                                        : "Unassigned"}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3600,6 +3651,20 @@ function Pipeline_modal_view() {
                                 </div>
                               )}
                               <div className="flex items-center text-slate-700">
+                                <Briefcase
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Industry
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.industry || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
                                 <Building2
                                   size={18}
                                   className="mr-3 text-slate-500"
@@ -3610,6 +3675,20 @@ function Pipeline_modal_view() {
                                   </p>
                                   <p className="text-slate-900">
                                     {deal.clientType || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <Globe
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Source
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.source || "Not specified"}
                                   </p>
                                 </div>
                               </div>
@@ -3725,6 +3804,26 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                               />
                             </div>
+                            {userRole === "Admin" && (
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                  Assign To
+                                </label>
+                                <select
+                                  name="assignTo"
+                                  value={editFormData.assignTo}
+                                  onChange={handleEditChange}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                >
+                                  <option value="">Select User</option>
+                                  {salesUsers.map((u) => (
+                                    <option key={u._id} value={u._id}>
+                                      {u.firstName} {u.lastName}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                           </div>
 
                           {/* Company Information (edit) */}
@@ -3871,6 +3970,57 @@ function Pipeline_modal_view() {
                                 <option value="">Select Client Type</option>
                                 <option value="B2B">B2B</option>
                                 <option value="B2C">B2C</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Industry
+                              </label>
+                              <select
+                                name="industry"
+                                value={editFormData.industry}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select Industry</option>
+                                {[
+                                  "IT",
+                                  "Finance",
+                                  "Healthcare",
+                                  "Education",
+                                  "Manufacturing",
+                                  "Retail",
+                                  "Other",
+                                ].map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Source
+                              </label>
+                              <select
+                                name="source"
+                                value={editFormData.source}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select Source</option>
+                                {[
+                                  "Website",
+                                  "Referral",
+                                  "Social Media",
+                                  "Email",
+                                  "Phone",
+                                  "Other",
+                                ].map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
                               </select>
                             </div>
                             <div>
