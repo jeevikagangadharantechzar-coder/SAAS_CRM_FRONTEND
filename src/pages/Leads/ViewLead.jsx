@@ -7,6 +7,7 @@ import {
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
   Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2, Plus,
+  Briefcase, UserCheck, Users,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
@@ -823,13 +824,22 @@ const ViewLead = () => {
       leadName: lead.leadName || "",
       companyName: lead.companyName || "",
       email: lead.email || "",
+      alternateEmail: lead.alternateEmail || "",
       phoneNumber: lead.phoneNumber || "",
+      alternatePhoneNumber: lead.alternatePhoneNumber || "",
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
       notes: lead.notes || "",
       address: lead.address || "",
       country: lead.country || "",
       assignTo: lead.assignTo?._id || "",
+      source: lead.source || "",
+      industry: lead.industry || "",
+      status: lead.status || "Cold",
+      NumberOfEmployees: lead.NumberOfEmployees ?? "",
+      followUpDate: lead.followUpDate
+        ? new Date(lead.followUpDate).toISOString().slice(0, 10)
+        : "",
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -848,10 +858,19 @@ const ViewLead = () => {
     if (name === "email") {
       setEditErrors((prev) => ({ ...prev, email: !!value && !validateEmail(value) }));
     }
+    if (name === "alternateEmail") {
+      setEditErrors((prev) => ({ ...prev, alternateEmail: !!value && !validateEmail(value) }));
+    }
     if (name === "phoneNumber") {
       setEditErrors((prev) => ({
         ...prev,
         phoneNumber: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
+      }));
+    }
+    if (name === "alternatePhoneNumber") {
+      setEditErrors((prev) => ({
+        ...prev,
+        alternatePhoneNumber: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
       }));
     }
   };
@@ -861,12 +880,20 @@ const ViewLead = () => {
     if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
     if (editFormData.email && !validateEmail(editFormData.email))
       return toast.error("Please enter a valid email address");
+    if (editFormData.alternateEmail && !validateEmail(editFormData.alternateEmail))
+      return toast.error("Please enter a valid alternate email address");
     if (
       editFormData.phoneNumber &&
       !isEffectivelyEmptyPhone(editFormData.phoneNumber) &&
       !validatePhoneNumber(editFormData.phoneNumber)
     )
       return toast.error("Please enter a valid phone number");
+    if (
+      editFormData.alternatePhoneNumber &&
+      !isEffectivelyEmptyPhone(editFormData.alternatePhoneNumber) &&
+      !validatePhoneNumber(editFormData.alternatePhoneNumber)
+    )
+      return toast.error("Please enter a valid alternate phone number");
 
     try {
       setIsSavingDetails(true);
@@ -876,15 +903,24 @@ const ViewLead = () => {
         leadName: editFormData.leadName.trim(),
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
+        alternateEmail: editFormData.alternateEmail,
         phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
           ? `+${editFormData.phoneNumber}`
           : editFormData.phoneNumber,
+        alternatePhoneNumber: editFormData.alternatePhoneNumber && !editFormData.alternatePhoneNumber.startsWith("+")
+          ? `+${editFormData.alternatePhoneNumber}`
+          : editFormData.alternatePhoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
         notes: editFormData.notes,
         address: editFormData.address,
         country: editFormData.country,
         assignTo: editFormData.assignTo,
+        source: editFormData.source,
+        industry: editFormData.industry,
+        status: editFormData.status,
+        NumberOfEmployees: editFormData.NumberOfEmployees,
+        followUpDate: editFormData.followUpDate,
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
@@ -1392,21 +1428,34 @@ const ViewLead = () => {
                             value={lead.email
                               ? <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a>
                               : "N/A"} />
+                          <InfoRow icon={<Mail size={18}/>}     label="Alternate Email"
+                            value={lead.alternateEmail
+                              ? <a href={`mailto:${lead.alternateEmail}`} className="text-blue-600 hover:underline">{lead.alternateEmail}</a>
+                              : "Not specified"} />
                           <InfoRow icon={<Phone size={18}/>}    label="Phone"
                             value={lead.phoneNumber
                               ? <a href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`} className="text-blue-600 hover:underline">{lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}</a>
                               : "N/A"} />
+                          <InfoRow icon={<Phone size={18}/>}    label="Alternate Phone"
+                            value={lead.alternatePhoneNumber
+                              ? <a href={`tel:${lead.alternatePhoneNumber.startsWith("+") ? lead.alternatePhoneNumber : `+${lead.alternatePhoneNumber}`}`} className="text-blue-600 hover:underline">{lead.alternatePhoneNumber.startsWith("+") ? lead.alternatePhoneNumber : `+${lead.alternatePhoneNumber}`}</a>
+                              : "Not specified"} />
                           <InfoRow icon={<Building2 size={18}/>} label="Client Type" value={lead.clientType || "Not specified"} />
+                          <InfoRow icon={<Globe size={18}/>}     label="Source"      value={lead.source || "Not specified"} />
+                          <InfoRow icon={<Briefcase size={18}/>} label="Industry"    value={lead.industry || "Not specified"} />
+                          <InfoRow icon={<Users size={18}/>}     label="Number of Employees" value={lead.NumberOfEmployees || "Not specified"} />
                         </div>
                       </div>
                       <div className="space-y-5">
                         <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide invisible">Client Information</h3>
                         <div className="space-y-4">
+                          <InfoRow icon={<UserCheck size={18}/>} label="Status"      value={lead.status || "Not specified"} />
                           <InfoRow icon={<FileText size={18}/>} label="Requirement" value={lead.requirement || "Not specified"} />
                           <InfoRow icon={<MapPin size={18}/>}   label="Address"     value={lead.address || "Not specified"} />
                           <InfoRow icon={<Globe size={18}/>}    label="Country"     value={lead.country || "Not specified"} />
+                          <InfoRow icon={<Calendar size={18}/>} label="Follow-up Date" value={lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Created"     value={new Date(lead.createdAt).toLocaleDateString()} />
-                          {lead.assignTo && (
+                          {lead.assignTo && userRole !== "Sales" && (
                             <InfoRow icon={<User size={18}/>}   label="Assigned To"
                               value={`${lead.assignTo.firstName} ${lead.assignTo.lastName} (${lead.assignTo.email})`} />
                           )}
@@ -1514,6 +1563,22 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Email</label>
+                          <input
+                            type="email"
+                            name="alternateEmail"
+                            value={editFormData.alternateEmail}
+                            onChange={handleEditChange}
+                            placeholder="name@example.com"
+                            className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                              editErrors.alternateEmail ? "border-red-500" : "border-slate-300"
+                            }`}
+                          />
+                          {editErrors.alternateEmail && (
+                            <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                          )}
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                           <div
                             className={`border rounded-lg ${
@@ -1538,6 +1603,30 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Phone</label>
+                          <div
+                            className={`border rounded-lg ${
+                              editErrors.alternatePhoneNumber ? "border-red-500" : "border-slate-300"
+                            }`}
+                          >
+                            <PhoneInput
+                              country={"in"}
+                              preferredCountries={["in"]}
+                              countryCodeEditable={false}
+                              value={editFormData.alternatePhoneNumber}
+                              onChange={(phone) =>
+                                handleEditChange({ target: { name: "alternatePhoneNumber", value: phone } })
+                              }
+                              specialLabel=""
+                              inputStyle={phoneInputStyle}
+                              buttonStyle={phoneButtonStyle}
+                            />
+                          </div>
+                          {editErrors.alternatePhoneNumber && (
+                            <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
+                          )}
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Client Type</label>
                           <select
                             name="clientType"
@@ -1550,12 +1639,81 @@ const ViewLead = () => {
                             <option value="B2C">B2C</option>
                           </select>
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
+                          <select
+                            name="source"
+                            value={editFormData.source}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="">Select Source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email">Email</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
+                          <select
+                            name="industry"
+                            value={editFormData.industry}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="">Select Industry</option>
+                            <option value="IT">IT</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Education">Education</option>
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Number of Employees</label>
+                          <input
+                            type="number"
+                            name="NumberOfEmployees"
+                            value={editFormData.NumberOfEmployees}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-4">
                         <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
                           Lead Information
                         </h3>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                          <select
+                            name="status"
+                            value={editFormData.status}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="Hot">Hot</option>
+                            <option value="Warm">Warm</option>
+                            <option value="Cold">Cold</option>
+                            <option value="Junk">Junk</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Follow-up Date</label>
+                          <input
+                            type="date"
+                            name="followUpDate"
+                            value={editFormData.followUpDate}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Requirement</label>
                           <textarea
