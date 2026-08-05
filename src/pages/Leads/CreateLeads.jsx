@@ -56,7 +56,9 @@ export default function CreateLeads() {
   const [formData, setFormData] = useState({
     leadName: "",
     phoneNumber: "",
+    alternatePhoneNumber: "",
     email: "",
+    alternateEmail: "",
     source: "",
     companyName: "",
     industry: "",
@@ -167,7 +169,9 @@ export default function CreateLeads() {
             leadName: leadData.leadName || "",
             companyName: leadData.companyName || "",
             phoneNumber: leadData.phoneNumber || "",
+            alternatePhoneNumber: leadData.alternatePhoneNumber || "",
             email: leadData.email || "",
+            alternateEmail: leadData.alternateEmail || "",
             source: leadData.source || "",
             industry: leadData.industry || "",
             clientType: leadData.clientType || "",
@@ -442,6 +446,20 @@ export default function CreateLeads() {
         "Please enter a valid email address with a proper domain (e.g., name@company.com)";
     }
 
+    if (formData.alternateEmail.trim() && !validateEmailDomain(formData.alternateEmail)) {
+      newErrors.alternateEmail = true;
+      newFieldErrors.alternateEmail =
+        "Please enter a valid email address with a proper domain (e.g., name@company.com)";
+    }
+
+    if (
+      formData.alternatePhoneNumber &&
+      !validatePhoneNumber(formData.alternatePhoneNumber, phoneCountryCode)
+    ) {
+      newErrors.alternatePhoneNumber = true;
+      newFieldErrors.alternatePhoneNumber = `Please enter a valid phone number (${getPhoneNumberLengthMessage(phoneCountryCode)})`;
+    }
+
     if (formData.followUpDate) {
       const dateErr = validateFollowUpDate(formData.followUpDate);
       if (dateErr) {
@@ -515,6 +533,10 @@ export default function CreateLeads() {
           dataToSend.append(key, `${yyyy}-${mm}-${dd}`);
         } else if (key === "phoneNumber" && dataToSubmit.phoneNumber) {
           const rawPhone = String(dataToSubmit.phoneNumber).trim();
+          const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
+          dataToSend.append(key, formattedPhone);
+        } else if (key === "alternatePhoneNumber" && dataToSubmit.alternatePhoneNumber) {
+          const rawPhone = String(dataToSubmit.alternatePhoneNumber).trim();
           const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
           dataToSend.append(key, formattedPhone);
         } else {
@@ -644,7 +666,13 @@ export default function CreateLeads() {
           label: "Phone Number",
           icon: <Phone size={16} />,
         },
+        {
+          name: "alternatePhoneNumber",
+          label: "Alternate Phone Number",
+          icon: <Phone size={16} />,
+        },
         { name: "email", label: "Email", icon: <Mail size={16} /> },
+        { name: "alternateEmail", label: "Alternate Email", icon: <Mail size={16} /> },
         { name: "address", label: "Address", icon: <MapPin size={16} /> },
         {
           name: "country",
@@ -719,13 +747,17 @@ export default function CreateLeads() {
           type: "select",
           options: ["Hot", "Warm", "Cold", "Junk"],
         },
-        {
-          name: "assignTo",
-          label: "Assign To",
-          icon: <User size={16} />,
-          type: "select",
-          options: getSalesUsersOptions(),
-        },
+        ...(userRole !== "Sales"
+          ? [
+              {
+                name: "assignTo",
+                label: "Assign To",
+                icon: <User size={16} />,
+                type: "select",
+                options: getSalesUsersOptions(),
+              },
+            ]
+          : []),
         {
           name: "followUpDate",
           label: "Follow-up Date",
@@ -865,6 +897,60 @@ export default function CreateLeads() {
                                 ✓ Valid phone number
                               </p>
                             )}
+                        </div>
+                      ) : field.name === "alternatePhoneNumber" ? (
+                        <div>
+                          <div
+                            className={`border rounded-lg ${
+                              errors.alternatePhoneNumber
+                                ? "border-red-500"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            <PhoneInput
+                              country={"in"}
+                              preferredCountries={["in"]}
+                              countryCodeEditable={false}
+                              disableDropdown={false}
+                              value={formData.alternatePhoneNumber}
+                              onChange={(phone, countryData) => {
+                                const dialCode = countryData.dialCode;
+                                if (phone && phone !== dialCode) {
+                                  setFormData((prev) => ({ ...prev, alternatePhoneNumber: phone }));
+                                } else {
+                                  setFormData((prev) => ({ ...prev, alternatePhoneNumber: "" }));
+                                }
+                                if (errors.alternatePhoneNumber) {
+                                  setErrors((p) => ({ ...p, alternatePhoneNumber: false }));
+                                }
+                                if (fieldErrors.alternatePhoneNumber) {
+                                  setFieldErrors((p) => ({ ...p, alternatePhoneNumber: "" }));
+                                }
+                              }}
+                              placeholder="Select code and enter number"
+                              specialLabel=""
+                              inputStyle={{
+                                width: "100%",
+                                height: "42px",
+                                fontSize: "14px",
+                                paddingLeft: "55px",
+                                borderRadius: "0.5rem",
+                                border: "none",
+                              }}
+                              buttonStyle={{
+                                borderRadius: "0.5rem 0 0 0.5rem",
+                                height: "42px",
+                                background: "white",
+                                border: "none",
+                                borderRight: "1px solid #e5e7eb",
+                              }}
+                            />
+                          </div>
+                          {fieldErrors.alternatePhoneNumber && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {fieldErrors.alternatePhoneNumber}
+                            </p>
+                          )}
                         </div>
                       ) : field.type === "select" ? (
                         <div>

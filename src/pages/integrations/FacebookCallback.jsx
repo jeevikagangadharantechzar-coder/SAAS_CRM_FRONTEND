@@ -21,10 +21,10 @@ export default function FacebookCallback() {
   const [searchParams]          = useSearchParams();
   const navigate                = useNavigate();
   const [status, setStatus]     = useState("processing"); // processing | select | success | error
-  const [pages, setPages]       = useState([]);
+  const [pages, setPages]       = useState([]);    // full page objects including pageAccessToken
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving]     = useState(false);
-  const [userToken, setUserToken] = useState(null); // stored after first exchange so code isn't reused
+  const [userToken, setUserToken] = useState(null);
   const hasFetched              = useRef(false); // prevents double-exchange (StrictMode / remount)
 
   const code = searchParams.get("code");
@@ -43,22 +43,28 @@ export default function FacebookCallback() {
     exchangeCode(code);
   }, []);
 
-  const exchangeCode = async (authCode, pageId = null, token = null) => {
+  const exchangeCode = async (authCode, selectedPage = null, token = null) => {
     try {
       setSaving(true);
 
       // Build payload — on page selection use stored userToken, never re-use the one-time code
       const payload = {};
-      if (token)  payload.userToken = token;
-      else        payload.code      = authCode;
-      if (pageId) payload.pageId    = pageId;
+      if (token)         payload.userToken = token;
+      else               payload.code      = authCode;
+      if (selectedPage) {
+        payload.pageId           = selectedPage.pageId;
+        payload.pageAccessToken  = selectedPage.pageAccessToken;
+        payload.pageName         = selectedPage.pageName;
+        payload.instagramId      = selectedPage.instagramId || null;
+        payload.instagramUsername = selectedPage.instagramUsername || null;
+      }
 
       const { data } = await api.post("/meta/callback", payload);
 
       if (data.selectPage) {
-        // Backend returned pages list + already-exchanged userToken
+        // Backend returned pages list with access tokens; store all so Step 2 can use them
         setPages(data.pages || []);
-        setUserToken(data.userToken);   // store so we don't re-use the one-time code
+        setUserToken(data.userToken);
         setStatus("select");
       } else if (data.success) {
         setStatus("success");
@@ -75,9 +81,10 @@ export default function FacebookCallback() {
     }
   };
 
-  // On page selection: send stored userToken instead of the expired code
+  // On page selection: send the page's own access token (fetched in Step 1, works for all page types)
   const handleSelectPage = (pageId) => {
-    exchangeCode(null, pageId, userToken);
+    const page = pages.find(p => p.pageId === pageId);
+    exchangeCode(null, page, userToken);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
