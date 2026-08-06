@@ -26,11 +26,28 @@ import {
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 
-// Import Lost Deal components
 import useLostDealModal from "../LostDealModal/LossDeal";
 import ReassignmentModal from "../components/ReassignmentModal";
 
-// Email validation function
+const STANDARD_INDUSTRIES = [
+  "IT",
+  "Finance",
+  "Healthcare",
+  "Education",
+  "Manufacturing",
+  "Retail",
+  "Real Estate",
+  "Energy & Utilities",
+  "Construction",
+  "Telecommunications",
+  "Automotive",
+  "Fashion & Apparel",
+  "Food & Beverage",
+  "Media & Advertising",
+  "Non-profit",
+  "Professional Services"
+];
+
 const validateEmail = (email) => {
   if (!email) return true; // Empty is allowed (not required)
   const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
@@ -178,6 +195,8 @@ export default function CreateDeal() {
     renderModal: renderLostDealModal,
   } = useLostDealModal();
 
+  const [isCustomIndustry, setIsCustomIndustry] = useState(false);
+
   const [formData, setFormData] = useState({
     dealName: "",
     dealValue: "",
@@ -287,6 +306,9 @@ export default function CreateDeal() {
       if (existingDeal.followUpDate) {
         parsedFollowUpDate = new Date(existingDeal.followUpDate);
       }
+
+      const isCustom = existingDeal.industry && !STANDARD_INDUSTRIES.includes(existingDeal.industry);
+      setIsCustomIndustry(!!isCustom);
 
       setFormData({
         dealName: existingDeal.dealName || "",
@@ -775,7 +797,7 @@ export default function CreateDeal() {
       label: "Industry",
       icon: <BriefcaseBusiness size={16} />,
       type: "select",
-      options: ["IT", "Finance", "Healthcare", "Education", "Manufacturing", "Retail", "Other"],
+      options: [...STANDARD_INDUSTRIES, "Other"],
     },
     {
       name: "clientType",
@@ -970,23 +992,52 @@ export default function CreateDeal() {
                         }}
                       />
                     ) : (
-                      <select
-                        name={field.name}
-                        value={formData[field.name] || ""}
-                        onChange={handleChange}
-                        className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11 truncate"
-                      >
-                        <option value="">Select {field.label}</option>
-                        {field.options.map((opt) =>
-                          typeof opt === "string" ? (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ) : (
-                            <option key={opt.value || opt} value={opt.value || opt}>
-                              {opt.label || opt}
-                            </option>
-                          )
+                      <>
+                        <select
+                          name={field.name}
+                          value={
+                            field.name === "industry" && isCustomIndustry
+                              ? "Other"
+                              : (formData[field.name] || "")
+                          }
+                          onChange={(e) => {
+                            if (field.name === "industry") {
+                              if (e.target.value === "Other") {
+                                setIsCustomIndustry(true);
+                                setFormData((p) => ({ ...p, industry: "" }));
+                              } else {
+                                setIsCustomIndustry(false);
+                                handleChange(e);
+                              }
+                            } else {
+                              handleChange(e);
+                            }
+                          }}
+                          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11 truncate"
+                        >
+                          <option value="">Select {field.label}</option>
+                          {field.options.map((opt) =>
+                            typeof opt === "string" ? (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ) : (
+                              <option key={opt.value || opt} value={opt.value || opt}>
+                                {opt.label || opt}
+                              </option>
+                            )
+                          )}
+                        </select>
+                        {field.name === "industry" && isCustomIndustry && (
+                          <input
+                            type="text"
+                            placeholder="Enter custom industry (e.g. influencer, service, finance, accounts)"
+                            value={formData.industry || ""}
+                            onChange={(e) =>
+                              setFormData((p) => ({ ...p, industry: e.target.value }))
+                            }
+                            className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                          />
                         )}
-                      </select>
+                      </>
                     )
                   ) : field.name === "phoneNumber" || field.name === "alternativeNumber" ? (
                     <>

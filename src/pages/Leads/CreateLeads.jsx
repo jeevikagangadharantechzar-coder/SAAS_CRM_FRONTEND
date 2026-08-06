@@ -27,6 +27,25 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ReassignmentModal from "../components/ReassignmentModal";
 
+const STANDARD_INDUSTRIES = [
+  "IT",
+  "Finance",
+  "Healthcare",
+  "Education",
+  "Manufacturing",
+  "Retail",
+  "Real Estate",
+  "Energy & Utilities",
+  "Construction",
+  "Telecommunications",
+  "Automotive",
+  "Fashion & Apparel",
+  "Food & Beverage",
+  "Media & Advertising",
+  "Non-profit",
+  "Professional Services"
+];
+
 export default function CreateLeads() {
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -42,6 +61,7 @@ export default function CreateLeads() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [isAutoAssigned, setIsAutoAssigned] = useState(false);
+  const [isCustomIndustry, setIsCustomIndustry] = useState(false);
   const ALLOWED_FILE_TYPES = [
     "application/pdf",
     "image/jpeg",
@@ -126,7 +146,6 @@ export default function CreateLeads() {
     fetchSalesUsers();
   }, [API_URL]);
 
-  //  Prefill from Website Contact Form (CREATE MODE ONLY)
   useEffect(() => {
     if (!contactFormData) return;
     if (leadId) return;
@@ -145,6 +164,8 @@ export default function CreateLeads() {
       clientType: contactFormData.clientType || "",
       notes: contactFormData.notes || "",
     }));
+    const isCustom = contactFormData.industry && !STANDARD_INDUSTRIES.includes(contactFormData.industry);
+    setIsCustomIndustry(!!isCustom);
     setExistingAttachments(contactFormData.attachments || []);
   }, [contactFormData, leadId]);
 
@@ -163,6 +184,9 @@ export default function CreateLeads() {
           );
 
           const leadData = response.data;
+
+          const isCustom = leadData.industry && !STANDARD_INDUSTRIES.includes(leadData.industry);
+          setIsCustomIndustry(!!isCustom);
 
           setExistingAttachments(leadData.attachments || []);
           setFormData({
@@ -700,12 +724,7 @@ export default function CreateLeads() {
           icon: <Briefcase size={16} />,
           type: "select",
           options: [
-            "IT",
-            "Finance",
-            "Healthcare",
-            "Education",
-            "Manufacturing",
-            "Retail",
+            ...STANDARD_INDUSTRIES,
             "Other",
           ],
         },
@@ -956,8 +975,24 @@ export default function CreateLeads() {
                         <div>
                           <select
                             name={field.name}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
+                            value={
+                              field.name === "industry" && isCustomIndustry
+                                ? "Other"
+                                : (formData[field.name] || "")
+                            }
+                            onChange={(e) => {
+                              if (field.name === "industry") {
+                                if (e.target.value === "Other") {
+                                  setIsCustomIndustry(true);
+                                  setFormData((p) => ({ ...p, industry: "" }));
+                                } else {
+                                  setIsCustomIndustry(false);
+                                  handleChange(e);
+                                }
+                              } else {
+                                handleChange(e);
+                              }
+                            }}
                             className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
                               errors[field.name]
                                 ? "border-red-500"
@@ -977,6 +1012,17 @@ export default function CreateLeads() {
                               )
                             )}
                           </select>
+                          {field.name === "industry" && isCustomIndustry && (
+                            <input
+                              type="text"
+                              placeholder="Enter custom industry (e.g. influencer, service, finance, accounts)"
+                              value={formData.industry || ""}
+                              onChange={(e) =>
+                                setFormData((p) => ({ ...p, industry: e.target.value }))
+                              }
+                              className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                            />
+                          )}
                           {fieldErrors[field.name] && (
                             <p className="text-sm text-red-500 mt-1">
                               {fieldErrors[field.name]}
