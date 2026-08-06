@@ -1215,7 +1215,7 @@ const ViewLead = () => {
                   <span className="truncate">{prevLeadInfo.leadName}</span>
                 </button>
               )}
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h1 className="  font-bold text-black-500">
                 {lead.leadName}
               </h1>
               {nextLeadInfo && (

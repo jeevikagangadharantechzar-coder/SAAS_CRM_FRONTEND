@@ -124,7 +124,7 @@ const SidebarItem = ({
             {icon}
           </IconCircle>
           <span
-            className={`text-base font-medium transition-opacity duration-200 ${
+            className={`text-sm font-medium transition-opacity duration-200 ${
               isActive ? "text-[#008ecc]" : "text-slate-750"
             }`}
           >
@@ -197,7 +197,7 @@ const Collapsible = ({
                 {icon}
               </IconCircle>
               <span
-                className={`text-base font-medium ${
+                className={`text-sm font-medium ${
                   isChildActive ? "text-[#008ecc]" : "text-slate-750"
                 }`}
               >
@@ -280,7 +280,7 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true, 
             )}
           </div>
           <span
-            className={`text-base font-medium ${
+            className={`text-sm font-medium ${
               isResolvedActive ? "text-[#008ecc]" : "text-slate-600"
             }`}
           >
@@ -387,7 +387,7 @@ const MessagesItem = ({ to, sidebarOpen = true, hasPermission = true }) => {
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
               )}
             </div>
-            <span className={`text-base font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
+            <span className={`text-sm font-medium ${isActive ? "text-[#008ecc]" : "text-gray-700"}`}>
               {t("sidebar.messages")}
             </span>
           </div>
