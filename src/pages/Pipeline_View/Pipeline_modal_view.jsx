@@ -46,6 +46,7 @@ import {
   Send,
   AlertTriangle,
   UserCheck,
+  LocateFixed,
 } from "lucide-react";
 import {
   BarChart,
@@ -1149,6 +1150,7 @@ function Pipeline_modal_view() {
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [countries] = useState(getNames());
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [salesUsers, setSalesUsers] = useState([]);
 
@@ -1860,7 +1862,12 @@ function Pipeline_modal_view() {
       industry: deal.industry || "",
       source: deal.source || "",
       address: deal.address || "",
+      city: deal.city || "",
+      state: deal.state || "",
+      pincode: deal.pincode || "",
       country: deal.country || "",
+      latitude: deal.latitude || "",
+      longitude: deal.longitude || "",
       assignTo: deal.assignedTo?._id || "",
     });
     setEditErrors({});
@@ -1892,6 +1899,67 @@ function Pipeline_modal_view() {
           !validatePhoneNumber(value),
       }));
     }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countries.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setEditFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const performSaveDetails = async (extraFields = {}) => {
@@ -1926,7 +1994,12 @@ function Pipeline_modal_view() {
         industry: editFormData.industry,
         source: editFormData.source,
         address: editFormData.address.trim(),
+        city: editFormData.city,
+        state: editFormData.state,
+        pincode: editFormData.pincode,
         country: editFormData.country.trim(),
+        latitude: editFormData.latitude,
+        longitude: editFormData.longitude,
         ...(userRole === "Admin" ? { assignTo: editFormData.assignTo } : {}),
         ...extraFields,
       };
@@ -3746,6 +3819,42 @@ function Pipeline_modal_view() {
                                 </div>
                               </div>
                               <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">City</p>
+                                  <p className="text-slate-900">
+                                    {deal.city || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">State</p>
+                                  <p className="text-slate-900">
+                                    {deal.state || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Pincode</p>
+                                  <p className="text-slate-900">
+                                    {deal.pincode || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
                                 <Globe
                                   size={18}
                                   className="mr-3 text-slate-500"
@@ -3754,6 +3863,30 @@ function Pipeline_modal_view() {
                                   <p className="text-sm font-medium">Country</p>
                                   <p className="text-slate-900">
                                     {deal.country || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <LocateFixed
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Latitude</p>
+                                  <p className="text-slate-900">
+                                    {deal.latitude || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <LocateFixed
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Longitude</p>
+                                  <p className="text-slate-900">
+                                    {deal.longitude || "Not specified"}
                                   </p>
                                 </div>
                               </div>
@@ -4065,12 +4198,56 @@ function Pipeline_modal_view() {
                               </select>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Address
-                              </label>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-sm font-medium text-slate-700">
+                                  Address
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={handleUseCurrentLocation}
+                                  disabled={isFetchingLocation}
+                                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <LocateFixed size={14} />
+                                  {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                                </button>
+                              </div>
                               <input
                                 name="address"
                                 value={editFormData.address}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                City
+                              </label>
+                              <input
+                                name="city"
+                                value={editFormData.city}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                State
+                              </label>
+                              <input
+                                name="state"
+                                value={editFormData.state}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Pincode
+                              </label>
+                              <input
+                                name="pincode"
+                                value={editFormData.pincode}
                                 onChange={handleEditChange}
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
@@ -4092,6 +4269,30 @@ function Pipeline_modal_view() {
                                   </option>
                                 ))}
                               </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Latitude
+                              </label>
+                              <input
+                                name="latitude"
+                                value={editFormData.latitude || ""}
+                                onChange={handleEditChange}
+                                placeholder="Auto-filled via current location, or enter manually"
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Longitude
+                              </label>
+                              <input
+                                name="longitude"
+                                value={editFormData.longitude || ""}
+                                onChange={handleEditChange}
+                                placeholder="Auto-filled via current location, or enter manually"
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
                             </div>
                           </div>
                         </div>
