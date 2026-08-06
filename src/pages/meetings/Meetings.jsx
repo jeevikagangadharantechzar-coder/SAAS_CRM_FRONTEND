@@ -42,8 +42,10 @@ function AlarmBanner({ meeting, onDismiss }) {
   );
 }
 
-// Banner shown when user hasn't connected Google account
-function GoogleConnectBanner({ onConnect }) {
+// Banner shown when user hasn't connected Google account — exported so the
+// Deal/Lead detail pages' own embedded Meetings tabs can show the exact same
+// nudge instead of only relying on the reactive save-time error toast.
+export function GoogleConnectBanner({ onConnect }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
       <div className="flex items-start gap-3 flex-1 min-w-0">

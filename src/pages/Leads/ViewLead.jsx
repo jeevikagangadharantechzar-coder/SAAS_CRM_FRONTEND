@@ -8,6 +8,7 @@ import {
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
   Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2, Plus,
   Briefcase, UserCheck, Users, LocateFixed, Tag,
+  PlusCircle, StickyNote, CheckSquare, Target as TargetIcon, XCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
@@ -15,6 +16,9 @@ import "react-phone-input-2/lib/style.css";
 import { getNames } from "country-list";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import LinkedTasksTargetsTab from "../../components/LinkedTasksTargetsTab";
+import MeetingModal from "../meetings/MeetingModal.jsx";
+import useMeetings from "../meetings/useMeetings.js";
+import { GoogleConnectBanner } from "../meetings/Meetings.jsx";
 
 const countryNames = getNames();
 
@@ -514,15 +518,29 @@ const InfoRow = ({ icon, label, value }) => (
   </div>
 );
 
-const ActivityItem = ({ color, icon, label, date }) => (
-  <div className="flex items-start">
-    <div className={`w-10 h-10 ${color} rounded-full flex items-center justify-center flex-shrink-0`}>{icon}</div>
-    <div className="ml-4">
-      <h3 className="text-sm font-medium text-slate-900">{label}</h3>
-      <p className="text-sm text-slate-500 mt-0.5">{new Date(date).toLocaleString()}</p>
-    </div>
-  </div>
-);
+// Same icon/color language as the Deal Activity Log's ACTIVITY_TYPE_META
+// (Pipeline_modal_view.jsx) — visual consistency across the app. Keys must
+// match the `type` values getLeadActivityLog (leads.controller.js) emits.
+const LEAD_ACTIVITY_TYPE_META = {
+  lead_created:        { icon: PlusCircle,       bg: "bg-blue-100",    iconColor: "text-blue-600" },
+  status_changed:      { icon: Tag,              bg: "bg-indigo-100",  iconColor: "text-indigo-600" },
+  assignee_changed:    { icon: UserCheck,        bg: "bg-violet-100",  iconColor: "text-violet-600" },
+  lead_edited:         { icon: Edit,             bg: "bg-slate-200",   iconColor: "text-slate-600" },
+  notes_updated:       { icon: StickyNote,       bg: "bg-yellow-100",  iconColor: "text-yellow-600" },
+  followup_note:       { icon: Calendar,         bg: "bg-purple-100",  iconColor: "text-purple-600" },
+  attachment_uploaded: { icon: Paperclip,        bg: "bg-cyan-100",    iconColor: "text-cyan-600" },
+  lead_rejected:       { icon: Ban,              bg: "bg-red-100",     iconColor: "text-red-600" },
+  lead_converted:      { icon: Handshake,        bg: "bg-emerald-100", iconColor: "text-emerald-600" },
+  task_activity:       { icon: CheckSquare,      bg: "bg-amber-100",   iconColor: "text-amber-600" },
+  target_linked:       { icon: TargetIcon,       bg: "bg-amber-100",   iconColor: "text-amber-700" },
+  target_reason_note:  { icon: TargetIcon,       bg: "bg-orange-100",  iconColor: "text-orange-600" },
+  meeting_scheduled:   { icon: Calendar,         bg: "bg-pink-100",    iconColor: "text-pink-600" },
+  meeting_cancelled:   { icon: XCircle,          bg: "bg-red-100",     iconColor: "text-red-600" },
+  email_sent:          { icon: Mail,             bg: "bg-cyan-100",    iconColor: "text-cyan-600" },
+  email_scheduled:     { icon: Mail,             bg: "bg-cyan-100",    iconColor: "text-cyan-600" },
+  email_cancelled:     { icon: XCircle,          bg: "bg-red-100",     iconColor: "text-red-600" },
+  default:             { icon: Clock,            bg: "bg-slate-100",   iconColor: "text-slate-500" },
+};
 
 // ════════════════════════════════════════════════════════════
 // Main ViewLead
@@ -847,6 +865,102 @@ const ViewLead = () => {
       .then((r) => setLead(r.data))
       .catch(() => toast.error("Failed to fetch lead details"));
   }, [id]);
+
+  const [activityFeed, setActivityFeed] = useState([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+
+  const fetchActivity = useCallback(() => {
+    const token = localStorage.getItem("token");
+    setIsActivityLoading(true);
+    return axios.get(`${API_URL}/leads/${id}/activity`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => setActivityFeed(r.data.activity || []))
+      .catch(() => toast.error("Failed to load activity log"))
+      .finally(() => setIsActivityLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    fetchActivity();
+  }, [fetchActivity]);
+
+  // Meetings — same embedded MeetingModal + useMeetings hook the Deal
+  // Details page and the real Meetings page both use.
+  const { createMeeting, updateMeeting, cancelMeeting, googleConfigured, zoomConfigured, connectGoogle } = useMeetings();
+  // Same planFeature check the real Meetings page uses to decide whether the
+  // "Connect Google" nudge is even relevant for this tenant's plan.
+  const hasGoogleMeetSync = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}").planFeatures?.google_meet_sync !== false; }
+    catch { return true; }
+  })();
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  // Same open-create/open-edit split the real Meetings page uses — null
+  // means the modal is in "create" mode, a meeting object means "edit".
+  const [editMeeting, setEditMeeting] = useState(null);
+  const [leadMeetings, setLeadMeetings] = useState([]);
+  const [isMeetingsLoading, setIsMeetingsLoading] = useState(false);
+
+  const fetchLeadMeetings = useCallback(() => {
+    const token = localStorage.getItem("token");
+    setIsMeetingsLoading(true);
+    return axios.get(`${API_URL}/leads/${id}/meetings`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => setLeadMeetings(r.data || []))
+      .catch(() => toast.error("Failed to load meetings"))
+      .finally(() => setIsMeetingsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    fetchLeadMeetings();
+  }, [fetchLeadMeetings]);
+
+  const openCreateMeeting = () => {
+    setEditMeeting(null);
+    setIsMeetingModalOpen(true);
+  };
+
+  const openEditMeeting = (meeting) => {
+    setEditMeeting(meeting);
+    setIsMeetingModalOpen(true);
+  };
+
+  const closeMeetingModal = () => {
+    setIsMeetingModalOpen(false);
+    setEditMeeting(null);
+  };
+
+  const handleMeetingSave = async (formData) => {
+    if (editMeeting) {
+      await updateMeeting(editMeeting._id, formData);
+    } else {
+      await createMeeting({ ...formData, leadId: id });
+    }
+    closeMeetingModal();
+    fetchLeadMeetings();
+    fetchActivity();
+  };
+
+  const handleCancelMeeting = async (meetingId) => {
+    if (!window.confirm("Cancel this meeting?")) return;
+    await cancelMeeting(meetingId);
+    fetchLeadMeetings();
+    fetchActivity();
+  };
+
+  // Emails — same "campaign sends matched by contact email" the Deal
+  // Details page's Email tab uses (MassEmail has no leadId link).
+  const [leadEmails, setLeadEmails] = useState([]);
+  const [isEmailsLoading, setIsEmailsLoading] = useState(false);
+
+  const fetchLeadEmails = useCallback(() => {
+    const token = localStorage.getItem("token");
+    setIsEmailsLoading(true);
+    return axios.get(`${API_URL}/leads/${id}/emails`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => setLeadEmails(r.data || []))
+      .catch(() => toast.error("Failed to load emails"))
+      .finally(() => setIsEmailsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    fetchLeadEmails();
+  }, [fetchLeadEmails]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -1646,7 +1760,7 @@ const ViewLead = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
-          {["details", "tasks_targets", "attachments", "activity", "followups", "notes"].map((tab) => (
+          {["details", "tasks_targets", "attachments", "activity", "followups", "notes", "meetings", "email"].map((tab) => (
             <button
               key={tab}
               className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -2427,13 +2541,50 @@ const ViewLead = () => {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
                   <h2 className="text-lg font-semibold text-slate-900">Activity Timeline</h2>
-                  <p className="text-sm text-slate-600 mt-1">Recent activities and updates for this lead</p>
+                  <p className="text-sm text-slate-600 mt-1">Everything that happened on this lead, in one place</p>
                 </div>
-                <div className="p-6 space-y-6">
-                  <ActivityItem color="bg-blue-100"    icon={<FileText size={16} className="text-blue-600"/>}    label="Lead created"       date={lead.createdAt} />
-                  {lead.updatedAt      && <ActivityItem color="bg-emerald-100" icon={<Clock    size={16} className="text-emerald-600"/>} label="Lead updated"       date={lead.updatedAt} />}
-                  {lead.followUpDate   && <ActivityItem color="bg-orange-100"  icon={<Calendar size={16} className="text-orange-600"/>}  label="Last Follow-Up"     date={lead.followUpDate} />}
-                  {lead.lastReminderAt && <ActivityItem color="bg-yellow-100"  icon={<Clock    size={16} className="text-yellow-600"/>}  label="Last Reminder Sent" date={lead.lastReminderAt} />}
+                <div className="p-6 max-h-[405px] overflow-y-auto">
+                  {isActivityLoading ? (
+                    <p className="text-sm text-slate-500">Loading activity…</p>
+                  ) : activityFeed.length === 0 ? (
+                    <p className="text-sm text-slate-500">No activity recorded yet.</p>
+                  ) : (
+                    <div className="relative">
+                      {/* Connecting line — runs behind every icon, center to
+                          center, so consecutive events read as one continuous
+                          timeline instead of disconnected blocks. */}
+                      {activityFeed.length > 1 && (
+                        <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-slate-200" />
+                      )}
+                      {activityFeed.map((event, idx) => {
+                        const meta = LEAD_ACTIVITY_TYPE_META[event.type] || LEAD_ACTIVITY_TYPE_META.default;
+                        const Icon = meta.icon;
+                        return (
+                          <div
+                            key={`${event.type}-${event.timestamp}-${idx}`}
+                            className={`flex items-start ${idx !== activityFeed.length - 1 ? "mb-8" : ""}`}
+                          >
+                            <div className="flex-shrink-0">
+                              <div className={`relative z-10 w-10 h-10 ${meta.bg} rounded-full flex items-center justify-center`}>
+                                <Icon size={16} className={meta.iconColor} />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <h3 className="text-sm font-medium text-slate-900">{event.description}</h3>
+                              <p className="text-sm text-slate-500 mt-1">
+                                {event.performedBy?.name ? `${event.performedBy.name} — ` : ""}
+                                {event.timestamp
+                                  ? new Date(event.timestamp).toLocaleString("en-US", {
+                                      month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                                    })
+                                  : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2557,6 +2708,137 @@ const ViewLead = () => {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Meetings ── */}
+            {activeTab === "meetings" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Meetings</h2>
+                    <p className="text-sm text-slate-600 mt-1">Scheduled with this lead's contact</p>
+                  </div>
+                  <button
+                    onClick={openCreateMeeting}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
+                  >
+                    <Plus size={15} />
+                    Schedule Meeting
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  {/* Same nudge the real Meetings page shows — Google Meet
+                      links can't be auto-generated until this is connected,
+                      so surface that here instead of only after the user
+                      fills the whole form and hits the save-time error. */}
+                  {hasGoogleMeetSync && !googleConfigured && (
+                    <GoogleConnectBanner onConnect={connectGoogle} />
+                  )}
+                  {isMeetingsLoading ? (
+                    <p className="text-sm text-slate-500">Loading meetings…</p>
+                  ) : leadMeetings.length === 0 ? (
+                    <p className="text-sm text-slate-500">No meetings scheduled yet.</p>
+                  ) : (
+                    leadMeetings.map((m) => {
+                      const isUpcoming = m.status === "scheduled" && new Date(m.startDateTime) > new Date();
+                      return (
+                        <div
+                          key={m._id}
+                          onClick={() => navigate(`/${tenantSlug}/meetings`)}
+                          className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{m.title}</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {m.startDateTime && new Date(m.startDateTime).toLocaleString("en-US", {
+                                month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                              })}
+                              {" — "}
+                              {m.provider === "zoom" ? "Zoom" : "Google Meet"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {isUpcoming && (
+                              <>
+                                <button
+                                  onClick={() => openEditMeeting(m)}
+                                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleCancelMeeting(m._id)}
+                                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-orange-300 text-orange-600 hover:bg-orange-50 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            )}
+                            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize">
+                              {m.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Email ── */}
+            {activeTab === "email" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Emails</h2>
+                    <p className="text-sm text-slate-600 mt-1">Campaign sends to this lead's contact</p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      navigate(`/${tenantSlug}/create-email`, {
+                        state: {
+                          selectedContacts: lead.email
+                            ? [{ name: lead.leadName || lead.email, email: lead.email, type: "lead" }]
+                            : [],
+                        },
+                      })
+                    }
+                    disabled={!lead.email}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 disabled:opacity-50"
+                  >
+                    <Mail size={15} />
+                    Send Email
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  {isEmailsLoading ? (
+                    <p className="text-sm text-slate-500">Loading emails…</p>
+                  ) : leadEmails.length === 0 ? (
+                    <p className="text-sm text-slate-500">No emails sent to this contact yet.</p>
+                  ) : (
+                    leadEmails.map((e) => (
+                      <div
+                        key={e._id}
+                        onClick={() => navigate(`/${tenantSlug}/${e.status === "scheduled" ? "scheduled-emails" : "email-history"}`)}
+                        className="p-4 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{e.subject}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {(e.scheduledFor || e.createdAt) && new Date(e.scheduledFor || e.createdAt).toLocaleString("en-US", {
+                              month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 capitalize flex-shrink-0">
+                          {e.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -2893,6 +3175,18 @@ const ViewLead = () => {
         isOpen={showWAModal}
         onClose={() => setShowWAModal(false)}
         lead={lead}
+      />
+
+      {/* Meeting scheduling/editing — the exact same modal the real Meetings
+          page uses, in both create and edit mode. */}
+      <MeetingModal
+        isOpen={isMeetingModalOpen}
+        onClose={closeMeetingModal}
+        onSave={handleMeetingSave}
+        editMeeting={editMeeting}
+        zoomConfigured={zoomConfigured}
+        googleMeetSyncEnabled={googleConfigured}
+        initialAttendees={lead.email ? [lead.email] : []}
       />
     </div>
   );
