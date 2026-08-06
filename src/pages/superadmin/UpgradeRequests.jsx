@@ -144,8 +144,8 @@ const UpgradeRequests = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Upgrade Requests</h2>
-          <p className="text-slate-500 text-sm">Review, verify pricing, and manage plan upgrade requests submitted by tenant admins.</p>
+          <h2 className="text-slate-900">Upgrade Requests</h2>
+          <p className="text-base text-slate-600">Review, verify pricing, and manage plan upgrade requests submitted by tenant admins.</p>
         </div>
 
         {/* Tab Controls */}
@@ -180,7 +180,7 @@ const UpgradeRequests = () => {
         <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center space-x-2">
             <ArrowUpCircle className="text-[#008ecc]" size={20} />
-            <h3 className="text-base font-bold text-slate-800">Pending Upgrade Requests</h3>
+            <h3 className="text-slate-700">Pending Upgrade Requests</h3>
           </div>
 
           <div className="overflow-x-auto">
@@ -244,7 +244,7 @@ const UpgradeRequests = () => {
                           {format(endDate, "MMM dd, yyyy")}
                         </td>
                         <td className="px-6 py-4 font-medium">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold border uppercase ${
                             req.type === "mid_cycle"
                               ? "bg-blue-50 text-blue-700 border-blue-100"
                               : "bg-amber-50 text-amber-700 border-amber-100"
@@ -308,7 +308,7 @@ const UpgradeRequests = () => {
         <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center space-x-2">
             <History className="text-[#008ecc]" size={20} />
-            <h3 className="text-base font-bold text-slate-800">Processed Upgrade History</h3>
+            <h3 className="text-slate-700">Processed Upgrade History</h3>
           </div>
 
           <div className="overflow-x-auto">
@@ -406,7 +406,7 @@ const UpgradeRequests = () => {
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center space-x-2 text-red-600">
                 <XCircle size={20} />
-                <h3 className="text-base font-bold text-slate-800">Reject Upgrade Request</h3>
+                <h3 className="text-slate-700">Reject Upgrade Request</h3>
               </div>
               <button
                 onClick={() => setIsRejectModalOpen(false)}

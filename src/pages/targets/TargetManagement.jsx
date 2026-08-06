@@ -201,11 +201,11 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-blue-600">{leads.total}</p>
-          <p className="text-[11px] text-gray-500 mt-0.5">Total Leads</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Leads</p>
         </div>
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-indigo-600">{deals.total}</p>
-          <p className="text-[11px] text-gray-500 mt-0.5">Total Deals</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Deals</p>
         </div>
       </div>
 
@@ -240,14 +240,14 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
             placeholder={tab === "leads" ? "Search leads..." : "Search deals..."} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-7 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30"
+            className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30"
           />
         </div>
         {tab === "leads" && (
           <select 
             value={leadStatusFilter} 
             onChange={(e) => setLeadStatusFilter(e.target.value)}
-            className="w-24 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+            className="w-24 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
           >
             <option value="">All Status</option>
             <option value="Hot">Hot</option>
@@ -260,7 +260,7 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
           <select 
             value={dealStageFilter} 
             onChange={(e) => setDealStageFilter(e.target.value)}
-            className="w-28 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+            className="w-28 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
           >
             <option value="">All Stages</option>
             <option value="Qualification">Qualification</option>
@@ -277,18 +277,18 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
         {/* Select All row */}
         {tab === "leads" && leads.list.length > 0 && (
           <div className="flex items-center justify-between px-1 py-1 border-b border-gray-100">
-            <span className="text-[11px] font-semibold text-gray-500">Select to link with target</span>
+            <span className="text-xs font-semibold text-gray-500">Select to link with target</span>
             <button type="button" onClick={() => onSelectAllLeads(leads.list, allLeadsSelected)}
-              className="text-[11px] font-bold text-[#008ecc] hover:underline">
+              className="text-xs font-bold text-[#008ecc] hover:underline">
               {allLeadsSelected ? "Deselect All" : "Select All"}
             </button>
           </div>
         )}
         {tab === "deals" && deals.list.length > 0 && (
           <div className="flex items-center justify-between px-1 py-1 border-b border-gray-100">
-            <span className="text-[11px] font-semibold text-gray-500">Select to link with target</span>
+            <span className="text-xs font-semibold text-gray-500">Select to link with target</span>
             <button type="button" onClick={() => onSelectAllDeals(deals.list, allDealsSelected)}
-              className="text-[11px] font-bold text-[#008ecc] hover:underline">
+              className="text-xs font-bold text-[#008ecc] hover:underline">
               {allDealsSelected ? "Deselect All" : "Select All"}
             </button>
           </div>
@@ -315,15 +315,15 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <p className="text-xs font-semibold text-gray-800 truncate">{l.leadName}</p>
                     <div className="flex items-center gap-1 shrink-0">
-                      {(inTaskLeadIds.includes(l._id) || l.inActiveTask) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in task</span>}
-                      {(inUse || l.inActiveTarget) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in target</span>}
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
+                      {(inTaskLeadIds.includes(l._id) || l.inActiveTask) && <span className="text-xs px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in task</span>}
+                      {(inUse || l.inActiveTarget) && <span className="text-xs px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in target</span>}
+                      <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
                     </div>
                   </div>
-                  {l.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{l.companyName}</p>}
-                  {l.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</p>}
-                  {l.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{l.email}</p>}
-                  <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Added {fmt(l.createdAt)}</p>
+                  {l.companyName && <p className="text-xs text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{l.companyName}</p>}
+                  {l.phoneNumber && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</p>}
+                  {l.email && <p className="text-xs text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{l.email}</p>}
+                  <p className="text-xs text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Added {fmt(l.createdAt)}</p>
                 </div>
               </div>
               );
@@ -352,21 +352,21 @@ function SalesPersonPreview({ userId, baseUrl, headers, selectedLeads, selectedD
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
                     <div className="flex items-center gap-1 shrink-0">
-                      {(inTaskDealIds.includes(d._id) || d.inActiveTask) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in task</span>}
-                      {(inUse || d.inActiveTarget) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in target</span>}
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                      {(inTaskDealIds.includes(d._id) || d.inActiveTask) && <span className="text-xs px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in task</span>}
+                      {(inUse || d.inActiveTarget) && <span className="text-xs px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in target</span>}
+                      <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
                     </div>
                   </div>
                   {adminBadge && (
-                    <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
+                    <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
                   )}
-                  {d.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{d.companyName}</p>}
+                  {d.companyName && <p className="text-xs text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{d.companyName}</p>}
                   <div className="flex flex-wrap gap-2 mb-0.5">
-                    {d.value && <p className="text-[11px] font-bold text-gray-700">{d.currency} {d.value}</p>}
-                    {d.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
+                    {d.value && <p className="text-xs font-bold text-gray-700">{d.currency} {d.value}</p>}
+                    {d.phoneNumber && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
                   </div>
-                  {d.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
-                  <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
+                  {d.email && <p className="text-xs text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
+                  <p className="text-xs text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
                 </div>
               </div>
               );
@@ -387,7 +387,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
       {/* Table header */}
       <div className="grid grid-cols-[2fr_1fr_1fr_1.4fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
         {["Sales Person","Period","Status","Dates","Overall","Leads Conv.","Deals Won","Lead→Deal Won","Deals Lost","Calls","Meetings","Actions"].map((h,i) => (
-          <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i >= 3 && i <= 10 ? "text-center" : i === 11 ? "text-center" : ""}`}>{h}</div>
+          <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i >= 3 && i <= 10 ? "text-center" : i === 11 ? "text-center" : ""}`}>{h}</div>
         ))}
       </div>
 
@@ -419,22 +419,22 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                 <div className={`w-1.5 h-8 rounded-full ${progressColor} shrink-0`} />
                 <div>
                   <p className="font-bold text-gray-900 text-sm">{t.salesPerson?.firstName} {t.salesPerson?.lastName}</p>
-                  {t.salesPerson?.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5"><Mail size={9} />{t.salesPerson.email}</p>}
+                  {t.salesPerson?.email && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Mail size={9} />{t.salesPerson.email}</p>}
                 </div>
                 <div className="ml-1">{isExpanded ? <ChevronUp size={14} className="text-[#008ecc]" /> : <ChevronDown size={14} className="text-gray-400" />}</div>
               </div>
               {/* Period */}
               <div className="flex items-center">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>{t.period}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>{t.period}</span>
               </div>
               {/* Status */}
               <div className="flex items-center">
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
               </div>
               {/* Dates */}
               <div className="flex flex-col justify-center gap-0.5">
-                <div className="flex items-center gap-1 text-[11px] text-gray-700 font-semibold"><Calendar size={9} className="text-gray-400" />{fmt(t.startDate)}</div>
-                <div className="flex items-center gap-1 text-[11px] text-gray-700 font-semibold"><Calendar size={9} className="text-gray-400" />{fmt(t.endDate)}</div>
+                <div className="flex items-center gap-1 text-xs text-gray-700 font-semibold"><Calendar size={9} className="text-gray-400" />{fmt(t.startDate)}</div>
+                <div className="flex items-center gap-1 text-xs text-gray-700 font-semibold"><Calendar size={9} className="text-gray-400" />{fmt(t.endDate)}</div>
               </div>
               {/* Overall */}
               <div className="flex flex-col items-center justify-center">
@@ -500,13 +500,13 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                     <div className="flex items-start gap-2">
                       <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[11px] font-bold text-red-700">Rejection Requested</p>
-                        <p className="text-[11px] text-red-600 mt-0.5 break-words">Reason: {t.rejectionReason}</p>
+                        <p className="text-xs font-bold text-red-700">Rejection Requested</p>
+                        <p className="text-xs text-red-600 mt-0.5 break-words">Reason: {t.rejectionReason}</p>
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <button onClick={() => onApproveRejection(t, "approve")} className="px-3 py-1.5 bg-red-500 text-white text-[11px] font-semibold rounded hover:bg-red-600">Approve Rejection</button>
-                      <button onClick={() => onApproveRejection(t, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+                      <button onClick={() => onApproveRejection(t, "approve")} className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600">Approve Rejection</button>
+                      <button onClick={() => onApproveRejection(t, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
                     </div>
                   </div>
                 )}
@@ -517,13 +517,13 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                     <div className="flex items-start gap-2">
                       <Info size={14} className="text-purple-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[11px] font-bold text-purple-700">Hold Pending</p>
-                        <p className="text-[11px] text-purple-600 mt-0.5 break-words">Reason: {t.holdReason}</p>
+                        <p className="text-xs font-bold text-purple-700">Hold Pending</p>
+                        <p className="text-xs text-purple-600 mt-0.5 break-words">Reason: {t.holdReason}</p>
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <button onClick={() => onApproveHold(t, "approve")} className="px-3 py-1.5 bg-purple-500 text-white text-[11px] font-semibold rounded hover:bg-purple-600">Approve Hold</button>
-                      <button onClick={() => onApproveHold(t, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+                      <button onClick={() => onApproveHold(t, "approve")} className="px-3 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded hover:bg-purple-600">Approve Hold</button>
+                      <button onClick={() => onApproveHold(t, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
                     </div>
                   </div>
                 )}
@@ -533,7 +533,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2">
                     <MessageSquare size={14} className="text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Admin Note</p>
+                      <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-0.5">Admin Note</p>
                       <p className="text-sm text-amber-800 font-medium leading-relaxed">{t.description}</p>
                     </div>
                   </div>
@@ -558,20 +558,20 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                             <div className="flex items-start gap-1 px-3 pt-3 pb-0">
                               <button type="button" onClick={() => setExpandedDealIdx(prev => ({...prev, [dealKey]: !isOpen}))} className="flex-1 text-left pb-2.5">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                                  <span className="text-xs bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                                   <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                                   <CheckCircle size={13} className="text-emerald-500 shrink-0" />
                                   {isOpen ? <ChevronUp size={13} className="text-emerald-600" /> : <ChevronDown size={13} className="text-gray-400" />}
                                 </div>
                                 {adminBadge && (
-                                  <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1" title={adminBadge.title}>
+                                  <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1" title={adminBadge.title}>
                                     {adminBadge.text}
                                   </span>
                                 )}
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                                  {d.companyName && <span className="text-[10px] text-gray-600 font-medium flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                                  {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
-                                  {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+                                  {d.companyName && <span className="text-xs text-gray-600 font-medium flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                                  {d.value && <span className="text-xs font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
+                                  {totalDays !== null && <span className="text-xs text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
                                 </div>
                               </button>
                               <button onClick={e => { e.stopPropagation(); onUnlinkItem?.({ targetId: t._id, type: "deal", itemId: d._id, itemName: d.dealName || d.dealTitle }); }} className="p-1 mt-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
@@ -579,22 +579,22 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                             {isOpen && (
                               <div className="border-t border-emerald-100">
                                 <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
-                                  {d.phoneNumber && <span className="text-[11px] text-gray-700 font-medium flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
-                                  {d.email && <span className="text-[11px] text-gray-700 font-medium flex items-center gap-1 truncate max-w-[220px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
-                                  {wonDate && <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-bold"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)} {fmtTime(wonDate)}</span>}
+                                  {d.phoneNumber && <span className="text-xs text-gray-700 font-medium flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
+                                  {d.email && <span className="text-xs text-gray-700 font-medium flex items-center gap-1 truncate max-w-[220px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
+                                  {wonDate && <span className="text-xs text-emerald-700 flex items-center gap-1 font-bold"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)} {fmtTime(wonDate)}</span>}
                                 </div>
                                 <div className="border-t border-emerald-100 px-3 py-2.5 bg-white/60 space-y-1.5">
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wide mb-1.5">Stage Journey</p>
+                                  <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Stage Journey</p>
                                   {createdDate && (
                                     <div className="flex items-start gap-2">
                                       <div className="w-2 h-2 rounded-full bg-gray-500 mt-0.5 shrink-0" />
-                                      <div><span className="text-[11px] font-semibold text-gray-700">Lead Created</span><p className="text-[10px] text-gray-700 font-medium">{fmt(createdDate)} {fmtTime(createdDate)}</p></div>
+                                      <div><span className="text-xs font-semibold text-gray-700">Lead Created</span><p className="text-xs text-gray-700 font-medium">{fmt(createdDate)} {fmtTime(createdDate)}</p></div>
                                     </div>
                                   )}
                                   {createdDate && (
                                     <div className="flex items-start gap-2 pl-1">
                                       <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-300" /><div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" /></div>
-                                      <div><span className="text-[11px] font-semibold text-gray-700">Qualification <span className="text-gray-500 font-normal">(Deal Start)</span></span><p className="text-[10px] text-gray-700 font-medium">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p></div>
+                                      <div><span className="text-xs font-semibold text-gray-700">Qualification <span className="text-gray-500 font-normal">(Deal Start)</span></span><p className="text-xs text-gray-700 font-medium">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p></div>
                                     </div>
                                   )}
                                   {stageHistory.map((h, hi) => {
@@ -604,9 +604,9 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                                       <div key={hi} className="flex items-start gap-2 pl-1">
                                         <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-300" /><div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-400"} shrink-0`} /></div>
                                         <div>
-                                          <span className="text-[11px] font-semibold text-gray-800">{h.stage}</span>
-                                          {diff !== null && <span className="text-[10px] text-gray-500 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
-                                          <p className="text-[10px] text-gray-700 font-medium">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+                                          <span className="text-xs font-semibold text-gray-800">{h.stage}</span>
+                                          {diff !== null && <span className="text-xs text-gray-500 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+                                          <p className="text-xs text-gray-700 font-medium">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
                                         </div>
                                       </div>
                                     );
@@ -614,14 +614,14 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                                   {wonDate && !stageHistory.some(h => h.stage === "Closed Won") && (
                                     <div className="flex items-start gap-2 pl-1">
                                       <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-300" /><div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" /></div>
-                                      <div><span className="text-[11px] font-semibold text-emerald-700">Closed Won</span><p className="text-[10px] text-gray-700 font-medium">{fmt(wonDate)} {fmtTime(wonDate)}</p></div>
+                                      <div><span className="text-xs font-semibold text-emerald-700">Closed Won</span><p className="text-xs text-gray-700 font-medium">{fmt(wonDate)} {fmtTime(wonDate)}</p></div>
                                     </div>
                                   )}
                                 </div>
                                 {totalDays !== null && (
                                   <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
                                     <Clock size={11} className="text-emerald-600 shrink-0" />
-                                    <p className="text-[11px] font-bold text-emerald-700">{totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}</p>
+                                    <p className="text-xs font-bold text-emerald-700">{totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}</p>
                                   </div>
                                 )}
                               </div>
@@ -646,32 +646,32 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-xs font-bold text-gray-900 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{d.stage}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{d.stage}</span>
                                 <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "deal", itemId: d._id, itemName: d.dealName || d.dealTitle })} className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors" title="Remove from target"><Trash2 size={11} /></button>
                               </div>
                             </div>
                             {adminBadge && (
-                              <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 w-fit" title={adminBadge.title}>{adminBadge.text}</span>
+                              <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 w-fit" title={adminBadge.title}>{adminBadge.text}</span>
                             )}
-                            {d.companyName && <p className="text-[11px] text-gray-600 font-medium flex items-center gap-1 truncate"><Building2 size={9} />{d.companyName}</p>}
+                            {d.companyName && <p className="text-xs text-gray-600 font-medium flex items-center gap-1 truncate"><Building2 size={9} />{d.companyName}</p>}
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                              {d.value && <span className="text-[11px] font-bold text-gray-800">{d.currency || "INR"} {d.value}</span>}
-                              {d.phoneNumber && <span className="text-[11px] text-gray-700 font-medium flex items-center gap-1"><Phone size={9} className="text-gray-500" />{d.phoneNumber}</span>}
+                              {d.value && <span className="text-xs font-bold text-gray-800">{d.currency || "INR"} {d.value}</span>}
+                              {d.phoneNumber && <span className="text-xs text-gray-700 font-medium flex items-center gap-1"><Phone size={9} className="text-gray-500" />{d.phoneNumber}</span>}
                             </div>
                             {d.stageHistory?.length > 0 && (
                               <div className="pt-1.5 border-t border-gray-100 space-y-0.5">
-                                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Stage Trail</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Stage Trail</p>
                                 {[...d.stageHistory].sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-1.5">
                                     <div className={`w-1.5 h-1.5 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-400"} shrink-0`} />
-                                    <span className="text-[10px] text-gray-800 font-semibold">{h.stage}</span>
-                                    <span className="text-[10px] text-gray-600 font-medium">— {fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                                    <span className="text-xs text-gray-800 font-semibold">{h.stage}</span>
+                                    <span className="text-xs text-gray-600 font-medium">— {fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
                                   </div>
                                 ))}
                               </div>
                             )}
                             {daysInPipeline !== null && (
-                              <p className="text-[10px] text-gray-600 font-medium flex items-center gap-1">
+                              <p className="text-xs text-gray-600 font-medium flex items-center gap-1">
                                 <Clock size={9} className="text-gray-400" />
                                 {daysInPipeline === 0 ? "Created today" : `${daysInPipeline}d in pipeline`} · since {fmt(d.createdAt)}
                               </p>
@@ -689,7 +689,7 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                     <div className="flex items-center gap-2 mb-2">
                       <p className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><Users size={13} /> Linked Leads ({linkedLeads.length + convertedLeadDeals.length})</p>
                       {convertedLeadDeals.filter(d => d.salesPersonConverted !== false).length > 0 && (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
                           <Check size={9} /> {convertedLeadDeals.filter(d => d.salesPersonConverted !== false).length} Converted to Deal
                         </span>
                       )}
@@ -703,25 +703,25 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-xs font-bold text-gray-900 truncate flex-1">{l.leadName}</p>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{l.status}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{l.status}</span>
                                 <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "lead", itemId: l._id, itemName: l.leadName })} className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors" title="Remove from target"><Trash2 size={11} /></button>
                               </div>
                             </div>
-                            {l.companyName && <p className="text-[11px] text-gray-600 font-medium flex items-center gap-1 truncate mt-1"><Building2 size={9} />{l.companyName}</p>}
+                            {l.companyName && <p className="text-xs text-gray-600 font-medium flex items-center gap-1 truncate mt-1"><Building2 size={9} />{l.companyName}</p>}
                             {(history.length > 0 || l.createdAt) && (
                               <div className="pt-1.5 border-t border-gray-100 space-y-0.5">
-                                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Status Journey</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Status Journey</p>
                                 <div className="flex items-center gap-1">
                                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                  <span className="text-[10px] text-gray-800 font-semibold ml-1">Cold</span>
-                                  <span className="text-[10px] text-gray-600 font-medium ml-1">{fmt(l.createdAt)}</span>
+                                  <span className="text-xs text-gray-800 font-semibold ml-1">Cold</span>
+                                  <span className="text-xs text-gray-600 font-medium ml-1">{fmt(l.createdAt)}</span>
                                 </div>
                                 {history.map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-1 pl-1">
                                     <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                     <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                                    <span className="text-[10px] text-gray-800 font-semibold ml-1">{h.status}</span>
-                                    <span className="text-[10px] text-gray-600 font-medium ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                                    <span className="text-xs text-gray-800 font-semibold ml-1">{h.status}</span>
+                                    <span className="text-xs text-gray-600 font-medium ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -738,38 +738,38 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                               <p className="text-xs font-bold text-gray-900 truncate flex-1">{d.dealName}</p>
                               <div className="flex items-center gap-1 shrink-0">
                                 {d.convertedByName ? (
-                                  <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200">
+                                  <span className="text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200">
                                     {d.salesPersonConverted ? `Converted Lead to Deal by ${d.convertedByName}` : `Converted Lead to Deal by Admin ${d.convertedByName}`}
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Converted → Deal</span>
+                                  <span className="text-xs bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Converted → Deal</span>
                                 )}
                                 <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "lead", itemId: d.leadId, itemName: d.dealName })} className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors" title="Remove from target"><Trash2 size={11} /></button>
                               </div>
                             </div>
-                            {d.value && <p className="text-[11px] text-emerald-700 font-bold">{d.currency} {d.value}</p>}
+                            {d.value && <p className="text-xs text-emerald-700 font-bold">{d.currency} {d.value}</p>}
                             <div className="pt-1.5 border-t border-emerald-100 space-y-0.5">
-                              <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Lead Status Journey</p>
+                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Lead Status Journey</p>
                               <div className="flex items-center gap-1">
                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                <span className="text-[10px] text-gray-800 font-semibold ml-1">Cold</span>
-                                <span className="text-[10px] text-gray-600 font-medium ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
+                                <span className="text-xs text-gray-800 font-semibold ml-1">Cold</span>
+                                <span className="text-xs text-gray-600 font-medium ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
                               </div>
                               {history.map((h, hi) => (
                                 <div key={hi} className="flex items-center gap-1 pl-1">
                                   <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                   <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                                  <span className="text-[10px] text-gray-800 font-semibold ml-1">{h.status}</span>
-                                  <span className="text-[10px] text-gray-600 font-medium ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                                  <span className="text-xs text-gray-800 font-semibold ml-1">{h.status}</span>
+                                  <span className="text-xs text-gray-600 font-medium ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                 </div>
                               ))}
                               <div className="flex items-center gap-1 pl-1 flex-wrap">
                                 <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
-                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                                <span className="text-xs text-emerald-700 font-bold ml-1">Converted to Deal</span>
+                                <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                                 {!d.salesPersonConverted && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
+                                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
                                     Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
                                   </span>
                                 )}
@@ -777,16 +777,16 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                               <div className="flex items-center gap-1 pl-1">
                                 <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                <span className="text-[10px] text-blue-700 font-bold ml-1">Qualification (Deal Start)</span>
-                                <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                                <span className="text-xs text-blue-700 font-bold ml-1">Qualification (Deal Start)</span>
+                                <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                               </div>
                               {/* Subsequent deal stage moves */}
                               {(d.stageHistory || []).sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                                 <div key={hi} className="flex items-center gap-1 pl-1">
                                   <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                   <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STAGE_DOT[h.stage] || "bg-gray-400"}`} />
-                                  <span className={`text-[10px] font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700" : h.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{h.stage}</span>
-                                  <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                                  <span className={`text-xs font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700" : h.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{h.stage}</span>
+                                  <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
                                 </div>
                               ))}
                               {/* Fallback: show current stage when it's not already in stageHistory */}
@@ -794,8 +794,8 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                                 <div className="flex items-center gap-1 pl-1">
                                   <div className="w-px h-2 bg-gray-300 mr-0.5" />
                                   <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.stage === "Closed Won" ? "bg-emerald-500" : d.stage === "Closed Lost" ? "bg-red-400" : STAGE_DOT[d.stage] || "bg-gray-400"}`} />
-                                  <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
-                                  {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-1">● Live</span>}
+                                  <span className={`text-xs font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
+                                  {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-xs text-orange-500 font-bold ml-1">● Live</span>}
                                 </div>
                               )}
                             </div>
@@ -818,8 +818,8 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                           <Phone size={14} className="text-orange-500" />
                         </div>
                         <div className="text-left">
-                          <p className="text-[11px] font-bold text-gray-800">Reported Calls</p>
-                          <p className="text-[10px] text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
+                          <p className="text-xs font-bold text-gray-800">Reported Calls</p>
+                          <p className="text-xs text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
                         </div>
                       </div>
                       <div className="text-xs font-bold text-orange-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
@@ -839,8 +839,8 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                           <Activity size={14} className="text-purple-500" />
                         </div>
                         <div className="text-left">
-                          <p className="text-[11px] font-bold text-gray-800">Reported Meetings</p>
-                          <p className="text-[10px] text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
+                          <p className="text-xs font-bold text-gray-800">Reported Meetings</p>
+                          <p className="text-xs text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
                         </div>
                       </div>
                       <div className="text-xs font-bold text-purple-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
@@ -855,10 +855,10 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
                     <div className="space-y-2">
                       {[...t.notes].reverse().map((n, i) => (
                         <div key={i} className="bg-blue-50 border border-blue-100 rounded-xl p-2.5">
-                          <p className="text-[11px] text-gray-800 font-medium leading-relaxed">{n.text}</p>
+                          <p className="text-xs text-gray-800 font-medium leading-relaxed">{n.text}</p>
                           <div className="flex items-center justify-between mt-1">
-                            <p className="text-[10px] text-gray-600 font-semibold flex items-center gap-1"><Clock size={8} /> {fmt(n.addedAt)} {fmtTime(n.addedAt)}</p>
-                            {n.addedBy && <p className="text-[10px] text-blue-600 font-semibold">{n.addedBy.firstName} {n.addedBy.lastName}</p>}
+                            <p className="text-xs text-gray-600 font-semibold flex items-center gap-1"><Clock size={8} /> {fmt(n.addedAt)} {fmtTime(n.addedAt)}</p>
+                            {n.addedBy && <p className="text-xs text-blue-600 font-semibold">{n.addedBy.firstName} {n.addedBy.lastName}</p>}
                           </div>
                         </div>
                       ))}
@@ -945,18 +945,18 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
         {/* Header */}
         <div className="flex items-start justify-between mb-1">
           <div>
-            <h3 className="font-bold text-gray-800 text-sm">{t.salesPerson?.firstName} {t.salesPerson?.lastName}</h3>
-            {t.salesPerson?.email && <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5"><Mail size={9} />{t.salesPerson.email}</p>}
+            <h3 className="text-slate-700">{t.salesPerson?.firstName} {t.salesPerson?.lastName}</h3>
+            {t.salesPerson?.email && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Mail size={9} />{t.salesPerson.email}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>{t.period}</span>
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(t); }} className="p-1 hover:bg-blue-50 rounded-full text-gray-400 hover:text-[#008ecc] transition-colors" title="Edit target"><Pencil size={14} /></button>
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(t._id); }} className="p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors" title="Delete target"><Trash2 size={14} /></button>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2 mt-1">
+        <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2 mt-1">
           <Calendar size={11} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
         </div>
 
@@ -965,8 +965,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
           <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
             <MessageSquare size={12} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Note from Admin</p>
-              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{t.description}</p>
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-0.5">Note from Admin</p>
+              <p className="text-xs text-amber-800 font-medium leading-relaxed">{t.description}</p>
             </div>
           </div>
         )}
@@ -976,13 +976,13 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
             <div className="flex items-start gap-2 mb-2">
               <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[11px] font-bold text-red-700">Rejection Requested</p>
-                <p className="text-[11px] text-red-600 mt-0.5 break-words">Reason: {t.rejectionReason}</p>
+                <p className="text-xs font-bold text-red-700">Rejection Requested</p>
+                <p className="text-xs text-red-600 mt-0.5 break-words">Reason: {t.rejectionReason}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => onApproveRejection(t, "approve")} className="flex-1 py-1.5 bg-red-500 text-white text-[11px] font-semibold rounded hover:bg-red-600">Approve</button>
-              <button onClick={() => onApproveRejection(t, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+              <button onClick={() => onApproveRejection(t, "approve")} className="flex-1 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600">Approve</button>
+              <button onClick={() => onApproveRejection(t, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
             </div>
           </div>
         )}
@@ -992,13 +992,13 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
             <div className="flex items-start gap-2 mb-2">
               <Info size={14} className="text-purple-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[11px] font-bold text-purple-700">Hold Pending</p>
-                <p className="text-[11px] text-purple-600 mt-0.5 break-words">Reason: {t.holdReason}</p>
+                <p className="text-xs font-bold text-purple-700">Hold Pending</p>
+                <p className="text-xs text-purple-600 mt-0.5 break-words">Reason: {t.holdReason}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => onApproveHold(t, "approve")} className="flex-1 py-1.5 bg-purple-500 text-white text-[11px] font-semibold rounded hover:bg-purple-600">Approve</button>
-              <button onClick={() => onApproveHold(t, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+              <button onClick={() => onApproveHold(t, "approve")} className="flex-1 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded hover:bg-purple-600">Approve</button>
+              <button onClick={() => onApproveHold(t, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
             </div>
           </div>
         )}
@@ -1023,7 +1023,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
               {m.countOnly ? (
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-2xl font-bold text-gray-800">{m.actual}</span>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.badgeClass}`}>{m.badgeText}</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.badgeClass}`}>{m.badgeText}</span>
                 </div>
               ) : (
                 <>
@@ -1032,13 +1032,13 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                     <span className="text-xs text-gray-400">/ {m.target}</span>
                   </div>
                   {m.specialZeroMessage && m.actual === 0 ? (
-                    <div className="mt-2 text-center text-[10px] font-semibold text-amber-600 bg-amber-100/50 py-1.5 rounded border border-amber-200">
+                    <div className="mt-2 text-center text-xs font-semibold text-amber-600 bg-amber-100/50 py-1.5 rounded border border-amber-200">
                       {m.specialZeroMessage}
                     </div>
                   ) : (
                     <>
                       <ProgressBar value={m.pct} color={getProgressColor(m.pct)} />
-                      <p className={`text-[11px] font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
+                      <p className={`text-xs font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
                     </>
                   )}
                 </>
@@ -1077,20 +1077,20 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                         <div className="flex items-center gap-1 px-3 pt-3 pb-0">
                           <button type="button" onClick={() => toggleExpand(`won-${i}`)} className="flex-1 text-left pb-2.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                              <span className="text-xs bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <CheckCircle size={13} className="text-emerald-500 shrink-0" />
                               {isOpen ? <ChevronUp size={13} className="text-emerald-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
                             </div>
                             {adminBadge && (
-                              <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
+                              <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
                                 {adminBadge.text}
                               </span>
                             )}
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                            {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                            {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
-                            {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+                            {d.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                            {d.value && <span className="text-xs font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
+                            {totalDays !== null && <span className="text-xs text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
                           </div>
                           </button>
                           <button onClick={e => { e.stopPropagation(); onUnlinkItem?.({ targetId: t._id, type: "deal", itemId: d._id, itemName: d.dealName || d.dealTitle }); }} className="p-1 mb-auto mt-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
@@ -1100,19 +1100,19 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                         {isOpen && (
                           <div className="border-t border-emerald-100">
                             <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
-                              {d.phoneNumber && <span className="text-[11px] text-gray-600 flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
-                              {d.email && <span className="text-[11px] text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
-                              {wonDate && <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)}</span>}
+                              {d.phoneNumber && <span className="text-xs text-gray-600 flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
+                              {d.email && <span className="text-xs text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
+                              {wonDate && <span className="text-xs text-emerald-700 flex items-center gap-1 font-medium"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)}</span>}
                             </div>
 
                             <div className="border-t border-emerald-100 px-3 py-2.5 bg-white/60 space-y-1.5">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
                               {createdDate && (
                                 <div className="flex items-start gap-2">
                                   <div className="w-2 h-2 rounded-full bg-gray-400 mt-0.5 shrink-0" />
                                   <div>
-                                    <span className="text-[11px] font-semibold text-gray-600">Lead Created</span>
-                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+                                    <span className="text-xs font-semibold text-gray-600">Lead Created</span>
+                                    <p className="text-xs text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -1123,9 +1123,9 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                                     <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
                                   </div>
                                   <div>
-                                    <span className="text-[11px] font-semibold text-indigo-700">Lead → Deal Converted</span>
-                                    <span className="text-[10px] text-indigo-400 ml-1">(+{Math.max(0, Math.round((convertedDate - createdDate) / 86400000))}d)</span>
-                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
+                                    <span className="text-xs font-semibold text-indigo-700">Lead → Deal Converted</span>
+                                    <span className="text-xs text-indigo-400 ml-1">(+{Math.max(0, Math.round((convertedDate - createdDate) / 86400000))}d)</span>
+                                    <p className="text-xs text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -1136,9 +1136,9 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                                     <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
                                   </div>
                                   <div>
-                                    <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-                                    <span className="text-[10px] text-gray-400 ml-1">(deal start)</span>
-                                    <p className="text-[10px] text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
+                                    <span className="text-xs font-semibold text-gray-700">Qualification</span>
+                                    <span className="text-xs text-gray-400 ml-1">(deal start)</span>
+                                    <p className="text-xs text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -1152,9 +1152,9 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                                       <div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
                                     </div>
                                     <div>
-                                      <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-                                      {diff !== null && <span className="text-[10px] text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
-                                      <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+                                      <span className="text-xs font-semibold text-gray-700">{h.stage}</span>
+                                      {diff !== null && <span className="text-xs text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+                                      <p className="text-xs text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
                                     </div>
                                   </div>
                                 );
@@ -1167,8 +1167,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                                   </div>
                                   <div>
-                                    <span className="text-[11px] font-semibold text-emerald-700">Closed Won</span>
-                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(wonDate)} {fmtTime(wonDate)}</p>
+                                    <span className="text-xs font-semibold text-emerald-700">Closed Won</span>
+                                    <p className="text-xs text-gray-700 font-semibold">{fmt(wonDate)} {fmtTime(wonDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -1177,7 +1177,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                             {totalDays !== null && (
                               <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
                                 <Clock size={11} className="text-emerald-600 shrink-0" />
-                                <p className="text-[11px] font-bold text-emerald-700">
+                                <p className="text-xs font-bold text-emerald-700">
                                   {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
                                 </p>
                               </div>
@@ -1210,33 +1210,33 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                         <div key={d._id} className="bg-red-50 border border-red-200 rounded-2xl overflow-hidden">
                           <button type="button" onClick={() => toggleExpand(`lost-${i}`)} className="w-full px-3 pt-3 pb-2.5 text-left">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                              <span className="text-xs bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <XCircle size={13} className="text-red-500 shrink-0" />
                               {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
                             </div>
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                              {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                              {d.value && <span className="text-[10px] font-bold text-red-700">{d.currency || "INR"} {d.value}</span>}
-                              {totalDays !== null && <span className="text-[10px] text-red-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d in pipeline`}</span>}
-                              {d.lossReason && <span className="text-[10px] text-red-600 font-medium">Reason: {d.lossReason}</span>}
+                              {d.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                              {d.value && <span className="text-xs font-bold text-red-700">{d.currency || "INR"} {d.value}</span>}
+                              {totalDays !== null && <span className="text-xs text-red-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d in pipeline`}</span>}
+                              {d.lossReason && <span className="text-xs text-red-600 font-medium">Reason: {d.lossReason}</span>}
                             </div>
                           </button>
                           {isOpen && (
                             <div className="border-t border-red-100">
                               <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
-                                {d.phoneNumber && <span className="text-[11px] text-gray-600 flex items-center gap-1"><Phone size={9} className="text-red-400" />{d.phoneNumber}</span>}
-                                {d.email && <span className="text-[11px] text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-red-400" />{d.email}</span>}
+                                {d.phoneNumber && <span className="text-xs text-gray-600 flex items-center gap-1"><Phone size={9} className="text-red-400" />{d.phoneNumber}</span>}
+                                {d.email && <span className="text-xs text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-red-400" />{d.email}</span>}
                               </div>
                               <div className="border-t border-red-100 px-3 py-2.5 bg-white/60 space-y-1.5">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
                                 {createdDate && (
                                   <div className="flex items-start gap-2">
                                     <div className="w-2 h-2 rounded-full bg-blue-400 mt-0.5 shrink-0" />
                                     <div>
-                                      <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-                                      <span className="text-[10px] text-gray-400 ml-1">(created)</span>
-                                      <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+                                      <span className="text-xs font-semibold text-gray-700">Qualification</span>
+                                      <span className="text-xs text-gray-400 ml-1">(created)</span>
+                                      <p className="text-xs text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
                                     </div>
                                   </div>
                                 )}
@@ -1250,9 +1250,9 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                                         <div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
                                       </div>
                                       <div>
-                                        <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-                                        {diff !== null && <span className="text-[10px] text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
-                                        <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+                                        <span className="text-xs font-semibold text-gray-700">{h.stage}</span>
+                                        {diff !== null && <span className="text-xs text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+                                        <p className="text-xs text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
                                       </div>
                                     </div>
                                   );
@@ -1261,15 +1261,15 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                               {totalDays !== null && (
                                 <div className="px-3 py-2 bg-red-100/70 flex items-center gap-1.5">
                                   <Clock size={11} className="text-red-600 shrink-0" />
-                                  <p className="text-[11px] font-bold text-red-700">
+                                  <p className="text-xs font-bold text-red-700">
                                     {totalDays === 0 ? "Lost same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} in pipeline before lost`}
                                   </p>
                                 </div>
                               )}
                               {d.lossNotes && (
                                 <div className="px-3 py-2 bg-red-50/80 border-t border-red-100">
-                                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-0.5">Loss Notes</p>
-                                  <p className="text-[11px] text-gray-600">{d.lossNotes}</p>
+                                  <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-0.5">Loss Notes</p>
+                                  <p className="text-xs text-gray-600">{d.lossNotes}</p>
                                 </div>
                               )}
                             </div>
@@ -1299,15 +1299,15 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                           <button type="button" onClick={() => toggleExpand(`active-${i}`)} className="flex-1 min-w-0 text-left">
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
                               {isOpen ? <ChevronUp size={12} className="text-gray-500 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
                             </div>
                             {adminBadge && (
-                              <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1" title={adminBadge.title}>{adminBadge.text}</span>
+                              <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1" title={adminBadge.title}>{adminBadge.text}</span>
                             )}
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                              {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                              {d.value && <span className="text-[10px] font-bold text-gray-700">{d.currency || "INR"} {d.value}</span>}
+                              {d.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                              {d.value && <span className="text-xs font-bold text-gray-700">{d.currency || "INR"} {d.value}</span>}
                             </div>
                           </button>
                           <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "deal", itemId: d._id, itemName: d.dealName || d.dealTitle })} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
@@ -1315,26 +1315,26 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-gray-100 pt-2">
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                              {d.phoneNumber && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</span>}
-                              {d.email && <span className="text-[11px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={9} className="text-gray-400" />{d.email}</span>}
+                              {d.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</span>}
+                              {d.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={9} className="text-gray-400" />{d.email}</span>}
                             </div>
                             {/* Stage history mini trail */}
                             {(d.stageHistory?.length > 0) && (
                               <div className="pt-1.5 border-t border-gray-100">
-                                <p className="text-[10px] text-gray-400 font-semibold mb-1">Stage trail:</p>
+                                <p className="text-xs text-gray-400 font-semibold mb-1">Stage trail:</p>
                                 <div className="space-y-0.5">
                                   {[...d.stageHistory].sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                                     <div key={hi} className="flex items-center gap-1.5">
                                       <div className={`w-1.5 h-1.5 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
-                                      <span className="text-[10px] text-gray-600 font-medium">{h.stage}</span>
-                                      <span className="text-[10px] text-gray-400">— {fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                                      <span className="text-xs text-gray-600 font-medium">{h.stage}</span>
+                                      <span className="text-xs text-gray-400">— {fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
                                     </div>
                                   ))}
                                 </div>
                               </div>
                             )}
                             {daysInPipeline !== null && (
-                              <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                              <p className="text-xs text-gray-400 flex items-center gap-1">
                                 <Clock size={9} className="text-gray-300" />
                                 {daysInPipeline === 0 ? "Created today" : `${daysInPipeline} day${daysInPipeline !== 1 ? "s" : ""} in pipeline`}
                                 {d.createdAt && <span className="ml-1">· since {fmt(d.createdAt)}</span>}
@@ -1355,7 +1355,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5"><Users size={13} /> Linked Leads ({allLinkedLeadsCount})</p>
                   {selfConvertedCount > 0 && (
-                    <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
                       <Check size={9} className="text-emerald-500" /> {selfConvertedCount} Converted to Deal
                     </span>
                   )}
@@ -1371,33 +1371,33 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                           <button type="button" onClick={() => toggleExpand(`lead-${i}`)} className="flex-1 min-w-0 text-left">
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-semibold text-gray-800 truncate flex-1">{l.leadName}</p>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
                               {isOpen ? <ChevronUp size={12} className="text-gray-500 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
                             </div>
-                            {l.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mt-1"><Building2 size={9} />{l.companyName}</p>}
+                            {l.companyName && <p className="text-xs text-gray-400 flex items-center gap-1 truncate mt-1"><Building2 size={9} />{l.companyName}</p>}
                           </button>
                           <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "lead", itemId: l._id, itemName: l.leadName })} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
                         </div>
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 space-y-1 border-t border-gray-100 pt-2">
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                              {l.phoneNumber && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</span>}
-                              {l.email && <span className="text-[11px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={9} className="text-gray-400" />{l.email}</span>}
+                              {l.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</span>}
+                              {l.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={9} className="text-gray-400" />{l.email}</span>}
                             </div>
                             {(history.length > 0 || l.createdAt) && (
                               <div className="pt-1.5 border-t border-gray-100 space-y-1">
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Status Journey</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Status Journey</p>
                                 <div className="flex items-center gap-0.5">
                                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                                  <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                                  <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(l.createdAt)}</span>
+                                  <span className="text-xs text-gray-600 font-medium ml-1">Cold</span>
+                                  <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(l.createdAt)}</span>
                                 </div>
                                 {history.map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-0.5 pl-1">
                                     <div className="w-px h-2 bg-gray-200 mr-0.5" />
                                     <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                                    <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                                    <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                                    <span className="text-xs text-gray-600 font-medium ml-1">{h.status}</span>
+                                    <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -1418,42 +1418,42 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName}</p>
                               {!d.convertedByName && (
-                                <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded shrink-0">Converted → Deal</span>
+                                <span className="text-xs bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded shrink-0">Converted → Deal</span>
                               )}
                               {isOpen ? <ChevronUp size={12} className="text-emerald-600 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
                             </div>
                             {d.convertedByName && (
-                              <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
+                              <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
                                 {d.salesPersonConverted ? `Converted Lead to Deal by ${d.convertedByName}` : `Converted Lead to Deal by Admin ${d.convertedByName}`}
                               </span>
                             )}
-                            {d.value && <p className="text-[11px] text-emerald-700 font-bold mt-1">{d.currency} {d.value}</p>}
+                            {d.value && <p className="text-xs text-emerald-700 font-bold mt-1">{d.currency} {d.value}</p>}
                           </button>
                           <button onClick={() => onUnlinkItem?.({ targetId: t._id, type: "lead", itemId: d.leadId, itemName: d.dealName })} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Remove from target"><Trash2 size={12} /></button>
                         </div>
                         {isOpen && (
                         <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
                           <div className="flex items-center gap-0.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
+                            <span className="text-xs text-gray-600 font-medium ml-1">Cold</span>
+                            <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
                           </div>
                           {history.map((h, hi) => (
                             <div key={hi} className="flex items-center gap-0.5 pl-1">
                               <div className="w-px h-2 bg-gray-200 mr-0.5" />
                               <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                              <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                              <span className="text-xs text-gray-600 font-medium ml-1">{h.status}</span>
+                              <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                             </div>
                           ))}
                           <div className="flex items-center gap-0.5 pl-1 flex-wrap">
                             <div className="w-px h-2 bg-gray-200 mr-0.5" />
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                            <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            <span className="text-xs text-emerald-700 font-bold ml-1">Converted to Deal</span>
+                            <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                             {!d.salesPersonConverted && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
+                              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
                                 Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
                               </span>
                             )}
@@ -1461,16 +1461,16 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                           <div className="flex items-center gap-0.5 pl-1">
                             <div className="w-px h-2 bg-gray-200 mr-0.5" />
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[10px] text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            <span className="text-xs text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
+                            <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                           </div>
                           {/* Subsequent deal stage moves */}
                           {(d.stageHistory || []).sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
                             <div key={hi} className="flex items-center gap-0.5 pl-1">
                               <div className="w-px h-2 bg-gray-200 mr-0.5" />
                               <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STAGE_DOT[h.stage] || "bg-gray-400"}`} />
-                              <span className={`text-[10px] font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700" : h.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{h.stage}</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                              <span className={`text-xs font-bold ml-1 ${h.stage === "Closed Won" ? "text-emerald-700" : h.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{h.stage}</span>
+                              <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
                             </div>
                           ))}
                           {/* Fallback: show current stage when not yet in stageHistory */}
@@ -1478,8 +1478,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                             <div className="flex items-center gap-0.5 pl-1">
                               <div className="w-px h-2 bg-gray-200 mr-0.5" />
                               <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.stage === "Closed Won" ? "bg-emerald-500" : d.stage === "Closed Lost" ? "bg-red-400" : STAGE_DOT[d.stage] || "bg-gray-400"}`} />
-                              <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
-                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-1">● Live</span>}
+                              <span className={`text-xs font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
+                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-xs text-orange-500 font-bold ml-1">● Live</span>}
                             </div>
                           )}
                         </div>
@@ -1507,8 +1507,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                       <Phone size={14} className="text-orange-500" />
                     </div>
                     <div className="text-left">
-                      <p className="text-[11px] font-bold text-gray-800">Reported Calls</p>
-                      <p className="text-[10px] text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
+                      <p className="text-xs font-bold text-gray-800">Reported Calls</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
                     </div>
                   </div>
                   <div className="text-xs font-bold text-orange-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
@@ -1528,8 +1528,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                       <Activity size={14} className="text-purple-500" />
                     </div>
                     <div className="text-left">
-                      <p className="text-[11px] font-bold text-gray-800">Reported Meetings</p>
-                      <p className="text-[10px] text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
+                      <p className="text-xs font-bold text-gray-800">Reported Meetings</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
                     </div>
                   </div>
                   <div className="text-xs font-bold text-purple-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
@@ -1546,12 +1546,12 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {[...t.notes].reverse().map((n, i) => (
                     <div key={i} className="bg-blue-50 border border-blue-100 rounded-xl p-2.5">
-                      <p className="text-[11px] text-gray-700 leading-relaxed">{n.text}</p>
+                      <p className="text-xs text-gray-700 leading-relaxed">{n.text}</p>
                       <div className="flex items-center justify-between mt-1">
-                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                        <p className="text-xs text-gray-400 flex items-center gap-1">
                           <Clock size={8} /> {fmt(n.addedAt)} {fmtTime(n.addedAt)}
                         </p>
-                        {n.addedBy && <p className="text-[10px] text-blue-500 font-medium">{n.addedBy.firstName} {n.addedBy.lastName}</p>}
+                        {n.addedBy && <p className="text-xs text-blue-500 font-medium">{n.addedBy.firstName} {n.addedBy.lastName}</p>}
                       </div>
                     </div>
                   ))}
@@ -1561,7 +1561,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
           </div>
         )}
 
-        {t.createdBy && <p className="text-[10px] text-gray-300 mt-3">Set by {t.createdBy.firstName} {t.createdBy.lastName}</p>}
+        {t.createdBy && <p className="text-xs text-gray-300 mt-3">Set by {t.createdBy.firstName} {t.createdBy.lastName}</p>}
       </div>
     </div>
   );
@@ -1651,7 +1651,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-slate-900 flex items-center gap-2">
             <Target size={20} className="text-[#008ecc]" /> Set Sales Target
           </h2>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={18} className="text-gray-500" /></button>
@@ -1698,7 +1698,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
 
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">Target Numbers</p>
-              <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
+              <p className="text-xs text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { key: "targetLeads",    label: "Leads",        icon: <Users size={12} className="text-blue-500" />,      auto: true },
@@ -1707,7 +1707,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
                   { key: "targetMeetings", label: "Meetings",     icon: <Activity size={12} className="text-purple-500" />,  auto: false },
                 ].map(({ key, label, icon, auto }) => (
                   <div key={key}>
-                    <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-[9px] text-blue-400 font-semibold ml-1">from ticks</span>}</label>
+                    <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-xs text-blue-400 font-semibold ml-1">from ticks</span>}</label>
                     <input type="number" min="0" placeholder="0"
                       disabled={auto}
                       className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc] ${auto ? "bg-blue-50 border-blue-200 text-blue-700 cursor-not-allowed" : "border-gray-200"}`}
@@ -1732,9 +1732,9 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
             {/* Linked summary chips */}
             {(selectedLeads.size > 0 || selectedDeals.size > 0) && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-1">
-                <p className="text-[11px] font-bold text-blue-700">Linked to this target:</p>
-                {selectedLeads.size > 0 && <p className="text-[11px] text-blue-600">✓ {selectedLeads.size} lead{selectedLeads.size > 1 ? "s" : ""} selected</p>}
-                {selectedDeals.size > 0 && <p className="text-[11px] text-blue-600">✓ {selectedDeals.size} deal{selectedDeals.size > 1 ? "s" : ""} selected</p>}
+                <p className="text-xs font-bold text-blue-700">Linked to this target:</p>
+                {selectedLeads.size > 0 && <p className="text-xs text-blue-600">✓ {selectedLeads.size} lead{selectedLeads.size > 1 ? "s" : ""} selected</p>}
+                {selectedDeals.size > 0 && <p className="text-xs text-blue-600">✓ {selectedDeals.size} deal{selectedDeals.size > 1 ? "s" : ""} selected</p>}
               </div>
             )}
 
@@ -1870,7 +1870,7 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-slate-900 flex items-center gap-2">
             <Pencil size={18} className="text-[#008ecc]" /> Edit Target
           </h2>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={18} className="text-gray-500" /></button>
@@ -1919,7 +1919,7 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
             {/* Target Numbers */}
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">Target Numbers</p>
-              <p className="text-[11px] text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
+              <p className="text-xs text-blue-500 mb-2">Leads &amp; Deals counts reflect what you tick in the preview panel.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { key: "targetLeads",    label: "Leads",        icon: <Users size={12} className="text-blue-500" />,      auto: true },
@@ -1928,7 +1928,7 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
                   { key: "targetMeetings", label: "Meetings",     icon: <Activity size={12} className="text-purple-500" />,  auto: false },
                 ].map(({ key, label, icon, auto }) => (
                   <div key={key}>
-                    <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-[9px] text-blue-400 font-semibold ml-1">from ticks</span>}</label>
+                    <label className="flex items-center gap-1 text-xs font-medium text-gray-600 mb-1">{icon} {label}{auto && <span className="text-xs text-blue-400 font-semibold ml-1">from ticks</span>}</label>
                     <input type="number" min="0" placeholder="0"
                       disabled={auto}
                       className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc] ${auto ? "bg-blue-50 border-blue-200 text-blue-700 cursor-not-allowed" : "border-gray-200"}`}
@@ -1953,9 +1953,9 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
             {/* Linked summary chips */}
             {(selectedLeads.size > 0 || selectedDeals.size > 0) && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-1">
-                <p className="text-[11px] font-bold text-blue-700">Linked to this target:</p>
-                {selectedLeads.size > 0 && <p className="text-[11px] text-blue-600">✓ {selectedLeads.size} lead{selectedLeads.size > 1 ? "s" : ""} selected</p>}
-                {selectedDeals.size > 0 && <p className="text-[11px] text-blue-600">✓ {selectedDeals.size} deal{selectedDeals.size > 1 ? "s" : ""} selected</p>}
+                <p className="text-xs font-bold text-blue-700">Linked to this target:</p>
+                {selectedLeads.size > 0 && <p className="text-xs text-blue-600">✓ {selectedLeads.size} lead{selectedLeads.size > 1 ? "s" : ""} selected</p>}
+                {selectedDeals.size > 0 && <p className="text-xs text-blue-600">✓ {selectedDeals.size} deal{selectedDeals.size > 1 ? "s" : ""} selected</p>}
               </div>
             )}
 
@@ -2325,8 +2325,8 @@ export default function TargetManagement() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Target Management</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Set and track sales targets — weekly & monthly</p>
+          <h1 className="text-gray-900">Target Management</h1>
+          <p className="text-base text-slate-600 mt-1">Set and track sales targets — weekly & monthly</p>
         </div>
         <button onClick={() => setModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[#008ecc] text-white rounded-lg hover:bg-[#0077aa] text-sm font-semibold">
@@ -2336,7 +2336,7 @@ export default function TargetManagement() {
 
       {dashStats && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
+          <h2 className="text-slate-900 mb-3">Monthly Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={dashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={dashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
@@ -2361,7 +2361,7 @@ export default function TargetManagement() {
           className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "notifications" ? "bg-amber-500 text-white border-amber-500 shadow-sm" : "bg-white text-amber-600 border-amber-300 hover:bg-amber-50"}`}>
           <Bell size={13} /> Notifications & Reminders
           {notifications.filter(n => !n.read && !n.isRead).length > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+            <span className="ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
               {notifications.filter(n => !n.read && !n.isRead).length}
             </span>
           )}
@@ -2372,7 +2372,7 @@ export default function TargetManagement() {
           className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${mainView === "reasonNotes" ? "bg-rose-500 text-white border-rose-500 shadow-sm" : "bg-white text-rose-600 border-rose-300 hover:bg-rose-50"}`}>
           <Flag size={13} /> Reason Notes
           {reasonNotes.filter(n => n.status === "pending").length > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+            <span className="ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
               {reasonNotes.filter(n => n.status === "pending").length}
             </span>
           )}
@@ -2415,7 +2415,7 @@ export default function TargetManagement() {
       {mainView === "notifications" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2"><Bell size={16} className="text-amber-500" /> Notifications & Reminders</h2>
+            <h2 className="text-slate-900 flex items-center gap-2"><Bell size={16} className="text-amber-500" /> Notifications & Reminders</h2>
             <div className="flex items-center gap-3">
               {notifications.filter(n => !n.read && !n.isRead).length > 0 && (
                 <button onClick={handleMarkAllRead} className="text-xs text-[#008ecc] hover:underline font-medium">Mark all as read</button>
@@ -2440,8 +2440,8 @@ export default function TargetManagement() {
                   {icon}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-800">{n.title}</p>
-                    <p className="text-[12px] text-gray-700 font-medium mt-0.5 leading-relaxed whitespace-pre-line">{n.message}</p>
-                    <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
+                    <p className="text-xs text-gray-700 font-medium mt-0.5 leading-relaxed whitespace-pre-line">{n.message}</p>
+                    <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
                   </div>
                   <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
                     {isUnread && (
@@ -2450,7 +2450,7 @@ export default function TargetManagement() {
                           e.stopPropagation();
                           handleMarkNotifRead(n);
                         }}
-                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
                         title="Mark as read"
                       >
                         <CheckCheck size={11} /> Mark as read
@@ -2478,7 +2478,7 @@ export default function TargetManagement() {
           <div className="space-y-3">
             {/* Header row */}
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h2 className="text-slate-900 flex items-center gap-2">
                 <Flag size={16} className="text-rose-500" /> Reason Notes from Sales Team
                 <span className="text-xs font-normal text-gray-400 ml-1">({reasonNotes.length} total)</span>
               </h2>
@@ -2535,11 +2535,11 @@ export default function TargetManagement() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${n.itemType === "lead" ? "bg-blue-100 text-blue-700" : "bg-indigo-100 text-indigo-700"}`}>{n.itemType}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${n.itemType === "lead" ? "bg-blue-100 text-blue-700" : "bg-indigo-100 text-indigo-700"}`}>{n.itemType}</span>
                             <p className="text-sm font-bold text-gray-900">{n.itemName}</p>
-                            {isPending && <span className="text-[10px] bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 rounded-full">Pending</span>}
-                            {!isPending && !isReactivated && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Resolved</span>}
-                            {isReactivated && <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Kept with same person</span>}
+                            {isPending && <span className="text-xs bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 rounded-full">Pending</span>}
+                            {!isPending && !isReactivated && <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Resolved</span>}
+                            {isReactivated && <span className="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Kept with same person</span>}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -2559,29 +2559,29 @@ export default function TargetManagement() {
                       {/* Details grid */}
                       <div className="mx-4 mb-3 bg-white rounded-xl border border-gray-100 px-3 py-2.5 space-y-2">
                         {/* Note text */}
-                        <p className="text-[12px] text-gray-800 font-medium leading-relaxed border-l-2 border-rose-300 pl-2.5">"{n.note}"</p>
+                        <p className="text-xs text-gray-800 font-medium leading-relaxed border-l-2 border-rose-300 pl-2.5">"{n.note}"</p>
 
                         {/* Snapshot detail chips */}
                         {(n.companyName || n.phoneNumber || n.email || n.value || n.stageOrStatus) && (
                           <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 border-t border-gray-100">
-                            {n.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Building2 size={9} />{n.companyName}</span>}
-                            {n.value && <span className="text-[10px] font-bold text-gray-700">{n.currency || ""} {n.value}</span>}
-                            {n.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={9} />{n.phoneNumber}</span>}
-                            {n.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[200px]"><Mail size={9} />{n.email}</span>}
-                            {n.stageOrStatus && <span className="text-[10px] bg-gray-100 text-gray-600 font-semibold px-1.5 py-0.5 rounded">{n.stageOrStatus}</span>}
+                            {n.companyName && <span className="text-xs text-gray-500 flex items-center gap-0.5"><Building2 size={9} />{n.companyName}</span>}
+                            {n.value && <span className="text-xs font-bold text-gray-700">{n.currency || ""} {n.value}</span>}
+                            {n.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-0.5"><Phone size={9} />{n.phoneNumber}</span>}
+                            {n.email && <span className="text-xs text-gray-500 flex items-center gap-0.5 truncate max-w-[200px]"><Mail size={9} />{n.email}</span>}
+                            {n.stageOrStatus && <span className="text-xs bg-gray-100 text-gray-600 font-semibold px-1.5 py-0.5 rounded">{n.stageOrStatus}</span>}
                           </div>
                         )}
 
                         {/* Reporter + time */}
                         <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-gray-100">
-                          <p className="text-[11px] text-gray-600 font-medium flex items-center gap-1">
+                          <p className="text-xs text-gray-600 font-medium flex items-center gap-1">
                             <Users size={10} className="text-gray-400" />
                             {n.salesPerson?.firstName} {n.salesPerson?.lastName}
                           </p>
-                          <p className="text-[11px] text-gray-500 flex items-center gap-1"><Clock size={9} />{fmt(n.addedAt)} {fmtTime(n.addedAt)}</p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1"><Clock size={9} />{fmt(n.addedAt)} {fmtTime(n.addedAt)}</p>
                         </div>
                         {(n.status === "resolved" || isReactivated) && n.reassignedTo && (
-                          <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                          <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                             <ArrowRightLeft size={10} />
                             {isReactivated ? "Kept with" : "Reassigned to"} {n.reassignedTo?.firstName} {n.reassignedTo?.lastName}
                             {n.reassignNote && <span className="text-gray-500 font-normal ml-1">· "{n.reassignNote}"</span>}
@@ -2644,7 +2644,7 @@ export default function TargetManagement() {
         return (
           <div className="space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h2 className="text-slate-900 flex items-center gap-2">
                 <Trophy size={16} className="text-indigo-500" /> Admin Completed Leads &amp; Deals
               </h2>
               <button onClick={fetchAdminActivity} className="text-xs text-[#008ecc] hover:underline font-medium">Refresh</button>
@@ -2654,11 +2654,11 @@ export default function TargetManagement() {
                 target's own progress bar/percentages. */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center">
-                <p className="text-[11px] text-purple-600 font-semibold">Leads Converted by Admin</p>
+                <p className="text-xs text-purple-600 font-semibold">Leads Converted by Admin</p>
                 <p className="text-xl font-bold text-purple-700">{leads.length}</p>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                <p className="text-[11px] text-emerald-600 font-semibold">Deal Closed by Admin</p>
+                <p className="text-xs text-emerald-600 font-semibold">Deal Closed by Admin</p>
                 <p className="text-xl font-bold text-emerald-700">{deals.length}</p>
               </div>
             </div>
@@ -2675,15 +2675,15 @@ export default function TargetManagement() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
                   {["Type", "Name", "Company", "Salesperson", "Date & Time", "Actions"].map((h, i) => (
-                    <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
+                    <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
                   ))}
                 </div>
                 {rows.map((r) => (
                   <div key={r.key} className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] px-4 py-3 border-b border-gray-100 last:border-0 items-center hover:bg-gray-50/70">
-                    <div><span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${r.typeClass}`}>{r.typeLabel}</span></div>
+                    <div><span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${r.typeClass}`}>{r.typeLabel}</span></div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-800 truncate">{r.name}</p>
-                      {r.value && <p className="text-[11px] font-bold text-emerald-600">{r.value}</p>}
+                      {r.value && <p className="text-xs font-bold text-emerald-600">{r.value}</p>}
                     </div>
                     <div className="text-xs text-gray-600 truncate">{r.company || "—"}</div>
                     <div className="text-xs text-gray-600 truncate">{r.salesperson}</div>
@@ -2779,10 +2779,10 @@ export default function TargetManagement() {
                 <Trash2 size={18} className="text-red-500" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-base">
+                <h3 className="text-slate-700">
                   {noteDeleteConfirm.isBulk ? `Delete ${noteDeleteConfirm.count} Note(s)?` : "Delete Reason Note?"}
                 </h3>
-                <p className="text-sm text-gray-500 mt-0.5">
+                <p className="text-base text-slate-600 mt-1">
                   {noteDeleteConfirm.isBulk
                     ? `${noteDeleteConfirm.count} selected reason note(s) will be permanently removed.`
                     : "This reason note will be permanently removed."}
@@ -2812,8 +2812,8 @@ export default function TargetManagement() {
                 <Trash2 size={18} className="text-red-500" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-base">Delete Target?</h3>
-                <p className="text-sm text-gray-500 mt-0.5">This will permanently remove <span className="font-semibold text-gray-700">{deleteConfirm.name}</span> and all its progress data.</p>
+                <h3 className="text-slate-700">Delete Target?</h3>
+                <p className="text-base text-slate-600 mt-1">This will permanently remove <span className="font-semibold text-gray-700">{deleteConfirm.name}</span> and all its progress data.</p>
               </div>
             </div>
             <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2">
@@ -2836,8 +2836,8 @@ export default function TargetManagement() {
                 <Trash2 size={18} className="text-red-500" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-base">Remove from Admin Completed?</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Remove <span className="font-semibold text-gray-700">"{dismissConfirm.itemName}"</span> from this list? It won't be deleted — just hidden from Admin Completed.</p>
+                <h3 className="text-slate-700">Remove from Admin Completed?</h3>
+                <p className="text-base text-slate-600 mt-1">Remove <span className="font-semibold text-gray-700">"{dismissConfirm.itemName}"</span> from this list? It won't be deleted — just hidden from Admin Completed.</p>
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-1">
@@ -2857,8 +2857,8 @@ export default function TargetManagement() {
                 <Trash2 size={18} className="text-orange-500" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-base">Remove from Target?</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Remove <span className="font-semibold text-gray-700">"{unlinkConfirm.itemName}"</span> from this target?</p>
+                <h3 className="text-slate-700">Remove from Target?</h3>
+                <p className="text-base text-slate-600 mt-1">Remove <span className="font-semibold text-gray-700">"{unlinkConfirm.itemName}"</span> from this target?</p>
               </div>
             </div>
             <div className="bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">
@@ -2902,8 +2902,8 @@ function ApproveHoldModal({ open, target, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Approve Hold Request</h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <h3 className="text-slate-700 mb-4">Approve Hold Request</h3>
+        <p className="text-base text-slate-600 mb-4">
           Are you sure you want to approve the hold request for "{target.period} Target"?
           Please provide a new end date to extend the target timeline.
         </p>
@@ -2939,21 +2939,21 @@ function WorkflowExplanationModal({ open, onClose }) {
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
           <X size={20} />
         </button>
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="text-slate-700 mb-4 flex items-center gap-2">
           <Info className="text-indigo-500" />
           How Tasks & Targets Work
         </h3>
         
         <div className="space-y-6 text-sm text-gray-700">
           <section>
-            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <h3 className="text-slate-700 mb-2 border-b pb-1">🏢 Company Viewpoint</h3>
             <p className="mb-2">
               Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
             </p>
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👤 Salesperson Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
               <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
@@ -2962,7 +2962,7 @@ function WorkflowExplanationModal({ open, onClose }) {
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👑 Admin Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
               <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>

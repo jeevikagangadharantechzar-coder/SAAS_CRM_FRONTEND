@@ -964,10 +964,10 @@ export default function LostDealAnalytics() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+            <h1 className="text-gray-900">
               Lost Deal Analysis & Intelligence
             </h1>
-            <p className="text-gray-500 mt-1">
+            <p className="text-base text-slate-600 mt-1">
               Analyze patterns and recover lost opportunities
             </p>
           </div>
@@ -1092,7 +1092,7 @@ export default function LostDealAnalytics() {
               <AlertTriangle size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-red-800 mb-1">High-Value Alert</h4>
+              <h3 className="text-red-800 mb-1">High-Value Alert</h3>
               <p className="text-sm text-red-600 mb-2">
                 {highValueThreshold === null
                   ? "Threshold not set by Admin yet"
@@ -1146,7 +1146,7 @@ export default function LostDealAnalytics() {
               <Lightbulb size={18} />
             </div>
             <div>
-              <h4 className="font-semibold text-blue-800 mb-1">Top Pattern</h4>
+              <h3 className="text-blue-800 mb-1">Top Pattern</h3>
               <p className="text-sm text-blue-600 mb-2">
                 "{topReasons[0]?._id || "No data"}" -{" "}
                 {topReasons[0]?.percentage || 0}%
@@ -1170,7 +1170,7 @@ export default function LostDealAnalytics() {
               <Zap size={18} />
             </div>
             <div>
-              <h4 className="font-semibold text-green-800 mb-1">Recovery Opportunity</h4>
+              <h3 className="text-green-800 mb-1">Recovery Opportunity</h3>
               <p className="text-sm text-green-600 mb-2">
                 Focus on {getHighestLossStage?.stage || "early"} stage...
               </p>
@@ -1364,7 +1364,7 @@ export default function LostDealAnalytics() {
         {/* Deal-Wise View Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mt-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h3 className="text-slate-700 flex items-center gap-2">
               <Eye size={18} className="text-blue-500" />
               Deal-Wise View - Lost Opportunities
             </h3>
@@ -1373,7 +1373,7 @@ export default function LostDealAnalytics() {
               <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
                 <button
                   onClick={() => toggleSort("date")}
-                  className={`flex items-center gap-1 px-2 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-2 sm:px-3 py-1 text-xs sm:text-xs rounded-md transition-colors whitespace-nowrap ${
                     dealSortBy === "date"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-200"
@@ -1391,7 +1391,7 @@ export default function LostDealAnalytics() {
 
                 <button
                   onClick={() => toggleSort("value")}
-                  className={`flex items-center gap-1 px-2 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-2 sm:px-3 py-1 text-xs sm:text-xs rounded-md transition-colors whitespace-nowrap ${
                     dealSortBy === "value"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-200"
@@ -1580,7 +1580,7 @@ export default function LostDealAnalytics() {
           {/* Loss Reason Distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <h3 className="text-slate-700 flex items-center gap-2">
                 <PieChart size={18} className="text-purple-500" />
                 Loss Reasons
               </h3>
@@ -1651,7 +1651,7 @@ export default function LostDealAnalytics() {
           {/* Stage Analysis */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <h3 className="text-slate-700 flex items-center gap-2">
                 <Layers size={18} className="text-indigo-500" />
                 Stage Analysis - Where Deals Are Lost
               </h3>
@@ -1798,7 +1798,7 @@ export default function LostDealAnalytics() {
 
           {/* Monthly Trend */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+  <h3 className="text-slate-700 mb-4 flex items-center gap-2">
     <BarChart3 size={18} className="text-blue-500" />
     Monthly Trend
   </h3>
@@ -1909,7 +1909,7 @@ export default function LostDealAnalytics() {
         <div className="space-y-6">
           {/* Deals Lost at Invoice Sent */}
           <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-100">
-            <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <h3 className="text-slate-700 mb-3 flex items-center gap-2">
               <Zap size={16} className="text-emerald-500" />
               Deals Lost at Invoice Sent Stage
             </h3>
@@ -2064,7 +2064,7 @@ export default function LostDealAnalytics() {
 
           {/* Top Loss Contributors */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 min-h-[250px]">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <h3 className="text-slate-700 mb-4 flex items-center gap-2">
               <Users size={18} className="text-orange-500" />
               Top Contributors
             </h3>
@@ -2090,7 +2090,7 @@ export default function LostDealAnalytics() {
                       </div>
                       {index < 3 && (
                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-[10px] text-white font-bold">
+                          <span className="text-xs text-white font-bold">
                             {index + 1}
                           </span>
                         </div>
@@ -2126,7 +2126,7 @@ export default function LostDealAnalytics() {
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-5"
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h3 className="text-slate-700 flex items-center gap-2">
               <Award size={18} className="text-amber-500" />
               High-Value Lost Deals
               {highValueThreshold !== null && (
@@ -2299,7 +2299,7 @@ export default function LostDealAnalytics() {
 
         {/* Stage Intelligence Summary */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <h3 className="text-slate-700 mb-4 flex items-center gap-2">
             <Activity size={18} className="text-indigo-500" />
             Stage Intelligence Summary
           </h3>
@@ -2366,10 +2366,10 @@ export default function LostDealAnalytics() {
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">
+                <h2 className="text-slate-900">
                   {selectedReasonModal.reason}
                 </h2>
-                <p className="text-gray-500 mt-1">
+                <p className="text-base text-slate-600 mt-1">
                   {selectedReasonModal.count} deals lost | Total Value:{" "}
                   {formatCurrency(selectedReasonModal.totalValue)}
                 </p>
@@ -2384,7 +2384,7 @@ export default function LostDealAnalytics() {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <h3 className="text-slate-700 mb-4 flex items-center gap-2">
                   <BarChart size={18} />
                   Top 10 Deals by Value
                 </h3>
@@ -2420,7 +2420,7 @@ export default function LostDealAnalytics() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <h3 className="text-slate-700 mb-4 flex items-center gap-2">
                     <Building2 size={18} />
                     Industries Breakdown
                   </h3>
@@ -2447,7 +2447,7 @@ export default function LostDealAnalytics() {
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <h3 className="text-slate-700 mb-4 flex items-center gap-2">
                     <GitBranch size={18} />
                     Stage Breakdown
                   </h3>
@@ -2475,7 +2475,7 @@ export default function LostDealAnalytics() {
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <h3 className="text-slate-700 mb-4 flex items-center gap-2">
                   <Users size={18} />
                   Top Users Responsible
                 </h3>

@@ -109,8 +109,8 @@ export default function TargetPipelineView({ targets, baseUrl, headers, onRefres
       {inProcessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold mb-4">Start Target</h3>
-            <p className="text-sm text-gray-600 mb-2">What work are you going to do?</p>
+            <h3 className="mb-4">Start Target</h3>
+            <p className="text-base text-slate-600 mb-2">What work are you going to do?</p>
             <textarea
               className="w-full border border-gray-300 rounded p-2 mb-4"
               rows={3}
@@ -129,8 +129,8 @@ export default function TargetPipelineView({ targets, baseUrl, headers, onRefres
       {rejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-red-600 mb-4">Reject Target</h3>
-            <p className="text-sm text-gray-600 mb-2">Reason for rejection (Requires Admin Approval)</p>
+            <h3 className="text-red-600 mb-4">Reject Target</h3>
+            <p className="text-base text-slate-600 mb-2">Reason for rejection (Requires Admin Approval)</p>
             <textarea
               className="w-full border border-gray-300 rounded p-2 mb-4"
               rows={3}
@@ -149,8 +149,8 @@ export default function TargetPipelineView({ targets, baseUrl, headers, onRefres
       {inHoldModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-purple-600 mb-4">Put Target In Hold</h3>
-            <p className="text-sm text-gray-600 mb-2">Reason for hold (e.g., Medical Leave)</p>
+            <h3 className="text-purple-600 mb-4">Put Target In Hold</h3>
+            <p className="text-base text-slate-600 mb-2">Reason for hold (e.g., Medical Leave)</p>
             <textarea
               className="w-full border border-gray-300 rounded p-2 mb-4"
               rows={3}
@@ -178,7 +178,7 @@ function Column({ stage, targets, moveTarget, onEdit, onApproveRejection, onAppr
   return (
     <div ref={drop} className={`flex-shrink-0 w-80 rounded-xl border ${stage.bgColor} ${stage.borderColor} flex flex-col`}>
       <div className={`px-4 py-3 border-b ${stage.borderColor} flex justify-between items-center bg-white/50 rounded-t-xl`}>
-        <h3 className={`font-bold ${stage.color}`}>{stage.title}</h3>
+        <h3 className={`${stage.color}`}>{stage.title}</h3>
         <span className="bg-white px-2 py-0.5 rounded text-sm font-medium shadow-sm">{targets.length}</span>
       </div>
       <div className="p-3 flex-1 overflow-y-auto space-y-3">
@@ -205,7 +205,7 @@ function TargetCard({ target, onEdit, onApproveRejection, onApproveHold }) {
     <div ref={drag} className={`bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab ${isDragging ? "opacity-50" : "opacity-100"} hover:shadow-md transition-shadow`}>
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h4 className="font-semibold text-gray-800 line-clamp-2 capitalize">{target.period} Target</h4>
+          <h3 className="text-slate-700 line-clamp-2">{target.period} Target</h3>
           {target.salesPerson && (
             <p className="text-xs text-gray-500 mt-0.5">
               {target.salesPerson.firstName} {target.salesPerson.lastName}
@@ -222,8 +222,8 @@ function TargetCard({ target, onEdit, onApproveRejection, onApproveHold }) {
           </div>
           {onApproveRejection && (
             <div className="flex gap-2 mt-2">
-              <button onClick={() => onApproveRejection(target, "approve")} className="flex-1 bg-red-600 text-white text-[10px] py-1 rounded">Approve</button>
-              <button onClick={() => onApproveRejection(target, "deny")} className="flex-1 bg-gray-300 text-gray-800 text-[10px] py-1 rounded">Deny</button>
+              <button onClick={() => onApproveRejection(target, "approve")} className="flex-1 bg-red-600 text-white text-xs py-1 rounded">Approve</button>
+              <button onClick={() => onApproveRejection(target, "deny")} className="flex-1 bg-gray-300 text-gray-800 text-xs py-1 rounded">Deny</button>
             </div>
           )}
         </div>
@@ -236,8 +236,8 @@ function TargetCard({ target, onEdit, onApproveRejection, onApproveHold }) {
           </div>
           {onApproveHold && (
             <div className="flex gap-2 mt-2">
-              <button onClick={() => onApproveHold(target, "approve")} className="flex-1 bg-purple-600 text-white text-[10px] py-1 rounded">Approve</button>
-              <button onClick={() => onApproveHold(target, "deny")} className="flex-1 bg-gray-300 text-gray-800 text-[10px] py-1 rounded">Deny</button>
+              <button onClick={() => onApproveHold(target, "approve")} className="flex-1 bg-purple-600 text-white text-xs py-1 rounded">Approve</button>
+              <button onClick={() => onApproveHold(target, "deny")} className="flex-1 bg-gray-300 text-gray-800 text-xs py-1 rounded">Deny</button>
             </div>
           )}
         </div>

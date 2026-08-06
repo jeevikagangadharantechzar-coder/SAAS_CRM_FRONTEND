@@ -302,13 +302,13 @@ const WebsiteContactForm = () => {
       <div className="min-h-screen flex items-start justify-center py-10 px-4">
         <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border">
           <div className="px-6 py-5 border-b">
-            <h1 className="text-2xl font-bold text-gray-800">Contact Us</h1>
+            <h1 className="text-gray-900">Contact Us</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-10">
             {fieldGroups.map((group) => (
               <div key={group.title} className="space-y-6 p-6 border rounded-xl">
-                <h2 className={`text-lg font-semibold border-b pb-2 ${group.color}`}>
+                <h2 className={`border-b pb-2 ${group.color}`}>
                   {group.title}
                 </h2>
 
@@ -414,7 +414,7 @@ const WebsiteContactForm = () => {
 
             {/*  ATTACHMENTS SECTION - ADD HERE */}
             <div className="space-y-6 p-6 border rounded-xl">
-              <h2 className="text-lg font-semibold border-b pb-2 text-orange-600">
+              <h2 className="border-b pb-2 text-orange-600">
                 Attachments
               </h2>
 
@@ -457,7 +457,7 @@ const WebsiteContactForm = () => {
                           <p className="text-xs truncate w-full text-center">
                             {file.name}
                           </p>
-                          <p className="text-[10px] text-gray-500">
+                          <p className="text-xs text-gray-500">
                             {(file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>

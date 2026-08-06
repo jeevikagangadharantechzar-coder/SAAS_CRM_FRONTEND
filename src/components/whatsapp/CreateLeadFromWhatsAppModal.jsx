@@ -86,8 +86,8 @@ export default function CreateLeadFromWhatsAppModal({ isOpen, onClose, contact, 
               <UserPlus size={17} className="text-white" />
             </div>
             <div>
-              <h2 className="font-semibold text-gray-800">Convert to Lead</h2>
-              <p className="text-xs text-gray-400">Create a CRM lead from this WhatsApp contact</p>
+              <h2 className="text-slate-900">Convert to Lead</h2>
+              <p className="text-base text-slate-600">Create a CRM lead from this WhatsApp contact</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 transition">

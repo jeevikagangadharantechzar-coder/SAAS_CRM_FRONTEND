@@ -83,8 +83,8 @@ const SuperAdminLogin = () => {
                 e.target.src = "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png";
               }}
             />
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-800">SuperAdmin Portal</h2>
-            <p className="text-gray-600 mt-3 max-w-xs mx-auto">
+            <h2 className="text-slate-900">SuperAdmin Portal</h2>
+            <p className="text-base text-slate-600 mt-1 max-w-xs mx-auto">
               Secure administrative gateway to manage tenants, view system metrics, and customize platform settings.
             </p>
           </div>
@@ -103,8 +103,8 @@ const SuperAdminLogin = () => {
             />
           </div>
 
-          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center lg:text-left">Administration</h2>
-          <p className="text-gray-600 mb-8 text-center lg:text-left">
+          <h2 className="text-slate-900 mb-2 text-center lg:text-left">Administration</h2>
+          <p className="text-base text-slate-600 mb-8 text-center lg:text-left">
             Authorized access only. Enter your credentials.
           </p>
 

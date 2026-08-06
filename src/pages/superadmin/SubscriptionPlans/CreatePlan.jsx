@@ -57,8 +57,8 @@ const CreatePlan = () => {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Create Subscription Plan</h2>
-          <p className="text-slate-500 text-sm">Add a new SaaS pricing tier and access limits.</p>
+          <h2 className="text-slate-900">Create Subscription Plan</h2>
+          <p className="text-base text-slate-600">Add a new SaaS pricing tier and access limits.</p>
         </div>
       </div>
 

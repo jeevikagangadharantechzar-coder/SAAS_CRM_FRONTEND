@@ -359,8 +359,8 @@ const MassEmail = () => {
       {/* Page Header */}
       <div className="mb-6 flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Email Campaign</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-gray-900">Email Campaign</h1>
+          <p className="text-base text-slate-600 mt-1">
             Communicate with multiple lead and deal contacts via email
           </p>
         </div>
@@ -507,8 +507,8 @@ const MassEmail = () => {
         {filteredContacts.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No Contacts Found</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-slate-700 mb-2">No Contacts Found</h3>
+            <p className="text-base text-slate-600 mb-4">
               {searchQuery 
                 ? 'Try adjusting your search or filters' 
                 : 'No contacts available. Create leads or deals first.'}

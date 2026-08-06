@@ -339,8 +339,8 @@ const Login = () => {
                 e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png";
               }}
             />
-            <h2 className="text-2xl font-bold text-gray-800 mt-6">Welcome Back</h2>
-            <p className="text-gray-600 mt-2">Sign in to access your tenant CRM portal</p>
+            <h2 className="text-slate-900 mt-6">Welcome Back</h2>
+            <p className="text-base text-slate-600 mt-1">Sign in to access your tenant CRM portal</p>
           </div>
         </div>
 
@@ -358,8 +358,8 @@ const Login = () => {
             />
           </div>
 
-          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center lg:text-left">Sign In</h2>
-          <p className="text-gray-600 mb-8 text-center lg:text-left">
+          <h2 className="text-slate-900 mb-2 text-center lg:text-left">Sign In</h2>
+          <p className="text-base text-slate-600 mb-8 text-center lg:text-left">
             Enter your credentials to continue
           </p>
 
@@ -507,7 +507,7 @@ const Login = () => {
                 <path d="M12 16h.01" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="text-slate-700 mb-2">
               {expiredNotice.trialExpired ? "Your Free Trial Has Ended" : "Subscription Expired"}
             </h3>
             {expiredNotice.expiryDate && (

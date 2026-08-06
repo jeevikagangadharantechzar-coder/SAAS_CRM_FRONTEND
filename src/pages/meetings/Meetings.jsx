@@ -148,7 +148,7 @@ export function Meetings() {
       {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Meetings</h1>
+          <h1 className="text-gray-900">Meetings</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -228,7 +228,7 @@ export function Meetings() {
         <div className="space-y-6">
           {upcoming.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h2 className="text-slate-900 mb-3">
                 Upcoming
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -240,7 +240,7 @@ export function Meetings() {
           )}
           {past.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h2 className="text-slate-900 mb-3">
                 Past
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

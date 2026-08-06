@@ -23,7 +23,7 @@ const Timeline = ({ entries = [], viewerSender }) => {
         if (entry.type === "status_change") {
           return (
             <div key={idx} className="flex items-center justify-center">
-              <span className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-3 py-1">
+              <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-3 py-1">
                 {entry.senderName} changed status to <strong>{entry.status}</strong> ·{" "}
                 {formatDateTime(entry.createdAt)}
               </span>
@@ -41,14 +41,14 @@ const Timeline = ({ entries = [], viewerSender }) => {
               }`}
             >
               <div
-                className={`text-[11px] font-semibold mb-0.5 ${
+                className={`text-xs font-semibold mb-0.5 ${
                   isViewer ? "text-white/80" : "text-gray-500"
                 }`}
               >
                 {isViewer ? "You" : entry.senderName}
               </div>
               <p className="text-sm whitespace-pre-line">{entry.text}</p>
-              <div className={`text-[10px] mt-1 ${isViewer ? "text-white/70" : "text-gray-400"}`}>
+              <div className={`text-xs mt-1 ${isViewer ? "text-white/70" : "text-gray-400"}`}>
                 {formatDateTime(entry.createdAt)}
               </div>
             </div>

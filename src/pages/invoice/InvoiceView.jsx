@@ -100,7 +100,7 @@ const InvoiceView = () => {
               <span className="text-slate-500">View Invoice</span>
             </div>
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h1 className="text-gray-900">
                 Invoice #{invoice.invoicenumber || id}
               </h1>
               <span
@@ -138,17 +138,17 @@ const InvoiceView = () => {
             {activeTab === "details" && (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-slate-900">
                     Invoice Details
                   </h2>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-base text-slate-600 mt-1">
                     Full breakdown of this invoice
                   </p>
                 </div>
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Client Info */}
                   <div className="space-y-5">
-                    <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                    <h3 className="text-slate-700 mb-3">
                       Client Information
                     </h3>
                     <div className="space-y-4">
@@ -204,7 +204,7 @@ const InvoiceView = () => {
 
                   {/* Invoice Info */}
                   <div className="space-y-5">
-                    <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                    <h3 className="text-slate-700 mb-3">
                       Invoice Information
                     </h3>
                     <div className="space-y-4">
@@ -295,7 +295,7 @@ const InvoiceView = () => {
 
                 {invoice.customFields?.length > 0 && (
                   <div className="p-6 border-t border-slate-100">
-                    <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                    <h3 className="text-slate-700 mb-3">
                       Custom Fields
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -322,10 +322,10 @@ const InvoiceView = () => {
             {activeTab === "activity" && (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-slate-900">
                     Activity Timeline
                   </h2>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-base text-slate-600 mt-1">
                     Updates and changes for this invoice
                   </p>
                 </div>
@@ -336,10 +336,10 @@ const InvoiceView = () => {
                       <FileText size={16} className="text-blue-600" />
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-sm font-medium text-slate-900">
+                      <h3 className="text-slate-700">
                         Invoice created
                       </h3>
-                      <p className="text-sm text-slate-500 mt-1">
+                      <p className="text-base text-slate-600 mt-1">
                         {invoice.createdAt
                           ? new Date(invoice.createdAt).toLocaleString()
                           : "N/A"}
@@ -354,10 +354,10 @@ const InvoiceView = () => {
                         <Clock size={16} className="text-emerald-600" />
                       </div>
                       <div className="ml-4">
-                        <h3 className="text-sm font-medium text-slate-900">
+                        <h3 className="text-slate-700">
                           Invoice updated
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-base text-slate-600 mt-1">
                           {new Date(invoice.updatedAt).toLocaleString()}
                         </p>
                       </div>
@@ -371,10 +371,10 @@ const InvoiceView = () => {
                         <Mail size={16} className="text-purple-600" />
                       </div>
                       <div className="ml-4">
-                        <h3 className="text-sm font-medium text-slate-900">
+                        <h3 className="text-slate-700">
                           Invoice email sent
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-base text-slate-600 mt-1">
                           {new Date(invoice.emailSentAt).toLocaleString()}
                         </p>
                       </div>
@@ -388,7 +388,7 @@ const InvoiceView = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+              <h3 className="text-slate-700 mb-4">
                 Assigned To
               </h3>
               {invoice.assignTo ? (

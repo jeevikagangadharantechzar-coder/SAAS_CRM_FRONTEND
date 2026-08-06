@@ -243,10 +243,10 @@ const SendProposal = () => {
     <div className="p-6">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-semibold">
+        <h1 className="">
           {isEditing ? "Edit Proposal" : "Send Proposal"}
         </h1>
-        <p className="text-xl">|</p>
+        <p className="text-base text-slate-600">|</p>
         <Link to="/proposal">
           <p className="text-base text-blue-600 hover:underline">Back</p>
         </Link>

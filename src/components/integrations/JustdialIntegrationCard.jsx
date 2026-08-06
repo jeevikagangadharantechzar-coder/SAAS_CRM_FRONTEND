@@ -31,8 +31,8 @@ export default function JustdialIntegrationCard() {
           <PhoneCall size={24} className="text-orange-500" />
         </div>
         <div>
-          <h2 className="font-semibold text-gray-800 text-lg">Justdial Lead Integration</h2>
-          <p className="text-gray-500 text-sm">
+          <h2 className="text-slate-900">Justdial Lead Integration</h2>
+          <p className="text-base text-slate-600">
             Capture incoming enquiries from Justdial directly into your CRM.
           </p>
         </div>
@@ -63,7 +63,7 @@ export default function JustdialIntegrationCard() {
 
         {/* Instructions */}
         <div className="mt-6 border-t border-gray-100 pt-5">
-          <h3 className="font-semibold text-gray-700 mb-3 text-sm">How to set this up:</h3>
+          <h3 className="text-slate-700 mb-3">How to set this up:</h3>
           <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
             <li>Copy the Webhook URL above.</li>
             <li>Contact your Justdial Account Manager or login to your Justdial Vendor Portal.</li>

@@ -25,7 +25,7 @@ export const PlanDeleteModal = ({ isOpen, onClose, onConfirm, planName, isDeleti
         <div className="px-6 py-5 bg-red-600 text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <AlertTriangle size={22} className="animate-bounce" />
-            <h3 className="text-lg font-bold">Delete Subscription Plan</h3>
+            <h3 className="">Delete Subscription Plan</h3>
           </div>
           <button
             onClick={onClose}
@@ -39,8 +39,8 @@ export const PlanDeleteModal = ({ isOpen, onClose, onConfirm, planName, isDeleti
           <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3 text-red-800">
             <AlertTriangle size={24} className="flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-bold text-sm">Destructive Action Warning</h4>
-              <p className="text-xs mt-1 leading-relaxed">
+              <h3 className="">Destructive Action Warning</h3>
+              <p className="text-base text-slate-600 mt-1 leading-relaxed">
                 Deleting the subscription plan <strong>{planName}</strong> is permanent. New tenants will not be able to subscribe to this plan. Tenants currently on this plan might experience billing disruptions.
               </p>
             </div>

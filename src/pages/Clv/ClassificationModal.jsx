@@ -82,8 +82,8 @@ const ClassificationModal = ({ isOpen, onClose, title, data, type }) => {
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-slate-900">{title}</h2>
+            <p className="text-base text-slate-600 mt-1">
               Total {data.length} {type} {data.length === 1 ? 'client' : 'clients'}
             </p>
           </div>

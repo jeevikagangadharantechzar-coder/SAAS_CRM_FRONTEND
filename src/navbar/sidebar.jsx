@@ -287,7 +287,7 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true, 
             {label}
           </span>
           {badge > 0 && (
-            <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+            <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
               {badge > 99 ? "99+" : badge}
             </span>
           )}
@@ -299,7 +299,7 @@ const SmallLink = ({ to, icon, label, hasPermission = true, sidebarOpen = true, 
             size: 18,
           })}
           {badge > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
               {badge > 9 ? "9+" : badge}
             </span>
           )}
@@ -392,7 +392,7 @@ const MessagesItem = ({ to, sidebarOpen = true, hasPermission = true }) => {
             </span>
           </div>
           {unread > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+            <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
               {unread > 99 ? "99+" : unread}
             </span>
           )}
@@ -401,7 +401,7 @@ const MessagesItem = ({ to, sidebarOpen = true, hasPermission = true }) => {
         <div className="relative">
           <MessageSquare color={isActive ? "#008ecc" : "#475569"} size={18} />
           {unread > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-[#008ecc] text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 bg-[#008ecc] text-white text-xs font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
               !
             </span>
           )}

@@ -156,7 +156,7 @@ const SuperAdminLayout = () => {
                   <IconCircle isActive={isActive}>{item.icon}</IconCircle>
                   <span className="text-base font-medium flex-1">{item.label}</span>
                   {item.label === "Upgrade Requests" && pendingUpgrades > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">
+                    <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
                       {pendingUpgrades > 99 ? "99+" : pendingUpgrades}
                     </span>
                   )}
@@ -200,7 +200,7 @@ const SuperAdminLayout = () => {
             >
               <Menu size={22} />
             </button>
-            <h1 className="text-xl font-bold text-slate-800">Management Console</h1>
+            <h1 className="text-gray-900">Management Console</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-[#008ecc] border border-blue-100">
@@ -219,8 +219,8 @@ const SuperAdminLayout = () => {
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-2">Log out</h3>
-            <p className="text-sm text-slate-500 mb-6">
+            <h3 className="text-slate-700 mb-2">Log out</h3>
+            <p className="text-base text-slate-600 mb-6">
               Are you sure you want to logout?
             </p>
             <div className="flex justify-end gap-3">

@@ -13,7 +13,7 @@ const DeleteModal = ({ type, name, onDeleteForEveryone, onDeleteForMe, onClearCh
                 <Trash2 size={16} className="text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 text-sm">Delete Chat</h3>
+                <h3 className="text-slate-700">Delete Chat</h3>
                 {name && <p className="text-xs text-gray-400 mt-0.5">{name}</p>}
               </div>
             </div>
@@ -57,7 +57,7 @@ const DeleteModal = ({ type, name, onDeleteForEveryone, onDeleteForMe, onClearCh
                 <Users size={16} className="text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 text-sm">Delete Group</h3>
+                <h3 className="text-slate-700">Delete Group</h3>
                 {name && <p className="text-xs text-gray-400 mt-0.5">{name}</p>}
               </div>
             </div>
@@ -102,7 +102,7 @@ const DeleteModal = ({ type, name, onDeleteForEveryone, onDeleteForMe, onClearCh
               <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center">
                 <MessageSquareX size={15} className="text-red-500" />
               </div>
-              <h3 className="font-semibold text-gray-800 text-sm">Clear Chat</h3>
+              <h3 className="text-slate-700">Clear Chat</h3>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X size={16} />
@@ -141,7 +141,7 @@ const DeleteModal = ({ type, name, onDeleteForEveryone, onDeleteForMe, onClearCh
             <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center">
               <Trash2 size={15} className="text-red-500" />
             </div>
-            <h3 className="font-semibold text-gray-800 text-sm">Delete Message</h3>
+            <h3 className="text-slate-700">Delete Message</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={16} />

@@ -122,7 +122,7 @@ const PreviewModal = ({ file, onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
         <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="font-semibold">{file.name}</h3>
+          <h3 className="">{file.name}</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -828,7 +828,7 @@ export default function CreateDeal() {
             >
               <ArrowLeft size={20} />
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">
+            <h1 className="text-gray-900">
               {isEditMode ? "Edit Deal" : "Create New Deal"}
             </h1>
           </div>
@@ -838,14 +838,14 @@ export default function CreateDeal() {
         <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6 md:space-y-10">
           {/* Deal Info */}
           <div className="space-y-4 md:space-y-6 p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2 text-blue-600">
+            <h2 className="border-b pb-2 text-blue-600">
               Deal Information
             </h2>
 
             {formData.stage === "Closed Lost" && formData.lossReason && (
               <div className="md:col-span-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <h3 className="text-sm font-semibold text-red-700 mb-1">Loss Information</h3>
-                <p className="text-sm text-gray-700">
+                <h3 className="text-red-700 mb-1">Loss Information</h3>
+                <p className="text-base text-slate-600">
                   <span className="font-medium">Reason:</span> {formData.lossReason}
                 </p>
                 {formData.lossNotes && (
@@ -1055,7 +1055,7 @@ export default function CreateDeal() {
 
           {/* Follow-up Section */}
           <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2 text-purple-600 flex items-center gap-2">
+            <h2 className="border-b pb-2 text-purple-600 flex items-center gap-2">
               <Clock size={18} /> Follow-up
             </h2>
             {isEditMode ? (
@@ -1120,7 +1120,7 @@ export default function CreateDeal() {
           {/* Management */}
           {showAssignToField && (
             <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
-              <h2 className="text-lg font-semibold border-b pb-2 text-yellow-600">
+              <h2 className="border-b pb-2 text-yellow-600">
                 Management
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
@@ -1168,7 +1168,7 @@ export default function CreateDeal() {
 
           {/* Attachments */}
           <div className="p-6 border rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+            <h2 className="text-slate-900 border-b pb-2">
               Attachments
             </h2>
 
@@ -1190,7 +1190,7 @@ export default function CreateDeal() {
                     <button
                       type="button"
                       onClick={() => handleRemoveFile(idx, "existing")}
-                      className="text-[12px] text-red-600 hover:underline mt-1"
+                      className="text-xs text-red-600 hover:underline mt-1"
                     >
                       Remove
                     </button>
@@ -1239,13 +1239,13 @@ export default function CreateDeal() {
                         <p className="text-xs text-gray-500">
                           {(file.size / 1024).toFixed(1)} KB
                         </p>
-                        <p className="text-[10px] text-gray-700 truncate w-full text-center">
+                        <p className="text-xs text-gray-700 truncate w-full text-center">
                           {file.name}
                         </p>
                         <button
                           type="button"
                           onClick={() => handleRemoveFile(idx, "new")}
-                          className="text-[12px] text-red-600 hover:underline mt-1"
+                          className="text-xs text-red-600 hover:underline mt-1"
                         >
                           Remove
                         </button>

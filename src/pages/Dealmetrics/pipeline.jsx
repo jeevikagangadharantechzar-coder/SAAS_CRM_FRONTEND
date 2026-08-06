@@ -330,7 +330,7 @@ const NotificationsPanel = ({ deals, onClose, isOpen }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h4 className="font-semibold text-gray-900 text-lg">Notifications</h4>
+          <h3 className="text-slate-700">Notifications</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X size={20} className="text-gray-500" />
           </button>
@@ -506,7 +506,7 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
     >
       <div className="bg-white w-[95%] max-w-6xl h-[95vh] rounded-2xl shadow-2xl overflow-y-auto">
         <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">Performance Metrics</h2>
+          <h2 className="text-slate-900">Performance Metrics</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
             <X size={22} />
           </button>
@@ -514,7 +514,7 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
 
         <div className="p-8 space-y-12">
           <div className="border rounded-xl p-6 w-full">
-            <h3 className="font-semibold mb-6 flex items-center gap-2 w-100">
+            <h3 className="mb-6 flex items-center gap-2 w-100">
               <Target size={18} className="text-indigo-600" />
               Win Rate by Stage
             </h3>
@@ -524,7 +524,7 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
           </div>
 
           <div className="border rounded-xl p-6">
-            <h3 className="font-semibold mb-6 flex items-center gap-2">
+            <h3 className="mb-6 flex items-center gap-2">
               <TrendingUp size={18} className="text-indigo-600" />
               Monthly Deals Trend
             </h3>
@@ -534,7 +534,7 @@ const MetricsModal = ({ deals = [], onClose, isOpen }) => {
           </div>
 
           <div className="border rounded-xl p-6">
-            <h3 className="font-semibold mb-6 flex items-center gap-2">
+            <h3 className="mb-6 flex items-center gap-2">
               <PieChart size={18} className="text-indigo-600" />
               Stage Distribution
             </h3>
@@ -578,7 +578,7 @@ const StageCardPopup = ({ stage, deals, onClose, onFilterClick }) => {
   return (
     <div className="absolute z-50 w-60 bg-white rounded-lg shadow-lg border border-gray-200 p-3 mt-2">
       <div className="flex justify-between items-center mb-2">
-        <h4 className="font-semibold text-sm text-gray-800 truncate">{stage === 'Won' ? 'Deal Closed' : stage === 'Lost' ? 'Deal Lost' : `${stage} Stage`}</h4>
+        <h3 className="text-slate-700 truncate">{stage === 'Won' ? 'Deal Closed' : stage === 'Lost' ? 'Deal Lost' : `${stage} Stage`}</h3>
         <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
           <X size={14} className="text-gray-400" />
         </button>
@@ -655,7 +655,7 @@ const AIPredictions = ({ deals }) => {
         <div className="p-2 bg-indigo-100 rounded-lg">
           <Brain size={18} className="text-indigo-600" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900">AI Predictions</h3>
+        <h3 className="text-slate-700">AI Predictions</h3>
       </div>
 
       <div className="space-y-4">
@@ -724,7 +724,7 @@ const ScoreConfiguration = ({ onSave }) => {
         <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Customize Scoring Weights</h3>
+              <h3 className="text-slate-700">Customize Scoring Weights</h3>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <X size={20} className="text-gray-500" />
               </button>
@@ -855,7 +855,7 @@ const FollowUpModal = ({ isOpen, onClose, deal, onSave }) => {
             <div className="p-2 bg-purple-100 rounded-lg">
               <Calendar size={20} className="text-purple-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Schedule Follow-up</h3>
+            <h3 className="text-slate-700">Schedule Follow-up</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X size={20} className="text-gray-500" />
@@ -951,7 +951,7 @@ const StageActionModal = ({ isOpen, onClose, deal, onAction, navigate }) => {
             <div className={`p-2 ${stageConfig.bgColor} rounded-lg`}>
               <ActionIcon size={20} className={stageConfig.color} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Next Best Actions</h3>
+            <h3 className="text-slate-700">Next Best Actions</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X size={20} className="text-gray-500" />
@@ -1049,7 +1049,7 @@ const LossAnalysisModal = ({ isOpen, onClose, deal, onSubmit }) => {
             <div className="p-2 bg-rose-100 rounded-lg">
               <AlertTriangle size={20} className="text-rose-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">
+            <h3 className="text-slate-700">
               {isSubmitted ? "Loss Analysis Details" : "Deal Loss Analysis"}
             </h3>
           </div>
@@ -1170,8 +1170,8 @@ const MobileDealView = ({ deal, onAction, navigate }) => {
     <div className="block lg:hidden border border-gray-200 rounded-xl p-4 mb-3 bg-white hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 truncate">{deal.dealName}</h4>
-          <p className="text-sm text-gray-600 truncate">{deal.companyName || 'No company'}</p>
+          <h3 className="text-slate-700 truncate">{deal.dealName}</h3>
+          <p className="text-base text-slate-600 truncate">{deal.companyName || 'No company'}</p>
         </div>
         <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ml-2 ${
           deal.stage === 'Qualification' ? 'bg-amber-100 text-amber-800' :
@@ -1721,8 +1721,8 @@ function DealIntelligenceDashboard() {
                 <Brain size={24} className="text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 break-words">Deal Analysis & Intelligence</h1>
-                <p className="text-sm text-gray-600 mt-1 break-words">AI-powered pipeline management with stage-based actions</p>
+                <h1 className="text-gray-900 break-words">Deal Analysis & Intelligence</h1>
+                <p className="text-base text-slate-600 mt-1 break-words">AI-powered pipeline management with stage-based actions</p>
               </div>
             </div>
           </div>
@@ -1782,7 +1782,7 @@ function DealIntelligenceDashboard() {
             </div>
 
             <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-bold text-gray-900 break-words leading-tight">
+              <h3 className="text-slate-700 break-words leading-tight">
                 {label}
               </h3>
               <p className={`text-xs text-${color}-600`}>{sub}</p>
@@ -1818,8 +1818,8 @@ function DealIntelligenceDashboard() {
               <div className="p-6 border-b border-gray-200">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Deal Details</h2>
-                    <p className="text-sm text-gray-600 mt-1">{processedDeals.length} deals • AI-powered scoring</p>
+                    <h2 className="text-slate-900">Deal Details</h2>
+                    <p className="text-base text-slate-600 mt-1">{processedDeals.length} deals • AI-powered scoring</p>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
@@ -2014,7 +2014,7 @@ function DealIntelligenceDashboard() {
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <BarChart3 size={18} className="text-indigo-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">Pipeline Statistics</h3>
+                <h3 className="text-slate-700">Pipeline Statistics</h3>
               </div>
               <div className="space-y-4">
                 <div>
@@ -2072,7 +2072,7 @@ function DealIntelligenceDashboard() {
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <Sparkles size={18} className="text-indigo-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
+                <h3 className="text-slate-700">Quick Actions</h3>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {canCreateDeal && (
@@ -2125,8 +2125,8 @@ function DealIntelligenceDashboard() {
                   <XCircle size={20} className="text-rose-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Deal Lost</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h3 className="text-slate-700">Deal Lost</h3>
+                  <p className="text-base text-slate-600 mt-1">
                     {pipelineInsights.lostDeals} {pipelineInsights.lostDeals === 1 ? 'deal lost' : 'deals lost'}
                   </p>
                 </div>
@@ -2178,8 +2178,8 @@ function DealIntelligenceDashboard() {
                   <CheckCircle size={20} className="text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Deal Closed</h3>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h3 className="text-slate-700">Deal Closed</h3>
+                  <p className="text-base text-slate-600 mt-1">
                     {pipelineInsights.wonDeals} {pipelineInsights.wonDeals === 1 ? 'deal closed' : 'deals closed'}
                   </p>
                 </div>

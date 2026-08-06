@@ -368,7 +368,7 @@ const DealsDocument = () => {
       />
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
-        <h2 className="text-xl font-semibold text-gray-800">Deal Documents</h2>
+        <h2 className="text-slate-900">Deal Documents</h2>
       </div>
 
       <div className="mb-4 relative w-full sm:w-80">

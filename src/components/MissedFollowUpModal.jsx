@@ -74,7 +74,7 @@ const MissedFollowUpModal = () => {
         <div className="px-6 py-5 bg-[#008ecc] text-white flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <AlertTriangle size={22} />
-            <h3 className="text-lg font-bold">
+            <h3 className="">
               Missed Follow-up{missedList.length > 1 ? `s (${missedList.length})` : ""}
             </h3>
           </div>

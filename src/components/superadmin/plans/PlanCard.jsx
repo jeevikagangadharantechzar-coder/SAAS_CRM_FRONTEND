@@ -85,7 +85,7 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
       {/* Recommended Ribbon */}
       {is_recommended && (
         <div className="absolute top-0 right-0">
-          <div className="bg-amber-500 text-white font-bold text-[9px] uppercase tracking-wider px-3 py-1 rounded-bl-xl shadow-sm border-l border-b border-amber-600/30">
+          <div className="bg-amber-500 text-white font-bold text-xs uppercase tracking-wider px-3 py-1 rounded-bl-xl shadow-sm border-l border-b border-amber-600/30">
             Recommended
           </div>
         </div>
@@ -95,11 +95,11 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
         {/* Header */}
         <div>
           <div className="flex items-center space-x-2">
-            <h3 className="text-lg font-bold text-slate-800 tracking-tight truncate max-w-[70%]">
+            <h3 className="text-slate-700 truncate max-w-[70%]">
               {plan_name}
             </h3>
           </div>
-          <p className="text-slate-400 font-mono text-[10px] mt-0.5">{plan_code}</p>
+          <p className="text-base text-slate-600 font-mono mt-1">{plan_code}</p>
         </div>
 
         {/* Badges */}
@@ -122,7 +122,7 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
           {plan_type.toLowerCase() === "free" ? (
             <div>
               <span className="text-2xl font-black text-slate-800">Free</span>
-              <p className="text-slate-400 text-[11px] font-medium mt-1">No billing required</p>
+              <p className="text-slate-400 text-xs font-medium mt-1">No billing required</p>
             </div>
           ) : hasTiers ? (
             <div className="space-y-1.5">
@@ -148,7 +148,7 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
               {price_yearly > 0 && (
                 <div className="text-slate-500 text-xs font-medium">
                   {symbol}{parseFloat(price_yearly || 0).toFixed(2)}
-                  <span className="text-slate-400 text-[10px]">/yr</span>
+                  <span className="text-slate-400 text-xs">/yr</span>
                 </div>
               )}
             </div>
@@ -169,7 +169,7 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
           {trial_days > 0 && (
             <div className="flex items-center justify-between pt-1 border-t border-slate-200/50">
               <span className="text-slate-500">Trial Period</span>
-              <span className="font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 text-[10px]">
+              <span className="font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 text-xs">
                 {trial_days} days
               </span>
             </div>
@@ -182,7 +182,7 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
             <button
               type="button"
               onClick={() => setFeaturesOpen((o) => !o)}
-              className="flex items-center justify-between w-full text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 cursor-pointer hover:text-slate-600 transition-colors"
+              className="flex items-center justify-between w-full text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 cursor-pointer hover:text-slate-600 transition-colors"
             >
               <span>Features ({enabledFeatures.length})</span>
               {featuresOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -193,13 +193,13 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
                 {enabledFeatures.slice(0, PREVIEW_LIMIT).map((key) => (
                   <span
                     key={key}
-                    className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full font-medium"
+                    className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full font-medium"
                   >
                     {FEATURE_LABELS[key] || key}
                   </span>
                 ))}
                 {enabledFeatures.length > PREVIEW_LIMIT && (
-                  <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-full font-medium">
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-full font-medium">
                     +{enabledFeatures.length - PREVIEW_LIMIT} more
                   </span>
                 )}
@@ -209,7 +209,7 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
             {featuresOpen && (
               <div className="grid grid-cols-2 gap-1">
                 {enabledFeatures.map((key) => (
-                  <div key={key} className="flex items-center gap-1.5 text-[10px] text-slate-700">
+                  <div key={key} className="flex items-center gap-1.5 text-xs text-slate-700">
                     <Check size={10} className="text-emerald-500 shrink-0" />
                     <span className="truncate">{FEATURE_LABELS[key] || key}</span>
                   </div>

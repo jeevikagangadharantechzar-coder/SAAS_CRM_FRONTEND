@@ -1,9 +1,41 @@
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+@import "@fontsource/inter/900.css";
+
 @import "tailwindcss";
 
 
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Uniform typography scale — body 14-16px, buttons 14-15px, headings 20-32px */
+  --text-xs: 0.75rem;      /* 12px — micro text only (badges, timestamps, captions) */
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;     /* 14px — body text / buttons */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;       /* 16px — body text */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1rem;         /* 16px — body text (large) */
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem;      /* 20px — heading */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;      /* 24px — heading */
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.75rem;     /* 28px — heading */
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2rem;        /* 32px — heading (max) */
+  --text-4xl--line-height: 2.375rem;
+  --text-5xl: 2rem;        /* 32px — heading (max) */
+  --text-5xl--line-height: 2.375rem;
+}
 
 :root {
   --background: oklch(1 0 0);
@@ -122,6 +154,32 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Single heading hierarchy used app-wide — h1/h2/h3 only, standardized on the
+     Lead module (ViewLead.jsx) design: gray-900/slate-900/slate-700 text colors.
+     Pages may still set an accent/contrast color (e.g. white on a colored banner)
+     which naturally overrides this default via normal CSS specificity. */
+  h1 {
+    font-size: 1.75rem;      /* 28px */
+    line-height: 2.25rem;
+    font-weight: 700;
+    letter-spacing: normal;
+    color: #111827;          /* text-gray-900 */
+  }
+  h2 {
+    font-size: 1.5rem;       /* 24px */
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    color: #0f172a;          /* text-slate-900 */
+  }
+  h3 {
+    font-size: 1.25rem;      /* 20px */
+    line-height: 1.75rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    color: #334155;          /* text-slate-700 */
+  }
 }
 html,
 body {
@@ -188,13 +246,13 @@ body {
 html,
 body {
   @apply bg-white text-black transition-colors duration-300;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 .dark html,
 .dark body {
   @apply bg-black text-white;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 /* remove ALL inner borders */
 .PhoneInputInput {

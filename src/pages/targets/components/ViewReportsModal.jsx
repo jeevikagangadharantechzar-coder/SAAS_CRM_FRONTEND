@@ -99,8 +99,8 @@ export default function ViewReportsModal({ isOpen, onClose, reports, type, isAdm
               {icon}
             </div>
             <div>
-              <h2 className="text-gray-900 font-bold text-base">{title}</h2>
-              <p className="text-[11px] text-gray-500 font-medium">History of logged {isCall ? "calls" : "meetings"} for this target</p>
+              <h2 className="text-slate-900">{title}</h2>
+              <p className="text-base text-slate-600">History of logged {isCall ? "calls" : "meetings"} for this target</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
@@ -137,14 +137,14 @@ export default function ViewReportsModal({ isOpen, onClose, reports, type, isAdm
                         </button>
                       )}
                       {isAdmin && (isCall ? r.recordingUrl : r.screenshotUrl) && (
-                        <a href={getMediaUrl(isCall ? r.recordingUrl : r.screenshotUrl)} target="_blank" rel="noopener noreferrer" download className="text-[11px] text-gray-500 hover:text-gray-800 font-semibold flex items-center gap-1 transition-colors">
+                        <a href={getMediaUrl(isCall ? r.recordingUrl : r.screenshotUrl)} target="_blank" rel="noopener noreferrer" download className="text-xs text-gray-500 hover:text-gray-800 font-semibold flex items-center gap-1 transition-colors">
                           <Download size={11} /> Download
                         </a>
                       )}
                       {r.companyUrl && (
                         <a href={r.companyUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline font-medium">Website</a>
                       )}
-                      <span className="text-[10px] text-gray-500 font-semibold flex items-center gap-1 ml-1 bg-white px-2 py-1 rounded-full shadow-sm"><Clock size={10} /> {fmt(r.addedAt)}</span>
+                      <span className="text-xs text-gray-500 font-semibold flex items-center gap-1 ml-1 bg-white px-2 py-1 rounded-full shadow-sm"><Clock size={10} /> {fmt(r.addedAt)}</span>
                     </div>
                   </div>
                   <p className={`text-sm text-gray-700 leading-relaxed bg-white border p-3 rounded-lg ${innerBg}`}>

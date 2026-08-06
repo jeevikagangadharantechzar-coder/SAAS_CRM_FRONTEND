@@ -368,7 +368,10 @@ const ProposalHeadContent = () => {
       {/* Compact Toolbar Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-header">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-800">Proposal List</h1>
+          <div>
+            <h1 className="text-gray-900">Proposal List</h1>
+            <p className="text-base text-slate-600 mt-1">Create, send, and track your business proposals</p>
+          </div>
           <button
             onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
             className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"

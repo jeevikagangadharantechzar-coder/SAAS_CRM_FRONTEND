@@ -636,7 +636,7 @@ setSalesUsers(response.data.users);
             {/* Left Column */}
             <div>
               <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+                <h3 className="text-slate-700 mb-4 flex items-center">
                   <svg
                     className="w-5 h-5 mr-2 text-blue-600"
                     fill="none"
@@ -820,7 +820,7 @@ setSalesUsers(response.data.users);
             {/* Right Column */}
             <div>
               <div className="h-full bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+                <h3 className="text-slate-700 mb-4 flex items-center">
                   <svg
                     className="w-5 h-5 mr-2 text-green-600"
                     fill="none"
@@ -954,7 +954,7 @@ setSalesUsers(response.data.users);
               it doesn't pair evenly in height with either Basic Information or
               Deal Information. */}
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+            <h3 className="text-slate-700 mb-4 flex items-center">
               <svg
                 className="w-5 h-5 mr-2 text-purple-600"
                 fill="none"
@@ -1056,7 +1056,7 @@ setSalesUsers(response.data.users);
 
           {/* Financial Details */}
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+            <h3 className="text-slate-700 mb-4 flex items-center">
               <svg
                 className="w-5 h-5 mr-2 text-purple-600"
                 fill="none"
@@ -1260,7 +1260,7 @@ setSalesUsers(response.data.users);
           {/* Custom Fields — for anything the fixed form doesn't cover (varies by country/client) */}
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-800">Custom Fields</h3>
+              <h3 className="text-slate-700">Custom Fields</h3>
               <button
                 type="button"
                 onClick={handleAddCustomField}

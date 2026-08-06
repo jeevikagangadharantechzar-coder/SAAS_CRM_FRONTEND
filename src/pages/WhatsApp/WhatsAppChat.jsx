@@ -453,7 +453,7 @@ export default function WhatsAppChat() {
             >
               <MessageSquare size={13} /> Chats
               {conversations.reduce((s, c) => s + (c.unreadCount || 0), 0) > 0 && (
-                <span className="w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
+                <span className="w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-bold"
                       style={{ background: "#25D366" }}>
                   {conversations.reduce((s, c) => s + (c.unreadCount || 0), 0)}
                 </span>
@@ -526,7 +526,7 @@ export default function WhatsAppChat() {
                           {conv.lastMessageType !== "text" ? `[${conv.lastMessageType}]` : conv.lastMessage}
                         </p>
                         {conv.unreadCount > 0 && (
-                          <span className="ml-2 shrink-0 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
+                          <span className="ml-2 shrink-0 min-w-[18px] h-[18px] rounded-full text-white text-xs font-bold flex items-center justify-center px-1"
                                 style={{ background: "#25D366" }}>
                             {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                           </span>
@@ -589,8 +589,8 @@ export default function WhatsAppChat() {
             <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{ background: "#e7fbe9" }}>
               {WA_SVG(48, "#25D366")}
             </div>
-            <h3 className="text-xl font-bold text-gray-700 mb-2">WhatsApp Messages</h3>
-            <p className="text-gray-400 text-sm max-w-xs">
+            <h3 className="text-slate-700 mb-2">WhatsApp Messages</h3>
+            <p className="text-base text-slate-600 max-w-xs">
               Select a conversation from the Chats tab or pick a lead from the Leads tab
             </p>
           </div>

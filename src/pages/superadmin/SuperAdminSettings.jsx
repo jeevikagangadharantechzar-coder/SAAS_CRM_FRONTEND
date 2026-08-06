@@ -491,7 +491,7 @@ const SuperAdminSettings = () => {
                     onChange={handleLogoChange}
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Recommended: PNG or SVG, max 5 MB.
                 </p>
               </div>
@@ -526,7 +526,7 @@ const SuperAdminSettings = () => {
                   placeholder="e.g. Techzar Admin Console"
                   className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Shown in the browser tab when super admin is logged in. Leave blank to use the default.
                 </p>
               </div>
@@ -569,7 +569,7 @@ const SuperAdminSettings = () => {
                     onChange={handleFaviconChange}
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Recommended: ICO or 32×32 PNG. Max 2 MB.
                 </p>
               </div>

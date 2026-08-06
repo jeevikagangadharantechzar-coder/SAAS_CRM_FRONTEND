@@ -132,8 +132,8 @@ const ViewProposal = () => {
           <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <XCircle className="text-rose-600" size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">Proposal Not Found</h2>
-          <p className="text-slate-600 mb-6">
+          <h2 className="text-slate-900 mb-3">Proposal Not Found</h2>
+          <p className="text-base text-slate-600 mb-6">
             The proposal you're looking for doesn't exist or may have been removed.
           </p>
           <Link
@@ -169,7 +169,7 @@ const ViewProposal = () => {
               <span className="text-slate-500">View Proposal</span>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h1 className="text-gray-900">
                 {proposal.title}
               </h1>
               <div
@@ -207,7 +207,7 @@ const ViewProposal = () => {
             {activeTab === "content" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Proposal Content</h2>
+                  <h2 className="text-slate-900">Proposal Content</h2>
                 </div>
                 <div className="p-6">
                   <div
@@ -222,8 +222,8 @@ const ViewProposal = () => {
             {activeTab === "attachments" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <h2 className="text-slate-900">Attachments</h2>
+                  <p className="text-base text-slate-600 mt-1">
                     Files and documents related to this proposal
                   </p>
                 </div>
@@ -277,14 +277,14 @@ const ViewProposal = () => {
             {activeTab === "details" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Proposal Details</h2>
-                  <p className="text-sm text-slate-600 mt-1">Comprehensive information about this proposal</p>
+                  <h2 className="text-slate-900">Proposal Details</h2>
+                  <p className="text-base text-slate-600 mt-1">Comprehensive information about this proposal</p>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-5">
                       <div>
-                        <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">Client Information</h3>
+                        <h3 className="text-slate-700 mb-3">Client Information</h3>
                         <div className="space-y-4">
                           <div className="flex items-center text-slate-700">
                             <User size={18} className="mr-3 text-slate-500" />
@@ -312,7 +312,7 @@ const ViewProposal = () => {
                     </div>
                     <div className="space-y-5">
                       <div>
-                        <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">Proposal Information</h3>
+                        <h3 className="text-slate-700 mb-3">Proposal Information</h3>
                         <div className="space-y-4">
                           <div className="flex items-center text-slate-700">
                             <DollarSign size={18} className="mr-3 text-slate-500" />
@@ -347,8 +347,8 @@ const ViewProposal = () => {
             {activeTab === "activity" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Activity Timeline</h2>
-                  <p className="text-sm text-slate-600 mt-1">Recent activities and updates for this proposal</p>
+                  <h2 className="text-slate-900">Activity Timeline</h2>
+                  <p className="text-base text-slate-600 mt-1">Recent activities and updates for this proposal</p>
                 </div>
                 <div className="p-6">
                   <div className="relative">
@@ -359,8 +359,8 @@ const ViewProposal = () => {
                         </div>
                       </div>
                       <div className="ml-4">
-                        <h3 className="text-sm font-medium text-slate-900">Proposal created</h3>
-                        <p className="text-sm text-slate-500 mt-1">{new Date(proposal.createdAt).toLocaleString()}</p>
+                        <h3 className="text-slate-700">Proposal created</h3>
+                        <p className="text-base text-slate-600 mt-1">{new Date(proposal.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
                     {proposal.followUpDate && (
@@ -371,8 +371,8 @@ const ViewProposal = () => {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <h3 className="text-sm font-medium text-slate-900">Follow-up scheduled</h3>
-                          <p className="text-sm text-slate-500 mt-1">{new Date(proposal.followUpDate).toLocaleString()}</p>
+                          <h3 className="text-slate-700">Follow-up scheduled</h3>
+                          <p className="text-base text-slate-600 mt-1">{new Date(proposal.followUpDate).toLocaleString()}</p>
                         </div>
                       </div>
                     )}
@@ -383,8 +383,8 @@ const ViewProposal = () => {
                         </div>
                       </div>
                       <div className="ml-4">
-                        <h3 className="text-sm font-medium text-slate-900">Status changed to {statusStyle.label}</h3>
-                        <p className="text-sm text-slate-500 mt-1">{new Date(proposal.updatedAt || proposal.createdAt).toLocaleString()}</p>
+                        <h3 className="text-slate-700">Status changed to {statusStyle.label}</h3>
+                        <p className="text-base text-slate-600 mt-1">{new Date(proposal.updatedAt || proposal.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -396,7 +396,7 @@ const ViewProposal = () => {
           {/* Sidebar Column */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">Proposal Status</h3>
+              <h3 className="text-slate-700 mb-3">Proposal Status</h3>
               <div className={`inline-flex items-center px-4 py-2 rounded-full ${statusStyle.bgColor} ${statusStyle.color} border ${statusStyle.borderColor} mb-4`}>
                 <StatusIcon size={16} className="mr-2" />
                 <span className="capitalize font-medium text-sm">{statusStyle.label}</span>
@@ -404,14 +404,14 @@ const ViewProposal = () => {
               <p className="text-sm text-slate-600 mt-2">Last updated {new Date(proposal.updatedAt || proposal.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">Client</h3>
+              <h3 className="text-slate-700 mb-4">Client</h3>
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mr-3">
                   <User size={20} className="text-slate-600" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-slate-900">{proposal.dealTitle || "Unknown Client"}</h4>
-                  <p className="text-sm text-slate-600">{proposal.companyName || "No company"}</p>
+                  <h3 className="text-slate-700">{proposal.dealTitle || "Unknown Client"}</h3>
+                  <p className="text-base text-slate-600">{proposal.companyName || "No company"}</p>
                 </div>
               </div>
               <a href={`mailto:${proposal.email}`} className="flex items-center text-sm text-slate-600 hover:text-blue-600 transition-colors">

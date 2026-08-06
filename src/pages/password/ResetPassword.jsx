@@ -120,8 +120,8 @@ const handleReset = async (e) => {
           Back to Login
         </button>
         
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Your Password</h2>
-        <p className="text-gray-600 mb-6">Enter your new password below</p>
+        <h2 className="text-slate-900 mb-2">Reset Your Password</h2>
+        <p className="text-base text-slate-600 mb-6">Enter your new password below</p>
         
         {message && (
           <div className={`p-3 rounded-lg mb-5 flex items-start gap-2 ${isError ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>

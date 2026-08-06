@@ -92,8 +92,8 @@ const EditPlan = () => {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Edit Subscription Plan</h2>
-          <p className="text-slate-500 text-sm">Update plan limits, status, pricing, and visibility.</p>
+          <h2 className="text-slate-900">Edit Subscription Plan</h2>
+          <p className="text-base text-slate-600">Update plan limits, status, pricing, and visibility.</p>
         </div>
       </div>
 
@@ -116,7 +116,7 @@ const EditPlan = () => {
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-3 mt-6">
           <AlertCircle className="text-red-500" size={40} />
           <div>
-            <h3 className="font-bold text-red-800">Failed to load plan details</h3>
+            <h3 className="text-red-800">Failed to load plan details</h3>
             <p className="text-red-600 text-sm mt-1">
               {planError?.response?.data?.error || planError.message || "Plan not found."}
             </p>

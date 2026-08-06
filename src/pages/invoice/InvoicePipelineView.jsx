@@ -133,7 +133,7 @@ function Column({
       className={`min-w-[320px] w-[320px] flex flex-col border-2 ${borderColor} rounded-xl bg-white p-3 shadow-sm`}
     >
       <div className="mb-3">
-        <h2 className={`text-sm font-bold flex items-center justify-between ${titleColor} ${bgColor} p-3 rounded-lg`}>
+        <h2 className={`flex items-center justify-between ${titleColor} ${bgColor} p-3 rounded-lg`}>
           <span>{title}</span>
           <span className="inline-flex items-center justify-center border px-2 py-0.5 text-xs text-gray-600 bg-white rounded-full min-w-[24px]">
             {invoices.length}
@@ -257,7 +257,7 @@ function InvoiceCard({
 
       <div className="flex justify-between items-start mb-2 pr-6">
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 line-clamp-1" title={invoiceNumber}>
+          <h3 className="text-slate-700 line-clamp-1" title={invoiceNumber}>
             Invoice #{invoiceNumber}
           </h3>
           <p className="text-xs text-blue-600 mt-0.5 line-clamp-1 hover:underline cursor-pointer">

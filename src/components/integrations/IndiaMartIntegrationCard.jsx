@@ -100,8 +100,8 @@ export default function IndiaMartIntegrationCard() {
           </svg>
         </div>
         <div className="flex-1">
-          <h2 className="font-semibold text-gray-800 text-lg">IndiaMART Leads Integration</h2>
-          <p className="text-gray-500 text-sm">
+          <h2 className="text-slate-900">IndiaMART Leads Integration</h2>
+          <p className="text-base text-slate-600">
             Import inquiries and product leads dynamically from IndiaMART
           </p>
         </div>
@@ -119,7 +119,7 @@ export default function IndiaMartIntegrationCard() {
       <div className="p-5">
         {showForm ? (
           <form onSubmit={handleConnect} className="space-y-4 max-w-md bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700">Connect IndiaMART Account</h3>
+            <h3 className="text-slate-700">Connect IndiaMART Account</h3>
             
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Company/Account Name</label>

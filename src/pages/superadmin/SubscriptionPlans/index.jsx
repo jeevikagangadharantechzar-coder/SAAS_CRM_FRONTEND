@@ -63,11 +63,11 @@ const SubscriptionPlans = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center space-x-2">
+          <h2 className="text-slate-900 flex items-center space-x-2">
             <CreditCard className="text-[#008ecc]" size={24} />
             <span>Subscription plans</span>
           </h2>
-          <p className="text-slate-500 text-sm">Manage SaaS pricing tiers</p>
+          <p className="text-base text-slate-600">Manage SaaS pricing tiers</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -137,7 +137,7 @@ const SubscriptionPlans = () => {
         <div className="p-6 bg-red-50 border border-red-200 rounded-2xl flex flex-col items-center justify-center text-center space-y-3">
           <AlertCircle className="text-red-500" size={40} />
           <div>
-            <h3 className="font-bold text-red-800">Failed to load subscription plans</h3>
+            <h3 className="text-red-800">Failed to load subscription plans</h3>
             <p className="text-red-600 text-sm mt-1">{error?.response?.data?.error || error.message || "An unexpected error occurred."}</p>
           </div>
           <button
@@ -173,8 +173,8 @@ const SubscriptionPlans = () => {
                 <CreditCard className="text-slate-400" size={28} />
               </div>
               <div className="space-y-1">
-                <h3 className="font-bold text-slate-800 text-lg">No subscription plans found</h3>
-                <p className="text-slate-500 text-sm">
+                <h3 className="text-slate-700">No subscription plans found</h3>
+                <p className="text-base text-slate-600">
                   Create your first plan to start provisioning SaaS tiers for your tenants.
                 </p>
               </div>
