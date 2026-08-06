@@ -361,8 +361,8 @@ const EmailHistory = () => {
               <ArrowLeft className="w-6 h-6 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Email History</h1>
-              <p className="text-gray-600 text-sm mt-1">
+              <h1 className="text-gray-900">Email History</h1>
+              <p className="text-base text-slate-600 mt-1">
                 Total: {historyTotal} emails • Page {historyPage} of {historyTotalPages}
               </p>
             </div>
@@ -744,8 +744,8 @@ const EmailHistory = () => {
       {showDeleteModal && emailToDelete && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h3 className="text-xl font-bold mb-4">Delete Email</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="mb-4">Delete Email</h3>
+            <p className="text-base text-slate-600 mb-6">
               Are you sure you want to delete the email "{emailToDelete.subject}"? 
               This action cannot be undone.
             </p>
@@ -783,8 +783,8 @@ const EmailHistory = () => {
       {showBulkDeleteModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h3 className="text-xl font-bold mb-4">Delete Multiple Emails</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="mb-4">Delete Multiple Emails</h3>
+            <p className="text-base text-slate-600 mb-6">
               Are you sure you want to delete {getSelectionCount()} selected emails? 
               {selectAllMode && " This will delete ALL emails in your history."}
               This action cannot be undone.
@@ -821,7 +821,7 @@ const EmailHistory = () => {
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b">
-              <h3 className="text-xl font-bold">Recipients ({selectedRecipients.length})</h3>
+              <h3 className="">Recipients ({selectedRecipients.length})</h3>
               <button
                 onClick={() => {
                   setShowRecipientsModal(false);
@@ -860,7 +860,7 @@ const EmailHistory = () => {
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b">
-              <h3 className="text-xl font-bold">Email Preview</h3>
+              <h3 className="">Email Preview</h3>
               <button
                 onClick={() => {
                   setShowEmailViewModal(false);
@@ -886,7 +886,7 @@ const EmailHistory = () => {
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b">
-              <h3 className="text-xl font-bold">Attachments ({selectedAttachments.length})</h3>
+              <h3 className="">Attachments ({selectedAttachments.length})</h3>
               <button
                 onClick={() => {
                   setShowAttachmentsModal(false);

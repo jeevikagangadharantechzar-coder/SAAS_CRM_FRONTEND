@@ -48,7 +48,7 @@ const TrialExpiredModal = () => {
             <path d="M12 16h.01" />
           </svg>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Your Free Trial Has Ended</h3>
+        <h3 className="text-slate-700 mb-2">Your Free Trial Has Ended</h3>
         {expiryDate && (
           <span className="inline-block px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-semibold mb-3">
             Trial ended on {expiryDate}

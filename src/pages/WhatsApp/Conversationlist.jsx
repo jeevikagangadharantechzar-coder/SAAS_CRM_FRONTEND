@@ -49,7 +49,7 @@ export default function Conversationlist() {
       <div className="px-4 py-3 bg-[#075e54] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MessageCircle className="text-white w-5 h-5" />
-          <h2 className="text-white font-semibold text-base">WhatsApp</h2>
+          <h2 className="text-white">WhatsApp</h2>
         </div>
         <button
           onClick={() => loadConversations(search)}

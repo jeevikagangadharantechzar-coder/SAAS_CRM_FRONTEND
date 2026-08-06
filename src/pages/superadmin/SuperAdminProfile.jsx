@@ -48,8 +48,8 @@ const SuperAdminProfile = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">SuperAdmin Profile</h2>
-        <p className="text-slate-500 text-sm">Manage administrative credentials and security options.</p>
+        <h2 className="text-slate-900">SuperAdmin Profile</h2>
+        <p className="text-base text-slate-600">Manage administrative credentials and security options.</p>
       </div>
 
       {msg && (
@@ -73,18 +73,18 @@ const SuperAdminProfile = () => {
               <div className="w-24 h-24 rounded-full bg-[#f2fbff] text-[#008ecc] flex items-center justify-center font-black text-3xl shadow-lg border-2 border-[#008ecc]/20 mb-4">
                 SA
               </div>
-              <h3 className="font-extrabold text-slate-800 text-lg">{name}</h3>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mt-1">Platform Owner</p>
+              <h3 className="text-slate-700">{name}</h3>
+              <p className="text-base text-slate-600 uppercase tracking-widest mt-1">Platform Owner</p>
               
               <div className="w-full border-t border-slate-100 my-4" />
               
               <div className="text-left w-full space-y-3">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
                   <span className="text-sm font-medium text-slate-700">{email}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Access Role</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Access Role</span>
                   <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                     Full Access SuperAdmin
                   </span>

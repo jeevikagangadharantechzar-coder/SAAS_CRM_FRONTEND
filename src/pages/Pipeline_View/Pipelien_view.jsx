@@ -742,10 +742,10 @@ const STAGES = [
         {/* Toolbar */}
         <div className="mx-auto mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between max-w-[1600px] px-2 sm:px-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            <h1 className="">
                Pipeline View - Deal Stages
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-base text-slate-600 mt-1">
               {userRole === "Admin"
                 ? "Viewing all deals"
                 : "Viewing deals assigned to you"}
@@ -857,10 +857,10 @@ const STAGES = [
                       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                   </svg>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <h3 className="text-slate-700 mb-2">
                     No deals found
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-base text-slate-600 mb-4">
                     No deals match the current search/filters
                   </p>
                   <button
@@ -944,7 +944,7 @@ const STAGES = [
       >
         <div className="mb-3">
           <h2
-            className={`text-base font-bold flex items-center gap-2 ${titleColor} ${bgColor} p-3 rounded-lg`}
+            className={`flex items-center gap-2 ${titleColor} ${bgColor} p-3 rounded-lg`}
           >
             {title}
             <span className="inline-flex items-center justify-center border px-2 py-0.5 text-xs text-gray-600 bg-white rounded-full min-w-[24px]">
@@ -1141,7 +1141,7 @@ const STAGES = [
         {/* Deal Name - Centered and emphasized */}
         <div className={`text-center ${canEditDelete ? "pr-6" : ""}`}>
           <h3
-            className="text-md font-semibold text-indigo-600 cursor-pointer hover:text-indigo-800 transition-colors"
+            className="text-indigo-600 cursor-pointer hover:text-indigo-800 transition-colors"
             onClick={() => onView(deal, columnDeals)}
           >
             {deal.dealName}

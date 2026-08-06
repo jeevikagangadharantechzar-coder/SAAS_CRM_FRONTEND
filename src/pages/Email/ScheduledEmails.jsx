@@ -136,7 +136,7 @@ export default function ScheduledEmails() {
         >
           <ArrowLeft className="w-6 h-6 text-gray-600" />
         </button>
-        <h2 className="text-2xl font-semibold">Scheduled Emails</h2>
+        <h2 className="">Scheduled Emails</h2>
       </div>
 
       {loading ? (
@@ -167,11 +167,11 @@ export default function ScheduledEmails() {
                 <div className="flex-1 w-full">
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                     <div className="w-full sm:w-auto">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <h3 className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
                         {email.subject}
                       </h3>
-                      <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                      <p className="text-base text-slate-600 flex items-center gap-1 mt-1">
                         <FileText className="w-3 h-3" />
                         Template: {email.templateTitle || "Custom Email"}
                       </p>

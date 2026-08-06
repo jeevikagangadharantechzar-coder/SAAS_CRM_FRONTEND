@@ -132,8 +132,8 @@ export default function WhatsAppCallback() {
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800">Select a WhatsApp Number</h2>
-              <p className="text-gray-500 text-sm">Choose which number to connect to this CRM</p>
+              <h2 className="text-slate-900">Select a WhatsApp Number</h2>
+              <p className="text-base text-slate-600">Choose which number to connect to this CRM</p>
             </div>
           </div>
 

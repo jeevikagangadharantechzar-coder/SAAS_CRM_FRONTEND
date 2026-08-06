@@ -68,7 +68,7 @@ const DraftsPage = () => {
     <div className="min-h-screen bg-gray-50 py-8 px-2 md:px-10">
       {/* Header */}
       <div className="flex flex-col lg:flex-row items-center justify-between mb-8 gap-2">
-        <h1 className="text-3xl font-extrabold tracking-tight text-black">
+        <h1 className="text-gray-900">
           Draft Proposals
         </h1>
         <div className="flex gap-3 items-center">

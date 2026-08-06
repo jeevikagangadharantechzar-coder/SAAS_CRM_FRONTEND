@@ -391,7 +391,10 @@ const ReportsPage = () => {
         {/* ── Header ── */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Team Analytics</h1>
+            <div>
+              <h1 className="text-gray-900">Team Analytics</h1>
+              <p className="text-base text-slate-600 mt-1">Insights and performance metrics for your sales team</p>
+            </div>
             {/* Subtle refresh indicator — replaces full-page spinner for filter changes */}
             {refreshing && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-600">
@@ -415,7 +418,7 @@ const ReportsPage = () => {
                   <button
                     key={id}
                     onClick={() => setFilterMode(id)}
-                    className={`px-2 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
+                    className={`px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-xs font-medium transition-colors whitespace-nowrap ${
                       filterMode === id
                         ? "bg-white text-blue-700 shadow-sm"
                         : "text-gray-500 hover:text-gray-700"
@@ -616,9 +619,9 @@ const ReportsPage = () => {
                             <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
 
                               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-2">
-                                <h4 className="text-sm font-semibold text-gray-900">
+                                <h3 className="text-slate-700">
                                   {getSessionLabel()} — {rep.name}
-                                </h4>
+                                </h3>
                                 <div className="flex items-center gap-4 text-xs text-gray-500">
                                   <span>{sessions.length} session(s)</span>
                                   <span className="font-medium text-gray-700">
@@ -691,8 +694,8 @@ const ReportsPage = () => {
           {filteredReports.length === 0 && !refreshing && (
             <div className="text-center py-16">
               <FaUsers className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members found</h3>
-              <p className="text-gray-500 text-sm max-w-md mx-auto">
+              <h3 className="text-slate-700 mb-2">No team members found</h3>
+              <p className="text-base text-slate-600 max-w-md mx-auto">
                 {searchTerm
                   ? "No members match your search. Try a different name."
                   : error || "No performance data available for the selected period."}

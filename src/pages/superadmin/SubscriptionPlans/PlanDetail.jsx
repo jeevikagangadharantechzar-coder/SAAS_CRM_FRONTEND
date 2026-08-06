@@ -83,7 +83,7 @@ const PlanDetail = () => {
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-3">
           <AlertCircle className="text-red-500" size={40} />
           <div>
-            <h3 className="font-bold text-red-800">Failed to load plan details</h3>
+            <h3 className="text-red-800">Failed to load plan details</h3>
             <p className="text-red-600 text-sm mt-1">
               {planError?.response?.data?.error || planError.message || "Plan not found."}
             </p>
@@ -152,9 +152,9 @@ const PlanDetail = () => {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{plan_name}</h2>
+              <h2 className="text-slate-900">{plan_name}</h2>
               {is_recommended && (
-                <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200 uppercase tracking-wider">
+                <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-200 uppercase tracking-wider">
                   Recommended
                 </span>
               )}
@@ -179,7 +179,7 @@ const PlanDetail = () => {
         <div className="md:col-span-2 space-y-6">
           {/* Identity & Description */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
+            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center gap-2">
               <Layers size={16} className="text-slate-500" />
               <span>Identity & Description</span>
             </h3>
@@ -219,7 +219,7 @@ const PlanDetail = () => {
 
           {/* Pricing & Billing */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
+            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center gap-2">
               <DollarSign size={16} className="text-slate-500" />
               <span>Pricing & Billing</span>
             </h3>
@@ -276,7 +276,7 @@ const PlanDetail = () => {
 
           {/* Usage Stats - Tenants list */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center justify-between">
+            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Briefcase size={16} className="text-slate-500" />
                 <span>Tenant Subscribers</span>
@@ -302,11 +302,11 @@ const PlanDetail = () => {
                       <tr key={tenant._id} className="hover:bg-slate-50/50">
                         <td className="px-4 py-2">
                           <div className="font-bold text-slate-900">{tenant.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{tenant.slug}</div>
+                          <div className="text-xs text-slate-400 font-mono">{tenant.slug}</div>
                         </td>
                         <td className="px-4 py-2">
                           <div>{tenant.adminName}</div>
-                          <div className="text-[10px] text-slate-400">{tenant.adminEmail}</div>
+                          <div className="text-xs text-slate-400">{tenant.adminEmail}</div>
                         </td>
                         <td className="px-4 py-2 text-slate-500">
                           {tenant.plan_end_date
@@ -315,7 +315,7 @@ const PlanDetail = () => {
                         </td>
                         <td className="px-4 py-2 text-center">
                           <span
-                            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold border ${
                               tenant.plan_status === "active"
                                 ? "bg-green-50 text-green-700 border-green-200"
                                 : "bg-red-50 text-red-700 border-red-200"
@@ -340,7 +340,7 @@ const PlanDetail = () => {
         {/* Sidebar limits summary panel */}
         <div className="space-y-6">
           <div className="bg-[#008ecc] text-white rounded-2xl shadow-sm border border-[#008ecc]/20 p-6 space-y-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-blue-100 border-b border-[#008ecc]/30 pb-3 flex items-center gap-2">
+            <h3 className="text-blue-100 border-b border-[#008ecc]/30 pb-3 flex items-center gap-2">
               <Users size={16} className="text-amber-300" />
               <span>Provision Limits</span>
             </h3>
@@ -359,7 +359,7 @@ const PlanDetail = () => {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4 text-xs text-slate-600">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center gap-2">
               <Calendar size={16} className="text-slate-500" />
               <span>Visibility Settings</span>
             </h3>

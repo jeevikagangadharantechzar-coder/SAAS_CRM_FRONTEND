@@ -163,11 +163,11 @@ const FreeTrialSignups = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+          <h2 className="text-slate-900 flex items-center gap-2">
             <Rocket size={22} className="text-[#008ecc]" />
             Free Trial Signups
           </h2>
-          <p className="text-slate-500 text-sm">All data submitted through the landing page free trial form.</p>
+          <p className="text-base text-slate-600">All data submitted through the landing page free trial form.</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -359,7 +359,7 @@ const FreeTrialSignups = () => {
             <div className="px-6 py-5 bg-red-600 text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={22} />
-                <h3 className="text-lg font-bold">Delete Signup Record</h3>
+                <h3 className="">Delete Signup Record</h3>
               </div>
               <button
                 onClick={() => {
@@ -376,8 +376,8 @@ const FreeTrialSignups = () => {
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3 text-red-800">
                 <AlertTriangle size={24} className="flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-sm">This only removes the signup log entry</h4>
-                  <p className="text-xs mt-1 leading-relaxed">
+                  <h3 className="">This only removes the signup log entry</h3>
+                  <p className="text-base text-slate-600 mt-1 leading-relaxed">
                     This deletes the free trial signup record for <strong>{deleteTarget.businessName}</strong> ({deleteTarget.email}) from this list. It does <strong>not</strong> delete the tenant's workspace or database — manage that from the Tenants page.
                   </p>
                 </div>

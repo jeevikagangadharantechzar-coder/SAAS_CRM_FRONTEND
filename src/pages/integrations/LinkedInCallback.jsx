@@ -253,7 +253,7 @@ export default function LinkedInCallback() {
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <Layers size={18} className="text-blue-700" />
           </div>
-          <h2 className="text-lg font-bold text-gray-800">LinkedIn Setup</h2>
+          <h2 className="text-slate-900">LinkedIn Setup</h2>
         </div>
 
         {status === "select-org" && (

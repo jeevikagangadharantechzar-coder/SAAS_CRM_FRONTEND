@@ -247,10 +247,10 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-gray-900 truncate">
+                  <h3 className="text-slate-700 truncate">
                     {topPerformer.name}
                   </h3>
-                  <p className="text-xs text-gray-500 truncate">{topPerformer.email}</p>
+                  <p className="text-base text-slate-600 truncate">{topPerformer.email}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex items-center gap-1 text-yellow-600 text-xs">
                       <Zap className="w-3 h-3" />

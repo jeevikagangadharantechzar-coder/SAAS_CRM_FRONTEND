@@ -53,7 +53,7 @@ export default function DragBoard() {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Pipeline Board</h1>
+      <h1 className="mb-6">Pipeline Board</h1>
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex gap-6 overflow-x-auto">
           {Object.entries(columns).map(([columnId, items]) => (
@@ -64,7 +64,7 @@ export default function DragBoard() {
                   {...provided.droppableProps}
                   className="w-64 bg-gray-100 p-4 rounded-lg shadow min-h-[300px]"
                 >
-                  <h2 className="font-semibold text-lg mb-4">{columnId}</h2>
+                  <h2 className="mb-4">{columnId}</h2>
                   {items.map((item, index) => (
                     <Draggable
                       key={item.id}

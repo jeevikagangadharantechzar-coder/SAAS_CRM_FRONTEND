@@ -836,7 +836,7 @@ function AllDealsComponent() {
       {/* Compact Toolbar Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-deals-header">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-gray-800">All Deals</h2>
+          <h2 className="text-slate-900">All Deals</h2>
           <button
             onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
             className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
@@ -1242,11 +1242,11 @@ function AllDealsComponent() {
                           {deal.dealName || "-"}
                         </button>
                         {deal.stage === "Closed Won" ? (
-                          <span title={wonBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
+                          <span title={wonBadgeText} className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {wonBadgeText}
                           </span>
                         ) : deal.convertedBy ? (
-                          <span title={convertedBadgeText} className="text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
+                          <span title={convertedBadgeText} className="text-xs bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                             {convertedBadgeText}
                           </span>
                         ) : null}
@@ -1294,16 +1294,16 @@ function AllDealsComponent() {
                               <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
                               <div className="absolute top-full left-0 mt-1.5 hidden group-hover:flex flex-col min-w-[200px] shadow-xl z-50 pointer-events-none" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
                                 <div style={{background:"#f97316"}} className="px-3 py-2">
-                                  <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
+                                  <span className="text-white text-xs font-bold">🎯 This is your target</span>
                                 </div>
                                 <div className="bg-white px-3 py-2 space-y-1.5">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
-                                    <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                    <span className="text-xs text-gray-400 w-16 shrink-0">Assigned</span>
+                                    <span className="text-xs font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
                                   </div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
-                                    <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                    <span className="text-xs text-gray-400 w-16 shrink-0">Due Date</span>
+                                    <span className="text-xs font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
                                   </div>
                                 </div>
                               </div>
@@ -1561,9 +1561,9 @@ function AllDealsComponent() {
           onMouseLeave={handleRejectionLeave}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
             {hoveredRejectedDeal.rejectedAt && (
-              <p className="text-[10px] text-gray-400 font-medium shrink-0 ml-2">
+              <p className="text-xs text-gray-400 font-medium shrink-0 ml-2">
                 {new Date(hoveredRejectedDeal.rejectedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                 {" "}
                 {new Date(hoveredRejectedDeal.rejectedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}

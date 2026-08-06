@@ -62,8 +62,8 @@ export default function GoogleIntegration() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-xl font-bold text-gray-800 mb-1">Google Meet Integration</h1>
-      <p className="text-sm text-gray-500 mb-6">
+      <h1 className="text-gray-900 mb-1">Google Meet Integration</h1>
+      <p className="text-base text-slate-600 mb-6">
         Connect a Google Service Account so all users in this tenant can auto-generate Meet links
         when creating meetings — no OAuth consent screen required.
       </p>

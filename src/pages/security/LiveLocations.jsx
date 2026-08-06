@@ -123,11 +123,11 @@ export default function LiveLocations() {
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-slate-900 flex items-center gap-2">
             <MapPin className="w-6 h-6 text-[#008ecc]" />
             Live Team Locations
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-base text-slate-600 mt-1">
             Updates automatically as each sales rep's browser reports its position. Only reps who have
             granted location permission and have the app open will appear here.
             {selectedMember && " Showing only the selected rep — click them again or \"Show All\" to reset."}
@@ -177,7 +177,7 @@ export default function LiveLocations() {
                     <p className="text-xs text-gray-400">{m.email}</p>
                   </div>
                   <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
                       hasLocation
                         ? "bg-green-50 text-green-700 border-green-200"
                         : "bg-gray-50 text-gray-400 border-gray-200"

@@ -71,8 +71,8 @@ const AddMemberModal = ({ group, onClose }) => {
               <UserPlus size={16} className="text-[#008ecc]" />
             </div>
             <div>
-              <h2 className="font-semibold text-gray-800 text-sm">Add Members</h2>
-              <p className="text-[11px] text-gray-400">{group.name}</p>
+              <h2 className="text-slate-900">Add Members</h2>
+              <p className="text-base text-slate-600">{group.name}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition">

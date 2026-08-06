@@ -49,7 +49,7 @@ const CustomCalendarInput = React.forwardRef(({ value, onClick, placeholder }, r
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
-    <span className="text-gray-600 text-[17px] font-normal">
+    <span className="text-gray-600 text-base font-normal">
       {value || placeholder}
     </span>
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -645,7 +645,10 @@ const InvoiceHead = () => {
       {/* Compact Toolbar Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-gray-800">Invoices</h1>
+          <div>
+            <h1 className="text-gray-900">Invoices</h1>
+            <p className="text-base text-slate-600 mt-1">Manage and track your invoices and payments</p>
+          </div>
           <button
             onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
             className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"

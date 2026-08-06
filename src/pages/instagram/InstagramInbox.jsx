@@ -504,8 +504,8 @@ export default function InstagramInbox() {
              style={{ background: "linear-gradient(135deg, rgba(225,48,108,.1), rgba(131,58,180,.1))" }}>
           {IG_SVG(44, "#E1306C")}
         </div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Instagram not connected</h2>
-        <p className="text-gray-500 text-sm mb-5 max-w-xs">
+        <h2 className="text-slate-900 mb-2">Instagram not connected</h2>
+        <p className="text-base text-slate-600 mb-5 max-w-xs">
           Connect your Instagram Business account to start receiving DMs and comments directly in the CRM
         </p>
         <button
@@ -576,7 +576,7 @@ export default function InstagramInbox() {
             >
               <MessageSquare size={13} /> Messages
               {totalUnread > 0 && (
-                <span className="min-w-[16px] h-4 rounded-full text-white text-[10px] flex items-center justify-center font-bold px-1"
+                <span className="min-w-[16px] h-4 rounded-full text-white text-xs flex items-center justify-center font-bold px-1"
                       style={{ background: "#E1306C" }}>
                   {totalUnread > 99 ? "99+" : totalUnread}
                 </span>
@@ -657,7 +657,7 @@ export default function InstagramInbox() {
                           {conv.lastMessageType !== "text" ? `[${conv.lastMessageType}]` : conv.lastMessage}
                         </p>
                         {conv.unreadCount > 0 && (
-                          <span className="ml-2 shrink-0 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
+                          <span className="ml-2 shrink-0 min-w-[18px] h-[18px] rounded-full text-white text-xs font-bold flex items-center justify-center px-1"
                                 style={{ background: "#E1306C" }}>
                             {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                           </span>
@@ -708,7 +708,7 @@ export default function InstagramInbox() {
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-medium text-gray-800">@{comment.senderUsername}</p>
                             {comment.isAd && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 leading-none">Ad</span>
+                              <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 leading-none">Ad</span>
                             )}
                           </div>
                           <span className="text-xs text-gray-400 shrink-0 ml-2">{fmtTime(comment.igTimestamp)}</span>
@@ -789,8 +789,8 @@ export default function InstagramInbox() {
                  style={{ background: "linear-gradient(135deg, rgba(225,48,108,.08), rgba(131,58,180,.08))" }}>
               {IG_SVG(48, "#E1306C")}
             </div>
-            <h3 className="text-xl font-bold text-gray-700 mb-2">Instagram Inbox</h3>
-            <p className="text-gray-400 text-sm max-w-xs">
+            <h3 className="text-slate-700 mb-2">Instagram Inbox</h3>
+            <p className="text-base text-slate-600 max-w-xs">
               Select a conversation from the Messages tab, or switch to Comments to manage post comments
             </p>
           </div>
@@ -1058,8 +1058,8 @@ function InstagramCreateLeadModal({ contact, onClose, onLeadCreated }) {
           <UserPlus size={16} className="text-white" />
         </div>
         <div>
-          <h2 className="font-semibold text-gray-800">Convert to Lead</h2>
-          <p className="text-xs text-gray-400">Create a CRM lead from this Instagram contact</p>
+          <h2 className="text-slate-900">Convert to Lead</h2>
+          <p className="text-base text-slate-600">Create a CRM lead from this Instagram contact</p>
         </div>
         <button onClick={onClose} className="ml-auto p-1.5 rounded-full text-gray-400 hover:bg-gray-100 transition">
           <X size={18} />

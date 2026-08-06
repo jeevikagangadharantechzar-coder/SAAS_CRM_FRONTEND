@@ -325,7 +325,7 @@ export const PlanForm = ({
         {/* SECTION 1 — Plan Identity */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
-            <h3 className="text-md font-bold tracking-tight">SECTION 1 — Plan Identity</h3>
+            <h3 className="">SECTION 1 — Plan Identity</h3>
           </div>
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -381,7 +381,7 @@ export const PlanForm = ({
                   } ${errors.plan_code ? "border-red-300 focus:ring-red-500" : "border-slate-300"}`}
                 />
                 {planCode && !isCodeDisabled && (
-                  <p className="text-slate-400 text-[11px] mt-1 font-mono">Live Preview: {planCode}</p>
+                  <p className="text-slate-400 text-xs mt-1 font-mono">Live Preview: {planCode}</p>
                 )}
                 {errors.plan_code && (
                   <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.plan_code.message}</p>
@@ -439,7 +439,7 @@ export const PlanForm = ({
         {/* SECTION 2 — Pricing Tiers */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
-            <h3 className="text-md font-bold tracking-tight">SECTION 2 — Pricing Tiers</h3>
+            <h3 className="">SECTION 2 — Pricing Tiers</h3>
           </div>
           <div className="p-6 space-y-4">
             {planType === "free" ? (
@@ -483,7 +483,7 @@ export const PlanForm = ({
                             <p className={`text-sm font-bold ${tier.enabled ? "text-slate-800" : "text-slate-400"}`}>
                               {tier.label}
                             </p>
-                            <p className="text-[10px] text-slate-400 font-medium">
+                            <p className="text-xs text-slate-400 font-medium">
                               {tier.duration_months} {tier.duration_months === 1 ? "month" : "months"} validity
                             </p>
                           </div>
@@ -521,8 +521,8 @@ export const PlanForm = ({
                         {tier.enabled && (
                           <div className="flex items-center justify-between px-4 pb-3 pt-0 gap-4">
                             <div className="flex-1">
-                              <p className="text-[11px] text-slate-500 font-semibold">Grace Days</p>
-                              <p className="text-[10px] text-slate-400">Extra days after plan expires before access is cut off</p>
+                              <p className="text-xs text-slate-500 font-semibold">Grace Days</p>
+                              <p className="text-xs text-slate-400">Extra days after plan expires before access is cut off</p>
                             </div>
                             <input
                               type="text"
@@ -600,7 +600,7 @@ export const PlanForm = ({
         {/* SECTION 3 — Tenant User Limits */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
-            <h3 className="text-md font-bold tracking-tight">SECTION 3 — Limits</h3>
+            <h3 className="">SECTION 3 — Limits</h3>
           </div>
           <div className="p-6 space-y-6">
             {planType === "enterprise" ? (
@@ -632,7 +632,7 @@ export const PlanForm = ({
                     errors.max_users_per_tenant ? "border-red-300 focus:ring-red-500" : "border-slate-300"
                   }`}
                 />
-                <p className="text-slate-400 text-[10px] mt-1.5">Enter 0 for unlimited users per tenant database.</p>
+                <p className="text-slate-400 text-xs mt-1.5">Enter 0 for unlimited users per tenant database.</p>
                 {errors.max_users_per_tenant && (
                   <p className="text-red-500 text-xs mt-1.5 font-medium">{errors.max_users_per_tenant.message}</p>
                 )}
@@ -644,7 +644,7 @@ export const PlanForm = ({
         {/* SECTION 4 — Visibility & Settings */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
-            <h3 className="text-md font-bold tracking-tight">SECTION 4 — Settings</h3>
+            <h3 className="">SECTION 4 — Settings</h3>
           </div>
           <div className="p-6 space-y-6">
             <div className="space-y-4 border-b border-slate-100 pb-4">
@@ -659,7 +659,7 @@ export const PlanForm = ({
                   <label htmlFor="is_visible" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
                     Visible on pricing page
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Show this plan on public landing pages.</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Show this plan on public landing pages.</p>
                 </div>
               </div>
 
@@ -674,7 +674,7 @@ export const PlanForm = ({
                   <label htmlFor="show_on_landing_page" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
                     Visible on Landing Page
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Feature this plan on the marketing landing page.</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Feature this plan on the marketing landing page.</p>
                 </div>
               </div>
 
@@ -689,9 +689,9 @@ export const PlanForm = ({
                   <label htmlFor="is_recommended" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
                     Mark Recommended
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Highlights this plan with a ribbon badge.</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Highlights this plan with a ribbon badge.</p>
                   {isRecommended && hasRecommendedPlan && (
-                    <div className="mt-2 text-amber-600 text-[10px] font-semibold flex items-start space-x-1 bg-amber-50 p-2 rounded border border-amber-100">
+                    <div className="mt-2 text-amber-600 text-xs font-semibold flex items-start space-x-1 bg-amber-50 p-2 rounded border border-amber-100">
                       <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                       <span>Note: Another plan is recommended. Saving will override.</span>
                     </div>
@@ -733,8 +733,8 @@ export const PlanForm = ({
               <Sparkles size={17} />
             </div>
             <div>
-              <h3 className="text-md font-bold tracking-tight leading-tight">Feature Access</h3>
-              <p className="text-[11px] text-white/75 font-medium">
+              <h3 className="leading-tight">Feature Access</h3>
+              <p className="text-xs text-white/75 font-medium">
                 {selectedFeatureCount} of {TOTAL_FEATURE_COUNT} features enabled
               </p>
             </div>
@@ -788,11 +788,11 @@ export const PlanForm = ({
                       <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white shadow-sm border border-slate-200">
                         <GroupIcon size={14} className="text-[#008ecc]" />
                       </div>
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <h3 className="text-slate-700">
                         {group.title}
-                      </h4>
+                      </h3>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200 shrink-0">
+                    <span className="text-xs font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200 shrink-0">
                       {groupSelectedCount}/{group.features.length}
                     </span>
                   </div>
@@ -819,7 +819,7 @@ export const PlanForm = ({
                               <FeatureIcon size={15} />
                             </span>
                             <span
-                              className={`text-[13px] font-medium truncate ${
+                              className={`text-xs font-medium truncate ${
                                 checked ? "text-slate-800" : "text-slate-500"
                               }`}
                             >

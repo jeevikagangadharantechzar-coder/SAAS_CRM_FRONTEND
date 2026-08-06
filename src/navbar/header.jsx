@@ -450,7 +450,7 @@ const handleLogout = async () => {
                         <div className="ml-3 flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                             {badge && (
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${badge.className}`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border shrink-0 ${badge.className}`}>
                                 {badge.emoji} {badge.label}
                               </span>
                             )}
@@ -647,10 +647,10 @@ const handleLogout = async () => {
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+            <h3 className="text-slate-700 mb-2">
               Log out
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-base text-slate-600 mb-6">
               Are you sure you want to logout?
             </p>
             <div className="flex justify-end gap-3">

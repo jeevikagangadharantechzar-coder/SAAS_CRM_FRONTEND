@@ -523,7 +523,7 @@ export default function ChatWidget() {
             <div className="flex items-center space-x-3">
               <AILogo size="medium" />
               <div>
-                <h3 className="font-semibold text-sm">ZIYA PULSE CRM</h3>
+                <h3 className="">ZIYA PULSE CRM</h3>
                 <p className="text-xs text-blue-100 opacity-90">
                   {callInProgress ? 'Session tracking active...' : 'Click to expand • Ready to help'}
                 </p>
@@ -557,7 +557,7 @@ export default function ChatWidget() {
         <div className="flex items-center space-x-3">
           <AILogo size="medium" />
           <div>
-            <h3 className="font-semibold">ZIYA PULSE CRM</h3>
+            <h3 className="">ZIYA PULSE CRM</h3>
             <p className="text-xs text-blue-100 opacity-90">
               {callInProgress ? 'WhatsApp session tracking...' : 'Connected to your CRM dashboard'}
             </p>
@@ -752,7 +752,7 @@ export default function ChatWidget() {
                               <span>{item.name || item.title || item.leadName || item.dealName || item.invoiceNumber || `Record ${idx + 1}`}</span>
                             )}
                             {statusText && (
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] ${badgeColor}`}>
+                              <span className={`px-2 py-0.5 rounded-full text-xs ${badgeColor}`}>
                                 {statusText === "Closed Won" ? "Deal Closed" : statusText === "Closed Lost" ? "Deal Lost" : statusText}
                               </span>
                             )}
@@ -778,7 +778,7 @@ export default function ChatWidget() {
 
                           {item.type === 'target' && (
                             <div className="mt-3 mb-2 space-y-2 bg-white p-2 rounded border border-gray-100">
-                              <div className="flex justify-between items-center text-[10px]">
+                              <div className="flex justify-between items-center text-xs">
                                 <span className="font-semibold text-gray-700">Leads Converted</span>
                                 <span className="text-gray-500">{item.actualLeadsConverted} / {item.targetLeads}</span>
                               </div>
@@ -786,7 +786,7 @@ export default function ChatWidget() {
                                 <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, item.targetLeads > 0 ? (item.actualLeadsConverted / item.targetLeads) * 100 : (item.actualLeadsConverted > 0 ? 100 : 0))}%` }}></div>
                               </div>
 
-                              <div className="flex justify-between items-center text-[10px]">
+                              <div className="flex justify-between items-center text-xs">
                                 <span className="font-semibold text-gray-700">Deals Closed</span>
                                 <span className="text-gray-500">{item.actualDealsClosed} / {item.targetDeals}</span>
                               </div>
@@ -794,7 +794,7 @@ export default function ChatWidget() {
                                 <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, item.targetDeals > 0 ? (item.actualDealsClosed / item.targetDeals) * 100 : (item.actualDealsClosed > 0 ? 100 : 0))}%` }}></div>
                               </div>
 
-                              <div className="flex justify-between items-center text-[10px] mt-2 pt-2 border-t border-gray-100">
+                              <div className="flex justify-between items-center text-xs mt-2 pt-2 border-t border-gray-100">
                                 <span className="text-gray-600">Calls: <span className="font-medium text-gray-800">{item.actualCalls}</span> / {item.targetCalls}</span>
                                 <span className="text-gray-600">Meetings: <span className="font-medium text-gray-800">{item.actualMeetings}</span> / {item.targetMeetings}</span>
                               </div>
@@ -803,7 +803,7 @@ export default function ChatWidget() {
 
                           {item.type === 'user' && item.performanceScore !== undefined && (
                             <div className="mt-3 mb-2 space-y-1 bg-white p-2 rounded border border-gray-100">
-                              <div className="flex justify-between items-center text-[10px]">
+                              <div className="flex justify-between items-center text-xs">
                                 <span className="font-semibold text-gray-700">Performance Score</span>
                                 <span className="text-gray-500 font-medium">{item.performanceScore}/100</span>
                               </div>

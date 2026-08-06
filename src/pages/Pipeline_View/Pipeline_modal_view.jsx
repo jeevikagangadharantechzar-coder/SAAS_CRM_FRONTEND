@@ -1154,6 +1154,12 @@ function Pipeline_modal_view() {
   const [userRole, setUserRole] = useState("");
   const [salesUsers, setSalesUsers] = useState([]);
 
+  // Dynamic custom fields (edit mode)
+  const [cfDraftOpen, setCfDraftOpen] = useState(false);
+  const [cfDraftRows, setCfDraftRows] = useState([]); // [{id, name, type, options}]
+  const cfIdRef = useRef(0);
+  const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
+
   // Helper function to get auth token
   const getAuthToken = () => {
     return localStorage.getItem("token");
@@ -1869,6 +1875,14 @@ function Pipeline_modal_view() {
       latitude: deal.latitude || "",
       longitude: deal.longitude || "",
       assignTo: deal.assignedTo?._id || "",
+      customFields: (deal.customFields || []).map((f) => ({
+        id: nextCfId(),
+        cardTitle: f.cardTitle || "",
+        name: f.name || "",
+        type: f.type || "text",
+        options: f.options || [],
+        value: f.value || "",
+      })),
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -1878,6 +1892,76 @@ function Pipeline_modal_view() {
     setIsEditingDetails(false);
     setEditFormData(null);
     setEditErrors({});
+    setCfDraftOpen(false);
+    setCfDraftRows([]);
+  };
+
+  /* ── Dynamic custom fields (edit mode) ─────────────────────── */
+  const toggleCfDraft = () => {
+    const willOpen = !cfDraftOpen;
+    setCfDraftOpen(willOpen);
+    if (willOpen && cfDraftRows.length === 0) {
+      setCfDraftRows([{ id: nextCfId(), name: "", type: "text", options: "" }]);
+    }
+  };
+
+  const addCfDraftRow = () => {
+    setCfDraftRows((prev) => [...prev, { id: nextCfId(), name: "", type: "text", options: "" }]);
+  };
+
+  const updateCfDraftRow = (rowId, key, value) => {
+    setCfDraftRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [key]: value } : r)));
+  };
+
+  const removeCfDraftRow = (rowId) => {
+    setCfDraftRows((prev) => prev.filter((r) => r.id !== rowId));
+  };
+
+  const cancelCfDraft = () => {
+    setCfDraftRows([]);
+    setCfDraftOpen(false);
+  };
+
+  const saveCfDraft = () => {
+    const validRows = cfDraftRows.filter((r) => r.name.trim());
+    if (validRows.length === 0) {
+      cancelCfDraft();
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle: "",
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: [...(prev.customFields || []), ...newFields],
+    }));
+    cancelCfDraft();
+  };
+
+  const updateEditCustomFieldValue = (fid, value) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).map((f) =>
+        f.id === fid ? { ...f, value } : f
+      ),
+    }));
+  };
+
+  const removeEditCustomField = (fid) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).filter((f) => f.id !== fid),
+    }));
   };
 
   const handleEditChange = (e) => {
@@ -2001,6 +2085,15 @@ function Pipeline_modal_view() {
         latitude: editFormData.latitude,
         longitude: editFormData.longitude,
         ...(userRole === "Admin" ? { assignTo: editFormData.assignTo } : {}),
+        customFields: JSON.stringify(
+          (editFormData.customFields || []).map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        ),
         ...extraFields,
       };
 
@@ -2310,7 +2403,7 @@ function Pipeline_modal_view() {
               <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-lg">
                 <div className="bg-white px-6 py-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <h3 className="text-slate-700 flex items-center gap-2">
                       <Clock className="text-purple-600" size={20} />
                       {deal.followUpDate
                         ? "Reschedule Follow-up"
@@ -2337,10 +2430,10 @@ function Pipeline_modal_view() {
                   <div className="space-y-6">
                     {deal.followUpDate && (
                       <div className="bg-gray-50 -mx-6 px-6 py-4 border-b border-gray-200 mb-6">
-                        <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <h3 className="text-slate-700 mb-4 flex items-center gap-2">
                           <CheckCircle size={16} className="text-gray-500" />
                           Complete Previous Follow-up
-                        </h4>
+                        </h3>
 
                         <div className="space-y-4">
                           <div>
@@ -2393,11 +2486,11 @@ function Pipeline_modal_view() {
                     )}
 
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-4">
+                      <h3 className="text-slate-700 mb-4">
                         {deal.followUpDate
                           ? "Schedule Next Follow-up"
                           : "Schedule Follow-up"}
-                      </h4>
+                      </h3>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Follow-up Date & Time{" "}
                         <span className="text-red-500">*</span>
@@ -2554,7 +2647,7 @@ function Pipeline_modal_view() {
                   <span className="truncate">{prevDealInfo.dealName}</span>
                 </button>
               )}
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h1 className="text-gray-900">
                 {deal.dealName}
               </h1>
               <div
@@ -2595,7 +2688,7 @@ function Pipeline_modal_view() {
                 <span className="text-2xl font-bold leading-none">
                   {currentScore}
                 </span>
-                <span className="text-[11px] font-medium uppercase tracking-wide mt-1">
+                <span className="text-xs font-medium uppercase tracking-wide mt-1">
                   Deal Score
                 </span>
               </div>
@@ -2738,10 +2831,10 @@ function Pipeline_modal_view() {
                         <Sparkles size={14} className="text-amber-500" />
                         <span>Deal Score & Health Analysis</span>
                       </div>
-                      <h2 className="text-xl font-bold text-slate-900">
+                      <h2 className="text-slate-900">
                         {deal.dealName}
                       </h2>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-base text-slate-600">
                         {deal.companyName || "No Company Specified"}
                       </p>
                     </div>
@@ -2780,7 +2873,7 @@ function Pipeline_modal_view() {
                             <span className="block text-3xl font-extrabold text-slate-900">
                               {analysisScore}
                             </span>
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
                               Out of 100
                             </span>
                           </div>
@@ -2791,7 +2884,7 @@ function Pipeline_modal_view() {
                               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                               {statusLabel}
                             </span>
-                            <p className="text-[11px] text-slate-500 mt-1 max-w-[180px] truncate">
+                            <p className="text-xs text-slate-500 mt-1 max-w-[180px] truncate">
                               Deal Analysis Status
                             </p>
                           </div>
@@ -2858,11 +2951,11 @@ function Pipeline_modal_view() {
                               <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
                                 <CheckCircle size={16} />
                               </div>
-                              <h3 className="text-sm font-bold text-slate-900">
+                              <h3 className="text-slate-700">
                                 Why This Deal Scored {breakdown.total}/100
                               </h3>
                             </div>
-                            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
                               Score Breakdown
                             </span>
                           </div>
@@ -2878,7 +2971,7 @@ function Pipeline_modal_view() {
                                   Base Deal Score
                                 </span>
                               </div>
-                              <span className="font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                              <span className="font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-xs">
                                 +{breakdown.base} pts
                               </span>
                             </div>
@@ -2897,12 +2990,12 @@ function Pipeline_modal_view() {
                                     <span className="font-semibold text-slate-800 block">
                                       {item.name}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 block">
+                                    <span className="text-xs text-slate-500 block">
                                       {item.detail}
                                     </span>
                                   </div>
                                 </div>
-                                <span className="font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded text-[11px]">
+                                <span className="font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded text-xs">
                                   +{item.pts} pts
                                 </span>
                               </div>
@@ -2927,7 +3020,7 @@ function Pipeline_modal_view() {
                       <div className="p-1.5 bg-amber-100 rounded-lg text-amber-600">
                         <AlertCircle size={16} />
                       </div>
-                      <h3 className="text-sm font-bold text-slate-900">
+                      <h3 className="text-slate-700">
                         Areas Requiring Attention
                       </h3>
                     </div>
@@ -2988,12 +3081,12 @@ function Pipeline_modal_view() {
                                     <span className="font-semibold text-slate-800 block">
                                       {item.name}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 block">
+                                    <span className="text-xs text-slate-500 block">
                                       {item.detail}
                                     </span>
                                   </div>
                                 </div>
-                                <span className="font-bold text-rose-700 bg-rose-100/70 px-2 py-0.5 rounded text-[11px]">
+                                <span className="font-bold text-rose-700 bg-rose-100/70 px-2 py-0.5 rounded text-xs">
                                   {item.pts} pts
                                 </span>
                               </li>
@@ -3029,18 +3122,18 @@ function Pipeline_modal_view() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-blue-100 pb-3">
                           <div>
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
                               Next Best Action
                             </span>
-                            <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                            <h3 className="text-slate-700 mt-0.5">
                               Current Stage:{" "}
                               <span className="text-indigo-600">
                                 {deal.stage || "Qualification"}
                               </span>
-                            </h4>
+                            </h3>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] text-slate-400 block uppercase font-medium">
+                            <span className="text-xs text-slate-400 block uppercase font-medium">
                               Suggested Next Step
                             </span>
                             <span className="text-xs font-bold text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-full inline-block mt-0.5">
@@ -3134,7 +3227,7 @@ function Pipeline_modal_view() {
 
                 {/* Section 4: Statistical Visualization (Deal Analysis Engine Data) */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
-                  <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between">
+                  <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Activity size={16} className="text-blue-600" />
                       <span>Deal Analysis & Statistical Visualizations</span>
@@ -3149,10 +3242,10 @@ function Pipeline_modal_view() {
                     {/* Chart 1: Deal Analysis Score Factors BarChart */}
                     <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                        <h3 className="text-slate-700 mb-1">
                           Deal Analysis Score Breakdown
-                        </h4>
-                        <p className="text-[11px] text-slate-500 mb-3">
+                        </h3>
+                        <p className="text-base text-slate-600 mb-3">
                           Impacts from Deal Analysis Engine
                         </p>
                       </div>
@@ -3237,10 +3330,10 @@ function Pipeline_modal_view() {
                     {/* Chart 2: Positive vs Attention Factors PieChart */}
                     <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                        <h3 className="text-slate-700 mb-1">
                           Health Factors Ratio
-                        </h4>
-                        <p className="text-[11px] text-slate-500 mb-3">
+                        </h3>
+                        <p className="text-base text-slate-600 mb-3">
                           Positive points vs penalties
                         </p>
                       </div>
@@ -3316,10 +3409,10 @@ function Pipeline_modal_view() {
                     {/* Chart 3: Activity Breakdown BarChart */}
                     <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-800 mb-1">
+                        <h3 className="text-slate-700 mb-1">
                           Activity Volume
-                        </h4>
-                        <p className="text-[11px] text-slate-500 mb-3">
+                        </h3>
+                        <p className="text-base text-slate-600 mb-3">
                           Logged CRM activities
                         </p>
                       </div>
@@ -3408,9 +3501,9 @@ function Pipeline_modal_view() {
 
                   {/* Pipeline Stage Progress Visual */}
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-500 mb-3">
+                    <h3 className="text-slate-700 mb-3">
                       Pipeline Stage Progress
-                    </h4>
+                    </h3>
                     <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                       {DEAL_STAGES.map((stg, index) => {
                         const currentStageIdx = DEAL_STAGES.indexOf(
@@ -3429,7 +3522,7 @@ function Pipeline_modal_view() {
                         return (
                           <div key={stg} className="flex items-center gap-3">
                             <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${dotStyle}`}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${dotStyle}`}
                             >
                               {isPassed ? "✓" : index + 1}
                             </div>
@@ -3441,7 +3534,7 @@ function Pipeline_modal_view() {
                                   {stg}
                                 </span>
                                 {isCurrent && (
-                                  <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
                                     Current Stage
                                   </span>
                                 )}
@@ -3456,7 +3549,7 @@ function Pipeline_modal_view() {
 
                 {/* Section 5: Recent Activity Summary Feed */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between mb-4">
+                  <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center justify-between mb-4">
                     <span className="flex items-center gap-2">
                       <Clock size={16} className="text-slate-500" />
                       <span>Recent Activity Log</span>
@@ -3494,7 +3587,7 @@ function Pipeline_modal_view() {
                               <p className="font-medium text-slate-800">
                                 {event.description}
                               </p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">
+                              <p className="text-xs text-slate-400 mt-0.5">
                                 {event.timestamp
                                   ? new Date(event.timestamp).toLocaleString()
                                   : "Recently"}
@@ -3518,10 +3611,10 @@ function Pipeline_modal_view() {
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                   <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-900">
+                      <h2 className="text-slate-900">
                         Deal Details
                       </h2>
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-base text-slate-600 mt-1">
                         Comprehensive information about this deal
                       </p>
                     </div>
@@ -3537,11 +3630,12 @@ function Pipeline_modal_view() {
                   </div>
                   <div className="p-6">
                     {!isEditingDetails ? (
+                      <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Deal Information */}
                         <div className="space-y-5">
                           <div>
-                            <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                            <h3 className="text-slate-700 mb-3">
                               Deal Information
                             </h3>
                             <div className="space-y-4">
@@ -3668,7 +3762,7 @@ function Pipeline_modal_view() {
                         {/* Company Information */}
                         <div className="space-y-5">
                           <div>
-                            <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                            <h3 className="text-slate-700 mb-3">
                               Company Information
                             </h3>
                             <div className="space-y-4">
@@ -3894,12 +3988,37 @@ function Pipeline_modal_view() {
                           </div>
                         </div>
                       </div>
+
+                      {deal.customFields?.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-slate-200">
+                          <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide mb-4">
+                            Custom Fields
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {deal.customFields.map((f, idx) => (
+                              <div
+                                key={f._id || `${f.name}-${idx}`}
+                                className="flex items-center text-slate-700"
+                              >
+                                <Tag size={18} className="mr-3 text-slate-500" />
+                                <div>
+                                  <p className="text-sm font-medium">{f.name}</p>
+                                  <p className="text-slate-900">
+                                    {f.value || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      </>
                     ) : (
                       <div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {/* Deal Information (edit) */}
                           <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                            <h3 className="text-slate-700 mb-1">
                               Deal Information
                             </h3>
                             <div>
@@ -4002,7 +4121,7 @@ function Pipeline_modal_view() {
 
                           {/* Company Information (edit) */}
                           <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                            <h3 className="text-slate-700 mb-1">
                               Company Information
                             </h3>
                             <div>
@@ -4297,6 +4416,165 @@ function Pipeline_modal_view() {
                           </div>
                         </div>
 
+                        <div className="mt-6 pt-6 border-t border-slate-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">
+                              Custom Fields
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={toggleCfDraft}
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 transition"
+                            >
+                              <Plus size={14} /> Add Field
+                            </button>
+                          </div>
+
+                          {(editFormData.customFields || []).length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              {editFormData.customFields.map((f) => (
+                                <div key={f.id}>
+                                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                                    {f.name}
+                                    <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                      Custom
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeEditCustomField(f.id)}
+                                      className="ml-auto text-slate-400 hover:text-red-500"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </label>
+
+                                  {f.type === "textarea" ? (
+                                    <textarea
+                                      rows={3}
+                                      value={f.value}
+                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      placeholder={`Enter ${f.name}`}
+                                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
+                                    />
+                                  ) : f.type === "dropdown" ? (
+                                    <select
+                                      value={f.value}
+                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                    >
+                                      <option value="">Select {f.name}</option>
+                                      {(f.options || []).map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type={f.type}
+                                      value={f.value}
+                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      placeholder={`Enter ${f.name}`}
+                                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {cfDraftOpen && (
+                            <div className="space-y-3 bg-blue-50 border border-dashed border-blue-300 rounded-lg p-4">
+                              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                                New fields (not saved yet)
+                              </p>
+
+                              {cfDraftRows.map((row) => (
+                                <div
+                                  key={row.id}
+                                  className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+                                >
+                                  <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Field name</label>
+                                    <input
+                                      type="text"
+                                      value={row.name}
+                                      placeholder="e.g. PO Number"
+                                      onChange={(e) => updateCfDraftRow(row.id, "name", e.target.value)}
+                                      className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Field type</label>
+                                    <select
+                                      value={row.type}
+                                      onChange={(e) => updateCfDraftRow(row.id, "type", e.target.value)}
+                                      className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                    >
+                                      <option value="text">Text</option>
+                                      <option value="number">Number</option>
+                                      <option value="date">Date</option>
+                                      <option value="textarea">Textarea</option>
+                                      <option value="dropdown">Dropdown</option>
+                                    </select>
+                                  </div>
+
+                                  {row.type === "dropdown" ? (
+                                    <div>
+                                      <label className="block text-xs text-slate-500 mb-1">
+                                        Options (comma sep.)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={row.options}
+                                        placeholder="e.g. Yes, No"
+                                        onChange={(e) => updateCfDraftRow(row.id, "options", e.target.value)}
+                                        className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div />
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCfDraftRow(row.id)}
+                                    className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-slate-300 text-slate-400 hover:text-red-500 hover:border-red-300"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+
+                              <div className="flex items-center gap-3 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={addCfDraftRow}
+                                  className="text-xs font-semibold text-blue-600 hover:underline"
+                                >
+                                  + Add another field
+                                </button>
+                                <div className="flex-1" />
+                                <button
+                                  type="button"
+                                  onClick={cancelCfDraft}
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={saveCfDraft}
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                >
+                                  Save Fields
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
                           <button
                             type="button"
@@ -4339,10 +4617,10 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-slate-900">
                       Attachments
                     </h2>
-                    <p className="text-sm text-slate-600 mt-1">
+                    <p className="text-base text-slate-600 mt-1">
                       Files and documents related to this deal
                     </p>
                   </div>
@@ -4481,10 +4759,10 @@ function Pipeline_modal_view() {
             {activeTab === "activity" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-slate-900">
                     Activity Timeline
                   </h2>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-base text-slate-600 mt-1">
                     Everything that happened on this deal, in one place
                   </p>
                 </div>
@@ -4521,10 +4799,10 @@ function Pipeline_modal_view() {
                               </div>
                             </div>
                             <div className="ml-4">
-                              <h3 className="text-sm font-medium text-slate-900">
+                              <h3 className="text-slate-700">
                                 {event.description}
                               </h3>
-                              <p className="text-sm text-slate-500 mt-1">
+                              <p className="text-base text-slate-600 mt-1">
                                 {event.performedBy?.name
                                   ? `${event.performedBy.name} — `
                                   : ""}
@@ -4557,10 +4835,10 @@ function Pipeline_modal_view() {
                 <div className="p-6 border-b border-slate-100">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-900">
+                      <h2 className="text-slate-900">
                         Follow-up History
                       </h2>
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-base text-slate-600 mt-1">
                         Track all follow-ups for this deal (Most recent first)
                       </p>
                     </div>
@@ -4581,7 +4859,7 @@ function Pipeline_modal_view() {
                   {deal.followUpDate ? (
                     <div className="mb-8">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <h3 className="text-slate-700 flex items-center gap-2">
                           <Clock size={16} className="text-purple-600" />
                           Upcoming Follow-up
                         </h3>
@@ -4700,7 +4978,7 @@ function Pipeline_modal_view() {
 
                       return (
                         <div className="mt-8">
-                          <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                          <h3 className="text-slate-700 mb-4 flex items-center gap-2">
                             <Archive size={16} className="text-slate-600" />
                             Past Follow-ups ({filteredHistory.length})
                           </h3>
@@ -4807,9 +5085,9 @@ function Pipeline_modal_view() {
                                                 )}
                                               </div>
                                               <div>
-                                                <h4 className="font-medium text-slate-900">
+                                                <h3 className="text-slate-700">
                                                   Follow-up {outcome}
-                                                </h4>
+                                                </h3>
                                                 <div className="flex items-center gap-4 mt-1">
                                                   {actionDate ? (
                                                     <>
@@ -5094,10 +5372,10 @@ function Pipeline_modal_view() {
             {activeTab === "notes" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-slate-900">
                     Notes
                   </h2>
-                  <p className="text-sm text-slate-600 mt-1">Newest first</p>
+                  <p className="text-base text-slate-600 mt-1">Newest first</p>
                 </div>
                 <div className="p-6 border-b border-slate-100">
                   <textarea
@@ -5149,10 +5427,10 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-slate-900">
                       Proposals
                     </h2>
-                    <p className="text-sm text-slate-600 mt-1">
+                    <p className="text-base text-slate-600 mt-1">
                       Sent to this deal's contact
                     </p>
                   </div>
@@ -5274,10 +5552,10 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-slate-900">
                       Invoices
                     </h2>
-                    <p className="text-sm text-slate-600 mt-1">
+                    <p className="text-base text-slate-600 mt-1">
                       Billed to this deal
                     </p>
                   </div>
@@ -5356,10 +5634,10 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-slate-900">
                       Meetings
                     </h2>
-                    <p className="text-sm text-slate-600 mt-1">
+                    <p className="text-base text-slate-600 mt-1">
                       Scheduled with this deal's contact
                     </p>
                   </div>
@@ -5448,10 +5726,10 @@ function Pipeline_modal_view() {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-slate-900">
                       Emails
                     </h2>
-                    <p className="text-sm text-slate-600 mt-1">
+                    <p className="text-base text-slate-600 mt-1">
                       Campaign sends to this deal's contact
                     </p>
                   </div>
@@ -5529,7 +5807,7 @@ function Pipeline_modal_view() {
             <div className="space-y-6">
               {/* Status Card */}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-                <h3 className="text-sm font-medium text-slate-700 mb-3 uppercase tracking-wide">
+                <h3 className="text-slate-700 mb-3">
                   Deal Status
                 </h3>
                 <div
@@ -5547,7 +5825,7 @@ function Pipeline_modal_view() {
 
               {/* Company Card */}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-                <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+                <h3 className="text-slate-700 mb-4">
                   Company
                 </h3>
                 <div className="flex items-center mb-4">
@@ -5555,9 +5833,9 @@ function Pipeline_modal_view() {
                     <Building size={20} className="text-slate-600" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-slate-900">
+                    <h3 className="text-slate-700">
                       {deal.companyName || "Unknown Company"}
-                    </h4>
+                    </h3>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -5603,7 +5881,7 @@ function Pipeline_modal_view() {
 
               {/* Quick Actions Card */}
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200 p-5">
-                <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">
+                <h3 className="text-slate-700 mb-4">
                   Quick Actions
                 </h3>
                 <div className="space-y-2">

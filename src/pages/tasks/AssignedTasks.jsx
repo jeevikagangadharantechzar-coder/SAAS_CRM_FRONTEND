@@ -186,19 +186,19 @@ function TaskProgressWidget({ task }) {
           {metrics.map((m, i) => (
             <div key={i} className={`p-2.5 rounded-xl border ${m.bg} ${m.border} flex flex-col justify-between min-h-[82px]`}>
               <div className="flex items-start justify-between gap-1 mb-1.5">
-                <span className="text-[10px] font-bold text-gray-600 leading-tight">{m.label}</span>
+                <span className="text-xs font-bold text-gray-600 leading-tight">{m.label}</span>
                 <span className="shrink-0 mt-0.5">{m.icon}</span>
               </div>
               <div>
                 {m.countOnly ? (
-                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${m.badgeClass}`}>
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-bold ${m.badgeClass}`}>
                     {m.actual} {m.badgeText}
                   </span>
                 ) : (
                   <div className="flex items-end gap-1.5">
                     <span className="text-sm font-black text-gray-800">{m.actual}</span>
-                    <span className="text-[10px] text-gray-400 font-bold mb-0.5">/ {m.target}</span>
-                    <span className="text-[10px] font-bold ml-auto" style={{ color: m.pct >= 100 ? '#10b981' : m.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
+                    <span className="text-xs text-gray-400 font-bold mb-0.5">/ {m.target}</span>
+                    <span className="text-xs font-bold ml-auto" style={{ color: m.pct >= 100 ? '#10b981' : m.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
                       {m.pct}%
                     </span>
                   </div>
@@ -286,8 +286,8 @@ function ConfirmModal({ open, title, message, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-base font-bold text-gray-800 mb-2">{title}</h3>
-        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <h3 className="text-slate-700 mb-2">{title}</h3>
+        <p className="text-base text-slate-600 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">
             Cancel
@@ -346,7 +346,7 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
         <div className="w-4 h-4 rounded border-2 border-amber-400 bg-amber-400 flex items-center justify-center shrink-0">
           <Check size={10} className="text-white" strokeWidth={3} />
         </div>
-        <span className="text-[11px] text-amber-700 font-semibold">Reported — Pending admin review</span>
+        <span className="text-xs text-amber-700 font-semibold">Reported — Pending admin review</span>
       </div>
     );
   }
@@ -364,7 +364,7 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
           {open && <Check size={10} className="text-white" strokeWidth={3} />}
         </div>
         <span onClick={() => setOpen((v) => !v)}
-          className={`text-[11px] font-semibold transition-colors cursor-pointer ${open ? "text-rose-600" : "text-gray-400 group-hover:text-rose-500"}`}>
+          className={`text-xs font-semibold transition-colors cursor-pointer ${open ? "text-rose-600" : "text-gray-400 group-hover:text-rose-500"}`}>
           Report Issue
         </span>
       </label>
@@ -372,28 +372,28 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
       {open && (
         <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 overflow-hidden">
           <div className="px-3 py-2.5 bg-rose-100 border-b border-rose-200">
-            <p className="text-[10px] font-bold text-rose-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <p className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2 flex items-center gap-1">
               {itemType === "deal" ? <Briefcase size={9} /> : <Users size={9} />}
               {itemType === "deal" ? "Deal" : "Lead"} Details
             </p>
-            <p className="text-[12px] font-bold text-gray-800 mb-1">{itemName}</p>
+            <p className="text-xs font-bold text-gray-800 mb-1">{itemName}</p>
             <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
               {itemDetails.companyName && (
-                <span className="text-[10px] text-gray-600 flex items-center gap-0.5"><Building2 size={8} />{itemDetails.companyName}</span>
+                <span className="text-xs text-gray-600 flex items-center gap-0.5"><Building2 size={8} />{itemDetails.companyName}</span>
               )}
               {itemDetails.value && (
-                <span className="text-[10px] font-bold text-gray-700">{itemDetails.currency || ""} {itemDetails.value}</span>
+                <span className="text-xs font-bold text-gray-700">{itemDetails.currency || ""} {itemDetails.value}</span>
               )}
               {itemDetails.phoneNumber && (
-                <span className="text-[10px] text-gray-600 flex items-center gap-0.5"><Phone size={8} />{itemDetails.phoneNumber}</span>
+                <span className="text-xs text-gray-600 flex items-center gap-0.5"><Phone size={8} />{itemDetails.phoneNumber}</span>
               )}
               {itemDetails.email && (
-                <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate col-span-2"><Mail size={8} />{itemDetails.email}</span>
+                <span className="text-xs text-gray-500 flex items-center gap-0.5 truncate col-span-2"><Mail size={8} />{itemDetails.email}</span>
               )}
             </div>
             {itemDetails.statusLabel && (
               <div className="mt-1.5 flex items-center gap-1.5">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${itemDetails.statusColor || "bg-gray-100 text-gray-600"}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${itemDetails.statusColor || "bg-gray-100 text-gray-600"}`}>
                   {itemDetails.statusLabel}
                 </span>
               </div>
@@ -401,7 +401,7 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
           </div>
 
           <div className="px-3 py-2.5 space-y-2">
-            <p className="text-[10px] font-semibold text-rose-700">
+            <p className="text-xs font-semibold text-rose-700">
               Describe why this {itemType === "deal" ? "deal" : "lead"} is delayed or stuck — admin will review and may reassign.
             </p>
             <textarea
@@ -410,17 +410,17 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
               placeholder={itemType === "deal"
                 ? "e.g. Deal stuck at negotiation, client not responding for 2 weeks..."
                 : "e.g. Lead not responding, seems uninterested, needs reassignment..."}
-              className="w-full border border-rose-200 rounded-lg px-2.5 py-2 text-[11px] focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none bg-white"
+              className="w-full border border-rose-200 rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none bg-white"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => { setOpen(false); setNote(""); }}
-                className="text-[10px] text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
+                className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
               <button onClick={send} disabled={!note.trim() || sending}
-                className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-rose-500 text-white rounded-lg disabled:opacity-50 hover:bg-rose-600 transition-colors">
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-rose-500 text-white rounded-lg disabled:opacity-50 hover:bg-rose-600 transition-colors">
                 <Send size={10} /> {sending ? "Sending…" : "Send to Admin"}
               </button>
             </div>
@@ -451,31 +451,31 @@ function DealStageJourney({ deal }) {
   if (!createdDate && !leadCreatedDate) return null;
   return (
     <div className="border-t border-gray-100 px-3 py-2.5 bg-white/60 space-y-1.5">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
 
       {hasLeadOrigin ? (
         <>
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-400 mt-0.5 shrink-0" />
             <div>
-              <span className="text-[11px] font-semibold text-gray-600">Cold</span>
-              <p className="text-[10px] text-gray-700 font-semibold">{fmt(leadCreatedDate)} {fmtTime(leadCreatedDate)}</p>
+              <span className="text-xs font-semibold text-gray-600">Cold</span>
+              <p className="text-xs text-gray-700 font-semibold">{fmt(leadCreatedDate)} {fmtTime(leadCreatedDate)}</p>
             </div>
           </div>
           {leadHistory.map((h, hi) => (
             <div key={`lead-${hi}`} className="flex items-start gap-2 pl-1">
               <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className="w-2 h-2 rounded-full bg-blue-300 shrink-0" /></div>
               <div>
-                <span className="text-[11px] font-semibold text-gray-700">{h.status}</span>
-                <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</p>
+                <span className="text-xs font-semibold text-gray-700">{h.status}</span>
+                <p className="text-xs text-gray-700 font-semibold">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</p>
               </div>
             </div>
           ))}
           <div className="flex items-start gap-2 pl-1">
             <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /></div>
             <div>
-              <span className="text-[11px] font-semibold text-gray-700">Converted to Deal</span>
-              <p className="text-[10px] text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
+              <span className="text-xs font-semibold text-gray-700">Converted to Deal</span>
+              <p className="text-xs text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
             </div>
           </div>
         </>
@@ -483,8 +483,8 @@ function DealStageJourney({ deal }) {
         <div className="flex items-start gap-2">
           <div className="w-2 h-2 rounded-full bg-gray-400 mt-0.5 shrink-0" />
           <div>
-            <span className="text-[11px] font-semibold text-gray-600">Lead Created</span>
-            <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+            <span className="text-xs font-semibold text-gray-600">Lead Created</span>
+            <p className="text-xs text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
           </div>
         </div>
       )}
@@ -492,9 +492,9 @@ function DealStageJourney({ deal }) {
       <div className="flex items-start gap-2 pl-1">
         <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" /></div>
         <div>
-          <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-          <span className="text-[10px] text-gray-400 ml-1">(deal start)</span>
-          <p className="text-[10px] text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
+          <span className="text-xs font-semibold text-gray-700">Qualification</span>
+          <span className="text-xs text-gray-400 ml-1">(deal start)</span>
+          <p className="text-xs text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
         </div>
       </div>
       {stageHistory.map((h, hi) => {
@@ -504,9 +504,9 @@ function DealStageJourney({ deal }) {
           <div key={hi} className="flex items-start gap-2 pl-1">
             <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} /></div>
             <div>
-              <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-              {diff !== null && <span className="text-[10px] text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
-              <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+              <span className="text-xs font-semibold text-gray-700">{h.stage}</span>
+              {diff !== null && <span className="text-xs text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+              <p className="text-xs text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
             </div>
           </div>
         );
@@ -521,18 +521,18 @@ function LeadStatusJourney({ lead }) {
   if (!lead.createdAt) return null;
   return (
     <div className="border-t border-gray-100 px-3 py-2.5 bg-white/60 space-y-1">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Status Journey</p>
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Status Journey</p>
       <div className="flex items-center gap-0.5">
         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-        <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-        <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(lead.createdAt)}</span>
+        <span className="text-xs text-gray-600 font-medium ml-1">Cold</span>
+        <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(lead.createdAt)}</span>
       </div>
       {history.map((h, hi) => (
         <div key={hi} className="flex items-center gap-0.5 pl-1">
           <div className="w-px h-2 bg-gray-200 mr-0.5" />
           <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400" />
-          <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-          <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+          <span className="text-xs text-gray-600 font-medium ml-1">{h.status}</span>
+          <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
         </div>
       ))}
     </div>
@@ -585,10 +585,10 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
       <div className="px-3 pt-3 pb-2.5">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-800 truncate flex-1">{dealName}</p>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -598,14 +598,14 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
           </div>
         </div>
         {linkedBadgeText && (
-          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
+          <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
         )}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-          {deal.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
-          {deal.value && <span className={`text-[10px] font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
-          {deal.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
-          {deal.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
-          {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+          {deal.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
+          {deal.value && <span className={`text-xs font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
+          {deal.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
+          {deal.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
+          {totalDays !== null && <span className="text-xs text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
         </div>
         {/* Report Issue only makes sense while the deal is still live —
             posts against the task itself (no Target dependency), so it's
@@ -625,7 +625,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
       {expanded && totalDays !== null && (
         <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
           <Clock size={11} className="text-emerald-600 shrink-0" />
-          <p className="text-[11px] font-bold text-emerald-700">
+          <p className="text-xs font-bold text-emerald-700">
             {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
           </p>
         </div>
@@ -652,10 +652,10 @@ function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers
       <div className="p-3">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-800 truncate flex-1">{lead.leadName}</p>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
             </div>
           </div>
           <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 shrink-0" title={expanded ? "Collapse" : "Expand"}>
@@ -663,13 +663,13 @@ function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers
           </button>
         </div>
         {linkedBadgeText && (
-          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
+          <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1">{linkedBadgeText}</span>
         )}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-          {lead.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
-          {lead.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
-          {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
-          {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
+          {lead.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
+          {lead.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
+          {lead.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
+          {lead.createdAt && <span className="text-xs text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
         </div>
         {taskStatus !== "Completed" && lead.status !== "Converted" && (
           <ReportBox
@@ -703,7 +703,7 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
     <div className="space-y-4">
       {dealItems.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><Briefcase size={11}/> Linked Deals</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><Briefcase size={11}/> Linked Deals</p>
           {dealItems.map((deal) => (
             <DealLinkCard
               key={deal._id}
@@ -722,7 +722,7 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
       )}
       {leadItems.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><FileText size={11}/> Linked Leads</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><FileText size={11}/> Linked Leads</p>
           {leadItems.map((lead) => {
             const isPrimary = String(lead._id) === String(primaryLeadId);
             // A converted lead has no pipeline of its own — the real stage
@@ -782,7 +782,7 @@ function NotesModal({ open, task, onClose, onSave }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <h3 className="text-slate-700 flex items-center gap-2">
             <StickyNote size={16} className="text-amber-500" /> Add Note
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
@@ -829,7 +829,7 @@ function CompleteModal({ open, task, onClose, onConfirm }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <h3 className="text-slate-700 flex items-center gap-2">
             <CheckCircle size={16} className="text-emerald-500" /> Mark as Done
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
@@ -897,19 +897,19 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
         {/* Header */}
         <div className="flex items-start justify-between mb-1">
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-gray-800 text-sm truncate">{task.title}</h3>
-            <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+            <h3 className="text-slate-700 truncate">{task.title}</h3>
+            <p className="text-base text-slate-600 flex items-center gap-1 mt-1">
               <User size={9} />From: {task.createdBy?.firstName} {task.createdBy?.lastName}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${task.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : task.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : task.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{task.status || "New"}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${task.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : task.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : task.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{task.status || "New"}</span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold shrink-0 ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
           </div>
         </div>
 
         {adminTookTask && (
-          <span className="inline-block w-fit text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 mb-2">
+          <span className="inline-block w-fit text-xs bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 mb-2">
             Admin took this task — {adminTookTask}
           </span>
         )}
@@ -917,11 +917,11 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
         {hasPendingIssue && (
           <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-rose-50 border border-rose-200 rounded-lg w-fit">
             <Flag size={11} className="text-rose-500 shrink-0" />
-            <span className="text-[11px] font-bold text-rose-700">Pending Admin Review</span>
+            <span className="text-xs font-bold text-rose-700">Pending Admin Review</span>
           </div>
         )}
 
-        <p className="text-[11px] text-gray-400 mb-2 mt-1">Due {fmt(task.dueDate)}{isOverdue ? " (Overdue)" : ""}</p>
+        <p className="text-xs text-gray-400 mb-2 mt-1">Due {fmt(task.dueDate)}{isOverdue ? " (Overdue)" : ""}</p>
 
         <TaskProgressWidget task={task} />
 
@@ -931,8 +931,8 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
           <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
             <StickyNote size={12} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Task Description</p>
-              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{task.description}</p>
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-0.5">Task Description</p>
+              <p className="text-xs text-amber-800 font-medium leading-relaxed">{task.description}</p>
             </div>
           </div>
         )}
@@ -942,8 +942,8 @@ function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progress
           <div className="mb-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
             <StickyNote size={12} className="text-blue-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[9px] font-bold text-blue-600 uppercase tracking-wide mb-0.5">Your Notes</p>
-              <p className="text-[11px] text-blue-800 font-medium leading-relaxed break-words">{task.completionNotes}</p>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-0.5">Your Notes</p>
+              <p className="text-xs text-blue-800 font-medium leading-relaxed break-words">{task.completionNotes}</p>
             </div>
           </div>
         )}
@@ -998,7 +998,7 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
       {/* Table header */}
       <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.4fr_1.3fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
         {["Task", "Priority", "Status", "Due Date", "Linked Lead/Deal", "Actions"].map((h, i) => (
-          <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i >= 1 && i <= 3 ? "text-center" : i === 5 ? "text-center" : ""}`}>{h}</div>
+          <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i >= 1 && i <= 3 ? "text-center" : i === 5 ? "text-center" : ""}`}>{h}</div>
         ))}
       </div>
 
@@ -1032,17 +1032,17 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
                 <div className={`w-1.5 h-8 rounded-full shrink-0 ${isCompleted ? "bg-emerald-400" : isInProgress ? "bg-blue-400" : isOverdue ? "bg-red-300" : "bg-gray-200"}`} />
                 <div className="min-w-0">
                   <p className="font-bold text-gray-900 text-sm truncate">{task.title}</p>
-                  {task.description && <p className="text-[11px] text-gray-400 truncate mt-0.5">{task.description}</p>}
+                  {task.description && <p className="text-xs text-gray-400 truncate mt-0.5">{task.description}</p>}
                 </div>
                 <div className="ml-1 shrink-0">{isExpanded ? <ChevronUp size={14} className="text-[#008ecc]" /> : <ChevronDown size={14} className="text-gray-400" />}</div>
               </div>
               {/* Priority */}
               <div className="flex items-center justify-center">
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
               </div>
               {/* Status */}
               <div className="flex items-center justify-center">
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium flex items-center gap-1 ${
+                <span className={`text-xs px-2 py-0.5 rounded-md font-medium flex items-center gap-1 ${
                   isCompleted ? "bg-emerald-50 text-emerald-600" : isInProgress ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-500"
                 }`}>
                   {isCompleted ? <CheckCircle size={9} /> : isInProgress ? <AlertCircle size={9} /> : <Clock size={9} />}
@@ -1051,32 +1051,32 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
               </div>
               {/* Due Date */}
               <div className="flex items-center justify-center">
-                <span className={`text-[11px] font-semibold flex items-center gap-1 ${isOverdue && !isCompleted ? "text-red-500" : "text-gray-600"}`}>
+                <span className={`text-xs font-semibold flex items-center gap-1 ${isOverdue && !isCompleted ? "text-red-500" : "text-gray-600"}`}>
                   <Calendar size={9} />{fmt(task.dueDate)}
                 </span>
               </div>
               {/* Linked Lead/Deal */}
               <div className="flex flex-col justify-center gap-0.5 min-w-0">
-                {leadName && <span className="text-[11px] text-gray-700 truncate flex items-center gap-1"><FileText size={9} className="text-blue-500 shrink-0" />{leadName}</span>}
-                {dealName && <span className="text-[11px] text-gray-700 truncate flex items-center gap-1"><Briefcase size={9} className="text-blue-500 shrink-0" />{dealName}</span>}
-                {linkedBadgeText && <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 w-fit truncate max-w-full">{linkedBadgeText}</span>}
-                {!leadName && !dealName && <span className="text-[11px] text-gray-300">—</span>}
+                {leadName && <span className="text-xs text-gray-700 truncate flex items-center gap-1"><FileText size={9} className="text-blue-500 shrink-0" />{leadName}</span>}
+                {dealName && <span className="text-xs text-gray-700 truncate flex items-center gap-1"><Briefcase size={9} className="text-blue-500 shrink-0" />{dealName}</span>}
+                {linkedBadgeText && <span className="text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 w-fit truncate max-w-full">{linkedBadgeText}</span>}
+                {!leadName && !dealName && <span className="text-xs text-gray-300">—</span>}
               </div>
               {/* Actions */}
               <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                 {isPending && (
                   <>
                     <button onClick={() => onAddNote(task)} className="p-1.5 rounded-md border border-amber-200 text-amber-600 hover:bg-amber-50" title="Add a note"><MessageSquare size={12} /></button>
-                    <button onClick={() => onStartTask(task)} className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-[#008ecc] text-white hover:bg-[#0077aa] text-[11px] font-semibold"><ArrowRight size={11} /> Start</button>
+                    <button onClick={() => onStartTask(task)} className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-[#008ecc] text-white hover:bg-[#0077aa] text-xs font-semibold"><ArrowRight size={11} /> Start</button>
                   </>
                 )}
                 {isInProgress && (
                   <>
                     <button onClick={() => onAddNote(task)} className="p-1.5 rounded-md border border-amber-200 text-amber-600 hover:bg-amber-50" title="Add a note"><MessageSquare size={12} /></button>
-                    <button onClick={() => onCompleteTask(task)} className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 text-[11px] font-bold"><CheckCircle size={11} /> Done</button>
+                    <button onClick={() => onCompleteTask(task)} className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 text-xs font-bold"><CheckCircle size={11} /> Done</button>
                   </>
                 )}
-                {isCompleted && <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1"><CheckCircle size={12} /> Completed</span>}
+                {isCompleted && <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle size={12} /> Completed</span>}
               </div>
             </div>
 
@@ -1100,9 +1100,9 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
                       <div key={i} className="flex items-start gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#008ecc] mt-1 shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold text-gray-700">{h.event}</p>
-                          {h.detail && <p className="text-[10px] text-gray-500 break-words">{h.detail}</p>}
-                          <p className="text-[10px] text-gray-400">{fmt(h.at)} {fmtTime(h.at)}</p>
+                          <p className="text-xs font-semibold text-gray-700">{h.event}</p>
+                          {h.detail && <p className="text-xs text-gray-500 break-words">{h.detail}</p>}
+                          <p className="text-xs text-gray-400">{fmt(h.at)} {fmtTime(h.at)}</p>
                         </div>
                       </div>
                     ))}
@@ -1375,7 +1375,7 @@ export default function AssignedTasks() {
       {/* Header */}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-gray-900 flex items-center gap-2">
             <ClipboardList size={20} className="text-[#008ecc]" />
             My Tasks
             <button 
@@ -1386,7 +1386,7 @@ export default function AssignedTasks() {
               <Info size={16} />
             </button>
           </h1>
-          <p className="text-gray-400 text-sm mt-0.5">Tasks assigned to you by your admin</p>
+          <p className="text-base text-slate-600 mt-1">Tasks assigned to you by your admin</p>
         </div>
       </div>
 
@@ -1407,7 +1407,7 @@ export default function AssignedTasks() {
           Targets. */}
       {mainView === "tasks" && myDashStats && (
         <div className="mb-5">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">My Monthly Overview</h2>
+          <h2 className="text-slate-900 mb-3">My Monthly Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={myDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={myDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
@@ -1434,7 +1434,7 @@ export default function AssignedTasks() {
             >
               {f}
               {badge > 0 && (
-                <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold px-1 ${
+                <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-xs font-bold px-1 ${
                   isActive ? "bg-white/30 text-white" : "bg-[#008ecc] text-white"
                 }`}>
                   {badge}
@@ -1455,7 +1455,7 @@ export default function AssignedTasks() {
         >
           <Bell size={13} /> Notifications & Reminders
           {unreadReminderCount > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+            <span className="ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
               {unreadReminderCount}
             </span>
           )}
@@ -1489,7 +1489,7 @@ export default function AssignedTasks() {
       {mainView === "notifications" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <Bell size={16} className="text-amber-500" /> Notifications & Reminders
             </h2>
             <div className="flex items-center gap-3">
@@ -1528,19 +1528,19 @@ export default function AssignedTasks() {
                   {icon}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-800">{n.title}</p>
-                    <p className="text-[12px] text-gray-700 font-medium mt-0.5 leading-relaxed whitespace-pre-line">{n.message}</p>
+                    <p className="text-xs text-gray-700 font-medium mt-0.5 leading-relaxed whitespace-pre-line">{n.message}</p>
                     {n.meta?.linkedName && (
                       <div className="mt-2 bg-white/70 border border-gray-100 rounded-lg px-2.5 py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
+                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
                           {n.meta.linkedType === "deal" ? <Briefcase size={10} /> : <FileText size={10} />}
                           {n.meta.linkedType === "deal" ? "Deal" : "Lead"}: {n.meta.linkedName}
                         </span>
-                        {n.meta.linkedCompany && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Building2 size={9} />{n.meta.linkedCompany}</span>}
-                        {n.meta.linkedPhone && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} />{n.meta.linkedPhone}</span>}
-                        {n.meta.linkedEmail && <span className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} />{n.meta.linkedEmail}</span>}
+                        {n.meta.linkedCompany && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={9} />{n.meta.linkedCompany}</span>}
+                        {n.meta.linkedPhone && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} />{n.meta.linkedPhone}</span>}
+                        {n.meta.linkedEmail && <span className="text-xs text-gray-500 flex items-center gap-1 truncate"><Mail size={9} />{n.meta.linkedEmail}</span>}
                       </div>
                     )}
-                    <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
+                    <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
                   </div>
                   <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
                     {isUnread && (
@@ -1549,7 +1549,7 @@ export default function AssignedTasks() {
                           e.stopPropagation();
                           handleMarkNotifRead(n);
                         }}
-                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
                         title="Mark as read"
                       >
                         <CheckCheck size={11} /> Mark as read
@@ -1632,21 +1632,21 @@ function WorkflowExplanationModal({ open, onClose }) {
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
           <X size={20} />
         </button>
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="text-slate-700 mb-4 flex items-center gap-2">
           <Info className="text-blue-500" />
           How Tasks & Targets Work
         </h3>
         
         <div className="space-y-6 text-sm text-gray-700">
           <section>
-            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <h3 className="text-slate-700 mb-2 border-b pb-1">🏢 Company Viewpoint</h3>
             <p className="mb-2">
               Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
             </p>
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👤 Salesperson Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
               <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
@@ -1655,7 +1655,7 @@ function WorkflowExplanationModal({ open, onClose }) {
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👑 Admin Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
               <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>

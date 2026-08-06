@@ -85,8 +85,8 @@ export default function InstagramIntegrationCard() {
             {IG_SVG(26)}
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800 text-lg">Instagram</h2>
-            <p className="text-gray-500 text-sm">DMs, post comments & story mentions — all in one inbox</p>
+            <h2 className="text-slate-900">Instagram</h2>
+            <p className="text-base text-slate-600">DMs, post comments & story mentions — all in one inbox</p>
           </div>
         </div>
         {integrations.length > 0 && (

@@ -269,8 +269,8 @@ const ClientCLVDetails = () => {
           </button>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
             <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Error Loading Client</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h2 className="text-slate-900 mb-2">Error Loading Client</h2>
+            <p className="text-base text-slate-600 mb-6">{error}</p>
             <button
               onClick={fetchClientDetails}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-3"
@@ -302,8 +302,8 @@ const ClientCLVDetails = () => {
           </button>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
             <Users size={48} className="text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Client Not Found</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-slate-900 mb-2">Client Not Found</h2>
+            <p className="text-base text-slate-600 mb-6">
               The client "{decodedCompanyName}" doesn't exist or you don't have access.
             </p>
             <button
@@ -334,8 +334,8 @@ const ClientCLVDetails = () => {
             <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <RefreshCwOff size={32} className="text-orange-600" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Deal Reversed</h2>
-            <p className="text-gray-600 mb-2">
+            <h2 className="text-slate-900 mb-2">Deal Reversed</h2>
+            <p className="text-base text-slate-600 mb-2">
               This deal was previously "Closed Won" but has been moved to another stage.
             </p>
             <p className="text-sm text-orange-600 mb-6">
@@ -378,7 +378,7 @@ const ClientCLVDetails = () => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">{client.companyName}</h1>
+              <h1 className="text-gray-900">{client.companyName}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {getClassificationBadge(client.classification)}
                 {client.riskLevel && getRiskLevelBadge(client.riskLevel)}
@@ -491,7 +491,7 @@ const ClientCLVDetails = () => {
           <div className="space-y-6">
             {/* Support Analysis */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Support Analysis</h3>
+              <h3 className="text-slate-700 mb-4">Support Analysis</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Total Tickets</p>
@@ -529,7 +529,7 @@ const ClientCLVDetails = () => {
             {/* Risk Factors */}
             {client.riskFactors && client.riskFactors.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Risk Factors</h3>
+                <h3 className="text-slate-700 mb-4">Risk Factors</h3>
                 <ul className="list-disc list-inside space-y-1">
                   {client.riskFactors.map((factor, idx) => (
                     <li key={idx} className="text-sm text-red-600">{factor}</li>
@@ -542,7 +542,7 @@ const ClientCLVDetails = () => {
 
         {activeTab === "deals" && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Deal History</h3>
+            <h3 className="text-slate-700 mb-4">Deal History</h3>
             {deals.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full">
@@ -615,7 +615,7 @@ const ClientCLVDetails = () => {
         {activeTab === "support" && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Support Tickets</h3>
+              <h3 className="text-slate-700">Support Tickets</h3>
               <button
                 onClick={() => setShowTicketModal(true)}
                 className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -648,8 +648,8 @@ const ClientCLVDetails = () => {
                         {formatDate(ticket.openedAt)}
                       </span>
                     </div>
-                    <h4 className="font-medium text-gray-800 mb-1">{ticket.subject}</h4>
-                    <p className="text-sm text-gray-600">{ticket.description}</p>
+                    <h3 className="text-slate-700 mb-1">{ticket.subject}</h3>
+                    <p className="text-base text-slate-600">{ticket.description}</p>
                   </div>
                 ))}
               </div>
@@ -666,7 +666,7 @@ const ClientCLVDetails = () => {
           <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Create Support Ticket</h3>
+                <h3 className="text-slate-700 mb-4">Create Support Ticket</h3>
                 <form onSubmit={handleCreateTicket}>
                   <div className="space-y-4">
                     <div>

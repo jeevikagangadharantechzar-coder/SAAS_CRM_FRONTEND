@@ -229,8 +229,8 @@ export default function NotificationsPage() {
               <Bell className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">All Notifications</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <h1 className="text-gray-900">All Notifications</h1>
+              <p className="text-base text-slate-600 mt-1">
                 {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
               </p>
             </div>
@@ -345,7 +345,7 @@ export default function NotificationsPage() {
           >
             {label}
             {key === "unread" && unreadCount > 0 && (
-              <span className="ml-1.5 bg-red-500 text-white text-[10px] rounded-full px-1 py-0.5">
+              <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full px-1 py-0.5">
                 {unreadCount}
               </span>
             )}
@@ -452,7 +452,7 @@ export default function NotificationsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                           {badge && (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.className}`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${badge.className}`}>
                               {badge.emoji} {badge.label}
                             </span>
                           )}
@@ -509,13 +509,13 @@ export default function NotificationsPage() {
                           invoice: "bg-cyan-100 text-cyan-700",
                         }[cat] || "bg-gray-100 text-gray-600";
                         return (
-                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${catClass}`}>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${catClass}`}>
                             {CATEGORY_LABELS[cat] || n.type}
                           </span>
                         );
                       })()}
                       {isUnread && (
-                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
                           Unread
                         </span>
                       )}

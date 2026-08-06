@@ -135,8 +135,8 @@ export default function FacebookCallback() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white rounded-2xl shadow-md w-full max-w-md p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-1">Select a Facebook Page</h2>
-          <p className="text-gray-500 text-sm mb-5">
+          <h2 className="text-slate-900 mb-1">Select a Facebook Page</h2>
+          <p className="text-base text-slate-600 mb-5">
             Choose which page you want to connect to this CRM
           </p>
 

@@ -31,11 +31,11 @@ export const DateDivider = ({ date }) => (
 // System message (group created / member removed etc.)
 export const SystemMessage = ({ text, date }) => (
   <div className="flex flex-col items-center my-3">
-    <span className="text-[11px] text-gray-400 bg-gray-100 rounded-full px-4 py-1 text-center max-w-xs">
+    <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-4 py-1 text-center max-w-xs">
       {text}
     </span>
     {date && (
-      <span className="text-[10px] text-gray-300 mt-0.5">{formatTime(date)}</span>
+      <span className="text-xs text-gray-300 mt-0.5">{formatTime(date)}</span>
     )}
   </div>
 );
@@ -129,12 +129,12 @@ const GroupTickIcon = ({ readBy = [], totalOthers, memberNames = {}, senderId })
       {/* Hover tooltip — names + read times — drops BELOW the time row */}
       {hover && (
         <div className="absolute top-full right-0 mt-2 z-50 min-w-[200px] max-w-[280px]
-                        bg-gray-900 text-white text-[11px] rounded-xl shadow-2xl py-2
+                        bg-gray-900 text-white text-xs rounded-xl shadow-2xl py-2
                         border border-white/10 pointer-events-none"
              style={{ whiteSpace: "nowrap" }}>
           {/* Up-arrow pointing to the tick */}
           <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 border-l border-t border-white/10 rotate-45" />
-          <div className="px-3 pb-1.5 mb-1 border-b border-white/10 text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
+          <div className="px-3 pb-1.5 mb-1 border-b border-white/10 text-xs text-gray-400 font-semibold uppercase tracking-wide">
             {someRead ? `Read by ${readByCount} of ${totalOthers}` : "Not read yet"}
           </div>
           {someRead ? (
@@ -143,7 +143,7 @@ const GroupTickIcon = ({ readBy = [], totalOthers, memberNames = {}, senderId })
               return (
                 <div key={i} className="flex items-center justify-between gap-4 px-3 py-1.5">
                   <span className="font-medium text-white truncate">{rName}</span>
-                  <span className="text-gray-400 flex-shrink-0 text-[10px]">{formatReadTime(r.readAt)}</span>
+                  <span className="text-gray-400 flex-shrink-0 text-xs">{formatReadTime(r.readAt)}</span>
                 </div>
               );
             })
@@ -176,13 +176,13 @@ const ReactionPill = ({ emoji, userIds, names, isMine: myReaction, onToggle }) =
           }`}
       >
         <span>{emoji}</span>
-        <span className="font-semibold text-[11px]">{userIds.length}</span>
+        <span className="font-semibold text-xs">{userIds.length}</span>
       </button>
 
       {/* Tooltip */}
       {hover && names.length > 0 && (
         <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className="bg-gray-800 text-white text-[11px] rounded-lg px-2.5 py-1.5 whitespace-nowrap shadow-lg max-w-[180px] text-center leading-snug">
+          <div className="bg-gray-800 text-white text-xs rounded-lg px-2.5 py-1.5 whitespace-nowrap shadow-lg max-w-[180px] text-center leading-snug">
             <span className="font-medium">{emoji}</span>
             <span className="mx-1 text-gray-300">·</span>
             {names_str}
@@ -332,7 +332,7 @@ const MessageBubble = ({
       <div className="flex flex-col max-w-[68%]">
         {/* Sender name in groups */}
         {isGroup && !isMine && msg.senderName && (
-          <span className="text-[11px] font-semibold text-[#008ecc] mb-0.5 ml-1">{msg.senderName}</span>
+          <span className="text-xs font-semibold text-[#008ecc] mb-0.5 ml-1">{msg.senderName}</span>
         )}
 
         {/* Reply quote preview */}
@@ -346,12 +346,12 @@ const MessageBubble = ({
               {/* "Replying to" label */}
               <div className={`flex items-center gap-1 mb-0.5 ${isMine ? "text-white/70" : "text-[#008ecc]"}`}>
                 <CornerUpLeft size={11} />
-                <span className="text-[10px] font-semibold truncate">
+                <span className="text-xs font-semibold truncate">
                   {msg.replyTo.senderName || "Someone"}
                 </span>
               </div>
               {/* Quoted message text */}
-              <p className={`text-[12px] truncate leading-snug ${isMine ? "text-white/80" : "text-gray-500"}`}>
+              <p className={`text-xs truncate leading-snug ${isMine ? "text-white/80" : "text-gray-500"}`}>
                 {msg.replyTo.message || "📎 Attachment"}
               </p>
             </div>
@@ -400,7 +400,7 @@ const MessageBubble = ({
         {/* ── Time + tick — OUTSIDE bubble, below it ──── */}
         <div className={`flex items-center gap-1.5 mt-1 ${isMine ? "justify-end pr-0.5" : "justify-start pl-0.5"}`}
              style={{ overflow: "visible" }}>
-          <span className="text-[10px] text-gray-400 leading-none">{formatTime(msg.createdAt)}</span>
+          <span className="text-xs text-gray-400 leading-none">{formatTime(msg.createdAt)}</span>
           {/* DM tick */}
           {isMine && !isGroup && !isDeleted && <TickIcon status={msg.status} isRead={msg.isRead} />}
           {/* Group tick — shows read count for messages sent by current user */}

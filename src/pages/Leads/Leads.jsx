@@ -1104,8 +1104,8 @@ const updateFilter = (key, value, setter) => {
 
       {/* Page Title */}
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage and track your potential customers</p>
+        <h1 className="text-gray-900">Leads</h1>
+        <p className="text-base text-slate-600 mt-1">Manage and track your potential customers</p>
       </div>
 
       {/* Compact Toolbar Header */}
@@ -1507,15 +1507,15 @@ const updateFilter = (key, value, setter) => {
                             </div>
                           </span>
                           {lead.status === "Rejected" ? (
-                            <span title={rejectedBadgeText} className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
+                            <span title={rejectedBadgeText} className="text-xs bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                               {rejectedBadgeText}
                             </span>
                           ) : lead.status === "Converted" ? (
-                            <span title={convertedBadgeText} className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
+                            <span title={convertedBadgeText} className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
                               {convertedBadgeText}
                             </span>
                           ) : isActiveDisabled ? (
-                            <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
+                            <span className="text-xs bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
                               Pending Reassignment
                             </span>
                           ) : null}
@@ -1558,19 +1558,19 @@ const updateFilter = (key, value, setter) => {
                                 {isBellClicked && (
                                   <div className="absolute top-full left-0 mt-1.5 flex flex-col min-w-[200px] shadow-xl z-50" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
                                     <div style={{background:"#f97316"}} className="px-3 py-2 flex justify-between items-center">
-                                      <span className="text-white text-[11px] font-bold">🎯 This is your target</span>
+                                      <span className="text-white text-xs font-bold">🎯 This is your target</span>
                                       <button onClick={(e) => { e.stopPropagation(); setOpenBellTooltipId(null); }} className="text-white hover:text-orange-200">
                                         <X size={12} />
                                       </button>
                                     </div>
                                     <div className="bg-white px-3 py-2 space-y-1.5">
                                       <div className="flex items-center gap-1.5">
-                                        <span className="text-[10px] text-gray-400 w-16 shrink-0">Assigned</span>
-                                        <span className="text-[10px] font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                        <span className="text-xs text-gray-400 w-16 shrink-0">Assigned</span>
+                                        <span className="text-xs font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
                                       </div>
                                       <div className="flex items-center gap-1.5">
-                                        <span className="text-[10px] text-gray-400 w-16 shrink-0">Due Date</span>
-                                        <span className="text-[10px] font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                        <span className="text-xs text-gray-400 w-16 shrink-0">Due Date</span>
+                                        <span className="text-xs font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -1658,7 +1658,7 @@ const updateFilter = (key, value, setter) => {
                       </button>
 
                       {isFollowUpMissed(lead) && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
+                        <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
                           Missed
                         </span>
                       )}
@@ -1828,9 +1828,9 @@ const updateFilter = (key, value, setter) => {
           onMouseLeave={handleRejectionLeave}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
             {hoveredRejectedLead.rejectedAt && (
-              <p className="text-[10px] text-gray-400 font-medium shrink-0 ml-2">
+              <p className="text-xs text-gray-400 font-medium shrink-0 ml-2">
                 {new Date(hoveredRejectedLead.rejectedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                 {" "}
                 {new Date(hoveredRejectedLead.rejectedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}

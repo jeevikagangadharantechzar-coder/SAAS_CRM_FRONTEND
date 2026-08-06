@@ -37,7 +37,7 @@ const TicketCard = ({ ticket, onSendMessage }) => {
             <StatusBadge status={ticket.status} />
             <PriorityBadge priority={ticket.priority} />
           </div>
-          <h3 className="text-sm font-semibold text-gray-800 mt-1.5">{ticket.subject}</h3>
+          <h3 className="text-slate-700 mt-1.5">{ticket.subject}</h3>
           {ticket.attachmentName && (
             <a
               href={`${SI_URI}/${ticket.attachmentPath}`}
@@ -179,8 +179,8 @@ const UserSupportView = () => {
           <LifeBuoy className="text-[#008ecc]" size={20} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Support</h1>
-          <p className="text-sm text-gray-500">Raise a ticket and our team will get back to you</p>
+          <h1 className="text-gray-900">Support</h1>
+          <p className="text-base text-slate-600">Raise a ticket and our team will get back to you</p>
         </div>
       </div>
 
@@ -190,7 +190,7 @@ const UserSupportView = () => {
           onSubmit={handleSubmit}
           className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5"
         >
-          <h2 className="text-sm font-semibold text-gray-800">Raise a New Ticket</h2>
+          <h2 className="text-slate-900">Raise a New Ticket</h2>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject</label>
@@ -280,7 +280,7 @@ const UserSupportView = () => {
 
         {/* Ticket History */}
         <div className="lg:col-span-3 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          <h2 className="text-slate-900">
             My Tickets ({tickets.length})
           </h2>
 

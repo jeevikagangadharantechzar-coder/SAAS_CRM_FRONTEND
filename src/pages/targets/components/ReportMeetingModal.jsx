@@ -74,8 +74,8 @@ export default function ReportMeetingModal({ isOpen, onClose, targetId, baseUrl,
               <Calendar size={18} />
             </div>
             <div>
-              <h2 className="text-gray-900 font-bold text-base">Report Meeting Done</h2>
-              <p className="text-[11px] text-gray-500 font-medium">Log a new meeting for this target</p>
+              <h2 className="text-slate-900">Report Meeting Done</h2>
+              <p className="text-base text-slate-600">Log a new meeting for this target</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">

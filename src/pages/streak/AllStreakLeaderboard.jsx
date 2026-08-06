@@ -305,8 +305,8 @@ const AllStreakLeaderboard = () => {
             <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <Activity className="w-10 h-10 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Failed to Load Data</h2>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
+            <h2 className="text-slate-900 mb-3">Failed to Load Data</h2>
+            <p className="text-base text-slate-600 mb-6 max-w-md mx-auto">{error}</p>
             <button
               onClick={() => fetchStreakData()}
               className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl font-medium hover:shadow-lg transition-shadow"
@@ -331,9 +331,10 @@ const AllStreakLeaderboard = () => {
                 <Trophy className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+                <h1 className="text-gray-900">
                   Leaderboard
                 </h1>
+                <p className="text-base text-slate-600 mt-1">Track top performers and sales streaks across your team</p>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   <span className="px-4 py-1.5 bg-white rounded-full text-sm font-medium text-gray-700 shadow-sm border border-gray-200">
                     {getDynamicMonthLabel()}
@@ -430,7 +431,7 @@ const AllStreakLeaderboard = () => {
 
             {/* Title row */}
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-base font-semibold text-gray-800">Performance Data</h2>
+              <h2 className="text-slate-900">Performance Data</h2>
               {refreshing && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-full text-xs font-medium text-orange-600">
                   <FiRefreshCw className="w-3 h-3 animate-spin" />
@@ -675,7 +676,7 @@ const AllStreakLeaderboard = () => {
                             )}
                           </div>
                           <div className="text-xs text-gray-500">{performer.email}</div>
-                          <div className="text-[10px] text-purple-500">
+                          <div className="text-xs text-purple-500">
                             All time: {performer.cumulativeTotalLeads} leads · {performer.cumulativeDisplay}
                           </div>
                         </div>

@@ -415,7 +415,7 @@ const pipeline = () => {
       {/* <DeleteModel/> */}
       <section className="">
         <div className="md:flex justify-between items-center mb-4 ">
-          <h2 className="text-lg font-semibold">Lead Conversion</h2>
+          <h2 className="">Lead Conversion</h2>
 
           {/* Buttons */}
           <div className="flex gap-2 mt-4 md:md-0">
@@ -910,7 +910,7 @@ const pipeline = () => {
                             </div> */}
 
                                 {!isCollapsed && (
-                                  <div className="flex gap-3 mt-2 text-gray-500 text-[13px]">
+                                  <div className="flex gap-3 mt-2 text-gray-500 text-xs">
                                     <div className="font-bold">
                                       Rs. {totalAmount.toLocaleString("en-IN")}
                                     </div>
@@ -970,7 +970,7 @@ const pipeline = () => {
                                               <CardTitle>
                                                 <div className="flex justify-between">
                                                   <div className="flex gap-2">
-                                                    <button className=" rounded-full px-2 text-white bg-[green] text-[12px]">
+                                                    <button className=" rounded-full px-2 text-white bg-[green] text-xs">
                                                       {deal.owner
                                                         ?.slice(0, 2)
                                                         .toUpperCase() || "NA"}
@@ -1130,7 +1130,7 @@ const pipeline = () => {
                                             </CardContent>
                                             <hr className="h-0" />
                                             <div className="h-0 items-center flex justify-end mr-2">
-                                              <p className="font-bold text-[12px]">
+                                              <p className="font-bold text-xs">
                                                 Created At :{" "}
                                                 <span className="font-normal ml-1">
                                                   {" "}

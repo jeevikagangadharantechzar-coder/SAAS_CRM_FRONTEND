@@ -29,7 +29,8 @@ module.exports = {
   ],
 theme: {
       extend: { fontFamily: {
-      poppins: ['Poppins', 'sans-serif'],
+      sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      poppins: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
     },},
     },
     plugins: [],

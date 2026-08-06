@@ -339,10 +339,10 @@ function UserManagementInner() {
         <div className="w-full mb-6 flex flex-col items-center">
           <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <div className="text-center md:text-left">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              <h1 className="text-gray-900">
                 User &amp; Role Management
               </h1>
-              <p className="text-gray-600 mt-1 text-sm">Manage users and their access permissions</p>
+              <p className="text-base text-slate-600 mt-1">Manage users and their access permissions</p>
             </div>
             <div className="flex flex-wrap gap-3 items-center justify-center">
               <div className="add-user-btn">
@@ -415,8 +415,8 @@ function UserManagementInner() {
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-50 rounded-md"><Users size={20} className="text-blue-600" /></div>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">Users</h2>
-                      <p className="text-sm text-gray-500">
+                      <h2 className="text-slate-900">Users</h2>
+                      <p className="text-base text-slate-600">
                         {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""} total
                       </p>
                     </div>
@@ -530,8 +530,8 @@ function UserManagementInner() {
                         <td colSpan="6" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <Users size={40} className="text-gray-300 mb-3" />
-                            <h3 className="text-gray-500 font-medium mb-1">No users found</h3>
-                            <p className="text-gray-400 text-sm">
+                            <h3 className="text-slate-700 mb-1">No users found</h3>
+                            <p className="text-base text-slate-600">
                               {searchUserQuery || statusFilter !== "all"
                                 ? "Try adjusting your search or filter"
                                 : "Start by adding your first user"}
@@ -600,8 +600,8 @@ function UserManagementInner() {
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-green-50 rounded-md"><Shield size={20} className="text-green-600" /></div>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">Roles</h2>
-                      <p className="text-sm text-gray-500">
+                      <h2 className="text-slate-900">Roles</h2>
+                      <p className="text-base text-slate-600">
                         {filteredRoles.length} role{filteredRoles.length !== 1 ? "s" : ""} total
                       </p>
                     </div>
@@ -688,8 +688,8 @@ function UserManagementInner() {
                         <td colSpan="3" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <Shield size={40} className="text-gray-300 mb-3" />
-                            <h3 className="text-gray-500 font-medium mb-1">No roles found</h3>
-                            <p className="text-gray-400 text-sm">
+                            <h3 className="text-slate-700 mb-1">No roles found</h3>
+                            <p className="text-base text-slate-600">
                               {searchRoleQuery
                                 ? "Try adjusting your search"
                                 : "Create your first role to get started"}

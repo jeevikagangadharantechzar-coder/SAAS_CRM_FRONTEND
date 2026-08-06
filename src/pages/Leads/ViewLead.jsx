@@ -541,6 +541,15 @@ const LEAD_ACTIVITY_TYPE_META = {
   email_cancelled:     { icon: XCircle,          bg: "bg-red-100",     iconColor: "text-red-600" },
   default:             { icon: Clock,            bg: "bg-slate-100",   iconColor: "text-slate-500" },
 };
+const ActivityItem = ({ color, icon, label, date }) => (
+  <div className="flex items-start">
+    <div className={`w-10 h-10 ${color} rounded-full flex items-center justify-center flex-shrink-0`}>{icon}</div>
+    <div className="ml-4">
+      <h3 className="text-slate-700">{label}</h3>
+      <p className="text-base text-slate-600 mt-1">{new Date(date).toLocaleString()}</p>
+    </div>
+  </div>
+);
 
 // ════════════════════════════════════════════════════════════
 // Main ViewLead
@@ -1692,7 +1701,7 @@ const ViewLead = () => {
                   <span className="truncate">{prevLeadInfo.leadName}</span>
                 </button>
               )}
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h1 className="text-gray-900">
                 {lead.leadName}
               </h1>
               {nextLeadInfo && (
@@ -1779,7 +1788,7 @@ const ViewLead = () => {
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "attachments" &&
                 lead.attachments?.length > 0 && (
-                  <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-[10px]">
+                  <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
                     {lead.attachments.length}
                   </span>
                 )}
@@ -1795,8 +1804,8 @@ const ViewLead = () => {
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Lead Details</h2>
-                    <p className="text-sm text-slate-600 mt-1">Comprehensive information about this lead</p>
+                    <h2 className="text-slate-900">Lead Details</h2>
+                    <p className="text-base text-slate-600 mt-1">Comprehensive information about this lead</p>
                   </div>
                   {!isEditingDetails && !isTerminal && (
                     <button
@@ -1813,7 +1822,7 @@ const ViewLead = () => {
                   <>
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-5">
-                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">Client Information</h3>
+                        <h3 className="text-slate-700">Client Information</h3>
                         <div className="space-y-4">
                           <InfoRow icon={<User size={18}/>}     label="Lead Name" value={lead.leadName} />
                           <InfoRow icon={<Building size={18}/>} label="Company"   value={lead.companyName || "Not specified"} />
@@ -1945,7 +1954,7 @@ const ViewLead = () => {
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                        <h3 className="text-slate-700 mb-1">
                           Client Information
                         </h3>
                         <div>
@@ -2111,7 +2120,7 @@ const ViewLead = () => {
                       </div>
 
                       <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-slate-700 mb-1 uppercase tracking-wide">
+                        <h3 className="text-slate-700 mb-1">
                           Lead Information
                         </h3>
                         <div>
@@ -2458,8 +2467,8 @@ const ViewLead = () => {
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Attachments</h2>
-                    <p className="text-sm text-slate-600 mt-1">Files and documents related to this lead</p>
+                    <h2 className="text-slate-900">Attachments</h2>
+                    <p className="text-base text-slate-600 mt-1">Files and documents related to this lead</p>
                   </div>
                   <label
                     className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingAttachment ? "opacity-50 pointer-events-none" : ""}`}
@@ -2540,8 +2549,8 @@ const ViewLead = () => {
             {activeTab === "activity" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Activity Timeline</h2>
-                  <p className="text-sm text-slate-600 mt-1">Everything that happened on this lead, in one place</p>
+                  <h2 className="text-slate-900">Activity Timeline</h2>
+                  <p className="text-base text-slate-600 mt-1">Recent activities and updates for this lead</p>
                 </div>
                 <div className="p-6 max-h-[405px] overflow-y-auto">
                   {isActivityLoading ? (
@@ -2593,8 +2602,8 @@ const ViewLead = () => {
             {activeTab === "followups" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-lg font-semibold text-slate-900">Follow-up Notes Timeline</h2>
-                  <p className="text-sm text-slate-600 mt-1">Every note added, edited, or deleted for this lead</p>
+                  <h2 className="text-slate-900">Follow-up Notes Timeline</h2>
+                  <p className="text-base text-slate-600 mt-1">Every note added, edited, or deleted for this lead</p>
                 </div>
                 <div className="p-6 space-y-6">
                   {Array.isArray(lead.followUpNotesHistory) && lead.followUpNotesHistory.length > 0 ? (
@@ -2615,7 +2624,7 @@ const ViewLead = () => {
                               {config.icon}
                             </div>
                             <div className="ml-4 min-w-0">
-                              <h3 className="text-sm font-medium text-slate-900">
+                              <h3 className="text-slate-700">
                                 {config.label}{actor && ` by ${actor}`}
                               </h3>
                               {h.note && (
@@ -2847,7 +2856,7 @@ const ViewLead = () => {
           {/* Sidebar */}
           <div>
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h3 className="text-sm font-medium text-slate-700 mb-4 uppercase tracking-wide">Client</h3>
+              <h3 className="text-slate-700 mb-4">Client</h3>
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mr-3">
                   <User size={20} className="text-slate-600" />

@@ -138,8 +138,8 @@ export default function InstagramCallback() {
               {IG_SVG}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800">Select Instagram Account</h2>
-              <p className="text-gray-500 text-sm">Choose which account to connect to this CRM</p>
+              <h2 className="text-slate-900">Select Instagram Account</h2>
+              <p className="text-base text-slate-600">Choose which account to connect to this CRM</p>
             </div>
           </div>
 

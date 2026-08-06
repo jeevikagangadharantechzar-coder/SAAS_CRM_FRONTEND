@@ -68,7 +68,7 @@ const GmailConnectScreen = ({
     { icon: <MdLock    size={28} color="#f4b400" />, title: "Secure OAuth",  desc: "Google-protected" },
   ];
   return (
-    <div className="min-h-screen w-full flex" style={{ fontFamily: "Roboto, Arial, sans-serif" }}>
+    <div className="min-h-screen w-full flex" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
       <div
         className="hidden lg:flex lg:w-1/2 xl:w-3/5 flex-col relative overflow-hidden"
         style={{ background: "linear-gradient(145deg,#1a73e8 0%,#0d47a1 55%,#082966 100%)" }}
@@ -88,7 +88,7 @@ const GmailConnectScreen = ({
             </div>
           </div>
           <div className="flex-1 flex flex-col justify-center py-10">
-            <h1 className="text-white text-5xl xl:text-6xl font-light leading-tight mb-5">
+            <h1 className="text-white xl:text-6xl leading-tight mb-5">
               Your inbox,<br /><span className="font-semibold">always in reach.</span>
             </h1>
             <p className="text-blue-100 text-xl leading-relaxed mb-12 max-w-lg">
@@ -118,8 +118,8 @@ const GmailConnectScreen = ({
             </div>
             <span className="text-gray-800 text-xl font-medium">Gmail</span>
           </div>
-          <h2 className="text-3xl font-normal text-gray-800 mb-1">Sign in</h2>
-          <p className="text-gray-500 mb-7">to continue to Gmail</p>
+          <h2 className="text-slate-900 mb-1">Sign in</h2>
+          <p className="text-base text-slate-600 mb-7">to continue to Gmail</p>
 
           {error && (
             <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
@@ -1058,8 +1058,8 @@ const EmailChat = () => {
             style={{ background: "linear-gradient(135deg,#1a73e8,#0d47a1)" }}>
             <FaSpinner className="animate-spin text-white" size={28} />
           </div>
-          <h3 className="text-lg font-medium text-gray-800 mb-1">Connecting to Gmail</h3>
-          <p className="text-gray-400 text-sm">Checking authentication...</p>
+          <h3 className="text-slate-700 mb-1">Connecting to Gmail</h3>
+          <p className="text-base text-slate-600">Checking authentication...</p>
         </div>
       </div>
     );
@@ -1098,8 +1098,8 @@ const EmailChat = () => {
                 <FaExclamationTriangle size={30} color="#dc2626" />
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Disconnect {userEmail}?</h3>
-            <p className="text-gray-500 text-center text-sm mb-5">You'll need to reconnect to access your emails again.</p>
+            <h3 className="text-slate-700 text-center mb-2">Disconnect {userEmail}?</h3>
+            <p className="text-base text-slate-600 text-center mb-5">You'll need to reconnect to access your emails again.</p>
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
               <p className="text-sm text-yellow-800 flex items-start gap-2">
                 <FaInfoCircle size={15} className="flex-shrink-0 mt-0.5" />
@@ -1242,10 +1242,10 @@ const EmailChat = () => {
                   : <FaTrash size={28} color="#f97316" />}
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+            <h3 className="text-slate-700 text-center mb-2">
               {threadToDelete?.permanent ? "Delete permanently?" : "Move to trash?"}
             </h3>
-            <p className="text-gray-500 text-sm text-center mb-6">
+            <p className="text-base text-slate-600 text-center mb-6">
               {threadToDelete?.permanent ? "This cannot be undone." : "You can restore it from trash later."}
             </p>
             <div className="flex items-center justify-center gap-3">
@@ -1366,7 +1366,7 @@ const EmailChat = () => {
                     <FaArrowLeft size={15} />
                   </button>
                 )}
-                <h1 className="text-base font-medium flex items-center gap-2 min-w-0" style={{ color: "#202124" }}>
+                <h1 className="flex items-center gap-2 min-w-0" style={{ color: "#202124" }}>
                   {selectedThread ? (
                     threadLoading
                       ? <span className="text-gray-400 text-sm animate-pulse">Loading email…</span>
@@ -1457,8 +1457,8 @@ const EmailChat = () => {
                       <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "#f1f3f4" }}>
                         <FaEnvelope size={34} style={{ color: "#dadce0" }} />
                       </div>
-                      <h3 className="text-base font-medium mb-1" style={{ color: "#5f6368" }}>No emails found</h3>
-                      <p className="text-sm" style={{ color: "#80868b" }}>
+                      <h3 className="mb-1" style={{ color: "#5f6368" }}>No emails found</h3>
+                      <p className="text-base text-slate-600" style={{ color: "#80868b" }}>
                         {searchQuery ? "Try adjusting your search"
                           : activeLabel === "UNREAD" ? "You're all caught up! "
                           : `No emails in ${activeLabel.toLowerCase()}`}
@@ -1572,8 +1572,8 @@ const EmailChat = () => {
                               {extractName(msg.from).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <h4 className="font-medium text-sm truncate" style={{ color: "#202124" }}>{extractName(msg.from)}</h4>
-                              <p className="text-xs truncate" style={{ color: "#5f6368" }}>{extractEmail(msg.from)}</p>
+                              <h3 className="truncate" style={{ color: "#202124" }}>{extractName(msg.from)}</h3>
+                              <p className="text-base text-slate-600 truncate" style={{ color: "#5f6368" }}>{extractEmail(msg.from)}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1602,9 +1602,9 @@ const EmailChat = () => {
                         )}
                         {msg.hasAttachments && msg.attachments?.length > 0 && (
                           <div className="mb-4 p-3 rounded-xl" style={{ background: "#f6f8fc" }}>
-                            <h5 className="text-xs font-medium mb-2 flex items-center gap-1.5" style={{ color: "#444746" }}>
+                            <h3 className="mb-2 flex items-center gap-1.5" style={{ color: "#444746" }}>
                               <FaPaperclip size={11} />Attachments ({msg.attachments.length})
-                            </h5>
+                            </h3>
                             <div className="space-y-1.5">
                               {msg.attachments.map((att, idx) => (
                                 <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg" style={{ border: "1px solid #e8eaed" }}>

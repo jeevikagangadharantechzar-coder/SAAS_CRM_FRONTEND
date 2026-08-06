@@ -64,7 +64,7 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
     <div className="space-y-6">
       {/* Linked Tasks Section */}
       <div>
-        <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <h3 className="text-slate-700 mb-3 flex items-center gap-2">
           <CheckSquare size={16} className="text-blue-500" />
           Linked Tasks ({tasks.length})
         </h3>
@@ -79,18 +79,18 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
               return (
                 <div key={t._id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-gray-800 text-sm line-clamp-1">{t.title}</h4>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-2 shrink-0 ${PRIORITY_COLOR[t.priority] || "bg-gray-100 text-gray-600"}`}>
+                    <h3 className="text-slate-700 line-clamp-1">{t.title}</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold ml-2 shrink-0 ${PRIORITY_COLOR[t.priority] || "bg-gray-100 text-gray-600"}`}>
                       {t.priority}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mb-3 line-clamp-2">{t.description}</p>
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
-                    <span className={`text-[10px] px-2 py-0.5 rounded border font-medium ${STAGE_COLOR[t.status] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded border font-medium ${STAGE_COLOR[t.status] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
                       {t.status}
                     </span>
                     {t.dueDate && (
-                      <span className={`flex items-center gap-1 text-[10px] font-medium ${isOverdue ? "text-rose-600" : "text-gray-500"}`}>
+                      <span className={`flex items-center gap-1 text-xs font-medium ${isOverdue ? "text-rose-600" : "text-gray-500"}`}>
                         <Calendar size={12} />
                         {moment(t.dueDate).format("MMM D, YYYY")}
                         {isOverdue && " (Overdue)"}
@@ -106,7 +106,7 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
 
       {/* Linked Targets Section */}
       <div>
-        <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2 mt-8">
+        <h3 className="text-slate-700 mb-3 flex items-center gap-2 mt-8">
           <Target size={16} className="text-purple-500" />
           Linked Targets ({targets.length})
         </h3>
@@ -123,14 +123,14 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
                 <div key={t._id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-center mb-3">
                     <div>
-                      <h4 className="font-semibold text-gray-800 text-sm">Target period: {moment(t.startDate).format("MMM D")} - {moment(t.endDate).format("MMM D, YYYY")}</h4>
-                      <p className="text-[11px] text-gray-500 mt-0.5 capitalize">{t.period} Target</p>
+                      <h3 className="text-slate-700">Target period: {moment(t.startDate).format("MMM D")} - {moment(t.endDate).format("MMM D, YYYY")}</h3>
+                      <p className="text-base text-slate-600 mt-1 capitalize">{t.period} Target</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded border font-medium ${STAGE_COLOR[t.status] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded border font-medium ${STAGE_COLOR[t.status] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
                         {t.status}
                       </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${PRIORITY_COLOR[t.priority] || "bg-gray-100 text-gray-600"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${PRIORITY_COLOR[t.priority] || "bg-gray-100 text-gray-600"}`}>
                         {t.priority || "Low"}
                       </span>
                     </div>
@@ -138,7 +138,7 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
                   
                   {/* Mini Progress Bar */}
                   <div className="mb-2">
-                    <div className="flex justify-between text-[10px] font-semibold mb-1">
+                    <div className="flex justify-between text-xs font-semibold mb-1">
                       <span className="text-gray-600">Overall Progress</span>
                       <span className={overall >= 100 ? "text-emerald-600" : "text-blue-600"}>{overall}%</span>
                     </div>
@@ -148,7 +148,7 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
                   </div>
 
                   {/* Sub-goals summary */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[11px] text-gray-500 font-medium">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-gray-500 font-medium">
                     {t.targetLeads > 0 && <span>Leads: {t.actuals?.leadsConverted || 0}/{t.percentages?.effTargetLeads || t.targetLeads}</span>}
                     {t.targetDeals > 0 && <span>Deals: {t.actuals?.dealsWon || 0}/{t.percentages?.effTargetDeals || t.targetDeals}</span>}
                     {t.targetCalls > 0 && <span>Calls: {t.actuals?.calls || 0}/{t.targetCalls}</span>}

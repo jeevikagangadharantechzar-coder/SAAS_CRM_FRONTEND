@@ -47,7 +47,7 @@ const formatDate = (iso) =>
 
 const StatusPill = ({ status }) => (
   <span
-    className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${
+    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase ${
       STATUS_STYLES[status] || STATUS_STYLES.Pending
     }`}
   >
@@ -57,7 +57,7 @@ const StatusPill = ({ status }) => (
 
 const PriorityPill = ({ priority }) => (
   <span
-    className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${
+    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase ${
       PRIORITY_STYLES[priority] || PRIORITY_STYLES.Medium
     }`}
   >
@@ -177,8 +177,8 @@ const SupportTickets = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Support Tickets</h2>
-          <p className="text-slate-500 text-sm">
+          <h2 className="text-slate-900">Support Tickets</h2>
+          <p className="text-base text-slate-600">
             Tickets raised by tenant admins across all workspaces. {total} found.
           </p>
         </div>
@@ -267,7 +267,7 @@ const SupportTickets = () => {
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center space-x-2">
           <LifeBuoy className="text-[#008ecc]" size={20} />
-          <h3 className="text-base font-bold text-slate-800">Ticket Queue</h3>
+          <h3 className="text-slate-700">Ticket Queue</h3>
         </div>
 
         <div className="overflow-x-auto">
@@ -401,8 +401,8 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onSend
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-base font-bold text-slate-800">{ticket.subject}</h3>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">{ticket._id.slice(-6).toUpperCase()}</p>
+            <h3 className="text-slate-700">{ticket.subject}</h3>
+            <p className="text-base text-slate-600 font-mono mt-1">{ticket._id.slice(-6).toUpperCase()}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
             <X size={18} />
