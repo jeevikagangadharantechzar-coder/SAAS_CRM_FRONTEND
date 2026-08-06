@@ -7,7 +7,7 @@ import {
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
   Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2, Plus,
-  Briefcase, UserCheck, Users, LocateFixed,
+  Briefcase, UserCheck, Users, LocateFixed, Tag,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
@@ -806,6 +806,12 @@ const ViewLead = () => {
   const [salesUsers, setSalesUsers] = useState([]);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
+  // Dynamic custom fields (edit mode)
+  const [cfDraftOpen, setCfDraftOpen] = useState(false);
+  const [cfDraftRows, setCfDraftRows] = useState([]); // [{id, name, type, options}]
+  const cfIdRef = useRef(0);
+  const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     axios.get(`${API_URL}/leads/getLead/${id}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -846,6 +852,14 @@ const ViewLead = () => {
       followUpDate: lead.followUpDate
         ? new Date(lead.followUpDate).toISOString().slice(0, 10)
         : "",
+      customFields: (lead.customFields || []).map((f) => ({
+        id: nextCfId(),
+        cardTitle: f.cardTitle || "",
+        name: f.name || "",
+        type: f.type || "text",
+        options: f.options || [],
+        value: f.value || "",
+      })),
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -855,6 +869,76 @@ const ViewLead = () => {
     setIsEditingDetails(false);
     setEditFormData(null);
     setEditErrors({});
+    setCfDraftOpen(false);
+    setCfDraftRows([]);
+  };
+
+  /* ── Dynamic custom fields (edit mode) ─────────────────────── */
+  const toggleCfDraft = () => {
+    const willOpen = !cfDraftOpen;
+    setCfDraftOpen(willOpen);
+    if (willOpen && cfDraftRows.length === 0) {
+      setCfDraftRows([{ id: nextCfId(), name: "", type: "text", options: "" }]);
+    }
+  };
+
+  const addCfDraftRow = () => {
+    setCfDraftRows((prev) => [...prev, { id: nextCfId(), name: "", type: "text", options: "" }]);
+  };
+
+  const updateCfDraftRow = (rowId, key, value) => {
+    setCfDraftRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [key]: value } : r)));
+  };
+
+  const removeCfDraftRow = (rowId) => {
+    setCfDraftRows((prev) => prev.filter((r) => r.id !== rowId));
+  };
+
+  const cancelCfDraft = () => {
+    setCfDraftRows([]);
+    setCfDraftOpen(false);
+  };
+
+  const saveCfDraft = () => {
+    const validRows = cfDraftRows.filter((r) => r.name.trim());
+    if (validRows.length === 0) {
+      cancelCfDraft();
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle: "",
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: [...(prev.customFields || []), ...newFields],
+    }));
+    cancelCfDraft();
+  };
+
+  const updateEditCustomFieldValue = (fid, value) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).map((f) =>
+        f.id === fid ? { ...f, value } : f
+      ),
+    }));
+  };
+
+  const removeEditCustomField = (fid) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).filter((f) => f.id !== fid),
+    }));
   };
 
   const handleEditChange = (e) => {
@@ -996,6 +1080,15 @@ const ViewLead = () => {
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
+        customFields: JSON.stringify(
+          (editFormData.customFields || []).map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        ),
       };
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, payload, {
@@ -1540,6 +1633,24 @@ const ViewLead = () => {
                       </div>
                     </div>
 
+                    {lead.customFields?.length > 0 && (
+                      <div className="pt-6 border-t border-slate-200 p-6">
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide mb-4">
+                          Custom Fields
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {lead.customFields.map((f, idx) => (
+                            <InfoRow
+                              key={f._id || `${f.name}-${idx}`}
+                              icon={<Tag size={18} />}
+                              label={f.name}
+                              value={f.value || "Not specified"}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {lead.notes && (
                       <div className="mt-2 pt-6 border-t border-slate-200 p-6">
                         <button
@@ -1910,6 +2021,165 @@ const ViewLead = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-slate-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">
+                          Custom Fields
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={toggleCfDraft}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 transition"
+                        >
+                          <Plus size={14} /> Add Field
+                        </button>
+                      </div>
+
+                      {(editFormData.customFields || []).length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          {editFormData.customFields.map((f) => (
+                            <div key={f.id}>
+                              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                                {f.name}
+                                <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                  Custom
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditCustomField(f.id)}
+                                  className="ml-auto text-slate-400 hover:text-red-500"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </label>
+
+                              {f.type === "textarea" ? (
+                                <textarea
+                                  rows={3}
+                                  value={f.value}
+                                  onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                  placeholder={`Enter ${f.name}`}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
+                                />
+                              ) : f.type === "dropdown" ? (
+                                <select
+                                  value={f.value}
+                                  onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                >
+                                  <option value="">Select {f.name}</option>
+                                  {(f.options || []).map((opt) => (
+                                    <option key={opt} value={opt}>
+                                      {opt}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type={f.type}
+                                  value={f.value}
+                                  onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                  placeholder={`Enter ${f.name}`}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {cfDraftOpen && (
+                        <div className="space-y-3 bg-blue-50 border border-dashed border-blue-300 rounded-lg p-4">
+                          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                            New fields (not saved yet)
+                          </p>
+
+                          {cfDraftRows.map((row) => (
+                            <div
+                              key={row.id}
+                              className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+                            >
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Field name</label>
+                                <input
+                                  type="text"
+                                  value={row.name}
+                                  placeholder="e.g. GST Number"
+                                  onChange={(e) => updateCfDraftRow(row.id, "name", e.target.value)}
+                                  className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Field type</label>
+                                <select
+                                  value={row.type}
+                                  onChange={(e) => updateCfDraftRow(row.id, "type", e.target.value)}
+                                  className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                >
+                                  <option value="text">Text</option>
+                                  <option value="number">Number</option>
+                                  <option value="date">Date</option>
+                                  <option value="textarea">Textarea</option>
+                                  <option value="dropdown">Dropdown</option>
+                                </select>
+                              </div>
+
+                              {row.type === "dropdown" ? (
+                                <div>
+                                  <label className="block text-xs text-slate-500 mb-1">
+                                    Options (comma sep.)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={row.options}
+                                    placeholder="e.g. Yes, No"
+                                    onChange={(e) => updateCfDraftRow(row.id, "options", e.target.value)}
+                                    className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                  />
+                                </div>
+                              ) : (
+                                <div />
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => removeCfDraftRow(row.id)}
+                                className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-slate-300 text-slate-400 hover:text-red-500 hover:border-red-300"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <button
+                              type="button"
+                              onClick={addCfDraftRow}
+                              className="text-xs font-semibold text-blue-600 hover:underline"
+                            >
+                              + Add another field
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                              type="button"
+                              onClick={cancelCfDraft}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveCfDraft}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              Save Fields
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">

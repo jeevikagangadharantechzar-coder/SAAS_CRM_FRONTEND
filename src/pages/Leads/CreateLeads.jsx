@@ -20,6 +20,7 @@ import {
   X,
   Users,
   LocateFixed,
+  Plus,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import PhoneInput from "react-phone-input-2";
@@ -110,6 +111,13 @@ export default function CreateLeads() {
   const [followUpDateObj, setFollowUpDateObj] = useState(null);
   const followUpDateRef = useRef(null);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  // Dynamic (per-card) custom fields
+  const [customFields, setCustomFields] = useState([]); // committed: [{id, cardTitle, name, type, options, value}]
+  const [draftRows, setDraftRows] = useState({}); // { [cardTitle]: [{id, name, type, options}] }
+  const [draftOpen, setDraftOpen] = useState({}); // { [cardTitle]: bool }
+  const customFieldIdRef = useRef(0);
+  const nextCustomFieldId = () => `cf-${Date.now()}-${customFieldIdRef.current++}`;
 
   const [originalAssignTo, setOriginalAssignTo] = useState(null);
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
@@ -233,6 +241,16 @@ export default function CreateLeads() {
             attachments: [],
           });
           setOriginalAssignTo(leadData.assignTo?._id || null);
+          setCustomFields(
+            (leadData.customFields || []).map((f) => ({
+              id: nextCustomFieldId(),
+              cardTitle: f.cardTitle || "",
+              name: f.name || "",
+              type: f.type || "text",
+              options: f.options || [],
+              value: f.value || "",
+            }))
+          );
         } catch (error) {
           console.error("Error fetching lead:", error);
           toast.error("Failed to fetch lead data");
@@ -650,6 +668,19 @@ export default function CreateLeads() {
         JSON.stringify(existingAttachments)
       );
 
+      dataToSend.append(
+        "customFields",
+        JSON.stringify(
+          customFields.map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        )
+      );
+
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -750,6 +781,84 @@ export default function CreateLeads() {
   };
 
   const handleBackClick = () => navigate(-1);
+
+  /* ── Dynamic custom fields (per card) ─────────────────────── */
+  const toggleDraftCard = (cardTitle) => {
+    const willOpen = !draftOpen[cardTitle];
+    setDraftOpen((prev) => ({ ...prev, [cardTitle]: willOpen }));
+    if (willOpen && !(draftRows[cardTitle]?.length)) {
+      setDraftRows((prev) => ({
+        ...prev,
+        [cardTitle]: [{ id: nextCustomFieldId(), name: "", type: "text", options: "" }],
+      }));
+    }
+  };
+
+  const addDraftRow = (cardTitle) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: [
+        ...(prev[cardTitle] || []),
+        { id: nextCustomFieldId(), name: "", type: "text", options: "" },
+      ],
+    }));
+  };
+
+  const updateDraftRow = (cardTitle, rowId, key, value) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: (prev[cardTitle] || []).map((r) =>
+        r.id === rowId ? { ...r, [key]: value } : r
+      ),
+    }));
+  };
+
+  const removeDraftRow = (cardTitle, rowId) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: (prev[cardTitle] || []).filter((r) => r.id !== rowId),
+    }));
+  };
+
+  const cancelDraftCard = (cardTitle) => {
+    setDraftRows((prev) => ({ ...prev, [cardTitle]: [] }));
+    setDraftOpen((prev) => ({ ...prev, [cardTitle]: false }));
+  };
+
+  const saveDraftCard = (cardTitle) => {
+    const rows = draftRows[cardTitle] || [];
+    const validRows = rows.filter((r) => r.name.trim());
+
+    if (validRows.length === 0) {
+      cancelDraftCard(cardTitle);
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle,
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setCustomFields((prev) => [...prev, ...newFields]);
+    cancelDraftCard(cardTitle);
+  };
+
+  const updateCustomFieldValue = (id, value) => {
+    setCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, value } : f))
+    );
+  };
+
+  const removeCustomField = (id) => {
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
+  };
 
   const fieldGroups = [
     {
@@ -872,9 +981,18 @@ export default function CreateLeads() {
       key={group.title}
       className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm"
     >
-      <h2 className={`text-lg font-semibold border-b pb-2 ${group.color}`}>
-        {group.title}
-      </h2>
+      <div className="flex items-center justify-between border-b pb-2">
+        <h2 className={`text-lg font-semibold ${group.color}`}>
+          {group.title}
+        </h2>
+        <button
+          type="button"
+          onClick={() => toggleDraftCard(group.title)}
+          className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-indigo-400 text-indigo-600 hover:bg-indigo-50 transition"
+        >
+          <Plus size={14} /> Add Field
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {group.fields.map((field) => (
@@ -1107,7 +1225,162 @@ export default function CreateLeads() {
             )}
           </div>
         ))}
+
+        {customFields
+          .filter((f) => f.cardTitle === group.title)
+          .map((f) => (
+            <div
+              key={f.id}
+              className={f.type === "textarea" ? "md:col-span-3" : ""}
+            >
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                {f.name}
+                <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
+                  Custom
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeCustomField(f.id)}
+                  className="ml-auto text-gray-400 hover:text-red-500"
+                >
+                  <X size={14} />
+                </button>
+              </label>
+
+              {f.type === "textarea" ? (
+                <textarea
+                  rows={4}
+                  value={f.value}
+                  onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+                  placeholder={`Enter ${f.name}`}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+                />
+              ) : f.type === "dropdown" ? (
+                <select
+                  value={f.value}
+                  onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                >
+                  <option value="">Select {f.name}</option>
+                  {f.options.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={f.type}
+                  value={f.value}
+                  onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+                  placeholder={`Enter ${f.name}`}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                />
+              )}
+            </div>
+          ))}
       </div>
+
+      {draftOpen[group.title] && (
+        <div className="space-y-3 bg-indigo-50 border border-dashed border-indigo-300 rounded-lg p-4">
+          <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+            New fields (not saved yet)
+          </p>
+
+          {(draftRows[group.title] || []).map((row) => (
+            <div
+              key={row.id}
+              className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+            >
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Field name
+                </label>
+                <input
+                  type="text"
+                  value={row.name}
+                  placeholder="e.g. GST Number"
+                  onChange={(e) =>
+                    updateDraftRow(group.title, row.id, "name", e.target.value)
+                  }
+                  className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Field type
+                </label>
+                <select
+                  value={row.type}
+                  onChange={(e) =>
+                    updateDraftRow(group.title, row.id, "type", e.target.value)
+                  }
+                  className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="textarea">Textarea</option>
+                  <option value="dropdown">Dropdown</option>
+                </select>
+              </div>
+
+              {row.type === "dropdown" ? (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Options (comma sep.)
+                  </label>
+                  <input
+                    type="text"
+                    value={row.options}
+                    placeholder="e.g. Yes, No"
+                    onChange={(e) =>
+                      updateDraftRow(group.title, row.id, "options", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                  />
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <button
+                type="button"
+                onClick={() => removeDraftRow(group.title, row.id)}
+                className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-gray-300 text-gray-400 hover:text-red-500 hover:border-red-300"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => addDraftRow(group.title)}
+              className="text-xs font-semibold text-indigo-600 hover:underline"
+            >
+              + Add another field
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => cancelDraftCard(group.title)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => saveDraftCard(group.title)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Save Fields
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
