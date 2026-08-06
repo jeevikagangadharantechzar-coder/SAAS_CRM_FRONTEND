@@ -803,6 +803,11 @@ const ViewLead = () => {
   const [editFormData, setEditFormData] = useState(null);
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [noteInput, setNoteInput] = useState("");
+  const [isNoteSubmitting, setIsNoteSubmitting] = useState(false);
+  const [editingSingleNoteId, setEditingSingleNoteId] = useState(null);
+  const [editingSingleNoteText, setEditingSingleNoteText] = useState("");
+  const [isSavingSingleNote, setIsSavingSingleNote] = useState(false);
   const [salesUsers, setSalesUsers] = useState([]);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
@@ -836,7 +841,13 @@ const ViewLead = () => {
       alternatePhoneNumber: lead.alternatePhoneNumber || "",
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
-      notes: lead.notes || "",
+      notes: (() => {
+        try {
+          const parsed = JSON.parse(lead.notes);
+          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+        } catch (e) {}
+        return lead.notes || "";
+      })(),
       address: lead.address || "",
       city: lead.city || "",
       state: lead.state || "",
@@ -1024,6 +1035,77 @@ const ViewLead = () => {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  const parseNotes = (notesStr) => {
+    if (!notesStr) return [];
+    try {
+      const parsed = JSON.parse(notesStr);
+      if (Array.isArray(parsed)) return parsed;
+      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
+    } catch {
+      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!noteInput.trim()) return;
+    try {
+      setIsNoteSubmitting(true);
+      const token = localStorage.getItem("token");
+      const existingNotes = parseNotes(lead.notes);
+      const newNote = {
+        id: Date.now().toString(),
+        text: noteInput.trim(),
+        createdAt: new Date().toISOString()
+      };
+      const updatedNotesString = JSON.stringify([newNote, ...existingNotes]);
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLead(res.data.lead);
+      setNoteInput("");
+      toast.success("Note added");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add note");
+    } finally {
+      setIsNoteSubmitting(false);
+    }
+  };
+
+  const startEditSingleNote = (note) => {
+    setEditingSingleNoteId(note.id);
+    setEditingSingleNoteText(note.text);
+  };
+
+  const cancelEditSingleNote = () => {
+    setEditingSingleNoteId(null);
+    setEditingSingleNoteText("");
+  };
+
+  const handleEditSingleNote = async (noteId) => {
+    if (!editingSingleNoteText.trim()) return;
+    try {
+      setIsSavingSingleNote(true);
+      const token = localStorage.getItem("token");
+      const existingNotes = parseNotes(lead.notes);
+      const updatedNotesArray = existingNotes.map(n => 
+        n.id === noteId ? { ...n, text: editingSingleNoteText.trim() } : n
+      );
+      const updatedNotesString = JSON.stringify(updatedNotesArray);
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLead(res.data.lead);
+      cancelEditSingleNote();
+      toast.success("Note updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update note");
+    } finally {
+      setIsSavingSingleNote(false);
+    }
   };
 
   const saveDetails = async () => {
@@ -1533,11 +1615,11 @@ const ViewLead = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 mb-6">
-          {["details", "tasks_targets", "attachments", "activity", "followups"].map((tab) => (
+        <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
+          {["details", "tasks_targets", "attachments", "activity", "followups", "notes"].map((tab) => (
             <button
               key={tab}
-              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-slate-600 hover:text-slate-900"
@@ -1548,6 +1630,8 @@ const ViewLead = () => {
                 ? "Tasks & Targets"
                 : tab === "followups"
                 ? "Follow-up Notes"
+                : tab === "notes"
+                ? "Notes"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "attachments" &&
                 lead.attachments?.length > 0 && (
@@ -2356,6 +2440,95 @@ const ViewLead = () => {
                   ) : (
                     <p className="text-sm text-slate-500">No follow-up note activity yet</p>
                   )}
+                </div>
+              </div>
+            )}
+            {/* ── Notes ── */}
+            {activeTab === "notes" && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h2 className="text-lg font-semibold text-slate-900 mb-4">Notes</h2>
+                <div className="mb-6 relative">
+                  <textarea
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    placeholder="Write a note..."
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition min-h-[120px] resize-y"
+                  />
+                  <div className="absolute bottom-3 right-3">
+                    <button
+                      onClick={handleAddNote}
+                      disabled={isNoteSubmitting || !noteInput.trim()}
+                      className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {isNoteSubmitting ? "Adding..." : "Add Note"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-500 uppercase tracking-wide">
+                      Newest first
+                    </span>
+                    <div className="h-px bg-slate-200 flex-1 ml-4" />
+                  </div>
+                  
+                  {parseNotes(lead.notes).map((n, idx) => {
+                    const isEditing = editingSingleNoteId === n.id;
+                    return (
+                      <div key={n.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-4 transition-colors hover:bg-slate-100/50">
+                        {isEditing ? (
+                          <>
+                            <textarea
+                              value={editingSingleNoteText}
+                              onChange={(e) => setEditingSingleNoteText(e.target.value)}
+                              rows={3}
+                              className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-y mb-2"
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={cancelEditSingleNote}
+                                disabled={isSavingSingleNote}
+                                className="px-3 py-1.5 rounded-lg border text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleEditSingleNote(n.id)}
+                                disabled={!editingSingleNoteText.trim() || isSavingSingleNote}
+                                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                              >
+                                {isSavingSingleNote ? "Saving..." : "Save"}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
+                                  {lead.assignTo?.firstName?.charAt(0) || lead.leadName?.charAt(0) || "U"}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {lead.assignTo?.firstName || "Unknown User"} {lead.assignTo?.lastName || ""}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : new Date(lead.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors">
+                                <Edit size={14} />
+                              </button>
+                            </div>
+                            <p className="text-slate-800 text-sm whitespace-pre-wrap">{n.text}</p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

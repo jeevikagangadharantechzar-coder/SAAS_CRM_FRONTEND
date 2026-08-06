@@ -180,7 +180,15 @@ export default function CreateLeads() {
       country: contactFormData.country || "",
       industry: contactFormData.industry || "",
       clientType: contactFormData.clientType || "",
-      notes: contactFormData.notes || "",
+      notes: (() => {
+        try {
+          if (contactFormData.notes) {
+            const parsed = JSON.parse(contactFormData.notes);
+            if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+          }
+        } catch (e) {}
+        return contactFormData.notes || "";
+      })(),
     }));
     const isCustom = contactFormData.industry && !STANDARD_INDUSTRIES.includes(contactFormData.industry);
     setIsCustomIndustry(!!isCustom);
@@ -237,7 +245,15 @@ export default function CreateLeads() {
                   return `${mm}/${dd}/${d.getFullYear()}`;
                 })()
               : "",
-            notes: leadData.notes || "",
+            notes: (() => {
+              try {
+                if (leadData.notes) {
+                  const parsed = JSON.parse(leadData.notes);
+                  if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+                }
+              } catch (e) {}
+              return leadData.notes || "";
+            })(),
             attachments: [],
           });
           setOriginalAssignTo(leadData.assignTo?._id || null);
