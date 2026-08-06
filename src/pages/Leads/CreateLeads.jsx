@@ -1131,8 +1131,24 @@ export default function CreateLeads() {
               <div>
                 <select
                   name={field.name}
-                  value={formData[field.name] || ""}
-                  onChange={handleChange}
+                  value={
+                    field.name === "industry" && isCustomIndustry
+                      ? "Other"
+                      : (formData[field.name] || "")
+                  }
+                  onChange={(e) => {
+                    if (field.name === "industry") {
+                      if (e.target.value === "Other") {
+                        setIsCustomIndustry(true);
+                        setFormData((p) => ({ ...p, industry: "" }));
+                      } else {
+                        setIsCustomIndustry(false);
+                        handleChange(e);
+                      }
+                    } else {
+                      handleChange(e);
+                    }
+                  }}
                   className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
                     errors[field.name]
                       ? "border-red-500"
@@ -1152,6 +1168,17 @@ export default function CreateLeads() {
                     )
                   )}
                 </select>
+                {field.name === "industry" && isCustomIndustry && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom industry"
+                    value={formData.industry || ""}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, industry: e.target.value }))
+                    }
+                    className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                )}
                 {fieldErrors[field.name] && (
                   <p className="text-sm text-red-500 mt-1">
                     {fieldErrors[field.name]}
