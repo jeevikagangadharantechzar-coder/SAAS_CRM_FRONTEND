@@ -130,7 +130,31 @@ const NotesPopup = ({ record, onClose }) => {
           </button>
         </div>
         <div className="flex-1 overflow-auto p-5">
-          <p className="text-slate-800 whitespace-pre-wrap break-words">{record.notes}</p>
+          <div className="space-y-4">
+            {(() => {
+              let parsedNotes = [];
+              try {
+                if (record.notes) {
+                  const p = JSON.parse(record.notes);
+                  if (Array.isArray(p)) parsedNotes = p;
+                  else parsedNotes = [{ id: "legacy", text: record.notes }];
+                }
+              } catch (e) {
+                if (record.notes) parsedNotes = [{ id: "legacy", text: record.notes }];
+              }
+              
+              return parsedNotes.map((n, idx) => (
+                <div key={n.id || idx} className="bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="mb-3">
+                    <p className="text-slate-800 text-[15px] whitespace-pre-wrap break-words">{n.text}</p>
+                  </div>
+                  <p className="text-[13px] text-slate-500 font-medium">
+                    {n.id === "legacy" ? "Original note" : `${record.assignTo?.firstName || "Unknown User"} ${record.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(record.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </p>
+                </div>
+              ));
+            })()}
+          </div>
         </div>
       </div>
     </div>
@@ -1329,7 +1353,13 @@ const ViewLead = () => {
     setDealData({
       value: lead.value || "",
       currency: lead.currency || "USD",
-      notes: lead.notes || "",
+      notes: (() => {
+        try {
+          const parsed = JSON.parse(lead.notes);
+          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+        } catch (e) {}
+        return lead.notes || "";
+      })(),
       stage: "Qualification",
     });
     setConvertModalOpen(true);
@@ -1747,7 +1777,15 @@ const ViewLead = () => {
                             <p className="text-sm font-medium group-hover:text-blue-600 transition-colors uppercase tracking-wide">
                               Additional Notes
                             </p>
-                            <p className="text-slate-900 truncate mt-1">{lead.notes}</p>
+                            <p className="text-slate-900 truncate mt-1">
+                              {(() => {
+                                try {
+                                  const parsed = JSON.parse(lead.notes);
+                                  if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].text;
+                                } catch (e) {}
+                                return lead.notes;
+                              })()}
+                            </p>
                             <p className="text-xs text-slate-500 mt-0.5">{formatNotesMeta(lead)}</p>
                           </div>
                         </button>
@@ -2505,25 +2543,15 @@ const ViewLead = () => {
                           </>
                         ) : (
                           <>
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
-                                  {lead.assignTo?.firstName?.charAt(0) || lead.leadName?.charAt(0) || "U"}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900">
-                                    {lead.assignTo?.firstName || "Unknown User"} {lead.assignTo?.lastName || ""}
-                                  </p>
-                                  <p className="text-xs text-slate-500">
-                                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : new Date(lead.createdAt).toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors">
+                            <div className="flex justify-between items-start mb-3">
+                              <p className="text-slate-800 text-[15px] whitespace-pre-wrap break-words">{n.text}</p>
+                              <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 -mr-1.5 -mt-1.5 rounded-md hover:bg-blue-50 transition-colors">
                                 <Edit size={14} />
                               </button>
                             </div>
-                            <p className="text-slate-800 text-sm whitespace-pre-wrap">{n.text}</p>
+                            <p className="text-[13px] text-slate-500 font-medium">
+                              {n.id === "legacy" ? "Original note" : `${lead.assignTo?.firstName || "Unknown User"} ${lead.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(lead.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </p>
                           </>
                         )}
                       </div>

@@ -123,6 +123,7 @@ export default function CreateLeads() {
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
   const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
   const [pendingSubmitData, setPendingSubmitData] = useState(null);
+  const [rawNotesArray, setRawNotesArray] = useState([]);
 
   //  Load user role and ID - Only auto-assign for new leads and if not already assigned
   useEffect(() => {
@@ -184,9 +185,13 @@ export default function CreateLeads() {
         try {
           if (contactFormData.notes) {
             const parsed = JSON.parse(contactFormData.notes);
-            if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+            if (Array.isArray(parsed)) {
+              setRawNotesArray(parsed);
+              return parsed.length > 0 ? parsed[0].text : "";
+            }
           }
         } catch (e) {}
+        setRawNotesArray([]);
         return contactFormData.notes || "";
       })(),
     }));
@@ -249,9 +254,13 @@ export default function CreateLeads() {
               try {
                 if (leadData.notes) {
                   const parsed = JSON.parse(leadData.notes);
-                  if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+                  if (Array.isArray(parsed)) {
+                    setRawNotesArray(parsed);
+                    return parsed.length > 0 ? parsed[0].text : "";
+                  }
                 }
               } catch (e) {}
+              setRawNotesArray([]);
               return leadData.notes || "";
             })(),
             attachments: [],
@@ -674,6 +683,14 @@ export default function CreateLeads() {
           const rawPhone = String(dataToSubmit.alternatePhoneNumber).trim();
           const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
           dataToSend.append(key, formattedPhone);
+        } else if (key === "notes") {
+          let updatedNotesString = dataToSubmit.notes;
+          if (rawNotesArray.length > 0) {
+            const updatedArray = [...rawNotesArray];
+            updatedArray[0] = { ...updatedArray[0], text: dataToSubmit.notes };
+            updatedNotesString = JSON.stringify(updatedArray);
+          }
+          dataToSend.append(key, updatedNotesString);
         } else {
           dataToSend.append(key, dataToSubmit[key]);
         }
