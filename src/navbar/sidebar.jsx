@@ -31,6 +31,7 @@ import {
   LifeBuoy,
   Bell,
   Share2,
+  Trash2,
 } from "lucide-react";
 
 const WhatsAppIcon = ({ size = 18, color = "#475569" }) => (
@@ -652,6 +653,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           />
         </Collapsible>
 
+        {/* Trash — Admin-only, covers both trashed Leads and Deals via an
+            in-page toggle rather than two separate sidebar links. */}
+ 
+
         {/* Document (Collapsible) — independent "documents" permission now,
             decoupled from Leads/Deals access (previously just an OR of
             those two permissions, with no dedicated toggle of its own) */}
@@ -766,7 +771,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
           hasPermission={
             (isAdmin || userPermissions.deal_analysis || userPermissions.won_analysis || userPermissions.loss_analysis) &&
-            hasPlanFeature("analytics")
+            (hasPlanFeature("deal_analysis") || hasPlanFeature("won_analysis") || hasPlanFeature("loss_analysis"))
           }
         >
           <SmallLink
@@ -930,7 +935,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             sidebarOpen={isOpen}
           />
         )}
-
+              <SidebarItem
+          to="trash"
+          icon={<Trash2 />}
+          label={t("sidebar.trash")}
+          hasPermission={isAdmin}
+          sidebarOpen={isOpen}
+        />
         {/* Upgrade Plan */}
         {isAdmin && (
           <SidebarItem
@@ -940,6 +951,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             sidebarOpen={isOpen}
           />
         )}
+
+ 
       </nav>
     </aside>
   );

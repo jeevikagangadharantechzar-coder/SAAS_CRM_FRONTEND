@@ -181,6 +181,7 @@ const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'pipeline'
   const [showFilters, setShowFilters] = useState(false);
+  const [pipelineTrigger, setPipelineTrigger] = useState(0);
 
   // Import / Export
   const importFileInputRef = useRef(null);
@@ -453,7 +454,7 @@ const updateFilter = (key, value, setter) => {
     }
 
     // Follow-up filter
-    if (followUpFilter === "missed" || followUpFilter === "completed") {
+    if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
       params.append("followUpStatus", followUpFilter);
     }
 
@@ -476,22 +477,6 @@ const updateFilter = (key, value, setter) => {
       let leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
       let total = isNew ? data.totalLeads : leadsArr.length;
       let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
-
-      // "Today's Follow-ups" isn't a backend filter, so narrow the fetched
-      // page down to leads whose follow-up date is today's calendar day.
-      // (Only filters within the current server-side page, not globally.)
-      if (followUpFilter === "today") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        leadsArr = leadsArr.filter((lead) => {
-          if (!lead.followUpDate) return false;
-          const followUpDay = new Date(lead.followUpDate);
-          followUpDay.setHours(0, 0, 0, 0);
-          return followUpDay.getTime() === today.getTime();
-        });
-        total = leadsArr.length;
-        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
-      }
 
       // Filter by Lead Created Date
       if (dateFilterFrom || dateFilterTo) {
@@ -548,7 +533,7 @@ const updateFilter = (key, value, setter) => {
       if (sourceFilter) params.append("source", sourceFilter);
       if (clientTypeFilter) params.append("clientType", clientTypeFilter);
       if (assigneeFilter) params.append("assignee", assigneeFilter);
-      if (followUpFilter === "missed" || followUpFilter === "completed") {
+      if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
         params.append("followUpStatus", followUpFilter);
       }
       // Date filter applied client-side below
@@ -558,18 +543,6 @@ const updateFilter = (key, value, setter) => {
       });
       const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
       let exportRows = isNew ? data.leads : (Array.isArray(data) ? data : []);
-
-      // "today" has no backend filter (see fetchLeads), so narrow client-side.
-      if (followUpFilter === "today") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        exportRows = exportRows.filter((lead) => {
-          if (!lead.followUpDate) return false;
-          const followUpDay = new Date(lead.followUpDate);
-          followUpDay.setHours(0, 0, 0, 0);
-          return followUpDay.getTime() === today.getTime();
-        });
-      }
 
       // Filter by Lead Created Date for Export
       if (startDate || dateFilterFrom || endDate || dateFilterTo) {
@@ -787,11 +760,30 @@ const updateFilter = (key, value, setter) => {
       setShowRejectModal(false);
       setLeadToReject(null);
       setRejectReason("");
+      setPipelineTrigger((prev) => prev + 1);
       fetchLeads();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
       setRejecting(false);
+    }
+  };
+
+  const handleTrashClick = async (lead) => {
+    setMenuOpen(null);
+    if (!window.confirm("Are you sure you want to move this lead to trash?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `${API_URL}/leads/${lead._id}/trash`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Lead moved to trash");
+      setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to move lead to trash");
     }
   };
 
@@ -843,6 +835,7 @@ const updateFilter = (key, value, setter) => {
       }
       setConvertModalOpen(false);
       setSelectedLead(null);
+      setPipelineTrigger((prev) => prev + 1);
       fetchLeads();
 
     } catch (err) {
@@ -905,6 +898,7 @@ const updateFilter = (key, value, setter) => {
       );
 
       toast.success(t("leads.toast.followUpSuccess"));
+      setPipelineTrigger((prev) => prev + 1);
     } catch (err) {
       console.error("Follow-up update error:", err);
       toast.error(err.response?.data?.message || t("leads.toast.followUpFailed"));
@@ -1009,6 +1003,7 @@ const updateFilter = (key, value, setter) => {
 
       toast.success("Follow-up note added");
       closeAddNoteModal();
+      setPipelineTrigger((prev) => prev + 1);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add follow-up note");
     } finally {
@@ -1036,6 +1031,7 @@ const updateFilter = (key, value, setter) => {
           prev.map((l) => (l._id === leadId ? { ...l, status: newStatus } : l))
         );
         toast.success(t("leads.toast.statusSuccess"));
+        setPipelineTrigger((prev) => prev + 1);
       }
     } catch (error) {
       toast.error(t("leads.toast.statusFailed"));
@@ -1428,6 +1424,15 @@ const updateFilter = (key, value, setter) => {
           }}
           userRole={userRole}
           userId={currentUserId}
+          onAddNoteClick={openAddNoteModal}
+          onViewHistoryClick={openHistoryModal}
+          onFollowUpClick={openFollowUpPicker}
+          editingFollowUpId={editingFollowUpId}
+          setEditingFollowUpId={setEditingFollowUpId}
+          updateFollowUpDateInline={updateFollowUpDateInline}
+          followUpSavingId={followUpSavingId}
+          onLeadClick={(leadId) => navigate(`/${tenantSlug}/leads/view/${leadId}${location.search}`)}
+          pipelineTrigger={pipelineTrigger}
         />
       ) : (
       <div className="overflow-x-auto tour-lead-table">
@@ -1743,6 +1748,18 @@ const updateFilter = (key, value, setter) => {
                             className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
                           >
                             <Ban className="w-4 h-4 mr-2" /> Reject
+                          </button>
+                        )}
+
+                        {userRole === "Admin" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTrashClick(lead);
+                            }}
+                            className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
                           </button>
                         )}
                       </div>,

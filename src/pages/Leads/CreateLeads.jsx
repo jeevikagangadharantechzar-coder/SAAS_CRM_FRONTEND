@@ -19,6 +19,8 @@ import {
   Upload,
   X,
   Users,
+  LocateFixed,
+  Plus,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import PhoneInput from "react-phone-input-2";
@@ -26,6 +28,25 @@ import "react-phone-input-2/lib/style.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ReassignmentModal from "../components/ReassignmentModal";
+
+const STANDARD_INDUSTRIES = [
+  "IT",
+  "Finance",
+  "Healthcare",
+  "Education",
+  "Manufacturing",
+  "Retail",
+  "Real Estate",
+  "Energy & Utilities",
+  "Construction",
+  "Telecommunications",
+  "Automotive",
+  "Fashion & Apparel",
+  "Food & Beverage",
+  "Media & Advertising",
+  "Non-profit",
+  "Professional Services"
+];
 
 export default function CreateLeads() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -42,6 +63,7 @@ export default function CreateLeads() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [isAutoAssigned, setIsAutoAssigned] = useState(false);
+  const [isCustomIndustry, setIsCustomIndustry] = useState(false);
   const ALLOWED_FILE_TYPES = [
     "application/pdf",
     "image/jpeg",
@@ -56,7 +78,9 @@ export default function CreateLeads() {
   const [formData, setFormData] = useState({
     leadName: "",
     phoneNumber: "",
+    alternatePhoneNumber: "",
     email: "",
+    alternateEmail: "",
     source: "",
     companyName: "",
     industry: "",
@@ -64,7 +88,12 @@ export default function CreateLeads() {
     status: "Cold",
     assignTo: "",
     address: "",
+    city: "",
+    state: "",
+    pincode: "",
     country: "",
+    latitude: "",
+    longitude: "",
     followUpDate: "",
     notes: "",
     clientType: "",
@@ -81,11 +110,20 @@ export default function CreateLeads() {
   const [phoneCountryCode, setPhoneCountryCode] = useState("in");
   const [followUpDateObj, setFollowUpDateObj] = useState(null);
   const followUpDateRef = useRef(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  // Dynamic (per-card) custom fields
+  const [customFields, setCustomFields] = useState([]); // committed: [{id, cardTitle, name, type, options, value}]
+  const [draftRows, setDraftRows] = useState({}); // { [cardTitle]: [{id, name, type, options}] }
+  const [draftOpen, setDraftOpen] = useState({}); // { [cardTitle]: bool }
+  const customFieldIdRef = useRef(0);
+  const nextCustomFieldId = () => `cf-${Date.now()}-${customFieldIdRef.current++}`;
 
   const [originalAssignTo, setOriginalAssignTo] = useState(null);
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
   const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
   const [pendingSubmitData, setPendingSubmitData] = useState(null);
+  const [rawNotesArray, setRawNotesArray] = useState([]);
 
   //  Load user role and ID - Only auto-assign for new leads and if not already assigned
   useEffect(() => {
@@ -124,7 +162,6 @@ export default function CreateLeads() {
     fetchSalesUsers();
   }, [API_URL]);
 
-  //  Prefill from Website Contact Form (CREATE MODE ONLY)
   useEffect(() => {
     if (!contactFormData) return;
     if (leadId) return;
@@ -138,11 +175,28 @@ export default function CreateLeads() {
       requirement: contactFormData.requirement || "",
       source: "Website",
       address: contactFormData.address || "",
+      city: contactFormData.city || "",
+      state: contactFormData.state || "",
+      pincode: contactFormData.pincode || "",
       country: contactFormData.country || "",
       industry: contactFormData.industry || "",
       clientType: contactFormData.clientType || "",
-      notes: contactFormData.notes || "",
+      notes: (() => {
+        try {
+          if (contactFormData.notes) {
+            const parsed = JSON.parse(contactFormData.notes);
+            if (Array.isArray(parsed)) {
+              setRawNotesArray(parsed);
+              return parsed.length > 0 ? parsed[0].text : "";
+            }
+          }
+        } catch (e) {}
+        setRawNotesArray([]);
+        return contactFormData.notes || "";
+      })(),
     }));
+    const isCustom = contactFormData.industry && !STANDARD_INDUSTRIES.includes(contactFormData.industry);
+    setIsCustomIndustry(!!isCustom);
     setExistingAttachments(contactFormData.attachments || []);
   }, [contactFormData, leadId]);
 
@@ -162,12 +216,17 @@ export default function CreateLeads() {
 
           const leadData = response.data;
 
+          const isCustom = leadData.industry && !STANDARD_INDUSTRIES.includes(leadData.industry);
+          setIsCustomIndustry(!!isCustom);
+
           setExistingAttachments(leadData.attachments || []);
           setFormData({
             leadName: leadData.leadName || "",
             companyName: leadData.companyName || "",
             phoneNumber: leadData.phoneNumber || "",
+            alternatePhoneNumber: leadData.alternatePhoneNumber || "",
             email: leadData.email || "",
+            alternateEmail: leadData.alternateEmail || "",
             source: leadData.source || "",
             industry: leadData.industry || "",
             clientType: leadData.clientType || "",
@@ -176,7 +235,12 @@ export default function CreateLeads() {
             status: leadData.status || "Cold",
             assignTo: leadData.assignTo?._id || "",
             address: leadData.address || "",
+            city: leadData.city || "",
+            state: leadData.state || "",
+            pincode: leadData.pincode || "",
             country: leadData.country || "",
+            latitude: leadData.latitude || "",
+            longitude: leadData.longitude || "",
             followUpDate: leadData.followUpDate
               ? (() => {
                   const d = new Date(leadData.followUpDate);
@@ -186,10 +250,32 @@ export default function CreateLeads() {
                   return `${mm}/${dd}/${d.getFullYear()}`;
                 })()
               : "",
-            notes: leadData.notes || "",
+            notes: (() => {
+              try {
+                if (leadData.notes) {
+                  const parsed = JSON.parse(leadData.notes);
+                  if (Array.isArray(parsed)) {
+                    setRawNotesArray(parsed);
+                    return parsed.length > 0 ? parsed[0].text : "";
+                  }
+                }
+              } catch (e) {}
+              setRawNotesArray([]);
+              return leadData.notes || "";
+            })(),
             attachments: [],
           });
           setOriginalAssignTo(leadData.assignTo?._id || null);
+          setCustomFields(
+            (leadData.customFields || []).map((f) => ({
+              id: nextCustomFieldId(),
+              cardTitle: f.cardTitle || "",
+              name: f.name || "",
+              type: f.type || "text",
+              options: f.options || [],
+              value: f.value || "",
+            }))
+          );
         } catch (error) {
           console.error("Error fetching lead:", error);
           toast.error("Failed to fetch lead data");
@@ -339,6 +425,68 @@ export default function CreateLeads() {
     }
   };
 
+  /* ── Use Current Location (Geolocation + Reverse Geocoding) ─────────────────────── */
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countries.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   // Drag and drop handlers
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -436,13 +584,24 @@ export default function CreateLeads() {
       console.log("Phone validation failed for:", formData.phoneNumber, "Country:", phoneCountryCode);
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = true;
-      newFieldErrors.email = "Email is required";
-    } else if (!validateEmailDomain(formData.email)) {
+    if (formData.email.trim() && !validateEmailDomain(formData.email)) {
       newErrors.email = true;
       newFieldErrors.email =
         "Please enter a valid email address with a proper domain (e.g., name@company.com)";
+    }
+
+    if (formData.alternateEmail.trim() && !validateEmailDomain(formData.alternateEmail)) {
+      newErrors.alternateEmail = true;
+      newFieldErrors.alternateEmail =
+        "Please enter a valid email address with a proper domain (e.g., name@company.com)";
+    }
+
+    if (
+      formData.alternatePhoneNumber &&
+      !validatePhoneNumber(formData.alternatePhoneNumber, phoneCountryCode)
+    ) {
+      newErrors.alternatePhoneNumber = true;
+      newFieldErrors.alternatePhoneNumber = `Please enter a valid phone number (${getPhoneNumberLengthMessage(phoneCountryCode)})`;
     }
 
     if (formData.followUpDate) {
@@ -520,6 +679,18 @@ export default function CreateLeads() {
           const rawPhone = String(dataToSubmit.phoneNumber).trim();
           const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
           dataToSend.append(key, formattedPhone);
+        } else if (key === "alternatePhoneNumber" && dataToSubmit.alternatePhoneNumber) {
+          const rawPhone = String(dataToSubmit.alternatePhoneNumber).trim();
+          const formattedPhone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
+          dataToSend.append(key, formattedPhone);
+        } else if (key === "notes") {
+          let updatedNotesString = dataToSubmit.notes;
+          if (rawNotesArray.length > 0) {
+            const updatedArray = [...rawNotesArray];
+            updatedArray[0] = { ...updatedArray[0], text: dataToSubmit.notes };
+            updatedNotesString = JSON.stringify(updatedArray);
+          }
+          dataToSend.append(key, updatedNotesString);
         } else {
           dataToSend.append(key, dataToSubmit[key]);
         }
@@ -528,6 +699,19 @@ export default function CreateLeads() {
       dataToSend.append(
         "existingAttachments",
         JSON.stringify(existingAttachments)
+      );
+
+      dataToSend.append(
+        "customFields",
+        JSON.stringify(
+          customFields.map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        )
       );
 
       const config = {
@@ -631,6 +815,84 @@ export default function CreateLeads() {
 
   const handleBackClick = () => navigate(-1);
 
+  /* ── Dynamic custom fields (per card) ─────────────────────── */
+  const toggleDraftCard = (cardTitle) => {
+    const willOpen = !draftOpen[cardTitle];
+    setDraftOpen((prev) => ({ ...prev, [cardTitle]: willOpen }));
+    if (willOpen && !(draftRows[cardTitle]?.length)) {
+      setDraftRows((prev) => ({
+        ...prev,
+        [cardTitle]: [{ id: nextCustomFieldId(), name: "", type: "text", options: "" }],
+      }));
+    }
+  };
+
+  const addDraftRow = (cardTitle) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: [
+        ...(prev[cardTitle] || []),
+        { id: nextCustomFieldId(), name: "", type: "text", options: "" },
+      ],
+    }));
+  };
+
+  const updateDraftRow = (cardTitle, rowId, key, value) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: (prev[cardTitle] || []).map((r) =>
+        r.id === rowId ? { ...r, [key]: value } : r
+      ),
+    }));
+  };
+
+  const removeDraftRow = (cardTitle, rowId) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: (prev[cardTitle] || []).filter((r) => r.id !== rowId),
+    }));
+  };
+
+  const cancelDraftCard = (cardTitle) => {
+    setDraftRows((prev) => ({ ...prev, [cardTitle]: [] }));
+    setDraftOpen((prev) => ({ ...prev, [cardTitle]: false }));
+  };
+
+  const saveDraftCard = (cardTitle) => {
+    const rows = draftRows[cardTitle] || [];
+    const validRows = rows.filter((r) => r.name.trim());
+
+    if (validRows.length === 0) {
+      cancelDraftCard(cardTitle);
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle,
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setCustomFields((prev) => [...prev, ...newFields]);
+    cancelDraftCard(cardTitle);
+  };
+
+  const updateCustomFieldValue = (id, value) => {
+    setCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, value } : f))
+    );
+  };
+
+  const removeCustomField = (id) => {
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
+  };
+
   const fieldGroups = [
     {
       title: "Basic Information",
@@ -647,15 +909,13 @@ export default function CreateLeads() {
           label: "Phone Number",
           icon: <Phone size={16} />,
         },
-        { name: "email", label: "Email", icon: <Mail size={16} /> },
-        { name: "address", label: "Address", icon: <MapPin size={16} /> },
         {
-          name: "country",
-          label: "Country",
-          icon: <Globe size={16} />,
-          type: "select",
-          options: countries,
+          name: "alternatePhoneNumber",
+          label: "Alternate Phone Number",
+          icon: <Phone size={16} />,
         },
+        { name: "email", label: "Email", icon: <Mail size={16} /> },
+        { name: "alternateEmail", label: "Alternate Email", icon: <Mail size={16} /> },
       ],
     },
     {
@@ -675,12 +935,7 @@ export default function CreateLeads() {
           icon: <Briefcase size={16} />,
           type: "select",
           options: [
-            "IT",
-            "Finance",
-            "Healthcare",
-            "Education",
-            "Manufacturing",
-            "Retail",
+            ...STANDARD_INDUSTRIES,
             "Other",
           ],
         },
@@ -722,13 +977,17 @@ export default function CreateLeads() {
           type: "select",
           options: ["Hot", "Warm", "Cold", "Junk"],
         },
-        {
-          name: "assignTo",
-          label: "Assign To",
-          icon: <User size={16} />,
-          type: "select",
-          options: getSalesUsersOptions(),
-        },
+        ...(userRole !== "Sales"
+          ? [
+              {
+                name: "assignTo",
+                label: "Assign To",
+                icon: <User size={16} />,
+                type: "select",
+                options: getSalesUsersOptions(),
+              },
+            ]
+          : []),
         {
           name: "followUpDate",
           label: "Follow-up Date",
@@ -750,69 +1009,47 @@ export default function CreateLeads() {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+  const renderFieldGroup = (group) => (
+    <div
+      key={group.title}
+      className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm"
+    >
+      <div className="flex items-center justify-between border-b pb-2">
+        <h2 className={`border-b pb-2 ${group.color}`}>
+          {group.title}
+        </h2>
+        <button
+          type="button"
+          onClick={() => toggleDraftCard(group.title)}
+          className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-indigo-400 text-indigo-600 hover:bg-indigo-50 transition"
+        >
+          <Plus size={14} /> Add Field
+        </button>
       </div>
-    );
-  }
 
-  return (
-    <>
-      <div className="min-h-screen flex items-start justify-center py-10 px-4">
-        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-100">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-5 border-b rounded-t-2xl">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleBackClick}
-                className="p-2 rounded-lg bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h1 className="text-gray-900">
-                {leadId ? "Edit Lead" : "Create New Lead"}
-              </h1>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {group.fields.map((field) => (
+          <div
+            key={field.name}
+            className={`${field.type === "textarea" ? "md:col-span-3" : ""}`}
+          >
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              {field.icon} {field.label}
+              {(field.name === "leadName" || field.name === "companyName" || field.name === "phoneNumber") && (
+                <span className="text-red-500">*</span>
+              )}
+            </label>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-10">
-            {fieldGroups.map((group) => (
-              <div
-                key={group.title}
-                className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm"
-              >
-                <h2
-                  className={`border-b pb-2 ${group.color}`}
+            {field.name === "phoneNumber" ? (
+              <div>
+                <div
+                  className={`border rounded-lg ${
+                    errors.phoneNumber
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
                 >
-                  {group.title}
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {group.fields.map((field) => (
-                    <div
-                      key={field.name}
-                      className={`${field.type === "textarea" ? "md:col-span-3" : ""}`}
-                    >
-                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                        {field.icon} {field.label}
-                        {(field.name === "leadName" || field.name === "companyName" || field.name === "phoneNumber" || field.name === "email") && (
-                          <span className="text-red-500">*</span>
-                        )}
-                      </label>
-
-                      {field.name === "phoneNumber" ? (
-                        <div>
-                          <div
-                            className={`border rounded-lg ${
-                              errors.phoneNumber
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          >
-                           <PhoneInput
+                 <PhoneInput
   country={"in"}
   preferredCountries={["in"]}
   countryCodeEditable={false} // 👈 prevents editing +91 manually
@@ -825,7 +1062,7 @@ export default function CreateLeads() {
     if (!phone || !phone.startsWith(dialCode)) {
       setFormData((prev) => ({
         ...prev,
-        phoneNumber: dialCode, 
+        phoneNumber: dialCode,
       }));
       return;
     }
@@ -856,120 +1093,513 @@ export default function CreateLeads() {
     borderRight: "1px solid #e5e7eb",
   }}
 />
-                          </div>
-                          {fieldErrors.phoneNumber && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors.phoneNumber}
-                            </p>
-                          )}
-                          {formData.phoneNumber &&
-                            !fieldErrors.phoneNumber && (
-                              <p className="text-xs text-green-600 mt-1">
-                                ✓ Valid phone number
-                              </p>
-                            )}
-                        </div>
-                      ) : field.type === "select" ? (
-                        <div>
-                          <select
-                            name={field.name}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
-                              errors[field.name]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          >
-                            <option value="">Select {field.label}</option>
-                            {field.options.map((opt) =>
-                              typeof opt === "string" ? (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ) : (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              )
-                            )}
-                          </select>
-                          {fieldErrors[field.name] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors[field.name]}
-                            </p>
-                          )}
-                        </div>
-                      ) : field.type === "textarea" ? (
-                        <div>
-                          <textarea
-                            name={field.name}
-                            rows={5}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            placeholder={`Enter ${field.label}...`}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
-                            maxLength={500}
-                          />
-                          {fieldErrors[field.name] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors[field.name]}
-                            </p>
-                          )}
-                        </div>
-                      ) : field.name === "followUpDate" ? (
-                        <div>
-                          <DatePicker
-                            ref={followUpDateRef}
-                            selected={followUpDateObj}
-                            onChange={handleFollowUpDateChange}
-                            minDate={new Date()}
-                            dateFormat="MM/dd/yyyy"
-                            placeholderText="mm/dd/yyyy"
-                            showMonthDropdown
-                            showYearDropdown
-                            dropdownMode="select"
-                            isClearable
-                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
-                              errors.followUpDate
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                            wrapperClassName="w-full"
-                          />
-                          {fieldErrors.followUpDate && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors.followUpDate}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type={field.type || "text"}
-                            name={field.name}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            placeholder={field.placeholder || `Enter ${field.label}`}
-                            maxLength={field.maxLength || undefined}
-                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
-                              errors[field.name]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          />
-                          {fieldErrors[field.name] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors[field.name]}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                </div>
+                {fieldErrors.phoneNumber && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors.phoneNumber}
+                  </p>
+                )}
+                {formData.phoneNumber &&
+                  !fieldErrors.phoneNumber && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ✓ Valid phone number
+                    </p>
+                  )}
+              </div>
+            ) : field.name === "alternatePhoneNumber" ? (
+              <div>
+                <div
+                  className={`border rounded-lg ${
+                    errors.alternatePhoneNumber
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <PhoneInput
+                    country={"in"}
+                    preferredCountries={["in"]}
+                    countryCodeEditable={false}
+                    disableDropdown={false}
+                    value={formData.alternatePhoneNumber}
+                    onChange={(phone, countryData) => {
+                      const dialCode = countryData.dialCode;
+                      if (phone && phone !== dialCode) {
+                        setFormData((prev) => ({ ...prev, alternatePhoneNumber: phone }));
+                      } else {
+                        setFormData((prev) => ({ ...prev, alternatePhoneNumber: "" }));
+                      }
+                      if (errors.alternatePhoneNumber) {
+                        setErrors((p) => ({ ...p, alternatePhoneNumber: false }));
+                      }
+                      if (fieldErrors.alternatePhoneNumber) {
+                        setFieldErrors((p) => ({ ...p, alternatePhoneNumber: "" }));
+                      }
+                    }}
+                    placeholder="Select code and enter number"
+                    specialLabel=""
+                    inputStyle={{
+                      width: "100%",
+                      height: "42px",
+                      fontSize: "14px",
+                      paddingLeft: "55px",
+                      borderRadius: "0.5rem",
+                      border: "none",
+                    }}
+                    buttonStyle={{
+                      borderRadius: "0.5rem 0 0 0.5rem",
+                      height: "42px",
+                      background: "white",
+                      border: "none",
+                      borderRight: "1px solid #e5e7eb",
+                    }}
+                  />
+                </div>
+                {fieldErrors.alternatePhoneNumber && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors.alternatePhoneNumber}
+                  </p>
+                )}
+              </div>
+            ) : field.type === "select" ? (
+              <div>
+                <select
+                  name={field.name}
+                  value={
+                    field.name === "industry" && isCustomIndustry
+                      ? "Other"
+                      : (formData[field.name] || "")
+                  }
+                  onChange={(e) => {
+                    if (field.name === "industry") {
+                      if (e.target.value === "Other") {
+                        setIsCustomIndustry(true);
+                        setFormData((p) => ({ ...p, industry: "" }));
+                      } else {
+                        setIsCustomIndustry(false);
+                        handleChange(e);
+                      }
+                    } else {
+                      handleChange(e);
+                    }
+                  }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                    errors[field.name]
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select {field.label}</option>
+                  {field.options.map((opt) =>
+                    typeof opt === "string" ? (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ) : (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    )
+                  )}
+                </select>
+                {field.name === "industry" && isCustomIndustry && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom industry"
+                    value={formData.industry || ""}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, industry: e.target.value }))
+                    }
+                    className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                )}
+                {fieldErrors[field.name] && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors[field.name]}
+                  </p>
+                )}
+              </div>
+            ) : field.type === "textarea" ? (
+              <div>
+                <textarea
+                  name={field.name}
+                  rows={5}
+                  value={formData[field.name] || ""}
+                  onChange={handleChange}
+                  placeholder={`Enter ${field.label}...`}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+                  maxLength={500}
+                />
+                {fieldErrors[field.name] && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors[field.name]}
+                  </p>
+                )}
+              </div>
+            ) : field.name === "followUpDate" ? (
+              <div>
+                <DatePicker
+                  ref={followUpDateRef}
+                  selected={followUpDateObj}
+                  onChange={handleFollowUpDateChange}
+                  minDate={new Date()}
+                  dateFormat="MM/dd/yyyy"
+                  placeholderText="mm/dd/yyyy"
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
+                  isClearable
+                  className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                    errors.followUpDate
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                  wrapperClassName="w-full"
+                />
+                {fieldErrors.followUpDate && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors.followUpDate}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <input
+                  type={field.type || "text"}
+                  name={field.name}
+                  value={formData[field.name] || ""}
+                  onChange={handleChange}
+                  placeholder={field.placeholder || `Enter ${field.label}`}
+                  maxLength={field.maxLength || undefined}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                    errors[field.name]
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                />
+                {fieldErrors[field.name] && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors[field.name]}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {customFields
+          .filter((f) => f.cardTitle === group.title)
+          .map((f) => (
+            <div
+              key={f.id}
+              className={f.type === "textarea" ? "md:col-span-3" : ""}
+            >
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                {f.name}
+                <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
+                  Custom
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeCustomField(f.id)}
+                  className="ml-auto text-gray-400 hover:text-red-500"
+                >
+                  <X size={14} />
+                </button>
+              </label>
+
+              {f.type === "textarea" ? (
+                <textarea
+                  rows={4}
+                  value={f.value}
+                  onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+                  placeholder={`Enter ${f.name}`}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+                />
+              ) : f.type === "dropdown" ? (
+                <select
+                  value={f.value}
+                  onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                >
+                  <option value="">Select {f.name}</option>
+                  {f.options.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
                   ))}
+                </select>
+              ) : (
+                <input
+                  type={f.type}
+                  value={f.value}
+                  onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+                  placeholder={`Enter ${f.name}`}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                />
+              )}
+            </div>
+          ))}
+      </div>
+
+      {draftOpen[group.title] && (
+        <div className="space-y-3 bg-indigo-50 border border-dashed border-indigo-300 rounded-lg p-4">
+          <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+            New fields (not saved yet)
+          </p>
+
+          {(draftRows[group.title] || []).map((row) => (
+            <div
+              key={row.id}
+              className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+            >
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Field name
+                </label>
+                <input
+                  type="text"
+                  value={row.name}
+                  placeholder="e.g. GST Number"
+                  onChange={(e) =>
+                    updateDraftRow(group.title, row.id, "name", e.target.value)
+                  }
+                  className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Field type
+                </label>
+                <select
+                  value={row.type}
+                  onChange={(e) =>
+                    updateDraftRow(group.title, row.id, "type", e.target.value)
+                  }
+                  className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="textarea">Textarea</option>
+                  <option value="dropdown">Dropdown</option>
+                </select>
+              </div>
+
+              {row.type === "dropdown" ? (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Options (comma sep.)
+                  </label>
+                  <input
+                    type="text"
+                    value={row.options}
+                    placeholder="e.g. Yes, No"
+                    onChange={(e) =>
+                      updateDraftRow(group.title, row.id, "options", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                  />
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <button
+                type="button"
+                onClick={() => removeDraftRow(group.title, row.id)}
+                className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-gray-300 text-gray-400 hover:text-red-500 hover:border-red-300"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => addDraftRow(group.title)}
+              className="text-xs font-semibold text-indigo-600 hover:underline"
+            >
+              + Add another field
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => cancelDraftCard(group.title)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => saveDraftCard(group.title)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Save Fields
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="min-h-screen flex items-start justify-center py-10 px-4">
+        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-100">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-5 border-b rounded-t-2xl">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBackClick}
+                className="p-2 rounded-lg bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {leadId ? "Edit Lead" : "Create New Lead"}
+              </h1>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-10">
+            {renderFieldGroup(fieldGroups[0])}
+            {renderFieldGroup(fieldGroups[1])}
+
+            {/* Location Section */}
+            <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-2">
+                <h2 className="text-lg font-semibold text-teal-600 flex items-center gap-2">
+                  <MapPin size={18} /> Location
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={isFetchingLocation}
+                  className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <LocateFixed size={16} />
+                  {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address
+                  </label>
+                  <textarea
+                    name="address"
+                    rows={2}
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Enter address or use current location"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    placeholder="Enter City"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    placeholder="Enter State"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pincode
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleChange}
+                    placeholder="Enter Pincode"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Country
+                  </label>
+                  <select
+                    name="country"
+                    value={formData.country || ""}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Latitude
+                  </label>
+                  <input
+                    type="text"
+                    name="latitude"
+                    value={formData.latitude || ""}
+                    onChange={handleChange}
+                    placeholder="Auto-filled via current location, or enter manually"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Longitude
+                  </label>
+                  <input
+                    type="text"
+                    name="longitude"
+                    value={formData.longitude || ""}
+                    onChange={handleChange}
+                    placeholder="Auto-filled via current location, or enter manually"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
                 </div>
               </div>
-            ))}
+            </div>
+
+            {fieldGroups.slice(2).map((group) => renderFieldGroup(group))}
 
             {/* Attachments Section */}
             <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">

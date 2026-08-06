@@ -19,6 +19,13 @@ const SI_URI  = import.meta.env.VITE_SI_URI;
 // newly-missed follow-up still surfaces within a normal working session.
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
+// The popup itself should only interrupt the salesperson once per hour, even
+// though data is polled more often — otherwise it re-shows on every poll (or
+// every refresh) as long as a follow-up is still missed. Persisted in
+// localStorage, not state, so a page refresh doesn't reset the cooldown.
+const SHOW_INTERVAL_MS = 60 * 60 * 1000;
+const LAST_SHOWN_KEY = "missedFollowUpLastShownAt";
+
 const MissedFollowUpModal = () => {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
@@ -44,8 +51,13 @@ const MissedFollowUpModal = () => {
       axios
         .get(url, { headers: { Authorization: `Bearer ${token}` } })
         .then((res) => {
-          setMissedList(res.data.leads || []);
-          setDismissed(false);
+          const leads = res.data.leads || [];
+          setMissedList(leads);
+
+          const lastShown = Number(localStorage.getItem(LAST_SHOWN_KEY) || 0);
+          const canShow = leads.length > 0 && Date.now() - lastShown >= SHOW_INTERVAL_MS;
+          setDismissed(!canShow);
+          if (canShow) localStorage.setItem(LAST_SHOWN_KEY, String(Date.now()));
         })
         .catch(() => {});
     };

@@ -5,7 +5,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -45,6 +45,8 @@ import {
   Activity,
   Send,
   AlertTriangle,
+  UserCheck,
+  LocateFixed,
 } from "lucide-react";
 import {
   BarChart,
@@ -668,6 +670,7 @@ function Pipeline_modal_view() {
   const { dealId, tenantSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const pipelineListPath = `/${tenantSlug}/deals${location.search}`;
 
   const [deal, setDeal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1124,6 +1127,8 @@ function Pipeline_modal_view() {
   } = useLostDealModal();
   const [activeTab, setActiveTab] = useState("details");
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [isEditTimeModalOpen, setIsEditTimeModalOpen] = useState(false);
+  const [editTimeData, setEditTimeData] = useState({ newTime: null, editReason: "" });
   const [followUpData, setFollowUpData] = useState({
     followUpDate: null,
     followUpComment: "",
@@ -1145,11 +1150,44 @@ function Pipeline_modal_view() {
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [countries] = useState(getNames());
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [userRole, setUserRole] = useState("");
+  const [salesUsers, setSalesUsers] = useState([]);
+
+  // Dynamic custom fields (edit mode)
+  const [cfDraftOpen, setCfDraftOpen] = useState(false);
+  const [cfDraftRows, setCfDraftRows] = useState([]); // [{id, name, type, options}]
+  const cfIdRef = useRef(0);
+  const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
 
   // Helper function to get auth token
   const getAuthToken = () => {
     return localStorage.getItem("token");
   };
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      setUserRole(user.role?.name || "");
+    }
+  }, []);
+
+  // Assign To options — only Admins can reassign a deal, matching CreateDeal.jsx.
+  useEffect(() => {
+    if (userRole !== "Admin") return;
+    const fetchSalesUsers = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/users/sales`, {
+          headers: { Authorization: `Bearer ${getAuthToken()}` },
+        });
+        setSalesUsers(res.data.users || []);
+      } catch (err) {
+        console.error("Failed to fetch sales users:", err);
+      }
+    };
+    fetchSalesUsers();
+  }, [userRole, API_URL]);
 
   // Handle authentication errors
   const handleAuthError = (error) => {
@@ -1532,6 +1570,45 @@ function Pipeline_modal_view() {
       fetchDealEmails();
   }, [activeTab, dealId]);
 
+  // Handle edit follow-up time
+  const handleEditFollowUpTime = async () => {
+    if (!editTimeData.newTime || !editTimeData.editReason.trim()) {
+      toast.error("Time and reason are mandatory");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Please login to continue");
+        navigate("/login");
+        return;
+      }
+      
+      const payload = {
+        newTime: editTimeData.newTime.toISOString(),
+        editReason: editTimeData.editReason
+      };
+
+      await axios.patch(`${API_URL}/deals/edit-followup-time/${dealId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success("Follow-up time updated successfully");
+      setIsEditTimeModalOpen(false);
+      setEditTimeData({ newTime: null, editReason: "" });
+      fetchDealDetails(); // Refresh the data
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        console.error("Error editing follow-up time:", error);
+        toast.error(error.response?.data?.message || "Failed to edit follow-up time");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle schedule follow-up
   const handleScheduleFollowUp = async () => {
     // If rescheduling, enforce completing previous follow-up
@@ -1788,8 +1865,24 @@ function Pipeline_modal_view() {
       alternativeEmail: deal.alternativeEmail || "",
       alternativeNumber: deal.alternativeNumber || "",
       clientType: deal.clientType || "",
+      industry: deal.industry || "",
+      source: deal.source || "",
       address: deal.address || "",
+      city: deal.city || "",
+      state: deal.state || "",
+      pincode: deal.pincode || "",
       country: deal.country || "",
+      latitude: deal.latitude || "",
+      longitude: deal.longitude || "",
+      assignTo: deal.assignedTo?._id || "",
+      customFields: (deal.customFields || []).map((f) => ({
+        id: nextCfId(),
+        cardTitle: f.cardTitle || "",
+        name: f.name || "",
+        type: f.type || "text",
+        options: f.options || [],
+        value: f.value || "",
+      })),
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -1799,6 +1892,76 @@ function Pipeline_modal_view() {
     setIsEditingDetails(false);
     setEditFormData(null);
     setEditErrors({});
+    setCfDraftOpen(false);
+    setCfDraftRows([]);
+  };
+
+  /* ── Dynamic custom fields (edit mode) ─────────────────────── */
+  const toggleCfDraft = () => {
+    const willOpen = !cfDraftOpen;
+    setCfDraftOpen(willOpen);
+    if (willOpen && cfDraftRows.length === 0) {
+      setCfDraftRows([{ id: nextCfId(), name: "", type: "text", options: "" }]);
+    }
+  };
+
+  const addCfDraftRow = () => {
+    setCfDraftRows((prev) => [...prev, { id: nextCfId(), name: "", type: "text", options: "" }]);
+  };
+
+  const updateCfDraftRow = (rowId, key, value) => {
+    setCfDraftRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [key]: value } : r)));
+  };
+
+  const removeCfDraftRow = (rowId) => {
+    setCfDraftRows((prev) => prev.filter((r) => r.id !== rowId));
+  };
+
+  const cancelCfDraft = () => {
+    setCfDraftRows([]);
+    setCfDraftOpen(false);
+  };
+
+  const saveCfDraft = () => {
+    const validRows = cfDraftRows.filter((r) => r.name.trim());
+    if (validRows.length === 0) {
+      cancelCfDraft();
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle: "",
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: [...(prev.customFields || []), ...newFields],
+    }));
+    cancelCfDraft();
+  };
+
+  const updateEditCustomFieldValue = (fid, value) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).map((f) =>
+        f.id === fid ? { ...f, value } : f
+      ),
+    }));
+  };
+
+  const removeEditCustomField = (fid) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).filter((f) => f.id !== fid),
+    }));
   };
 
   const handleEditChange = (e) => {
@@ -1820,6 +1983,67 @@ function Pipeline_modal_view() {
           !validatePhoneNumber(value),
       }));
     }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countries.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setEditFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const performSaveDetails = async (extraFields = {}) => {
@@ -1851,8 +2075,25 @@ function Pipeline_modal_view() {
             ? `+${editFormData.alternativeNumber}`
             : editFormData.alternativeNumber,
         clientType: editFormData.clientType,
+        industry: editFormData.industry,
+        source: editFormData.source,
         address: editFormData.address.trim(),
+        city: editFormData.city,
+        state: editFormData.state,
+        pincode: editFormData.pincode,
         country: editFormData.country.trim(),
+        latitude: editFormData.latitude,
+        longitude: editFormData.longitude,
+        ...(userRole === "Admin" ? { assignTo: editFormData.assignTo } : {}),
+        customFields: JSON.stringify(
+          (editFormData.customFields || []).map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        ),
         ...extraFields,
       };
 
@@ -2385,13 +2626,13 @@ function Pipeline_modal_view() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div>
             <div className="flex items-center text-slate-600 mb-3">
-              <button
-                onClick={() => navigate(-1)}
+              <Link
+                to={pipelineListPath}
                 className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft size={16} className="mr-1" />
                 Back to Pipeline
-              </button>
+              </Link>
               <ChevronRight size={16} className="mx-2" />
               <span className="text-slate-500">View Deal</span>
             </div>
@@ -2685,8 +2926,8 @@ function Pipeline_modal_view() {
                         Assigned To
                       </span>
                       <span className="font-semibold text-slate-800 truncate block">
-                        {deal.assignTo
-                          ? `${deal.assignTo.firstName || ""} ${deal.assignTo.lastName || ""}`.trim()
+                        {deal.assignedTo
+                          ? `${deal.assignedTo.firstName || ""} ${deal.assignedTo.lastName || ""}`.trim()
                           : "Unassigned"}
                       </span>
                     </div>
@@ -3389,6 +3630,7 @@ function Pipeline_modal_view() {
                   </div>
                   <div className="p-6">
                     {!isEditingDetails ? (
+                      <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Deal Information */}
                         <div className="space-y-5">
@@ -3492,6 +3734,24 @@ function Pipeline_modal_view() {
                                         {deal.followUpComment}
                                       </p>
                                     )}
+                                  </div>
+                                </div>
+                              )}
+                              {userRole === "Admin" && (
+                                <div className="flex items-center text-slate-700">
+                                  <UserCheck
+                                    size={18}
+                                    className="mr-3 text-slate-500"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      Assign To
+                                    </p>
+                                    <p className="text-slate-900">
+                                      {deal.assignedTo
+                                        ? `${deal.assignedTo.firstName || ""} ${deal.assignedTo.lastName || ""}`.trim()
+                                        : "Unassigned"}
+                                    </p>
                                   </div>
                                 </div>
                               )}
@@ -3599,6 +3859,20 @@ function Pipeline_modal_view() {
                                 </div>
                               )}
                               <div className="flex items-center text-slate-700">
+                                <Briefcase
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Industry
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.industry || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
                                 <Building2
                                   size={18}
                                   className="mr-3 text-slate-500"
@@ -3609,6 +3883,20 @@ function Pipeline_modal_view() {
                                   </p>
                                   <p className="text-slate-900">
                                     {deal.clientType || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <Globe
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Source
+                                  </p>
+                                  <p className="text-slate-900">
+                                    {deal.source || "Not specified"}
                                   </p>
                                 </div>
                               </div>
@@ -3625,6 +3913,42 @@ function Pipeline_modal_view() {
                                 </div>
                               </div>
                               <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">City</p>
+                                  <p className="text-slate-900">
+                                    {deal.city || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">State</p>
+                                  <p className="text-slate-900">
+                                    {deal.state || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <MapPin
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Pincode</p>
+                                  <p className="text-slate-900">
+                                    {deal.pincode || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
                                 <Globe
                                   size={18}
                                   className="mr-3 text-slate-500"
@@ -3636,10 +3960,59 @@ function Pipeline_modal_view() {
                                   </p>
                                 </div>
                               </div>
+                              <div className="flex items-center text-slate-700">
+                                <LocateFixed
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Latitude</p>
+                                  <p className="text-slate-900">
+                                    {deal.latitude || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-slate-700">
+                                <LocateFixed
+                                  size={18}
+                                  className="mr-3 text-slate-500"
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">Longitude</p>
+                                  <p className="text-slate-900">
+                                    {deal.longitude || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
+
+                      {deal.customFields?.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-slate-200">
+                          <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide mb-4">
+                            Custom Fields
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {deal.customFields.map((f, idx) => (
+                              <div
+                                key={f._id || `${f.name}-${idx}`}
+                                className="flex items-center text-slate-700"
+                              >
+                                <Tag size={18} className="mr-3 text-slate-500" />
+                                <div>
+                                  <p className="text-sm font-medium">{f.name}</p>
+                                  <p className="text-slate-900">
+                                    {f.value || "Not specified"}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      </>
                     ) : (
                       <div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3724,6 +4097,26 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                               />
                             </div>
+                            {userRole === "Admin" && (
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                  Assign To
+                                </label>
+                                <select
+                                  name="assignTo"
+                                  value={editFormData.assignTo}
+                                  onChange={handleEditChange}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                >
+                                  <option value="">Select User</option>
+                                  {salesUsers.map((u) => (
+                                    <option key={u._id} value={u._id}>
+                                      {u.firstName} {u.lastName}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                           </div>
 
                           {/* Company Information (edit) */}
@@ -3874,11 +4267,106 @@ function Pipeline_modal_view() {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Address
+                                Industry
                               </label>
+                              <select
+                                name="industry"
+                                value={editFormData.industry}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select Industry</option>
+                                {[
+                                  "IT",
+                                  "Finance",
+                                  "Healthcare",
+                                  "Education",
+                                  "Manufacturing",
+                                  "Retail",
+                                  "Other",
+                                ].map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Source
+                              </label>
+                              <select
+                                name="source"
+                                value={editFormData.source}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select Source</option>
+                                {[
+                                  "Website",
+                                  "Referral",
+                                  "Social Media",
+                                  "Email",
+                                  "Phone",
+                                  "Other",
+                                ].map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-sm font-medium text-slate-700">
+                                  Address
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={handleUseCurrentLocation}
+                                  disabled={isFetchingLocation}
+                                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <LocateFixed size={14} />
+                                  {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                                </button>
+                              </div>
                               <input
                                 name="address"
                                 value={editFormData.address}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                City
+                              </label>
+                              <input
+                                name="city"
+                                value={editFormData.city}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                State
+                              </label>
+                              <input
+                                name="state"
+                                value={editFormData.state}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Pincode
+                              </label>
+                              <input
+                                name="pincode"
+                                value={editFormData.pincode}
                                 onChange={handleEditChange}
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
@@ -3901,7 +4389,190 @@ function Pipeline_modal_view() {
                                 ))}
                               </select>
                             </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Latitude
+                              </label>
+                              <input
+                                name="latitude"
+                                value={editFormData.latitude || ""}
+                                onChange={handleEditChange}
+                                placeholder="Auto-filled via current location, or enter manually"
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Longitude
+                              </label>
+                              <input
+                                name="longitude"
+                                value={editFormData.longitude || ""}
+                                onChange={handleEditChange}
+                                placeholder="Auto-filled via current location, or enter manually"
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              />
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="mt-6 pt-6 border-t border-slate-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">
+                              Custom Fields
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={toggleCfDraft}
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 transition"
+                            >
+                              <Plus size={14} /> Add Field
+                            </button>
+                          </div>
+
+                          {(editFormData.customFields || []).length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              {editFormData.customFields.map((f) => (
+                                <div key={f.id}>
+                                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                                    {f.name}
+                                    <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                      Custom
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeEditCustomField(f.id)}
+                                      className="ml-auto text-slate-400 hover:text-red-500"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </label>
+
+                                  {f.type === "textarea" ? (
+                                    <textarea
+                                      rows={3}
+                                      value={f.value}
+                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      placeholder={`Enter ${f.name}`}
+                                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
+                                    />
+                                  ) : f.type === "dropdown" ? (
+                                    <select
+                                      value={f.value}
+                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                    >
+                                      <option value="">Select {f.name}</option>
+                                      {(f.options || []).map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type={f.type}
+                                      value={f.value}
+                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      placeholder={`Enter ${f.name}`}
+                                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {cfDraftOpen && (
+                            <div className="space-y-3 bg-blue-50 border border-dashed border-blue-300 rounded-lg p-4">
+                              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                                New fields (not saved yet)
+                              </p>
+
+                              {cfDraftRows.map((row) => (
+                                <div
+                                  key={row.id}
+                                  className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+                                >
+                                  <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Field name</label>
+                                    <input
+                                      type="text"
+                                      value={row.name}
+                                      placeholder="e.g. PO Number"
+                                      onChange={(e) => updateCfDraftRow(row.id, "name", e.target.value)}
+                                      className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Field type</label>
+                                    <select
+                                      value={row.type}
+                                      onChange={(e) => updateCfDraftRow(row.id, "type", e.target.value)}
+                                      className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                    >
+                                      <option value="text">Text</option>
+                                      <option value="number">Number</option>
+                                      <option value="date">Date</option>
+                                      <option value="textarea">Textarea</option>
+                                      <option value="dropdown">Dropdown</option>
+                                    </select>
+                                  </div>
+
+                                  {row.type === "dropdown" ? (
+                                    <div>
+                                      <label className="block text-xs text-slate-500 mb-1">
+                                        Options (comma sep.)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={row.options}
+                                        placeholder="e.g. Yes, No"
+                                        onChange={(e) => updateCfDraftRow(row.id, "options", e.target.value)}
+                                        className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div />
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCfDraftRow(row.id)}
+                                    className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-slate-300 text-slate-400 hover:text-red-500 hover:border-red-300"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+
+                              <div className="flex items-center gap-3 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={addCfDraftRow}
+                                  className="text-xs font-semibold text-blue-600 hover:underline"
+                                >
+                                  + Add another field
+                                </button>
+                                <div className="flex-1" />
+                                <button
+                                  type="button"
+                                  onClick={cancelCfDraft}
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={saveCfDraft}
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                >
+                                  Save Fields
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
@@ -4192,19 +4863,34 @@ function Pipeline_modal_view() {
                           <Clock size={16} className="text-purple-600" />
                           Upcoming Follow-up
                         </h3>
-                        <button
-                          onClick={() => {
-                            setFollowUpData({
-                              followUpDate: new Date(deal.followUpDate),
-                              followUpComment: deal.followUpComment || "",
-                            });
-                            setIsFollowUpModalOpen(true);
-                          }}
-                          className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
-                        >
-                          <Edit size={14} />
-                          Reschedule
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => {
+                              setEditTimeData({
+                                newTime: new Date(deal.followUpDate),
+                                editReason: ""
+                              });
+                              setIsEditTimeModalOpen(true);
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                          >
+                            <Clock size={14} />
+                            Edit Time
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFollowUpData({
+                                followUpDate: new Date(deal.followUpDate),
+                                followUpComment: deal.followUpComment || "",
+                              });
+                              setIsFollowUpModalOpen(true);
+                            }}
+                            className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+                          >
+                            <Edit size={14} />
+                            Reschedule
+                          </button>
+                        </div>
                       </div>
                       <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4498,13 +5184,13 @@ function Pipeline_modal_view() {
                                               "Scheduled" && (
                                               <div className="mt-4">
                                                 <p className="text-sm font-medium text-slate-700 mb-2">
-                                                  Meeting Summary
+                                                  {followUp.action === "Updated" ? "Time Reschedule Reason" : "Meeting Summary"}
                                                 </p>
                                                 <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
                                                   <p className="text-slate-700">
                                                     {followUp.notes || (
                                                       <span className="text-slate-400 italic">
-                                                        No summary provided
+                                                        {followUp.action === "Updated" ? "No reason provided" : "No summary provided"}
                                                       </span>
                                                     )}
                                                   </p>
@@ -5222,6 +5908,114 @@ function Pipeline_modal_view() {
           )}
         </div>
       </div>
+      {isEditTimeModalOpen && (
+        <div className="fixed inset-0 z-[50] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              setIsEditTimeModalOpen(false);
+              setEditTimeData({ newTime: null, editReason: "" });
+            }}
+          />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all w-full max-w-md">
+                <div className="bg-white px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="text-blue-600" size={20} />
+                      Edit Follow-up Time
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsEditTimeModalOpen(false);
+                        setEditTimeData({ newTime: null, editReason: "" });
+                      }}
+                      className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={20} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white px-6 py-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Time <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          selected={editTimeData.newTime}
+                          onChange={(date) => {
+                            setEditTimeData(prev => ({ ...prev, newTime: date }));
+                          }}
+                          showTimeSelect
+                          showTimeSelectOnly
+                          timeIntervals={15}
+                          timeCaption="Time"
+                          dateFormat="h:mm aa"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition pl-10"
+                        />
+                        <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Select a new time for the existing follow-up on {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason for editing <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editTimeData.editReason}
+                        onChange={(e) => {
+                          setEditTimeData(prev => ({ ...prev, editReason: e.target.value }));
+                        }}
+                        placeholder="Why are you editing the time? (mandatory)"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white shadow-sm text-sm text-gray-700 placeholder-gray-400 transition resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditTimeModalOpen(false);
+                      setEditTimeData({ newTime: null, editReason: "" });
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEditFollowUpTime}
+                    disabled={isSubmitting || !editTimeData.newTime || !editTimeData.editReason?.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} />
+                        Update Time
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

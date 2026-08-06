@@ -6,7 +6,8 @@ import {
   ArrowLeft, ChevronRight, ChevronLeft, User, Mail, Phone, Building, Building2,
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
-  Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2,
+  Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2, Plus,
+  Briefcase, UserCheck, Users, LocateFixed, Tag,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
@@ -129,7 +130,31 @@ const NotesPopup = ({ record, onClose }) => {
           </button>
         </div>
         <div className="flex-1 overflow-auto p-5">
-          <p className="text-slate-800 whitespace-pre-wrap break-words">{record.notes}</p>
+          <div className="space-y-4">
+            {(() => {
+              let parsedNotes = [];
+              try {
+                if (record.notes) {
+                  const p = JSON.parse(record.notes);
+                  if (Array.isArray(p)) parsedNotes = p;
+                  else parsedNotes = [{ id: "legacy", text: record.notes }];
+                }
+              } catch (e) {
+                if (record.notes) parsedNotes = [{ id: "legacy", text: record.notes }];
+              }
+              
+              return parsedNotes.map((n, idx) => (
+                <div key={n.id || idx} className="bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="mb-3">
+                    <p className="text-slate-800 text-[15px] whitespace-pre-wrap break-words">{n.text}</p>
+                  </div>
+                  <p className="text-[13px] text-slate-500 font-medium">
+                    {n.id === "legacy" ? "Original note" : `${record.assignTo?.firstName || "Unknown User"} ${record.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(record.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </p>
+                </div>
+              ));
+            })()}
+          </div>
         </div>
       </div>
     </div>
@@ -238,6 +263,17 @@ const STYLES = {
   text:  { bg: "bg-yellow-100", fg: "text-yellow-600", Icon: FileText  },
   other: { bg: "bg-blue-100",   fg: "text-blue-600",   Icon: File      },
 };
+
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
 
 // ─── Authenticated fetch → ArrayBuffer ───────
 const authFetch = async (filePath, signal) => {
@@ -507,6 +543,8 @@ const ViewLead = () => {
   const [activeTab,   setActiveTab]   = useState("details");
   const [previewFile, setPreviewFile] = useState(null);
   const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
+
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
 
   // Swipe navigation between leads — the ordered list of {_id, leadName}
   // this lead was opened from (Leads table), passed via navigation state by
@@ -789,7 +827,19 @@ const ViewLead = () => {
   const [editFormData, setEditFormData] = useState(null);
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [noteInput, setNoteInput] = useState("");
+  const [isNoteSubmitting, setIsNoteSubmitting] = useState(false);
+  const [editingSingleNoteId, setEditingSingleNoteId] = useState(null);
+  const [editingSingleNoteText, setEditingSingleNoteText] = useState("");
+  const [isSavingSingleNote, setIsSavingSingleNote] = useState(false);
   const [salesUsers, setSalesUsers] = useState([]);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  // Dynamic custom fields (edit mode)
+  const [cfDraftOpen, setCfDraftOpen] = useState(false);
+  const [cfDraftRows, setCfDraftRows] = useState([]); // [{id, name, type, options}]
+  const cfIdRef = useRef(0);
+  const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -810,13 +860,41 @@ const ViewLead = () => {
       leadName: lead.leadName || "",
       companyName: lead.companyName || "",
       email: lead.email || "",
+      alternateEmail: lead.alternateEmail || "",
       phoneNumber: lead.phoneNumber || "",
+      alternatePhoneNumber: lead.alternatePhoneNumber || "",
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
-      notes: lead.notes || "",
+      notes: (() => {
+        try {
+          const parsed = JSON.parse(lead.notes);
+          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+        } catch (e) {}
+        return lead.notes || "";
+      })(),
       address: lead.address || "",
+      city: lead.city || "",
+      state: lead.state || "",
+      pincode: lead.pincode || "",
       country: lead.country || "",
+      latitude: lead.latitude || "",
+      longitude: lead.longitude || "",
       assignTo: lead.assignTo?._id || "",
+      source: lead.source || "",
+      industry: lead.industry || "",
+      status: lead.status || "Cold",
+      NumberOfEmployees: lead.NumberOfEmployees ?? "",
+      followUpDate: lead.followUpDate
+        ? new Date(lead.followUpDate).toISOString().slice(0, 10)
+        : "",
+      customFields: (lead.customFields || []).map((f) => ({
+        id: nextCfId(),
+        cardTitle: f.cardTitle || "",
+        name: f.name || "",
+        type: f.type || "text",
+        options: f.options || [],
+        value: f.value || "",
+      })),
     });
     setEditErrors({});
     setIsEditingDetails(true);
@@ -826,6 +904,76 @@ const ViewLead = () => {
     setIsEditingDetails(false);
     setEditFormData(null);
     setEditErrors({});
+    setCfDraftOpen(false);
+    setCfDraftRows([]);
+  };
+
+  /* ── Dynamic custom fields (edit mode) ─────────────────────── */
+  const toggleCfDraft = () => {
+    const willOpen = !cfDraftOpen;
+    setCfDraftOpen(willOpen);
+    if (willOpen && cfDraftRows.length === 0) {
+      setCfDraftRows([{ id: nextCfId(), name: "", type: "text", options: "" }]);
+    }
+  };
+
+  const addCfDraftRow = () => {
+    setCfDraftRows((prev) => [...prev, { id: nextCfId(), name: "", type: "text", options: "" }]);
+  };
+
+  const updateCfDraftRow = (rowId, key, value) => {
+    setCfDraftRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [key]: value } : r)));
+  };
+
+  const removeCfDraftRow = (rowId) => {
+    setCfDraftRows((prev) => prev.filter((r) => r.id !== rowId));
+  };
+
+  const cancelCfDraft = () => {
+    setCfDraftRows([]);
+    setCfDraftOpen(false);
+  };
+
+  const saveCfDraft = () => {
+    const validRows = cfDraftRows.filter((r) => r.name.trim());
+    if (validRows.length === 0) {
+      cancelCfDraft();
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle: "",
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: [...(prev.customFields || []), ...newFields],
+    }));
+    cancelCfDraft();
+  };
+
+  const updateEditCustomFieldValue = (fid, value) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).map((f) =>
+        f.id === fid ? { ...f, value } : f
+      ),
+    }));
+  };
+
+  const removeEditCustomField = (fid) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      customFields: (prev.customFields || []).filter((f) => f.id !== fid),
+    }));
   };
 
   const handleEditChange = (e) => {
@@ -835,11 +983,152 @@ const ViewLead = () => {
     if (name === "email") {
       setEditErrors((prev) => ({ ...prev, email: !!value && !validateEmail(value) }));
     }
+    if (name === "alternateEmail") {
+      setEditErrors((prev) => ({ ...prev, alternateEmail: !!value && !validateEmail(value) }));
+    }
     if (name === "phoneNumber") {
       setEditErrors((prev) => ({
         ...prev,
         phoneNumber: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
       }));
+    }
+    if (name === "alternatePhoneNumber") {
+      setEditErrors((prev) => ({
+        ...prev,
+        alternatePhoneNumber: !!value && !isEffectivelyEmptyPhone(value) && !validatePhoneNumber(value),
+      }));
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countryNames.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setEditFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const parseNotes = (notesStr) => {
+    if (!notesStr) return [];
+    try {
+      const parsed = JSON.parse(notesStr);
+      if (Array.isArray(parsed)) return parsed;
+      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
+    } catch {
+      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!noteInput.trim()) return;
+    try {
+      setIsNoteSubmitting(true);
+      const token = localStorage.getItem("token");
+      const existingNotes = parseNotes(lead.notes);
+      const newNote = {
+        id: Date.now().toString(),
+        text: noteInput.trim(),
+        createdAt: new Date().toISOString()
+      };
+      const updatedNotesString = JSON.stringify([newNote, ...existingNotes]);
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLead(res.data.lead);
+      setNoteInput("");
+      toast.success("Note added");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add note");
+    } finally {
+      setIsNoteSubmitting(false);
+    }
+  };
+
+  const startEditSingleNote = (note) => {
+    setEditingSingleNoteId(note.id);
+    setEditingSingleNoteText(note.text);
+  };
+
+  const cancelEditSingleNote = () => {
+    setEditingSingleNoteId(null);
+    setEditingSingleNoteText("");
+  };
+
+  const handleEditSingleNote = async (noteId) => {
+    if (!editingSingleNoteText.trim()) return;
+    try {
+      setIsSavingSingleNote(true);
+      const token = localStorage.getItem("token");
+      const existingNotes = parseNotes(lead.notes);
+      const updatedNotesArray = existingNotes.map(n => 
+        n.id === noteId ? { ...n, text: editingSingleNoteText.trim() } : n
+      );
+      const updatedNotesString = JSON.stringify(updatedNotesArray);
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLead(res.data.lead);
+      cancelEditSingleNote();
+      toast.success("Note updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update note");
+    } finally {
+      setIsSavingSingleNote(false);
     }
   };
 
@@ -848,12 +1137,20 @@ const ViewLead = () => {
     if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
     if (editFormData.email && !validateEmail(editFormData.email))
       return toast.error("Please enter a valid email address");
+    if (editFormData.alternateEmail && !validateEmail(editFormData.alternateEmail))
+      return toast.error("Please enter a valid alternate email address");
     if (
       editFormData.phoneNumber &&
       !isEffectivelyEmptyPhone(editFormData.phoneNumber) &&
       !validatePhoneNumber(editFormData.phoneNumber)
     )
       return toast.error("Please enter a valid phone number");
+    if (
+      editFormData.alternatePhoneNumber &&
+      !isEffectivelyEmptyPhone(editFormData.alternatePhoneNumber) &&
+      !validatePhoneNumber(editFormData.alternatePhoneNumber)
+    )
+      return toast.error("Please enter a valid alternate phone number");
 
     try {
       setIsSavingDetails(true);
@@ -863,18 +1160,41 @@ const ViewLead = () => {
         leadName: editFormData.leadName.trim(),
         companyName: editFormData.companyName.trim(),
         email: editFormData.email,
+        alternateEmail: editFormData.alternateEmail,
         phoneNumber: editFormData.phoneNumber && !editFormData.phoneNumber.startsWith("+")
           ? `+${editFormData.phoneNumber}`
           : editFormData.phoneNumber,
+        alternatePhoneNumber: editFormData.alternatePhoneNumber && !editFormData.alternatePhoneNumber.startsWith("+")
+          ? `+${editFormData.alternatePhoneNumber}`
+          : editFormData.alternatePhoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
         notes: editFormData.notes,
         address: editFormData.address,
+        city: editFormData.city,
+        state: editFormData.state,
+        pincode: editFormData.pincode,
         country: editFormData.country,
+        latitude: editFormData.latitude,
+        longitude: editFormData.longitude,
         assignTo: editFormData.assignTo,
+        source: editFormData.source,
+        industry: editFormData.industry,
+        status: editFormData.status,
+        NumberOfEmployees: editFormData.NumberOfEmployees,
+        followUpDate: editFormData.followUpDate,
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
+        customFields: JSON.stringify(
+          (editFormData.customFields || []).map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        ),
       };
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, payload, {
@@ -1033,7 +1353,13 @@ const ViewLead = () => {
     setDealData({
       value: lead.value || "",
       currency: lead.currency || "USD",
-      notes: lead.notes || "",
+      notes: (() => {
+        try {
+          const parsed = JSON.parse(lead.notes);
+          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
+        } catch (e) {}
+        return lead.notes || "";
+      })(),
       stage: "Qualification",
     });
     setConvertModalOpen(true);
@@ -1118,6 +1444,43 @@ const ViewLead = () => {
     if (!file.path) return toast.error("File path missing");
     setPreviewFile({ name: file.name, path: file.path, category: getCategory(file), mime: getMime(file) });
   }, []);
+
+/* ── Attachments: upload ─────────────────────── */
+  // updateLead always rebuilds attachments from `existingAttachments` (unlike
+  // deals' PATCH, which appends), so we must resend the lead's current
+  // attachments verbatim alongside the new files or this upload wipes them.
+  const handleUploadAttachments = async (files) => {
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    const totalFiles = (lead.attachments?.length || 0) + fileList.length;
+    if (totalFiles > 5) return toast.error("Maximum 5 attachments allowed");
+
+    if (fileList.some((file) => !ALLOWED_FILE_TYPES.includes(file.type)))
+      return toast.error("Only PDF, Image, Word, Excel files are allowed");
+
+    if (fileList.some((file) => file.size > 20 * 1024 * 1024))
+      return toast.error("Some files exceed the 20MB size limit");
+
+    try {
+      setIsUploadingAttachment(true);
+      const token = localStorage.getItem("token");
+      const dataToSend = new FormData();
+      fileList.forEach((file) => dataToSend.append("attachments", file));
+      dataToSend.append("existingAttachments", JSON.stringify(lead.attachments || []));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success(fileList.length > 1 ? "Attachments uploaded" : "Attachment uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload attachment");
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
 
   if (!lead) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -1282,11 +1645,11 @@ const ViewLead = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 mb-6">
-          {["details", "tasks_targets", "attachments", "activity", "followups"].map((tab) => (
+        <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
+          {["details", "tasks_targets", "attachments", "activity", "followups", "notes"].map((tab) => (
             <button
               key={tab}
-              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-slate-600 hover:text-slate-900"
@@ -1297,6 +1660,8 @@ const ViewLead = () => {
                 ? "Tasks & Targets"
                 : tab === "followups"
                 ? "Follow-up Notes"
+                : tab === "notes"
+                ? "Notes"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "attachments" &&
                 lead.attachments?.length > 0 && (
@@ -1342,27 +1707,63 @@ const ViewLead = () => {
                             value={lead.email
                               ? <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a>
                               : "N/A"} />
+                          <InfoRow icon={<Mail size={18}/>}     label="Alternate Email"
+                            value={lead.alternateEmail
+                              ? <a href={`mailto:${lead.alternateEmail}`} className="text-blue-600 hover:underline">{lead.alternateEmail}</a>
+                              : "Not specified"} />
                           <InfoRow icon={<Phone size={18}/>}    label="Phone"
                             value={lead.phoneNumber
                               ? <a href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`} className="text-blue-600 hover:underline">{lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}</a>
                               : "N/A"} />
+                          <InfoRow icon={<Phone size={18}/>}    label="Alternate Phone"
+                            value={lead.alternatePhoneNumber
+                              ? <a href={`tel:${lead.alternatePhoneNumber.startsWith("+") ? lead.alternatePhoneNumber : `+${lead.alternatePhoneNumber}`}`} className="text-blue-600 hover:underline">{lead.alternatePhoneNumber.startsWith("+") ? lead.alternatePhoneNumber : `+${lead.alternatePhoneNumber}`}</a>
+                              : "Not specified"} />
                           <InfoRow icon={<Building2 size={18}/>} label="Client Type" value={lead.clientType || "Not specified"} />
+                          <InfoRow icon={<Globe size={18}/>}     label="Source"      value={lead.source || "Not specified"} />
+                          <InfoRow icon={<Briefcase size={18}/>} label="Industry"    value={lead.industry || "Not specified"} />
+                          <InfoRow icon={<Users size={18}/>}     label="Number of Employees" value={lead.NumberOfEmployees || "Not specified"} />
                         </div>
                       </div>
                       <div className="space-y-5">
-                        <h3 className="text-slate-700">Lead Information</h3>
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide invisible">Client Information</h3>
                         <div className="space-y-4">
+                          <InfoRow icon={<UserCheck size={18}/>} label="Status"      value={lead.status || "Not specified"} />
                           <InfoRow icon={<FileText size={18}/>} label="Requirement" value={lead.requirement || "Not specified"} />
                           <InfoRow icon={<MapPin size={18}/>}   label="Address"     value={lead.address || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="City"        value={lead.city || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="State"       value={lead.state || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="Pincode"     value={lead.pincode || "Not specified"} />
                           <InfoRow icon={<Globe size={18}/>}    label="Country"     value={lead.country || "Not specified"} />
+                          <InfoRow icon={<LocateFixed size={18}/>} label="Latitude"  value={lead.latitude || "Not specified"} />
+                          <InfoRow icon={<LocateFixed size={18}/>} label="Longitude" value={lead.longitude || "Not specified"} />
+                          <InfoRow icon={<Calendar size={18}/>} label="Follow-up Date" value={lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Created"     value={new Date(lead.createdAt).toLocaleDateString()} />
-                          {lead.assignTo && (
+                          {lead.assignTo && userRole !== "Sales" && (
                             <InfoRow icon={<User size={18}/>}   label="Assigned To"
                               value={`${lead.assignTo.firstName} ${lead.assignTo.lastName} (${lead.assignTo.email})`} />
                           )}
                         </div>
                       </div>
                     </div>
+
+                    {lead.customFields?.length > 0 && (
+                      <div className="pt-6 border-t border-slate-200 p-6">
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide mb-4">
+                          Custom Fields
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {lead.customFields.map((f, idx) => (
+                            <InfoRow
+                              key={f._id || `${f.name}-${idx}`}
+                              icon={<Tag size={18} />}
+                              label={f.name}
+                              value={f.value || "Not specified"}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {lead.notes && (
                       <div className="mt-2 pt-6 border-t border-slate-200 p-6">
@@ -1376,7 +1777,15 @@ const ViewLead = () => {
                             <p className="text-sm font-medium group-hover:text-blue-600 transition-colors uppercase tracking-wide">
                               Additional Notes
                             </p>
-                            <p className="text-slate-900 truncate mt-1">{lead.notes}</p>
+                            <p className="text-slate-900 truncate mt-1">
+                              {(() => {
+                                try {
+                                  const parsed = JSON.parse(lead.notes);
+                                  if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].text;
+                                } catch (e) {}
+                                return lead.notes;
+                              })()}
+                            </p>
                             <p className="text-xs text-slate-500 mt-0.5">{formatNotesMeta(lead)}</p>
                           </div>
                         </button>
@@ -1464,6 +1873,22 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Email</label>
+                          <input
+                            type="email"
+                            name="alternateEmail"
+                            value={editFormData.alternateEmail}
+                            onChange={handleEditChange}
+                            placeholder="name@example.com"
+                            className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                              editErrors.alternateEmail ? "border-red-500" : "border-slate-300"
+                            }`}
+                          />
+                          {editErrors.alternateEmail && (
+                            <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                          )}
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                           <div
                             className={`border rounded-lg ${
@@ -1488,6 +1913,30 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Phone</label>
+                          <div
+                            className={`border rounded-lg ${
+                              editErrors.alternatePhoneNumber ? "border-red-500" : "border-slate-300"
+                            }`}
+                          >
+                            <PhoneInput
+                              country={"in"}
+                              preferredCountries={["in"]}
+                              countryCodeEditable={false}
+                              value={editFormData.alternatePhoneNumber}
+                              onChange={(phone) =>
+                                handleEditChange({ target: { name: "alternatePhoneNumber", value: phone } })
+                              }
+                              specialLabel=""
+                              inputStyle={phoneInputStyle}
+                              buttonStyle={phoneButtonStyle}
+                            />
+                          </div>
+                          {editErrors.alternatePhoneNumber && (
+                            <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
+                          )}
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Client Type</label>
                           <select
                             name="clientType"
@@ -1500,12 +1949,81 @@ const ViewLead = () => {
                             <option value="B2C">B2C</option>
                           </select>
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
+                          <select
+                            name="source"
+                            value={editFormData.source}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="">Select Source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email">Email</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
+                          <select
+                            name="industry"
+                            value={editFormData.industry}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="">Select Industry</option>
+                            <option value="IT">IT</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Education">Education</option>
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Number of Employees</label>
+                          <input
+                            type="number"
+                            name="NumberOfEmployees"
+                            value={editFormData.NumberOfEmployees}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-4">
                         <h3 className="text-slate-700 mb-1">
                           Lead Information
                         </h3>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                          <select
+                            name="status"
+                            value={editFormData.status}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="Hot">Hot</option>
+                            <option value="Warm">Warm</option>
+                            <option value="Cold">Cold</option>
+                            <option value="Junk">Junk</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Follow-up Date</label>
+                          <input
+                            type="date"
+                            name="followUpDate"
+                            value={editFormData.followUpDate}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Requirement</label>
                           <textarea
@@ -1527,10 +2045,48 @@ const ViewLead = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-sm font-medium text-slate-700">Address</label>
+                            <button
+                              type="button"
+                              onClick={handleUseCurrentLocation}
+                              disabled={isFetchingLocation}
+                              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <LocateFixed size={14} />
+                              {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                            </button>
+                          </div>
                           <input
                             name="address"
                             value={editFormData.address}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                          <input
+                            name="city"
+                            value={editFormData.city}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
+                          <input
+                            name="state"
+                            value={editFormData.state}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Pincode</label>
+                          <input
+                            name="pincode"
+                            value={editFormData.pincode}
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           />
@@ -1550,21 +2106,202 @@ const ViewLead = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
-                          <select
-                            name="assignTo"
-                            value={editFormData.assignTo}
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
+                          <input
+                            name="latitude"
+                            value={editFormData.latitude || ""}
                             onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                          >
-                            {salesUsers.map((u) => (
-                              <option key={u._id} value={u._id}>
-                                {u.firstName} {u.lastName}
-                              </option>
-                            ))}
-                          </select>
+                            placeholder="Auto-filled via current location, or enter manually"
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
+                          <input
+                            name="longitude"
+                            value={editFormData.longitude || ""}
+                            onChange={handleEditChange}
+                            placeholder="Auto-filled via current location, or enter manually"
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        {userRole !== "Sales" && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+                            <select
+                              name="assignTo"
+                              value={editFormData.assignTo}
+                              onChange={handleEditChange}
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            >
+                              {salesUsers.map((u) => (
+                                <option key={u._id} value={u._id}>
+                                  {u.firstName} {u.lastName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-slate-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">
+                          Custom Fields
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={toggleCfDraft}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 transition"
+                        >
+                          <Plus size={14} /> Add Field
+                        </button>
+                      </div>
+
+                      {(editFormData.customFields || []).length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          {editFormData.customFields.map((f) => (
+                            <div key={f.id}>
+                              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                                {f.name}
+                                <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                  Custom
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditCustomField(f.id)}
+                                  className="ml-auto text-slate-400 hover:text-red-500"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </label>
+
+                              {f.type === "textarea" ? (
+                                <textarea
+                                  rows={3}
+                                  value={f.value}
+                                  onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                  placeholder={`Enter ${f.name}`}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
+                                />
+                              ) : f.type === "dropdown" ? (
+                                <select
+                                  value={f.value}
+                                  onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                >
+                                  <option value="">Select {f.name}</option>
+                                  {(f.options || []).map((opt) => (
+                                    <option key={opt} value={opt}>
+                                      {opt}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type={f.type}
+                                  value={f.value}
+                                  onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                  placeholder={`Enter ${f.name}`}
+                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {cfDraftOpen && (
+                        <div className="space-y-3 bg-blue-50 border border-dashed border-blue-300 rounded-lg p-4">
+                          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                            New fields (not saved yet)
+                          </p>
+
+                          {cfDraftRows.map((row) => (
+                            <div
+                              key={row.id}
+                              className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+                            >
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Field name</label>
+                                <input
+                                  type="text"
+                                  value={row.name}
+                                  placeholder="e.g. GST Number"
+                                  onChange={(e) => updateCfDraftRow(row.id, "name", e.target.value)}
+                                  className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Field type</label>
+                                <select
+                                  value={row.type}
+                                  onChange={(e) => updateCfDraftRow(row.id, "type", e.target.value)}
+                                  className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                >
+                                  <option value="text">Text</option>
+                                  <option value="number">Number</option>
+                                  <option value="date">Date</option>
+                                  <option value="textarea">Textarea</option>
+                                  <option value="dropdown">Dropdown</option>
+                                </select>
+                              </div>
+
+                              {row.type === "dropdown" ? (
+                                <div>
+                                  <label className="block text-xs text-slate-500 mb-1">
+                                    Options (comma sep.)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={row.options}
+                                    placeholder="e.g. Yes, No"
+                                    onChange={(e) => updateCfDraftRow(row.id, "options", e.target.value)}
+                                    className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none"
+                                  />
+                                </div>
+                              ) : (
+                                <div />
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => removeCfDraftRow(row.id)}
+                                className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-slate-300 text-slate-400 hover:text-red-500 hover:border-red-300"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <button
+                              type="button"
+                              onClick={addCfDraftRow}
+                              className="text-xs font-semibold text-blue-600 hover:underline"
+                            >
+                              + Add another field
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                              type="button"
+                              onClick={cancelCfDraft}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveCfDraft}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              Save Fields
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
@@ -1605,9 +2342,27 @@ const ViewLead = () => {
             {/* ── Attachments ── */}
             {activeTab === "attachments" && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
-                <div className="p-6 border-b border-slate-100">
-                  <h2 className="text-slate-900">Attachments</h2>
-                  <p className="text-base text-slate-600 mt-1">Files and documents related to this lead</p>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-slate-900">Attachments</h2>
+                    <p className="text-base text-slate-600 mt-1">Files and documents related to this lead</p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingAttachment ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Plus size={15} />
+                    {isUploadingAttachment ? "Uploading…" : "Upload"}
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingAttachment}
+                      onChange={(e) => {
+                        handleUploadAttachments(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                 </div>
                 <div className="p-6">
                   {lead.attachments?.length > 0 ? (
@@ -1723,6 +2478,85 @@ const ViewLead = () => {
                   ) : (
                     <p className="text-sm text-slate-500">No follow-up note activity yet</p>
                   )}
+                </div>
+              </div>
+            )}
+            {/* ── Notes ── */}
+            {activeTab === "notes" && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h2 className="text-lg font-semibold text-slate-900 mb-4">Notes</h2>
+                <div className="mb-6 relative">
+                  <textarea
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    placeholder="Write a note..."
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition min-h-[120px] resize-y"
+                  />
+                  <div className="absolute bottom-3 right-3">
+                    <button
+                      onClick={handleAddNote}
+                      disabled={isNoteSubmitting || !noteInput.trim()}
+                      className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {isNoteSubmitting ? "Adding..." : "Add Note"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-500 uppercase tracking-wide">
+                      Newest first
+                    </span>
+                    <div className="h-px bg-slate-200 flex-1 ml-4" />
+                  </div>
+                  
+                  {parseNotes(lead.notes).map((n, idx) => {
+                    const isEditing = editingSingleNoteId === n.id;
+                    return (
+                      <div key={n.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-4 transition-colors hover:bg-slate-100/50">
+                        {isEditing ? (
+                          <>
+                            <textarea
+                              value={editingSingleNoteText}
+                              onChange={(e) => setEditingSingleNoteText(e.target.value)}
+                              rows={3}
+                              className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-y mb-2"
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={cancelEditSingleNote}
+                                disabled={isSavingSingleNote}
+                                className="px-3 py-1.5 rounded-lg border text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleEditSingleNote(n.id)}
+                                disabled={!editingSingleNoteText.trim() || isSavingSingleNote}
+                                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                              >
+                                {isSavingSingleNote ? "Saving..." : "Save"}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-start mb-3">
+                              <p className="text-slate-800 text-[15px] whitespace-pre-wrap break-words">{n.text}</p>
+                              <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 -mr-1.5 -mt-1.5 rounded-md hover:bg-blue-50 transition-colors">
+                                <Edit size={14} />
+                              </button>
+                            </div>
+                            <p className="text-[13px] text-slate-500 font-medium">
+                              {n.id === "legacy" ? "Original note" : `${lead.assignTo?.firstName || "Unknown User"} ${lead.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(lead.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

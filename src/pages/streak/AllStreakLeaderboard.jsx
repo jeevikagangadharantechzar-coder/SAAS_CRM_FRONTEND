@@ -579,14 +579,7 @@ const AllStreakLeaderboard = () => {
                 </div>
               )}
 
-              {/* Refresh */}
-              <button
-                onClick={() => fetchStreakData(true)}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
-                title="Refresh"
-              >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
-              </button>
+
             </div>
 
             {/* Active filter pill */}
