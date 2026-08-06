@@ -23,6 +23,7 @@ import {
   BriefcaseBusiness,
   Calendar,
   Clock,
+  LocateFixed,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -196,7 +197,12 @@ export default function CreateDeal() {
     industry: "",
     requirement: "",
     address: "",
+    city: "",
+    state: "",
+    pincode: "",
     country: "",
+    latitude: "",
+    longitude: "",
     attachments: [],
     lossReason: "",
     lossNotes: "",
@@ -221,6 +227,7 @@ export default function CreateDeal() {
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
   const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
   const [pendingSubmitData, setPendingSubmitData] = useState(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
 /* ── Fetch User Data Function ─────────────────────── */
   useEffect(() => {
@@ -304,7 +311,12 @@ export default function CreateDeal() {
         industry: existingDeal.industry || "",
         requirement: existingDeal.requirement || "",
         address: existingDeal.address || "",
+        city: existingDeal.city || "",
+        state: existingDeal.state || "",
+        pincode: existingDeal.pincode || "",
         country: existingDeal.country || "",
+        latitude: existingDeal.latitude || "",
+        longitude: existingDeal.longitude || "",
         clientType: existingDeal.clientType || "",
         attachments: [],
         lossReason: existingDeal.lossReason || "",
@@ -377,6 +389,68 @@ export default function CreateDeal() {
 
     setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
+
+/* ── Use Current Location (Geolocation + Reverse Geocoding) ─────────────────────── */
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countries.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
 /* ── Handle File Change Function ─────────────────────── */
   const handleFileChange = useCallback((e) => {
@@ -791,14 +865,6 @@ export default function CreateDeal() {
       type: "select",
       options: ["Website", "Referral", "Social Media", "Email", "Phone", "Other"],
     },
-    { name: "address", label: "Address", icon: <MapPin size={16} /> },
-    {
-      name: "country",
-      label: "Country",
-      icon: <Globe size={16} />,
-      type: "select",
-      options: countries,
-    },
   ];
 
   return (
@@ -1049,6 +1115,129 @@ export default function CreateDeal() {
                     )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Location Section */}
+          <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-2">
+              <h2 className="text-lg font-semibold text-teal-600 flex items-center gap-2">
+                <MapPin size={18} /> Location
+              </h2>
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={isFetchingLocation}
+                className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <LocateFixed size={16} />
+                {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address
+                </label>
+                <textarea
+                  name="address"
+                  rows={2}
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="Enter address or use current location"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 placeholder-gray-400 transition resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  City
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  placeholder="Enter City"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  State
+                </label>
+                <input
+                  type="text"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  placeholder="Enter State"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pincode
+                </label>
+                <input
+                  type="text"
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  placeholder="Enter Pincode"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Country
+                </label>
+                <select
+                  name="country"
+                  value={formData.country || ""}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                >
+                  <option value="">Select Country</option>
+                  {countries.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Latitude
+                </label>
+                <input
+                  type="text"
+                  name="latitude"
+                  value={formData.latitude || ""}
+                  onChange={handleChange}
+                  placeholder="Auto-filled via current location, or enter manually"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Longitude
+                </label>
+                <input
+                  type="text"
+                  name="longitude"
+                  value={formData.longitude || ""}
+                  onChange={handleChange}
+                  placeholder="Auto-filled via current location, or enter manually"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11"
+                />
+              </div>
             </div>
           </div>
 

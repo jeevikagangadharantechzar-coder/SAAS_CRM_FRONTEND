@@ -19,6 +19,7 @@ import {
   Upload,
   X,
   Users,
+  LocateFixed,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import PhoneInput from "react-phone-input-2";
@@ -66,7 +67,12 @@ export default function CreateLeads() {
     status: "Cold",
     assignTo: "",
     address: "",
+    city: "",
+    state: "",
+    pincode: "",
     country: "",
+    latitude: "",
+    longitude: "",
     followUpDate: "",
     notes: "",
     clientType: "",
@@ -83,6 +89,7 @@ export default function CreateLeads() {
   const [phoneCountryCode, setPhoneCountryCode] = useState("in");
   const [followUpDateObj, setFollowUpDateObj] = useState(null);
   const followUpDateRef = useRef(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   const [originalAssignTo, setOriginalAssignTo] = useState(null);
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
@@ -140,6 +147,9 @@ export default function CreateLeads() {
       requirement: contactFormData.requirement || "",
       source: "Website",
       address: contactFormData.address || "",
+      city: contactFormData.city || "",
+      state: contactFormData.state || "",
+      pincode: contactFormData.pincode || "",
       country: contactFormData.country || "",
       industry: contactFormData.industry || "",
       clientType: contactFormData.clientType || "",
@@ -180,7 +190,12 @@ export default function CreateLeads() {
             status: leadData.status || "Cold",
             assignTo: leadData.assignTo?._id || "",
             address: leadData.address || "",
+            city: leadData.city || "",
+            state: leadData.state || "",
+            pincode: leadData.pincode || "",
             country: leadData.country || "",
+            latitude: leadData.latitude || "",
+            longitude: leadData.longitude || "",
             followUpDate: leadData.followUpDate
               ? (() => {
                   const d = new Date(leadData.followUpDate);
@@ -341,6 +356,68 @@ export default function CreateLeads() {
     if (fieldErrors.phoneNumber) {
       setFieldErrors((p) => ({ ...p, phoneNumber: "" }));
     }
+  };
+
+  /* ── Use Current Location (Geolocation + Reverse Geocoding) ─────────────────────── */
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countries.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   // Drag and drop handlers
@@ -673,14 +750,6 @@ export default function CreateLeads() {
         },
         { name: "email", label: "Email", icon: <Mail size={16} /> },
         { name: "alternateEmail", label: "Alternate Email", icon: <Mail size={16} /> },
-        { name: "address", label: "Address", icon: <MapPin size={16} /> },
-        {
-          name: "country",
-          label: "Country",
-          icon: <Globe size={16} />,
-          type: "select",
-          options: countries,
-        },
       ],
     },
     {
@@ -779,69 +848,38 @@ export default function CreateLeads() {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
+  const renderFieldGroup = (group) => (
+    <div
+      key={group.title}
+      className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm"
+    >
+      <h2 className={`text-lg font-semibold border-b pb-2 ${group.color}`}>
+        {group.title}
+      </h2>
 
-  return (
-    <>
-      <div className="min-h-screen flex items-start justify-center py-10 px-4">
-        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-100">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-5 border-b rounded-t-2xl">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleBackClick}
-                className="p-2 rounded-lg bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h1 className="text-2xl font-bold text-gray-800">
-                {leadId ? "Edit Lead" : "Create New Lead"}
-              </h1>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {group.fields.map((field) => (
+          <div
+            key={field.name}
+            className={`${field.type === "textarea" ? "md:col-span-3" : ""}`}
+          >
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              {field.icon} {field.label}
+              {(field.name === "leadName" || field.name === "companyName" || field.name === "phoneNumber") && (
+                <span className="text-red-500">*</span>
+              )}
+            </label>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-10">
-            {fieldGroups.map((group) => (
-              <div
-                key={group.title}
-                className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm"
-              >
-                <h2
-                  className={`text-lg font-semibold border-b pb-2 ${group.color}`}
+            {field.name === "phoneNumber" ? (
+              <div>
+                <div
+                  className={`border rounded-lg ${
+                    errors.phoneNumber
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
                 >
-                  {group.title}
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {group.fields.map((field) => (
-                    <div
-                      key={field.name}
-                      className={`${field.type === "textarea" ? "md:col-span-3" : ""}`}
-                    >
-                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                        {field.icon} {field.label}
-                        {(field.name === "leadName" || field.name === "companyName" || field.name === "phoneNumber") && (
-                          <span className="text-red-500">*</span>
-                        )}
-                      </label>
-
-                      {field.name === "phoneNumber" ? (
-                        <div>
-                          <div
-                            className={`border rounded-lg ${
-                              errors.phoneNumber
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          >
-                           <PhoneInput
+                 <PhoneInput
   country={"in"}
   preferredCountries={["in"]}
   countryCodeEditable={false} // 👈 prevents editing +91 manually
@@ -854,7 +892,7 @@ export default function CreateLeads() {
     if (!phone || !phone.startsWith(dialCode)) {
       setFormData((prev) => ({
         ...prev,
-        phoneNumber: dialCode, 
+        phoneNumber: dialCode,
       }));
       return;
     }
@@ -885,174 +923,331 @@ export default function CreateLeads() {
     borderRight: "1px solid #e5e7eb",
   }}
 />
-                          </div>
-                          {fieldErrors.phoneNumber && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors.phoneNumber}
-                            </p>
-                          )}
-                          {formData.phoneNumber &&
-                            !fieldErrors.phoneNumber && (
-                              <p className="text-xs text-green-600 mt-1">
-                                ✓ Valid phone number
-                              </p>
-                            )}
-                        </div>
-                      ) : field.name === "alternatePhoneNumber" ? (
-                        <div>
-                          <div
-                            className={`border rounded-lg ${
-                              errors.alternatePhoneNumber
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          >
-                            <PhoneInput
-                              country={"in"}
-                              preferredCountries={["in"]}
-                              countryCodeEditable={false}
-                              disableDropdown={false}
-                              value={formData.alternatePhoneNumber}
-                              onChange={(phone, countryData) => {
-                                const dialCode = countryData.dialCode;
-                                if (phone && phone !== dialCode) {
-                                  setFormData((prev) => ({ ...prev, alternatePhoneNumber: phone }));
-                                } else {
-                                  setFormData((prev) => ({ ...prev, alternatePhoneNumber: "" }));
-                                }
-                                if (errors.alternatePhoneNumber) {
-                                  setErrors((p) => ({ ...p, alternatePhoneNumber: false }));
-                                }
-                                if (fieldErrors.alternatePhoneNumber) {
-                                  setFieldErrors((p) => ({ ...p, alternatePhoneNumber: "" }));
-                                }
-                              }}
-                              placeholder="Select code and enter number"
-                              specialLabel=""
-                              inputStyle={{
-                                width: "100%",
-                                height: "42px",
-                                fontSize: "14px",
-                                paddingLeft: "55px",
-                                borderRadius: "0.5rem",
-                                border: "none",
-                              }}
-                              buttonStyle={{
-                                borderRadius: "0.5rem 0 0 0.5rem",
-                                height: "42px",
-                                background: "white",
-                                border: "none",
-                                borderRight: "1px solid #e5e7eb",
-                              }}
-                            />
-                          </div>
-                          {fieldErrors.alternatePhoneNumber && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors.alternatePhoneNumber}
-                            </p>
-                          )}
-                        </div>
-                      ) : field.type === "select" ? (
-                        <div>
-                          <select
-                            name={field.name}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
-                              errors[field.name]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          >
-                            <option value="">Select {field.label}</option>
-                            {field.options.map((opt) =>
-                              typeof opt === "string" ? (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ) : (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              )
-                            )}
-                          </select>
-                          {fieldErrors[field.name] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors[field.name]}
-                            </p>
-                          )}
-                        </div>
-                      ) : field.type === "textarea" ? (
-                        <div>
-                          <textarea
-                            name={field.name}
-                            rows={5}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            placeholder={`Enter ${field.label}...`}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
-                            maxLength={500}
-                          />
-                          {fieldErrors[field.name] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors[field.name]}
-                            </p>
-                          )}
-                        </div>
-                      ) : field.name === "followUpDate" ? (
-                        <div>
-                          <DatePicker
-                            ref={followUpDateRef}
-                            selected={followUpDateObj}
-                            onChange={handleFollowUpDateChange}
-                            minDate={new Date()}
-                            dateFormat="MM/dd/yyyy"
-                            placeholderText="mm/dd/yyyy"
-                            showMonthDropdown
-                            showYearDropdown
-                            dropdownMode="select"
-                            isClearable
-                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
-                              errors.followUpDate
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                            wrapperClassName="w-full"
-                          />
-                          {fieldErrors.followUpDate && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors.followUpDate}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type={field.type || "text"}
-                            name={field.name}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            placeholder={field.placeholder || `Enter ${field.label}`}
-                            maxLength={field.maxLength || undefined}
-                            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
-                              errors[field.name]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          />
-                          {fieldErrors[field.name] && (
-                            <p className="text-sm text-red-500 mt-1">
-                              {fieldErrors[field.name]}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                </div>
+                {fieldErrors.phoneNumber && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors.phoneNumber}
+                  </p>
+                )}
+                {formData.phoneNumber &&
+                  !fieldErrors.phoneNumber && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ✓ Valid phone number
+                    </p>
+                  )}
+              </div>
+            ) : field.name === "alternatePhoneNumber" ? (
+              <div>
+                <div
+                  className={`border rounded-lg ${
+                    errors.alternatePhoneNumber
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <PhoneInput
+                    country={"in"}
+                    preferredCountries={["in"]}
+                    countryCodeEditable={false}
+                    disableDropdown={false}
+                    value={formData.alternatePhoneNumber}
+                    onChange={(phone, countryData) => {
+                      const dialCode = countryData.dialCode;
+                      if (phone && phone !== dialCode) {
+                        setFormData((prev) => ({ ...prev, alternatePhoneNumber: phone }));
+                      } else {
+                        setFormData((prev) => ({ ...prev, alternatePhoneNumber: "" }));
+                      }
+                      if (errors.alternatePhoneNumber) {
+                        setErrors((p) => ({ ...p, alternatePhoneNumber: false }));
+                      }
+                      if (fieldErrors.alternatePhoneNumber) {
+                        setFieldErrors((p) => ({ ...p, alternatePhoneNumber: "" }));
+                      }
+                    }}
+                    placeholder="Select code and enter number"
+                    specialLabel=""
+                    inputStyle={{
+                      width: "100%",
+                      height: "42px",
+                      fontSize: "14px",
+                      paddingLeft: "55px",
+                      borderRadius: "0.5rem",
+                      border: "none",
+                    }}
+                    buttonStyle={{
+                      borderRadius: "0.5rem 0 0 0.5rem",
+                      height: "42px",
+                      background: "white",
+                      border: "none",
+                      borderRight: "1px solid #e5e7eb",
+                    }}
+                  />
+                </div>
+                {fieldErrors.alternatePhoneNumber && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors.alternatePhoneNumber}
+                  </p>
+                )}
+              </div>
+            ) : field.type === "select" ? (
+              <div>
+                <select
+                  name={field.name}
+                  value={formData[field.name] || ""}
+                  onChange={handleChange}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                    errors[field.name]
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select {field.label}</option>
+                  {field.options.map((opt) =>
+                    typeof opt === "string" ? (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ) : (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    )
+                  )}
+                </select>
+                {fieldErrors[field.name] && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors[field.name]}
+                  </p>
+                )}
+              </div>
+            ) : field.type === "textarea" ? (
+              <div>
+                <textarea
+                  name={field.name}
+                  rows={5}
+                  value={formData[field.name] || ""}
+                  onChange={handleChange}
+                  placeholder={`Enter ${field.label}...`}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+                  maxLength={500}
+                />
+                {fieldErrors[field.name] && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors[field.name]}
+                  </p>
+                )}
+              </div>
+            ) : field.name === "followUpDate" ? (
+              <div>
+                <DatePicker
+                  ref={followUpDateRef}
+                  selected={followUpDateObj}
+                  onChange={handleFollowUpDateChange}
+                  minDate={new Date()}
+                  dateFormat="MM/dd/yyyy"
+                  placeholderText="mm/dd/yyyy"
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
+                  isClearable
+                  className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                    errors.followUpDate
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                  wrapperClassName="w-full"
+                />
+                {fieldErrors.followUpDate && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors.followUpDate}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <input
+                  type={field.type || "text"}
+                  name={field.name}
+                  value={formData[field.name] || ""}
+                  onChange={handleChange}
+                  placeholder={field.placeholder || `Enter ${field.label}`}
+                  maxLength={field.maxLength || undefined}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11 ${
+                    errors[field.name]
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                />
+                {fieldErrors[field.name] && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldErrors[field.name]}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="min-h-screen flex items-start justify-center py-10 px-4">
+        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-100">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-5 border-b rounded-t-2xl">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBackClick}
+                className="p-2 rounded-lg bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {leadId ? "Edit Lead" : "Create New Lead"}
+              </h1>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-10">
+            {renderFieldGroup(fieldGroups[0])}
+            {renderFieldGroup(fieldGroups[1])}
+
+            {/* Location Section */}
+            <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-2">
+                <h2 className="text-lg font-semibold text-teal-600 flex items-center gap-2">
+                  <MapPin size={18} /> Location
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={isFetchingLocation}
+                  className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <LocateFixed size={16} />
+                  {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address
+                  </label>
+                  <textarea
+                    name="address"
+                    rows={2}
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Enter address or use current location"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    placeholder="Enter City"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    placeholder="Enter State"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pincode
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleChange}
+                    placeholder="Enter Pincode"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Country
+                  </label>
+                  <select
+                    name="country"
+                    value={formData.country || ""}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Latitude
+                  </label>
+                  <input
+                    type="text"
+                    name="latitude"
+                    value={formData.latitude || ""}
+                    onChange={handleChange}
+                    placeholder="Auto-filled via current location, or enter manually"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Longitude
+                  </label>
+                  <input
+                    type="text"
+                    name="longitude"
+                    value={formData.longitude || ""}
+                    onChange={handleChange}
+                    placeholder="Auto-filled via current location, or enter manually"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+                  />
                 </div>
               </div>
-            ))}
+            </div>
+
+            {fieldGroups.slice(2).map((group) => renderFieldGroup(group))}
 
             {/* Attachments Section */}
             <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">

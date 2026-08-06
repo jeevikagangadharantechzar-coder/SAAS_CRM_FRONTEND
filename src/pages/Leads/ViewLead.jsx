@@ -7,7 +7,7 @@ import {
   FileText, Calendar, Clock, Paperclip, Download, Eye,
   X, FileImage, File, AlertCircle, Loader2, Edit, Save, BookOpen,
   Handshake, Ban, MapPin, Globe, MessageSquarePlus, Upload, Trash2, Plus,
-  Briefcase, UserCheck, Users,
+  Briefcase, UserCheck, Users, LocateFixed,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
@@ -804,6 +804,7 @@ const ViewLead = () => {
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [salesUsers, setSalesUsers] = useState([]);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -831,7 +832,12 @@ const ViewLead = () => {
       requirement: lead.requirement || "",
       notes: lead.notes || "",
       address: lead.address || "",
+      city: lead.city || "",
+      state: lead.state || "",
+      pincode: lead.pincode || "",
       country: lead.country || "",
+      latitude: lead.latitude || "",
+      longitude: lead.longitude || "",
       assignTo: lead.assignTo?._id || "",
       source: lead.source || "",
       industry: lead.industry || "",
@@ -875,6 +881,67 @@ const ViewLead = () => {
     }
   };
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const response = await axios.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            {
+              params: {
+                lat: latitude,
+                lon: longitude,
+                format: "json",
+              },
+            }
+          );
+
+          const addr = response.data.address || {};
+          const matchedCountry =
+            countryNames.find(
+              (c) => c.toLowerCase() === (addr.country || "").toLowerCase()
+            ) || addr.country || "";
+
+          setEditFormData((prev) => ({
+            ...prev,
+            address: response.data.display_name || prev.address,
+            city: addr.city || addr.town || addr.village || addr.county || "",
+            state: addr.state || "",
+            pincode: addr.postcode || "",
+            country: matchedCountry,
+            latitude,
+            longitude,
+          }));
+          toast.success("Location fetched successfully");
+        } catch (error) {
+          console.error("Error fetching address:", error);
+          toast.error("Failed to fetch address details. Please enter manually.");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Please enter manually."
+            : "Unable to fetch your location. Please enter manually."
+        );
+        setIsFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const saveDetails = async () => {
     if (!editFormData.leadName.trim()) return toast.error("Lead Name is required");
     if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
@@ -914,7 +981,12 @@ const ViewLead = () => {
         requirement: editFormData.requirement,
         notes: editFormData.notes,
         address: editFormData.address,
+        city: editFormData.city,
+        state: editFormData.state,
+        pincode: editFormData.pincode,
         country: editFormData.country,
+        latitude: editFormData.latitude,
+        longitude: editFormData.longitude,
         assignTo: editFormData.assignTo,
         source: editFormData.source,
         industry: editFormData.industry,
@@ -1452,7 +1524,12 @@ const ViewLead = () => {
                           <InfoRow icon={<UserCheck size={18}/>} label="Status"      value={lead.status || "Not specified"} />
                           <InfoRow icon={<FileText size={18}/>} label="Requirement" value={lead.requirement || "Not specified"} />
                           <InfoRow icon={<MapPin size={18}/>}   label="Address"     value={lead.address || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="City"        value={lead.city || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="State"       value={lead.state || "Not specified"} />
+                          <InfoRow icon={<MapPin size={18}/>}   label="Pincode"     value={lead.pincode || "Not specified"} />
                           <InfoRow icon={<Globe size={18}/>}    label="Country"     value={lead.country || "Not specified"} />
+                          <InfoRow icon={<LocateFixed size={18}/>} label="Latitude"  value={lead.latitude || "Not specified"} />
+                          <InfoRow icon={<LocateFixed size={18}/>} label="Longitude" value={lead.longitude || "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Follow-up Date" value={lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : "Not specified"} />
                           <InfoRow icon={<Calendar size={18}/>} label="Created"     value={new Date(lead.createdAt).toLocaleDateString()} />
                           {lead.assignTo && userRole !== "Sales" && (
@@ -1735,10 +1812,48 @@ const ViewLead = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-sm font-medium text-slate-700">Address</label>
+                            <button
+                              type="button"
+                              onClick={handleUseCurrentLocation}
+                              disabled={isFetchingLocation}
+                              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <LocateFixed size={14} />
+                              {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                            </button>
+                          </div>
                           <input
                             name="address"
                             value={editFormData.address}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                          <input
+                            name="city"
+                            value={editFormData.city}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
+                          <input
+                            name="state"
+                            value={editFormData.state}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Pincode</label>
+                          <input
+                            name="pincode"
+                            value={editFormData.pincode}
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           />
@@ -1756,6 +1871,26 @@ const ViewLead = () => {
                               <option key={name} value={name}>{name}</option>
                             ))}
                           </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
+                          <input
+                            name="latitude"
+                            value={editFormData.latitude || ""}
+                            onChange={handleEditChange}
+                            placeholder="Auto-filled via current location, or enter manually"
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
+                          <input
+                            name="longitude"
+                            value={editFormData.longitude || ""}
+                            onChange={handleEditChange}
+                            placeholder="Auto-filled via current location, or enter manually"
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
                         </div>
                         {userRole !== "Sales" && (
                           <div>
