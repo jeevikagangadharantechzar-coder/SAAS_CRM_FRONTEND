@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
@@ -24,6 +24,8 @@ import {
   Calendar,
   Clock,
   LocateFixed,
+  Plus,
+  X,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -248,6 +250,13 @@ export default function CreateDeal() {
   const [pendingSubmitData, setPendingSubmitData] = useState(null);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
+  // Dynamic (per-card) custom fields
+  const [customFields, setCustomFields] = useState([]); // committed: [{id, cardTitle, name, type, options, value}]
+  const [draftRows, setDraftRows] = useState({}); // { [cardTitle]: [{id, name, type, options}] }
+  const [draftOpen, setDraftOpen] = useState({}); // { [cardTitle]: bool }
+  const customFieldIdRef = useRef(0);
+  const nextCustomFieldId = () => `cf-${Date.now()}-${customFieldIdRef.current++}`;
+
 /* ── Fetch User Data Function ─────────────────────── */
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -353,6 +362,17 @@ export default function CreateDeal() {
         const normalised = existingDeal.attachments.map(normaliseAttachment);
         setExistingAttachments(normalised);
       }
+
+      setCustomFields(
+        (existingDeal.customFields || []).map((f) => ({
+          id: nextCustomFieldId(),
+          cardTitle: f.cardTitle || "",
+          name: f.name || "",
+          type: f.type || "text",
+          options: f.options || [],
+          value: f.value || "",
+        }))
+      );
     }
   }, [isEditMode, existingDeal]);
 
@@ -636,6 +656,19 @@ export default function CreateDeal() {
       const rawPaths = existingAttachments.map((a) => a.filePath).filter(Boolean);
       data.append("existingAttachments", JSON.stringify(rawPaths));
 
+      data.append(
+        "customFields",
+        JSON.stringify(
+          customFields.map((f) => ({
+            cardTitle: f.cardTitle,
+            name: f.name,
+            type: f.type,
+            options: f.options,
+            value: f.value,
+          }))
+        )
+      );
+
       let response;
       if (isEditMode && existingDeal) {
         response = await axios.patch(
@@ -822,6 +855,236 @@ export default function CreateDeal() {
 
   const showAssignToField = userRole === "Admin";
 
+  /* ── Dynamic custom fields (per card) ─────────────────────── */
+  const toggleDraftCard = (cardTitle) => {
+    const willOpen = !draftOpen[cardTitle];
+    setDraftOpen((prev) => ({ ...prev, [cardTitle]: willOpen }));
+    if (willOpen && !(draftRows[cardTitle]?.length)) {
+      setDraftRows((prev) => ({
+        ...prev,
+        [cardTitle]: [{ id: nextCustomFieldId(), name: "", type: "text", options: "" }],
+      }));
+    }
+  };
+
+  const addDraftRow = (cardTitle) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: [
+        ...(prev[cardTitle] || []),
+        { id: nextCustomFieldId(), name: "", type: "text", options: "" },
+      ],
+    }));
+  };
+
+  const updateDraftRow = (cardTitle, rowId, key, value) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: (prev[cardTitle] || []).map((r) =>
+        r.id === rowId ? { ...r, [key]: value } : r
+      ),
+    }));
+  };
+
+  const removeDraftRow = (cardTitle, rowId) => {
+    setDraftRows((prev) => ({
+      ...prev,
+      [cardTitle]: (prev[cardTitle] || []).filter((r) => r.id !== rowId),
+    }));
+  };
+
+  const cancelDraftCard = (cardTitle) => {
+    setDraftRows((prev) => ({ ...prev, [cardTitle]: [] }));
+    setDraftOpen((prev) => ({ ...prev, [cardTitle]: false }));
+  };
+
+  const saveDraftCard = (cardTitle) => {
+    const rows = draftRows[cardTitle] || [];
+    const validRows = rows.filter((r) => r.name.trim());
+
+    if (validRows.length === 0) {
+      cancelDraftCard(cardTitle);
+      return;
+    }
+
+    const newFields = validRows.map((r) => ({
+      id: r.id,
+      cardTitle,
+      name: r.name.trim(),
+      type: r.type,
+      options:
+        r.type === "dropdown"
+          ? r.options.split(",").map((o) => o.trim()).filter(Boolean)
+          : [],
+      value: "",
+    }));
+
+    setCustomFields((prev) => [...prev, ...newFields]);
+    cancelDraftCard(cardTitle);
+  };
+
+  const updateCustomFieldValue = (id, value) => {
+    setCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, value } : f))
+    );
+  };
+
+  const removeCustomField = (id) => {
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const AddFieldButton = ({ cardTitle }) => (
+    <button
+      type="button"
+      onClick={() => toggleDraftCard(cardTitle)}
+      className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-indigo-400 text-indigo-600 hover:bg-indigo-50 transition"
+    >
+      <Plus size={14} /> Add Field
+    </button>
+  );
+
+  const renderCommittedCustomFields = (cardTitle) =>
+    customFields
+      .filter((f) => f.cardTitle === cardTitle)
+      .map((f) => (
+        <div key={f.id} className={f.type === "textarea" ? "md:col-span-3" : ""}>
+          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            {f.name}
+            <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
+              Custom
+            </span>
+            <button
+              type="button"
+              onClick={() => removeCustomField(f.id)}
+              className="ml-auto text-gray-400 hover:text-red-500"
+            >
+              <X size={14} />
+            </button>
+          </label>
+
+          {f.type === "textarea" ? (
+            <textarea
+              rows={4}
+              value={f.value}
+              onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+              placeholder={`Enter ${f.name}`}
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white shadow-sm text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 placeholder-gray-400 transition resize-none"
+            />
+          ) : f.type === "dropdown" ? (
+            <select
+              value={f.value}
+              onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+            >
+              <option value="">Select {f.name}</option>
+              {f.options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type={f.type}
+              value={f.value}
+              onChange={(e) => updateCustomFieldValue(f.id, e.target.value)}
+              placeholder={`Enter ${f.name}`}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none transition h-11"
+            />
+          )}
+        </div>
+      ));
+
+  const renderCustomFieldDraftPanel = (cardTitle) =>
+    draftOpen[cardTitle] && (
+      <div className="space-y-3 bg-indigo-50 border border-dashed border-indigo-300 rounded-lg p-4 mt-4">
+        <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+          New fields (not saved yet)
+        </p>
+
+        {(draftRows[cardTitle] || []).map((row) => (
+          <div
+            key={row.id}
+            className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+          >
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Field name</label>
+              <input
+                type="text"
+                value={row.name}
+                placeholder="e.g. PO Number"
+                onChange={(e) => updateDraftRow(cardTitle, row.id, "name", e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Field type</label>
+              <select
+                value={row.type}
+                onChange={(e) => updateDraftRow(cardTitle, row.id, "type", e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+              >
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="date">Date</option>
+                <option value="textarea">Textarea</option>
+                <option value="dropdown">Dropdown</option>
+              </select>
+            </div>
+
+            {row.type === "dropdown" ? (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Options (comma sep.)</label>
+                <input
+                  type="text"
+                  value={row.options}
+                  placeholder="e.g. Yes, No"
+                  onChange={(e) => updateDraftRow(cardTitle, row.id, "options", e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none"
+                />
+              </div>
+            ) : (
+              <div />
+            )}
+
+            <button
+              type="button"
+              onClick={() => removeDraftRow(cardTitle, row.id)}
+              className="h-[38px] w-[38px] flex items-center justify-center rounded-md border border-gray-300 text-gray-400 hover:text-red-500 hover:border-red-300"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => addDraftRow(cardTitle)}
+            className="text-xs font-semibold text-indigo-600 hover:underline"
+          >
+            + Add another field
+          </button>
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => cancelDraftCard(cardTitle)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => saveDraftCard(cardTitle)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            Save Fields
+          </button>
+        </div>
+      </div>
+    );
+
   const formFields = [
     {
       name: "stage",
@@ -925,9 +1188,12 @@ export default function CreateDeal() {
         <form onSubmit={handleSubmit} className="p-4 md:p-8 space-y-6 md:space-y-10">
           {/* Deal Info */}
           <div className="space-y-4 md:space-y-6 p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2 text-blue-600">
-              Deal Information
-            </h2>
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-lg font-semibold text-blue-600">
+                Deal Information
+              </h2>
+              <AddFieldButton cardTitle="Deal Information" />
+            </div>
 
             {formData.stage === "Closed Lost" && formData.lossReason && (
               <div className="md:col-span-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1166,7 +1432,11 @@ export default function CreateDeal() {
                     )}
                 </div>
               ))}
+
+              {renderCommittedCustomFields("Deal Information")}
             </div>
+
+            {renderCustomFieldDraftPanel("Deal Information")}
           </div>
 
           {/* Location Section */}
@@ -1294,9 +1564,12 @@ export default function CreateDeal() {
 
           {/* Follow-up Section */}
           <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2 text-purple-600 flex items-center gap-2">
-              <Clock size={18} /> Follow-up
-            </h2>
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-lg font-semibold text-purple-600 flex items-center gap-2">
+                <Clock size={18} /> Follow-up
+              </h2>
+              <AddFieldButton cardTitle="Follow-up" />
+            </div>
             {isEditMode ? (
               <div className="mt-6 flex flex-col items-center justify-center p-6 bg-purple-50 rounded-xl border border-purple-100">
                 <p className="text-sm text-purple-800 mb-4 text-center max-w-md">
@@ -1354,14 +1627,24 @@ export default function CreateDeal() {
                 </div>
               </div>
             )}
+
+            {customFields.some((f) => f.cardTitle === "Follow-up") && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {renderCommittedCustomFields("Follow-up")}
+              </div>
+            )}
+            {renderCustomFieldDraftPanel("Follow-up")}
           </div>
 
           {/* Management */}
           {showAssignToField && (
             <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
-              <h2 className="text-lg font-semibold border-b pb-2 text-yellow-600">
-                Management
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-lg font-semibold text-yellow-600">
+                  Management
+                </h2>
+                <AddFieldButton cardTitle="Management" />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -1381,7 +1664,11 @@ export default function CreateDeal() {
                     ))}
                   </select>
                 </div>
+
+                {renderCommittedCustomFields("Management")}
               </div>
+
+              {renderCustomFieldDraftPanel("Management")}
             </div>
           )}
 
