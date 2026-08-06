@@ -655,13 +655,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Trash — Admin-only, covers both trashed Leads and Deals via an
             in-page toggle rather than two separate sidebar links. */}
-        <SidebarItem
-          to="trash"
-          icon={<Trash2 />}
-          label={t("sidebar.trash")}
-          hasPermission={isAdmin}
-          sidebarOpen={isOpen}
-        />
+ 
 
         {/* Document (Collapsible) — independent "documents" permission now,
             decoupled from Leads/Deals access (previously just an OR of
@@ -941,7 +935,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             sidebarOpen={isOpen}
           />
         )}
-
+              <SidebarItem
+          to="trash"
+          icon={<Trash2 />}
+          label={t("sidebar.trash")}
+          hasPermission={isAdmin}
+          sidebarOpen={isOpen}
+        />
         {/* Upgrade Plan */}
         {isAdmin && (
           <SidebarItem
@@ -951,6 +951,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             sidebarOpen={isOpen}
           />
         )}
+
+ 
       </nav>
     </aside>
   );
