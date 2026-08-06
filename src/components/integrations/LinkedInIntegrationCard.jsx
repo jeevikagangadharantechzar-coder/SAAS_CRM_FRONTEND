@@ -82,8 +82,8 @@ export default function LinkedInIntegrationCard() {
           </svg>
         </div>
         <div>
-          <h2 className="font-semibold text-gray-800 text-lg">LinkedIn Lead Gen Campaigns</h2>
-          <p className="text-gray-500 text-sm">
+          <h2 className="text-slate-900">LinkedIn Lead Gen Campaigns</h2>
+          <p className="text-base text-slate-600">
             Automatically sync leads from LinkedIn Lead Gen Forms into your CRM
           </p>
         </div>

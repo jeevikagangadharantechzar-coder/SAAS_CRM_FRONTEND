@@ -136,7 +136,7 @@ function NotesSection({ target, baseUrl, headers, onNoteAdded }) {
 
   return (
     <div className="mt-4 border-t border-gray-100 pt-4 space-y-3">
-      <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
+      <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
         <MessageSquare size={12} className="text-[#008ecc]" /> Notes to Admin
       </p>
 
@@ -145,8 +145,8 @@ function NotesSection({ target, baseUrl, headers, onNoteAdded }) {
         <div className="space-y-2 max-h-40 overflow-y-auto">
           {[...target.notes].reverse().map((n, i) => (
             <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-2.5">
-              <p className="text-[11px] text-gray-700 leading-relaxed">{n.text}</p>
-              <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+              <p className="text-xs text-gray-700 leading-relaxed">{n.text}</p>
+              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                 <Clock size={8} /> {fmt(n.addedAt)} {fmtTime(n.addedAt)}
               </p>
             </div>
@@ -211,7 +211,7 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
         <div className="w-4 h-4 rounded border-2 border-amber-400 bg-amber-400 flex items-center justify-center shrink-0">
           <Check size={10} className="text-white" strokeWidth={3} />
         </div>
-        <span className="text-[11px] text-amber-700 font-semibold">Reported — Pending admin review</span>
+        <span className="text-xs text-amber-700 font-semibold">Reported — Pending admin review</span>
       </div>
     );
   }
@@ -230,7 +230,7 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
           {open && <Check size={10} className="text-white" strokeWidth={3} />}
         </div>
         <span onClick={() => setOpen(v => !v)}
-          className={`text-[11px] font-semibold transition-colors cursor-pointer ${open ? "text-rose-600" : "text-gray-400 group-hover:text-rose-500"}`}>
+          className={`text-xs font-semibold transition-colors cursor-pointer ${open ? "text-rose-600" : "text-gray-400 group-hover:text-rose-500"}`}>
           Report Issue
         </span>
       </label>
@@ -240,38 +240,38 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
         <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 overflow-hidden">
           {/* Details summary */}
           <div className="px-3 py-2.5 bg-rose-100 border-b border-rose-200">
-            <p className="text-[10px] font-bold text-rose-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <p className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-2 flex items-center gap-1">
               {itemType === "deal" ? <Briefcase size={9} /> : <Users size={9} />}
               {itemType === "deal" ? "Deal" : "Lead"} Details
             </p>
-            <p className="text-[12px] font-bold text-gray-800 mb-1">{itemName}</p>
+            <p className="text-xs font-bold text-gray-800 mb-1">{itemName}</p>
             <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
               {itemDetails.companyName && (
-                <span className="text-[10px] text-gray-600 flex items-center gap-0.5"><Building2 size={8} />{itemDetails.companyName}</span>
+                <span className="text-xs text-gray-600 flex items-center gap-0.5"><Building2 size={8} />{itemDetails.companyName}</span>
               )}
               {itemDetails.value && (
-                <span className="text-[10px] font-bold text-gray-700">{itemDetails.currency || ""} {itemDetails.value}</span>
+                <span className="text-xs font-bold text-gray-700">{itemDetails.currency || ""} {itemDetails.value}</span>
               )}
               {itemDetails.phoneNumber && (
-                <span className="text-[10px] text-gray-600 flex items-center gap-0.5"><Phone size={8} />{itemDetails.phoneNumber}</span>
+                <span className="text-xs text-gray-600 flex items-center gap-0.5"><Phone size={8} />{itemDetails.phoneNumber}</span>
               )}
               {itemDetails.email && (
-                <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate col-span-2"><Mail size={8} />{itemDetails.email}</span>
+                <span className="text-xs text-gray-500 flex items-center gap-0.5 truncate col-span-2"><Mail size={8} />{itemDetails.email}</span>
               )}
             </div>
             {itemDetails.statusLabel && (
               <div className="mt-1.5 flex items-center gap-1.5">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${itemDetails.statusColor || "bg-gray-100 text-gray-600"}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${itemDetails.statusColor || "bg-gray-100 text-gray-600"}`}>
                   {itemDetails.statusLabel}
                 </span>
-                {itemDetails.dateNote && <span className="text-[10px] text-gray-400">{itemDetails.dateNote}</span>}
+                {itemDetails.dateNote && <span className="text-xs text-gray-400">{itemDetails.dateNote}</span>}
               </div>
             )}
           </div>
 
           {/* Note textarea */}
           <div className="px-3 py-2.5 space-y-2">
-            <p className="text-[10px] font-semibold text-rose-700">
+            <p className="text-xs font-semibold text-rose-700">
               Describe why this {itemType === "deal" ? "deal" : "lead"} is delayed or stuck — admin will review and may reassign.
             </p>
             <textarea
@@ -280,17 +280,17 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
               placeholder={itemType === "deal"
                 ? "e.g. Deal stuck at negotiation, client not responding for 2 weeks..."
                 : "e.g. Lead not responding, seems uninterested, needs reassignment..."}
-              className="w-full border border-rose-200 rounded-lg px-2.5 py-2 text-[11px] focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none bg-white"
+              className="w-full border border-rose-200 rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none bg-white"
               value={note}
               onChange={e => setNote(e.target.value)}
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => { setOpen(false); setNote(""); }}
-                className="text-[10px] text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
+                className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
               <button onClick={send} disabled={!note.trim() || sending}
-                className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-rose-500 text-white rounded-lg disabled:opacity-50 hover:bg-rose-600 transition-colors">
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-rose-500 text-white rounded-lg disabled:opacity-50 hover:bg-rose-600 transition-colors">
                 <Send size={10} /> {sending ? "Sending…" : "Send to Admin"}
               </button>
             </div>
@@ -386,12 +386,12 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
         {/* Period + dates */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : t.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{t.status || "New"}</span>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
               {t.period}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-gray-400">
+          <div className="flex items-center gap-1 text-xs text-gray-400">
             <Calendar size={10} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
           </div>
         </div>
@@ -401,8 +401,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
           <div className="mx-4 mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
             <MessageSquare size={12} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Note from Admin</p>
-              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{t.description}</p>
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-0.5">Note from Admin</p>
+              <p className="text-xs text-amber-800 font-medium leading-relaxed">{t.description}</p>
             </div>
           </div>
         )}
@@ -427,7 +427,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
               {m.countOnly ? (
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-2xl font-bold text-gray-800">{m.actual}</span>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.badgeClass}`}>{m.badgeText}</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.badgeClass}`}>{m.badgeText}</span>
                 </div>
               ) : (
                 <>
@@ -436,18 +436,18 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                     <span className="text-xs text-gray-400">/ {m.target}</span>
                   </div>
                   {m.specialZeroMessage && m.actual === 0 ? (
-                    <div className="mt-2 text-center text-[10px] font-semibold text-purple-600 bg-purple-100/50 py-1.5 rounded border border-purple-100">
+                    <div className="mt-2 text-center text-xs font-semibold text-purple-600 bg-purple-100/50 py-1.5 rounded border border-purple-100">
                       {m.specialZeroMessage}
                     </div>
                   ) : (
                     <>
                       <ProgressBar value={m.pct} color={getProgressColor(m.pct)} />
-                      <p className={`text-[11px] font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
+                      <p className={`text-xs font-bold mt-1 ${getTextColor(m.pct)}`}>{m.pct}%</p>
                     </>
                   )}
                   {(m.type === "call" || m.type === "meeting") && m.target > 0 && (
                     m.actual >= m.target ? (
-                      <div className="mt-2 text-center text-[10px] font-semibold text-emerald-600 bg-emerald-50 py-1.5 rounded border border-emerald-100">
+                      <div className="mt-2 text-center text-xs font-semibold text-emerald-600 bg-emerald-50 py-1.5 rounded border border-emerald-100">
                         Targeted {m.type}s are completed
                       </div>
                     ) : (
@@ -478,15 +478,15 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                   <div key={d._id} className="flex items-start gap-2">
                     <CheckCircle size={11} className="text-emerald-500 shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold text-gray-800 truncate">{d.dealName || d.dealTitle}</p>
+                      <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName || d.dealTitle}</p>
                       <div className="flex flex-wrap gap-2 mt-0.5">
-                        {d.wonAt && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Calendar size={8} />{fmt(d.wonAt)}</span>}
+                        {d.wonAt && <span className="text-xs text-gray-500 flex items-center gap-0.5"><Calendar size={8} />{fmt(d.wonAt)}</span>}
                         {daysTaken !== undefined && (
-                          <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-0.5">
+                          <span className="text-xs text-emerald-600 font-medium flex items-center gap-0.5">
                             <Clock size={8} />{daysTaken === 0 ? "Same day" : `${daysTaken}d to close`}
                           </span>
                         )}
-                        {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency} {d.value}</span>}
+                        {d.value && <span className="text-xs font-bold text-emerald-700">{d.currency} {d.value}</span>}
                       </div>
                     </div>
                   </div>
@@ -498,7 +498,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
 
         {/* Notes badge */}
         {t.notes?.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
             <MessageSquare size={11} className="text-[#008ecc]" />
             <span>{t.notes.length} note{t.notes.length > 1 ? "s" : ""} sent to admin</span>
           </div>
@@ -511,7 +511,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             <>
               <ChevronDown size={15} /> View Leads, Deals & Notes
               {hasUnread && !expanded && (
-                <span className="ml-1.5 flex items-center gap-1 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                <span className="ml-1.5 flex items-center gap-1 bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse">
                   New
                 </span>
               )}
@@ -527,7 +527,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             {/* ── Won Deals — accordion style ── */}
             {wonDeals.length > 0 && (
               <div>
-                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1.5">
+                <p className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-1.5">
                   <Award size={13} className="text-emerald-500" /> Deal Closed ({wonDeals.length})
                 </p>
                 <div className={`space-y-2 ${wonDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
@@ -545,20 +545,20 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         <div className="flex items-center gap-1 px-3 pt-3 pb-0">
                           <button type="button" onClick={() => toggleExpand(`won-${i}`)} className="flex-1 text-left pb-2.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                              <span className="text-xs bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                               <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                               <CheckCircle size={13} className="text-emerald-500 shrink-0" />
                               {isOpen ? <ChevronUp size={13} className="text-emerald-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
                             </div>
                             {adminBadge && (
-                              <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
+                              <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1" title={adminBadge.title}>
                                 {adminBadge.text}
                               </span>
                             )}
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                              {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                              {d.value && <span className="text-[10px] font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
-                              {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+                              {d.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                              {d.value && <span className="text-xs font-bold text-emerald-700">{d.currency || "INR"} {d.value}</span>}
+                              {totalDays !== null && <span className="text-xs text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
                             </div>
                           </button>
                           
@@ -568,19 +568,19 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         {isOpen && (
                           <div className="border-t border-emerald-100">
                             <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
-                              {d.phoneNumber && <span className="text-[11px] text-gray-600 flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
-                              {d.email && <span className="text-[11px] text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
-                              {wonDate && <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)}</span>}
+                              {d.phoneNumber && <span className="text-xs text-gray-600 flex items-center gap-1"><Phone size={9} className="text-emerald-400" />{d.phoneNumber}</span>}
+                              {d.email && <span className="text-xs text-gray-600 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-emerald-400" />{d.email}</span>}
+                              {wonDate && <span className="text-xs text-emerald-700 flex items-center gap-1 font-medium"><Calendar size={9} className="text-emerald-500" />Won: {fmt(wonDate)}</span>}
                             </div>
 
                             <div className="border-t border-emerald-100 px-3 py-2.5 bg-white/60 space-y-1.5">
-                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
                               {createdDate && (
                                 <div className="flex items-start gap-2">
                                   <div className="w-2 h-2 rounded-full bg-gray-400 mt-0.5 shrink-0" />
                                   <div>
-                                    <span className="text-[11px] font-semibold text-gray-600">Lead Created</span>
-                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+                                    <span className="text-xs font-semibold text-gray-600">Lead Created</span>
+                                    <p className="text-xs text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -591,9 +591,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                     <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
                                   </div>
                                   <div>
-                                    <span className="text-[11px] font-semibold text-indigo-700">Lead → Deal Converted</span>
-                                    <span className="text-[10px] text-indigo-400 ml-1">(+{Math.max(0, Math.round((convertedDate - createdDate) / 86400000))}d)</span>
-                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
+                                    <span className="text-xs font-semibold text-indigo-700">Lead → Deal Converted</span>
+                                    <span className="text-xs text-indigo-400 ml-1">(+{Math.max(0, Math.round((convertedDate - createdDate) / 86400000))}d)</span>
+                                    <p className="text-xs text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -604,9 +604,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                     <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
                                   </div>
                                   <div>
-                                    <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-                                    <span className="text-[10px] text-gray-400 ml-1">(deal start)</span>
-                                    <p className="text-[10px] text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
+                                    <span className="text-xs font-semibold text-gray-700">Qualification</span>
+                                    <span className="text-xs text-gray-400 ml-1">(deal start)</span>
+                                    <p className="text-xs text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -620,9 +620,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                       <div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
                                     </div>
                                     <div>
-                                      <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-                                      {diff !== null && <span className="text-[10px] text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
-                                      <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+                                      <span className="text-xs font-semibold text-gray-700">{h.stage}</span>
+                                      {diff !== null && <span className="text-xs text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+                                      <p className="text-xs text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
                                     </div>
                                   </div>
                                 );
@@ -635,8 +635,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                                   </div>
                                   <div>
-                                    <span className="text-[11px] font-semibold text-emerald-700">Closed Won</span>
-                                    <p className="text-[10px] text-gray-700 font-semibold">{fmt(wonDate)} {fmtTime(wonDate)}</p>
+                                    <span className="text-xs font-semibold text-emerald-700">Closed Won</span>
+                                    <p className="text-xs text-gray-700 font-semibold">{fmt(wonDate)} {fmtTime(wonDate)}</p>
                                   </div>
                                 </div>
                               )}
@@ -645,7 +645,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                             {totalDays !== null && (
                               <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
                                 <Clock size={11} className="text-emerald-600 shrink-0" />
-                                <p className="text-[11px] font-bold text-emerald-700">
+                                <p className="text-xs font-bold text-emerald-700">
                                   {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
                                 </p>
                               </div>
@@ -664,7 +664,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
               const lostDeals = [...linkedDeals.filter(d => d.stage === "Closed Lost"), ...convertedLeadDeals.filter(d => d.stage === "Closed Lost")];
               return lostDeals.length > 0 ? (
                 <div>
-                  <p className="text-[11px] font-bold text-red-700 mb-2 flex items-center gap-1.5"><XCircle size={12} className="text-red-500" /> Deal Lost ({lostDeals.length})</p>
+                  <p className="text-xs font-bold text-red-700 mb-2 flex items-center gap-1.5"><XCircle size={12} className="text-red-500" /> Deal Lost ({lostDeals.length})</p>
                   <div className="space-y-2">
                     {lostDeals.map((d, i) => {
                       const createdDate  = d.createdAt ? new Date(d.createdAt) : null;
@@ -678,24 +678,24 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           <div className="w-full px-3 pt-3 pb-2.5 flex items-start gap-1.5">
                             <button type="button" onClick={() => toggleExpand(`lost-${i}`)} className="flex-1 min-w-0 text-left">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
+                                <span className="text-xs bg-red-200 text-red-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">#{i+1}</span>
                                 <p className="text-sm font-bold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                                 <XCircle size={13} className="text-red-500 shrink-0" />
                                 {isOpen ? <ChevronUp size={13} className="text-red-600 shrink-0" /> : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
                               </div>
                               {adminBadge && (
-                                <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1" title={adminBadge.title}>
+                                <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1" title={adminBadge.title}>
                                   {adminBadge.text}
                                 </span>
                               )}
                               {activeTasks.some(task => task.dealRefs?.some(ref => (ref._id || ref) === d._id) || (task.dealRef?._id || task.dealRef) === d._id) && (
-                                <span className="inline-flex text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 w-fit items-center gap-1"><Flag size={9}/>Linked to active Task</span>
+                                <span className="inline-flex text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 w-fit items-center gap-1"><Flag size={9}/>Linked to active Task</span>
                               )}
                               <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                                {d.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
-                                {d.value && <span className="text-[10px] font-bold text-red-700">{d.currency || "INR"} {d.value}</span>}
-                                {totalDays !== null && <span className="text-[10px] text-red-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d in pipeline`}</span>}
-                                {d.lossReason && <span className="text-[10px] text-red-600 font-medium">Reason: {d.lossReason}</span>}
+                                {d.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{d.companyName}</span>}
+                                {d.value && <span className="text-xs font-bold text-red-700">{d.currency || "INR"} {d.value}</span>}
+                                {totalDays !== null && <span className="text-xs text-red-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d in pipeline`}</span>}
+                                {d.lossReason && <span className="text-xs text-red-600 font-medium">Reason: {d.lossReason}</span>}
                               </div>
                             </button>
 
@@ -703,19 +703,19 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           {isOpen && (
                             <div className="border-t border-red-100">
                               <div className="px-3 py-2 bg-white/70 flex flex-wrap gap-x-4 gap-y-1">
-                                {d.phoneNumber && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-red-400" />{d.phoneNumber}</span>}
-                                {d.email && <span className="text-[11px] text-gray-500 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-red-400" />{d.email}</span>}
+                                {d.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-red-400" />{d.phoneNumber}</span>}
+                                {d.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[180px]"><Mail size={9} className="text-red-400" />{d.email}</span>}
                               </div>
                               {(stageHistory.length > 0 || createdDate) && (
                                 <div className="px-3 py-2.5 bg-white/60 space-y-1.5 border-t border-red-100">
-                                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+                                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
                                   {createdDate && (
                                     <div className="flex items-start gap-2">
                                       <div className={`w-2 h-2 rounded-full ${STAGE_DOT["Qualification"] || "bg-gray-300"} mt-0.5 shrink-0`} />
                                       <div>
-                                        <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-                                        <span className="text-[10px] text-gray-400 ml-1">(created)</span>
-                                        <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+                                        <span className="text-xs font-semibold text-gray-700">Qualification</span>
+                                        <span className="text-xs text-gray-400 ml-1">(created)</span>
+                                        <p className="text-xs text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
                                       </div>
                                     </div>
                                   )}
@@ -729,9 +729,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                           <div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} />
                                         </div>
                                         <div>
-                                          <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-                                          {daysDiff !== null && <span className="text-[10px] text-gray-400 ml-1">({daysDiff === 0 ? "same day" : `+${daysDiff}d`})</span>}
-                                          <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+                                          <span className="text-xs font-semibold text-gray-700">{h.stage}</span>
+                                          {daysDiff !== null && <span className="text-xs text-gray-400 ml-1">({daysDiff === 0 ? "same day" : `+${daysDiff}d`})</span>}
+                                          <p className="text-xs text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
                                         </div>
                                       </div>
                                     );
@@ -741,15 +741,15 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                               {totalDays !== null && (
                                 <div className="px-3 py-2 bg-red-100/70 flex items-center gap-1.5">
                                   <Clock size={10} className="text-red-600 shrink-0" />
-                                  <p className="text-[11px] font-bold text-red-700">
+                                  <p className="text-xs font-bold text-red-700">
                                     {totalDays === 0 ? "Lost same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} in pipeline before lost`}
                                   </p>
                                 </div>
                               )}
                               {d.lossNotes && (
                                 <div className="px-3 py-2 bg-red-50/80 border-t border-red-100">
-                                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-0.5">Loss Notes</p>
-                                  <p className="text-[11px] text-gray-600">{d.lossNotes}</p>
+                                  <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-0.5">Loss Notes</p>
+                                  <p className="text-xs text-gray-600">{d.lossNotes}</p>
                                 </div>
                               )}
                             </div>
@@ -765,7 +765,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             {/* Live deals — accordion */}
             {liveDeals.length > 0 && (
               <div>
-                <p className="text-[11px] font-bold text-gray-600 mb-2 flex items-center gap-1"><Briefcase size={11} /> Active Deals ({liveDeals.length})</p>
+                <p className="text-xs font-bold text-gray-600 mb-2 flex items-center gap-1"><Briefcase size={11} /> Active Deals ({liveDeals.length})</p>
                 <div className={`space-y-2 ${liveDeals.length > 3 ? "max-h-80 overflow-y-auto pr-1" : ""}`}>
                   {liveDeals.map((d, i) => {
                     const stageHistory = (d.stageHistory || []).sort((a, b) => new Date(a.movedAt) - new Date(b.movedAt));
@@ -778,19 +778,19 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName || d.dealTitle}</p>
                             <div className="flex items-center gap-1 shrink-0">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500"}`}>{d.stage}</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500"}`}>{d.stage}</span>
                               {isOpen ? <ChevronUp size={12} className="text-gray-500" /> : <ChevronDown size={12} className="text-gray-400" />}
                             </div>
                           </div>
                           {adminBadge && (
-                            <span className="inline-block text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 w-fit" title={adminBadge.title}>{adminBadge.text}</span>
+                            <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 w-fit" title={adminBadge.title}>{adminBadge.text}</span>
                           )}
                           {activeTasks.some(task => task.dealRefs?.some(ref => (ref._id || ref) === d._id) || (task.dealRef?._id || task.dealRef) === d._id) && (
-                            <span className="inline-flex text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 w-fit items-center gap-1"><Flag size={9}/>Linked to active Task</span>
+                            <span className="inline-flex text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 w-fit items-center gap-1"><Flag size={9}/>Linked to active Task</span>
                           )}
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                            {d.companyName && <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><Building2 size={8} />{d.companyName}</span>}
-                            {d.value && <span className="text-[10px] font-bold text-gray-700">{d.currency} {d.value}</span>}
+                            {d.companyName && <span className="text-xs text-gray-400 flex items-center gap-0.5"><Building2 size={8} />{d.companyName}</span>}
+                            {d.value && <span className="text-xs font-bold text-gray-700">{d.currency} {d.value}</span>}
                           </div>
                         </button>
                         <div className="px-2.5 pb-2.5">
@@ -803,21 +803,21 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2 space-y-1.5">
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                              {d.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={8} />{d.phoneNumber}</span>}
-                              {d.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[160px]"><Mail size={8} />{d.email}</span>}
+                              {d.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-0.5"><Phone size={8} />{d.phoneNumber}</span>}
+                              {d.email && <span className="text-xs text-gray-500 flex items-center gap-0.5 truncate max-w-[160px]"><Mail size={8} />{d.email}</span>}
                             </div>
                             {/* Stage history mini */}
                             {stageHistory.length > 0 && (
                               <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-gray-50">
                                 {stageHistory.map((h, hi) => (
-                                  <span key={hi} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${STAGE_COLOR[h.stage] || "bg-gray-50 text-gray-400 border-gray-100"}`}>
+                                  <span key={hi} className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${STAGE_COLOR[h.stage] || "bg-gray-50 text-gray-400 border-gray-100"}`}>
                                     {h.stage.split(" ")[0]} · {fmt(h.movedAt)}
                                   </span>
                                 ))}
                               </div>
                             )}
                             {daysInPipeline !== null && (
-                              <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                              <p className="text-xs text-gray-400 flex items-center gap-1">
                                 <Clock size={8} className="text-gray-300" />
                                 {daysInPipeline === 0 ? "Created today" : `${daysInPipeline}d in pipeline`} · since {fmt(d.createdAt)}
                               </p>
@@ -835,9 +835,9 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             {(linkedLeads.length > 0 || convertedLeadsCount > 0) && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1"><Users size={11} /> Linked Leads ({allLinkedLeadsCount})</p>
+                  <p className="text-xs font-bold text-gray-600 flex items-center gap-1"><Users size={11} /> Linked Leads ({allLinkedLeadsCount})</p>
                   {selfConvertedCount > 0 && (
-                    <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                    <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                       <CheckCircle size={8} /> {selfConvertedCount} Converted to Deal
                     </span>
                   )}
@@ -853,15 +853,15 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold text-gray-800 truncate">{l.leadName}</p>
-                              {l.companyName && <p className="text-[10px] text-gray-400 flex items-center gap-0.5 truncate"><Building2 size={8} />{l.companyName}</p>}
+                              {l.companyName && <p className="text-xs text-gray-400 flex items-center gap-0.5 truncate"><Building2 size={8} />{l.companyName}</p>}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500"}`}>{l.status}</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500"}`}>{l.status}</span>
                               {isOpen ? <ChevronUp size={12} className="text-gray-500" /> : <ChevronDown size={12} className="text-gray-400" />}
                             </div>
                           </div>
                           {activeTasks.some(task => task.leadRefs?.some(ref => (ref._id || ref) === l._id) || (task.leadRef?._id || task.leadRef) === l._id) && (
-                            <span className="inline-flex text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 w-fit items-center gap-1 mt-1.5"><Flag size={9}/>Linked to active Task</span>
+                            <span className="inline-flex text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 w-fit items-center gap-1 mt-1.5"><Flag size={9}/>Linked to active Task</span>
                           )}
                         </button>
                         {l.status !== "Converted" && (
@@ -876,24 +876,24 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2">
                             <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                              {l.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Phone size={8} />{l.phoneNumber}</span>}
-                              {l.email && <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[140px]"><Mail size={8} />{l.email}</span>}
+                              {l.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-0.5"><Phone size={8} />{l.phoneNumber}</span>}
+                              {l.email && <span className="text-xs text-gray-500 flex items-center gap-0.5 truncate max-w-[140px]"><Mail size={8} />{l.email}</span>}
                             </div>
                             {/* Status journey */}
                             {(history.length > 0 || l.createdAt) && (
                               <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Status Journey</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Status Journey</p>
                                 <div className="flex items-center gap-0.5">
                                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                                  <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                                  <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(l.createdAt)}</span>
+                                  <span className="text-xs text-gray-600 font-medium ml-1">Cold</span>
+                                  <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(l.createdAt)}</span>
                                 </div>
                                 {history.map((h, hi) => (
                                   <div key={hi} className="flex items-center gap-0.5 pl-1">
                                     <div className="w-px h-2 bg-gray-200 mr-0.5" />
                                     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEAD_STATUS_COLOR[h.status] ? "bg-current" : "bg-gray-300"}`} style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                                    <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                                    <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                                    <span className="text-xs text-gray-600 font-medium ml-1">{h.status}</span>
+                                    <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -914,42 +914,42 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-semibold text-gray-800 truncate flex-1">{d.dealName}</p>
                               {!d.convertedByName && (
-                                <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded shrink-0">Converted → Deal</span>
+                                <span className="text-xs bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded shrink-0">Converted → Deal</span>
                               )}
                               {isOpen ? <ChevronUp size={12} className="text-emerald-600 shrink-0" /> : <ChevronDown size={12} className="text-gray-400 shrink-0" />}
                             </div>
                             {d.convertedByName && (
-                              <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
+                              <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mt-1">
                                 {d.salesPersonConverted ? `Converted Lead to Deal by ${d.convertedByName}` : `Converted Lead to Deal by Admin ${d.convertedByName}`}
                               </span>
                             )}
-                            {d.value && <p className="text-[11px] text-emerald-700 font-bold mt-1">{d.currency} {d.value}</p>}
+                            {d.value && <p className="text-xs text-emerald-700 font-bold mt-1">{d.currency} {d.value}</p>}
                           </button>
                         </div>
                         {/* Lead status journey before conversion */}
                         {isOpen && (
                         <div className="px-2.5 pb-2.5 border-t border-emerald-100 pt-2 space-y-1">
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Lead Status Journey</p>
                           <div className="flex items-center gap-0.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
+                            <span className="text-xs text-gray-600 font-medium ml-1">Cold</span>
+                            <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.leadCreatedAt || d.createdAt)}</span>
                           </div>
                           {history.map((h, hi) => (
                             <div key={hi} className="flex items-center gap-0.5 pl-1">
                               <div className="w-px h-2 bg-gray-200 mr-0.5" />
                               <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor: h.status==="Hot"?"#ef4444":h.status==="Warm"?"#f97316":h.status==="Cold"?"#6b7280":h.status==="Junk"?"#a855f7":"#10b981"}} />
-                              <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+                              <span className="text-xs text-gray-600 font-medium ml-1">{h.status}</span>
+                              <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
                             </div>
                           ))}
                           <div className="flex items-center gap-0.5 pl-1 flex-wrap">
                             <div className="w-px h-2 bg-gray-200 mr-0.5" />
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                            <span className="text-[10px] text-emerald-700 font-bold ml-1">Converted to Deal</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            <span className="text-xs text-emerald-700 font-bold ml-1">Converted to Deal</span>
+                            <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                             {!d.salesPersonConverted && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
+                              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 ml-1">
                                 Taken by Admin{d.convertedByName ? ` ${d.convertedByName}` : ""}
                               </span>
                             )}
@@ -958,8 +958,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           <div className="flex items-center gap-0.5 pl-1 mt-0.5">
                             <div className="w-px h-2 bg-gray-200 mr-0.5" />
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[10px] text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
-                            <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
+                            <span className="text-xs text-blue-700 font-semibold ml-1">Qualification (Deal Start)</span>
+                            <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(d.convertedAt || d.createdAt)} {fmtTime(d.convertedAt || d.createdAt)}</span>
                           </div>
                           {/* Subsequent deal stage moves — live tracking */}
                           {(d.stageHistory || []).sort((a,b) => new Date(a.movedAt)-new Date(b.movedAt)).map((h, hi) => (
@@ -972,12 +972,12 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                 : h.stage === "Proposal Sent-Negotiation" ? "bg-yellow-400"
                                 : "bg-blue-400"
                               }`} />
-                              <span className={`text-[10px] font-bold ml-1 ${
+                              <span className={`text-xs font-bold ml-1 ${
                                 h.stage === "Closed Won" ? "text-emerald-700"
                                 : h.stage === "Closed Lost" ? "text-red-600"
                                 : "text-gray-800"
                               }`}>{h.stage}</span>
-                              <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
+                              <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</span>
                             </div>
                           ))}
                           {/* Fallback: show current stage when not already in stageHistory */}
@@ -991,8 +991,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                                 : d.stage === "Proposal Sent-Negotiation" ? "bg-yellow-400"
                                 : "bg-blue-400"
                               }`} />
-                              <span className={`text-[10px] font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
-                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-[10px] text-orange-500 font-bold ml-0.5">● Live</span>}
+                              <span className={`text-xs font-bold ml-1 ${d.stage === "Closed Won" ? "text-emerald-700" : d.stage === "Closed Lost" ? "text-red-600" : "text-gray-800"}`}>{d.stage}</span>
+                              {d.stage !== "Closed Won" && d.stage !== "Closed Lost" && <span className="text-xs text-orange-500 font-bold ml-0.5">● Live</span>}
                             </div>
                           )}
                         </div>
@@ -1020,8 +1020,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                       <Phone size={14} className="text-orange-500" />
                     </div>
                     <div className="text-left">
-                      <p className="text-[11px] font-bold text-gray-800">Reported Calls</p>
-                      <p className="text-[10px] text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
+                      <p className="text-xs font-bold text-gray-800">Reported Calls</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.reportedCalls.length} call{t.reportedCalls.length !== 1 ? "s" : ""} logged</p>
                     </div>
                   </div>
                   <div className="text-xs font-bold text-orange-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
@@ -1041,8 +1041,8 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                       <Activity size={14} className="text-purple-500" />
                     </div>
                     <div className="text-left">
-                      <p className="text-[11px] font-bold text-gray-800">Reported Meetings</p>
-                      <p className="text-[10px] text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
+                      <p className="text-xs font-bold text-gray-800">Reported Meetings</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.reportedMeetings.length} meeting{t.reportedMeetings.length !== 1 ? "s" : ""} logged</p>
                     </div>
                   </div>
                   <div className="text-xs font-bold text-purple-600 bg-white px-2.5 py-1 rounded-full shadow-sm">View History</div>
@@ -1056,7 +1056,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
         )}
 
         {t.createdBy && (
-          <p className="text-[10px] text-gray-300 mt-3 text-right">Assigned by {t.createdBy.firstName} {t.createdBy.lastName}</p>
+          <p className="text-xs text-gray-300 mt-3 text-right">Assigned by {t.createdBy.firstName} {t.createdBy.lastName}</p>
         )}
       </div>
     </div>
@@ -1254,7 +1254,7 @@ export default function MyTargets() {
 
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-gray-900 flex items-center gap-2">
             <Target size={20} className="text-[#008ecc]" /> My Targets
             <button 
               onClick={() => setShowWorkflowExplanation(true)}
@@ -1264,13 +1264,13 @@ export default function MyTargets() {
               <Info size={16} />
             </button>
           </h1>
-          <p className="text-gray-400 text-sm mt-0.5">Targets assigned to you by your admin</p>
+          <p className="text-base text-slate-600 mt-1">Targets assigned to you by your admin</p>
         </div>
       </div>
 
       {myDashStats && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">My Monthly Overview</h2>
+          <h2 className="text-slate-900 mb-3">My Monthly Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={myDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={myDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
@@ -1294,15 +1294,15 @@ export default function MyTargets() {
       {targets.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-5">
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-[11px] text-gray-400">Total Targets</p>
+            <p className="text-xs text-gray-400">Total Targets</p>
             <p className="text-xl font-bold text-gray-700">{targets.length}</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-[11px] text-gray-400">Avg Progress</p>
+            <p className="text-xs text-gray-400">Avg Progress</p>
             <p className={`text-xl font-bold ${getTextColor(avgProgress)}`}>{avgProgress}%</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-[11px] text-gray-400">Achieved</p>
+            <p className="text-xs text-gray-400">Achieved</p>
             <p className="text-xl font-bold text-emerald-600">{targets.filter(t => (t.percentages?.overall || 0) >= 100).length}</p>
           </div>
         </div>
@@ -1324,7 +1324,7 @@ export default function MyTargets() {
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${myView === "notifications" ? "bg-amber-500 text-white border-amber-500 shadow-sm" : "bg-white text-amber-600 border-amber-300 hover:bg-amber-50"}`}>
               <Bell size={13} /> Notifications & Reminders
               {unreadCount > 0 && (
-                <span className="ml-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">{unreadCount}</span>
+                <span className="ml-0.5 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">{unreadCount}</span>
               )}
             </button>
 
@@ -1351,7 +1351,7 @@ export default function MyTargets() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
                 <Bell size={14} className="text-amber-500" /> Notifications & Reminders
-                {unreadCount > 0 && <span className="bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">{unreadCount} new</span>}
+                {unreadCount > 0 && <span className="bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">{unreadCount} new</span>}
               </p>
               <div className="flex items-center gap-3">
                 {unreadCount > 0 && (
@@ -1376,8 +1376,8 @@ export default function MyTargets() {
                   {isExpired ? <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" /> : isDue ? <Clock size={15} className="text-orange-500 shrink-0 mt-0.5" /> : isReassign ? <Bell size={15} className="text-blue-500 shrink-0 mt-0.5" /> : <Bell size={15} className="text-amber-500 shrink-0 mt-0.5" />}
                   <div className="flex-1 min-w-0">
                     <p className={`text-xs font-bold ${isUnread ? "text-gray-900" : "text-gray-700"}`}>{n.title}</p>
-                    <p className="text-[12px] text-gray-700 font-medium leading-relaxed mt-0.5">{n.message || n.text}</p>
-                    <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={8} />{fmt(n.createdAt)}</p>
+                    <p className="text-xs text-gray-700 font-medium leading-relaxed mt-0.5">{n.message || n.text}</p>
+                    <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={8} />{fmt(n.createdAt)}</p>
                   </div>
                   {/* Actions */}
                   <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
@@ -1387,7 +1387,7 @@ export default function MyTargets() {
                           e.stopPropagation();
                           handleMarkNotifRead(n);
                         }}
-                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
                         title="Mark as read"
                       >
                         <CheckCheck size={11} /> Mark as read
@@ -1484,21 +1484,21 @@ function WorkflowExplanationModal({ open, onClose }) {
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
           <X size={20} />
         </button>
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="text-slate-700 mb-4 flex items-center gap-2">
           <Info className="text-indigo-500" />
           How Tasks & Targets Work
         </h3>
         
         <div className="space-y-6 text-sm text-gray-700">
           <section>
-            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <h3 className="text-slate-700 mb-2 border-b pb-1">🏢 Company Viewpoint</h3>
             <p className="mb-2">
               Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
             </p>
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👤 Salesperson Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
               <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
@@ -1507,7 +1507,7 @@ function WorkflowExplanationModal({ open, onClose }) {
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👑 Admin Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
               <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>

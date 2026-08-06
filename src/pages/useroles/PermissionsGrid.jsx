@@ -11,7 +11,7 @@ export default function PermissionsGrid({
   return (
     <div className="border rounded-lg p-5 bg-gray-50">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
+        <h3 className="text-slate-700 flex items-center gap-2">
           <Shield size={18} />
           Permissions Configuration
         </h3>
@@ -33,7 +33,7 @@ export default function PermissionsGrid({
           const theme = THEME_STYLES[group.theme];
           return (
             <div key={group.title} className="space-y-3">
-              <h4 className={`font-medium ${theme.header} border-b pb-1`}>{group.title}</h4>
+              <h3 className={`${theme.header} border-b pb-1`}>{group.title}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {group.permissions.map((permission) => {
                   const IconComponent = permission.icon;

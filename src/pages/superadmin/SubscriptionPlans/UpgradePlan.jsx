@@ -160,8 +160,8 @@ const UpgradePlan = () => {
               <ArrowLeft size={18} />
             </button>
             <div>
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Plan Upgrade / Renewal</h1>
-              <p className="text-slate-500 text-xs mt-0.5 font-bold uppercase tracking-wider">Workspace: {tenantSlug}</p>
+              <h1 className="text-gray-900">Plan Upgrade / Renewal</h1>
+              <p className="text-base text-slate-600 mt-1 uppercase tracking-wider">Workspace: {tenantSlug}</p>
             </div>
           </div>
           <ShieldCheck size={36} className="text-[#008ecc]" />
@@ -174,7 +174,7 @@ const UpgradePlan = () => {
               <div className="inline-flex items-center bg-blue-50 border border-blue-100 rounded-full px-3 py-1 text-xs font-bold text-[#008ecc] uppercase tracking-wider">
                 Current Subscription
               </div>
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-slate-900">
                 {currentTenant.plan_id?.plan_name || "Trial / Free"}
                 {currentCycle && (
                   <span className="ml-2 text-sm font-medium text-slate-400">
@@ -211,7 +211,7 @@ const UpgradePlan = () => {
         <div className="bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden">
           <div className="bg-[#008ecc] text-white px-6 py-4 flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold">Request Proposal Details</h3>
+              <h3 className="">Request Proposal Details</h3>
               <p className="text-blue-100 text-xs font-semibold">
                 {selectedPlan
                   ? `${selectedPlan.plan_name}${selectedBillingCycle ? ` — ${TIER_LABELS[selectedBillingCycle] || selectedBillingCycle}` : ""}`
@@ -269,11 +269,11 @@ const UpgradePlan = () => {
                           }`}
                         >
                           {TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}
-                          <span className="block text-[10px] font-normal opacity-80 mt-0.5">
+                          <span className="block text-xs font-normal opacity-80 mt-0.5">
                             {selectedPlan.currency || "USD"} {tier.price.toLocaleString()}
                           </span>
                           {isCurrentCycle && (
-                            <span className="block text-[9px] mt-0.5 opacity-70">current</span>
+                            <span className="block text-xs mt-0.5 opacity-70">current</span>
                           )}
                         </button>
                       );
@@ -304,7 +304,7 @@ const UpgradePlan = () => {
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                <p className="text-xs text-slate-400 mt-2 font-medium">
                   {type === "mid_cycle"
                     ? "✓ Remaining value from current plan will be credited."
                     : "✓ Direct upgrade, no proration applied."}
@@ -347,7 +347,7 @@ const UpgradePlan = () => {
             {/* Pricing Preview */}
             <div className="md:col-span-2 space-y-6">
               <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Cost Preview</h4>
+                <h3 className="text-slate-700">Cost Preview</h3>
                 <div className="space-y-3 text-xs text-slate-700">
                   <div className="flex justify-between py-2 border-b border-slate-200/60">
                     <span className="text-slate-500">Plan Base Rate</span>

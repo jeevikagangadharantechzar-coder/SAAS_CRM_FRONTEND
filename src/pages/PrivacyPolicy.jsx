@@ -12,7 +12,7 @@ export default function PrivacyPolicy() {
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12">
         {/* Header */}
         <div className="mb-8 pb-6 border-b border-gray-100">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
+          <h1 className="text-gray-900 mb-2">Privacy Policy</h1>
           <p className="text-sm text-gray-500">Effective Date: {effectiveDate}</p>
           <p className="text-sm text-gray-500 mt-1">
             This Privacy Policy applies to {appName} operated by {companyName}.
@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
 
           {/* 1 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">1. Information We Collect</h2>
+            <h2 className="text-slate-900 mb-3">1. Information We Collect</h2>
             <p className="mb-2">We collect the following types of information when you use {appName}:</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               <li><strong>Account information:</strong> Name, email address, and password when you register.</li>
@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
 
           {/* 2 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">2. How We Use Google User Data</h2>
+            <h2 className="text-slate-900 mb-3">2. How We Use Google User Data</h2>
             <p className="mb-2">
               {appName} uses Google OAuth 2.0 to access your Google Calendar. Specifically, we request the
               <strong> calendar.events</strong> scope which allows us to:
@@ -52,7 +52,7 @@ export default function PrivacyPolicy() {
 
           {/* 3 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">3. How We Store Your Data</h2>
+            <h2 className="text-slate-900 mb-3">3. How We Store Your Data</h2>
             <ul className="list-disc list-inside space-y-1 ml-2">
               <li>Your Google OAuth tokens are stored securely in our encrypted database and are used solely to perform calendar operations on your behalf.</li>
               <li>Meeting data is stored in your organization's isolated database — no data is shared between tenants.</li>
@@ -62,7 +62,7 @@ export default function PrivacyPolicy() {
 
           {/* 4 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">4. Data Retention</h2>
+            <h2 className="text-slate-900 mb-3">4. Data Retention</h2>
             <p>
               We retain your data for as long as your account is active. You may disconnect your Google account
               at any time from the app settings, which removes your stored OAuth tokens immediately. You may also
@@ -72,7 +72,7 @@ export default function PrivacyPolicy() {
 
           {/* 5 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Third-Party Services</h2>
+            <h2 className="text-slate-900 mb-3">5. Third-Party Services</h2>
             <p>
               {appName} integrates with the following third-party services:
             </p>
@@ -90,7 +90,7 @@ export default function PrivacyPolicy() {
 
           {/* 6 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Security</h2>
+            <h2 className="text-slate-900 mb-3">6. Security</h2>
             <p>
               We implement industry-standard security measures including encrypted data transmission (HTTPS),
               secure token storage, and isolated per-tenant databases to protect your information.
@@ -99,7 +99,7 @@ export default function PrivacyPolicy() {
 
           {/* 7 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">7. Your Rights</h2>
+            <h2 className="text-slate-900 mb-3">7. Your Rights</h2>
             <p className="mb-2">You have the right to:</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               <li>Access the personal data we hold about you.</li>
@@ -116,7 +116,7 @@ export default function PrivacyPolicy() {
 
           {/* 8 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Changes to This Policy</h2>
+            <h2 className="text-slate-900 mb-3">8. Changes to This Policy</h2>
             <p>
               We may update this Privacy Policy from time to time. Changes will be posted on this page with
               an updated effective date. Continued use of the app after changes constitutes acceptance of the
@@ -126,7 +126,7 @@ export default function PrivacyPolicy() {
 
           {/* 9 */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">9. Contact Us</h2>
+            <h2 className="text-slate-900 mb-3">9. Contact Us</h2>
             <p>If you have any questions about this Privacy Policy, please contact us:</p>
             <div className="mt-2 p-4 bg-gray-50 rounded-lg">
               <p><strong>{companyName}</strong></p>

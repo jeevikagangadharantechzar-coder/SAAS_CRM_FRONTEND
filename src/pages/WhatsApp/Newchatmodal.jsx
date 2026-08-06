@@ -72,7 +72,7 @@ export default function NewChatModal({ onClose }) {
         <div className="bg-[#075e54] px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageCirclePlus className="text-white w-5 h-5" />
-            <h3 className="text-white font-semibold">New WhatsApp Chat</h3>
+            <h3 className="text-white">New WhatsApp Chat</h3>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white transition">
             <X className="w-5 h-5" />

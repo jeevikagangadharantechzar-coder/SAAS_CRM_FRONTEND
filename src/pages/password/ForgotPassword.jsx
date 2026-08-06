@@ -161,8 +161,8 @@ const ForgotPassword = ({ isOpen, onClose }) => {
             ) : (
               <div className="text-center py-4">
                 <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Check your email</h3>
-                <p className="text-gray-600 mb-6">
+                <h3 className="text-slate-700 mb-2">Check your email</h3>
+                <p className="text-base text-slate-600 mb-6">
                   We've sent a password reset link to <span className="font-medium">{email}</span>. 
                   Please check your inbox and follow the instructions.
                 </p>

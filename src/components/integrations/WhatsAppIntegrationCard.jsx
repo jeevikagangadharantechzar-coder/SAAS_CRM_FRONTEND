@@ -74,8 +74,8 @@ export default function WhatsAppIntegrationCard() {
               {WA_SVG()}
             </div>
             <div>
-              <h2 className="font-semibold text-gray-800 text-lg">WhatsApp Cloud API</h2>
-              <p className="text-gray-500 text-sm">Send & receive WhatsApp messages directly in the CRM</p>
+              <h2 className="text-slate-900">WhatsApp Cloud API</h2>
+              <p className="text-base text-slate-600">Send & receive WhatsApp messages directly in the CRM</p>
             </div>
           </div>
           {integrations.length > 0 && (
@@ -382,7 +382,7 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
           </div>
           <div className="flex-1">
             <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">✓ Connected!</p>
-            <h2 className="font-semibold text-gray-800">One more step to receive messages</h2>
+            <h2 className="text-slate-900">One more step to receive messages</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100"><X size={18} /></button>
         </div>
@@ -450,8 +450,8 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
             {WA_SVG(18)}
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold text-gray-800">Select WhatsApp Number</h2>
-            <p className="text-xs text-gray-400">Choose the number to connect to this CRM</p>
+            <h2 className="text-slate-900">Select WhatsApp Number</h2>
+            <p className="text-base text-slate-600">Choose the number to connect to this CRM</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100"><X size={18} /></button>
         </div>
@@ -506,8 +506,8 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
             {WA_SVG(18)}
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold text-gray-800">Enter Credentials Manually</h2>
-            <p className="text-xs text-gray-400">Paste your Meta API credentials</p>
+            <h2 className="text-slate-900">Enter Credentials Manually</h2>
+            <p className="text-base text-slate-600">Paste your Meta API credentials</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100"><X size={18} /></button>
         </div>
@@ -586,8 +586,8 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
           {WA_SVG(18)}
         </div>
         <div className="flex-1">
-          <h2 className="font-semibold text-gray-800">Connect WhatsApp Business</h2>
-          <p className="text-xs text-gray-400">Sign in with Meta to connect your number</p>
+          <h2 className="text-slate-900">Connect WhatsApp Business</h2>
+          <p className="text-base text-slate-600">Sign in with Meta to connect your number</p>
         </div>
         <button onClick={onClose} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100"><X size={18} /></button>
       </div>

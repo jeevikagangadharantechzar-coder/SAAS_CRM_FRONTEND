@@ -478,8 +478,8 @@ const CreateEmail = () => {
         <div className="border-b border-gray-200 p-4 sm:p-6 bg-white flex-shrink-0">
           <div className="flex justify-between items-start gap-4">
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800">Compose Email</h2>
-              <p className="text-gray-600 text-xs sm:text-sm mt-1">
+              <h2 className="text-slate-900">Compose Email</h2>
+              <p className="text-base text-slate-600 mt-1">
                 Sending to {emailData.selectedContacts.length} contacts
               </p>
             </div>

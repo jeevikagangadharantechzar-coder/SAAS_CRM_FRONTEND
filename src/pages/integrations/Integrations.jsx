@@ -32,8 +32,8 @@ export default function Integrations() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Integrations</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="text-gray-900">Integrations</h1>
+        <p className="text-base text-slate-600 mt-1">
           Connect your social channels and lead sources to centralise everything in the CRM
         </p>
       </div>

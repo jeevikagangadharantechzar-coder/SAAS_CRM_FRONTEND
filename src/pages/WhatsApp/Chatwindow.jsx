@@ -93,8 +93,8 @@ export default function ChatWindow() {
             </svg>
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-gray-700">WhatsApp CRM</h3>
-            <p className="text-gray-400 text-sm mt-1">
+            <h3 className="text-slate-700">WhatsApp CRM</h3>
+            <p className="text-base text-slate-600 mt-1">
               Select a conversation from the left to start chatting
             </p>
           </div>
@@ -210,7 +210,7 @@ export default function ChatWindow() {
 
                   {/* Time + Status */}
                   <div className={`flex items-center gap-1 mt-1 ${isOut ? "justify-end" : "justify-start"}`}>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-xs text-gray-400">
                       {formatMsgTime(msg.createdAt)}
                     </span>
                     {isOut && <StatusIcon status={msg.status} />}

@@ -15,7 +15,7 @@ const LinkedWorkModal = ({ isOpen, onClose, data }) => {
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">Linked Work Details</h2>
+          <h2 className="text-slate-900">Linked Work Details</h2>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <X size={20} />
           </button>
@@ -31,7 +31,7 @@ const LinkedWorkModal = ({ isOpen, onClose, data }) => {
           <div className="space-y-6">
             {hasTasks && (
               <div>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-blue-600 mb-3 uppercase tracking-wide">
+                <h3 className="flex items-center gap-2 text-blue-600 mb-3">
                   <CheckSquare size={16} /> Active Tasks
                 </h3>
                 <div className="space-y-3">
@@ -52,7 +52,7 @@ const LinkedWorkModal = ({ isOpen, onClose, data }) => {
 
             {hasTargets && (
               <div>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-purple-600 mb-3 uppercase tracking-wide">
+                <h3 className="flex items-center gap-2 text-purple-600 mb-3">
                   <Target size={16} /> Active Targets
                 </h3>
                 <div className="space-y-3">

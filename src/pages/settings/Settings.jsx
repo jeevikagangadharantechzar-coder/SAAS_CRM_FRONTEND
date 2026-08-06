@@ -436,10 +436,10 @@ export default function Settings() {
               <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">
+              <h1 className="text-gray-900">
                 Company Settings
               </h1>
-              <p className="text-sm sm:text-base text-gray-500 mt-1">
+              <p className="text-base text-slate-600 mt-1">
                 Customize your branding and browser display configuration.
               </p>
             </div>
@@ -461,11 +461,11 @@ export default function Settings() {
                     <div className="p-1.5 bg-blue-50 rounded-lg">
                       <Image className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    <h2 className="text-slate-900">
                       Company Logo
                     </h2>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <p className="text-base text-slate-600">
                     Used across dashboards and reports
                   </p>
                 </div>
@@ -530,11 +530,11 @@ export default function Settings() {
                     <div className="p-1.5 bg-purple-50 rounded-lg">
                       <Bookmark className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    <h2 className="text-slate-900">
                       Browser Favicon
                     </h2>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <p className="text-base text-slate-600">
                     Displayed in browser tabs
                   </p>
                 </div>
@@ -599,11 +599,11 @@ export default function Settings() {
                     <div className="p-1.5 bg-green-50 rounded-lg">
                       <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    <h2 className="text-slate-900">
                       Company Name
                     </h2>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <p className="text-base text-slate-600">
                     Appears in browser tab title
                   </p>
                 </div>
@@ -655,11 +655,11 @@ export default function Settings() {
                     <div className="p-1.5 bg-indigo-50 rounded-lg">
                       <Image className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    <h2 className="text-slate-900">
                       Message Template Logo
                     </h2>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <p className="text-base text-slate-600">
                     Used on PDF invoices, proposals, and email campaigns
                   </p>
                 </div>
@@ -721,8 +721,8 @@ export default function Settings() {
                   <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">Business Details</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">Shown on every invoice PDF</p>
+                  <h2 className="text-slate-900">Business Details</h2>
+                  <p className="text-base text-slate-600">Shown on every invoice PDF</p>
                 </div>
               </div>
 
@@ -813,8 +813,8 @@ export default function Settings() {
                   <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">Bank Details</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">Payment info shown on invoices</p>
+                  <h2 className="text-slate-900">Bank Details</h2>
+                  <p className="text-base text-slate-600">Payment info shown on invoices</p>
                 </div>
               </div>
 
@@ -887,8 +887,8 @@ export default function Settings() {
                   <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">Terms & Conditions</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">Footer text on every invoice</p>
+                  <h2 className="text-slate-900">Terms & Conditions</h2>
+                  <p className="text-base text-slate-600">Footer text on every invoice</p>
                 </div>
               </div>
 
@@ -922,8 +922,8 @@ export default function Settings() {
                     <Send className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">Invoice Sending Email</h2>
-                    <p className="text-xs sm:text-sm text-gray-500">Send invoices from your own Gmail</p>
+                    <h2 className="text-slate-900">Invoice Sending Email</h2>
+                    <p className="text-base text-slate-600">Send invoices from your own Gmail</p>
                   </div>
                 </div>
                 {invoiceGmailEmail && (
@@ -978,11 +978,11 @@ export default function Settings() {
                     <div className="p-1.5 bg-sky-50 rounded-lg">
                       <Video className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600" />
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    <h2 className="text-slate-900">
                       Zoom Integration
                     </h2>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <p className="text-base text-slate-600">
                     Connect your own Zoom account so this workspace can auto-generate Zoom meetings.
                   </p>
                 </div>

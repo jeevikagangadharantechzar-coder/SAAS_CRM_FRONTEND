@@ -172,7 +172,7 @@ const ContactList = () => {
     <div className="flex flex-col h-full bg-white border-r border-gray-100">
       {/* Header */}
       <div className="px-4 pt-5 pb-3 border-b border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Messages</h2>
+        <h2 className="text-slate-900 mb-3">Messages</h2>
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -193,7 +193,7 @@ const ContactList = () => {
           >
             <MessageSquare size={12} /> Direct
             {totalDmUnread > 0 && (
-              <span className="bg-[#008ecc] text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center">
+              <span className="bg-[#008ecc] text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center">
                 {totalDmUnread > 9 ? "9+" : totalDmUnread}
               </span>
             )}
@@ -205,7 +205,7 @@ const ContactList = () => {
           >
             <Users size={12} /> Groups
             {totalGroupUnread > 0 && (
-              <span className="bg-[#008ecc] text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center">
+              <span className="bg-[#008ecc] text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center">
                 {totalGroupUnread > 9 ? "9+" : totalGroupUnread}
               </span>
             )}
@@ -224,7 +224,7 @@ const ContactList = () => {
             <>
               {/* Pinned section label */}
               {pinned.length > 0 && (
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Pinned</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Pinned</p>
               )}
               {filteredContacts.map((contact, idx) => {
                 const isOnline  = onlineUsers.includes(String(contact._id));
@@ -236,7 +236,7 @@ const ContactList = () => {
                 return (
                   <React.Fragment key={contact._id}>
                     {showUnpinnedLabel && (
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">All Chats</p>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">All Chats</p>
                     )}
                     <div
                       className={`relative flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group/dm
@@ -258,7 +258,7 @@ const ContactList = () => {
                             {contact.name}
                             {isPinned && <Pin size={10} className="text-[#008ecc] flex-shrink-0" />}
                           </span>
-                          <span className="text-[10px] text-gray-400 flex-shrink-0 ml-1">
+                          <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
                             {contact.lastMessage ? formatTime(contact.lastMessage.createdAt) : ""}
                           </span>
                         </div>
@@ -271,7 +271,7 @@ const ContactList = () => {
                               : contact.email}
                           </span>
                           {contact.unreadCount > 0 && (
-                            <span className="ml-1 flex-shrink-0 bg-[#008ecc] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="ml-1 flex-shrink-0 bg-[#008ecc] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                               {contact.unreadCount > 9 ? "9+" : contact.unreadCount}
                             </span>
                           )}
@@ -326,7 +326,7 @@ const ContactList = () => {
             ) : (
               <>
                 {pinnedGroups.length > 0 && (
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Pinned</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Pinned</p>
                 )}
                 {filteredGroups.map((group, idx) => {
                   const isActive     = activeGroup?._id === group._id;
@@ -340,7 +340,7 @@ const ContactList = () => {
                   return (
                     <React.Fragment key={group._id}>
                       {showUnpinnedLabel && (
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">All Groups</p>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">All Groups</p>
                       )}
                       <div
                         onClick={() => selectGroup(group)}
@@ -358,7 +358,7 @@ const ContactList = () => {
                               {group.name}
                               {isGroupPinned && <Pin size={10} className="text-[#008ecc] flex-shrink-0" />}
                             </span>
-                            <span className="text-[10px] text-gray-400 flex-shrink-0 ml-1">
+                            <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
                               {group.lastMessage ? formatTime(group.lastMessage.createdAt) : ""}
                             </span>
                           </div>
@@ -373,7 +373,7 @@ const ContactList = () => {
                                 : `${group.memberCount} members`}
                             </span>
                             {group.unreadCount > 0 && (
-                              <span className="ml-1 flex-shrink-0 bg-[#008ecc] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                              <span className="ml-1 flex-shrink-0 bg-[#008ecc] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                                 {group.unreadCount > 9 ? "9+" : group.unreadCount}
                               </span>
                             )}

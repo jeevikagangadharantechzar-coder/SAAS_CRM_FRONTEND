@@ -83,8 +83,8 @@ export default function FacebookIntegrationCard() {
             <FBIcon size={26} />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800 text-lg">Facebook</h2>
-            <p className="text-gray-500 text-sm">Messenger inbox, post comments & lead ads — all in one place</p>
+            <h2 className="text-slate-900">Facebook</h2>
+            <p className="text-base text-slate-600">Messenger inbox, post comments & lead ads — all in one place</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

@@ -244,19 +244,19 @@ function TaskProgressWidget({ task }) {
           {metrics.map((m, i) => (
             <div key={i} className={`p-2.5 rounded-xl border ${m.bg} ${m.border} flex flex-col justify-between min-h-[82px]`}>
               <div className="flex items-start justify-between gap-1 mb-1.5">
-                <span className="text-[10px] font-bold text-gray-600 leading-tight">{m.label}</span>
+                <span className="text-xs font-bold text-gray-600 leading-tight">{m.label}</span>
                 <span className="shrink-0 mt-0.5">{m.icon}</span>
               </div>
               <div>
                 {m.countOnly ? (
-                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${m.badgeClass}`}>
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-bold ${m.badgeClass}`}>
                     {m.actual} {m.badgeText}
                   </span>
                 ) : (
                   <div className="flex items-end gap-1.5">
                     <span className="text-sm font-black text-gray-800">{m.actual}</span>
-                    <span className="text-[10px] text-gray-400 font-bold mb-0.5">/ {m.target}</span>
-                    <span className="text-[10px] font-bold ml-auto" style={{ color: m.pct >= 100 ? '#10b981' : m.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
+                    <span className="text-xs text-gray-400 font-bold mb-0.5">/ {m.target}</span>
+                    <span className="text-xs font-bold ml-auto" style={{ color: m.pct >= 100 ? '#10b981' : m.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
                       {m.pct}%
                     </span>
                   </div>
@@ -330,31 +330,31 @@ function DealStageJourney({ deal }) {
   if (!createdDate && !leadCreatedDate) return null;
   return (
     <div className="border-t border-gray-100 px-3 py-2.5 bg-white/60 space-y-1.5">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stage Journey</p>
 
       {hasLeadOrigin ? (
         <>
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-400 mt-0.5 shrink-0" />
             <div>
-              <span className="text-[11px] font-semibold text-gray-600">Cold</span>
-              <p className="text-[10px] text-gray-700 font-semibold">{fmt(leadCreatedDate)} {fmtTime(leadCreatedDate)}</p>
+              <span className="text-xs font-semibold text-gray-600">Cold</span>
+              <p className="text-xs text-gray-700 font-semibold">{fmt(leadCreatedDate)} {fmtTime(leadCreatedDate)}</p>
             </div>
           </div>
           {leadHistory.map((h, hi) => (
             <div key={`lead-${hi}`} className="flex items-start gap-2 pl-1">
               <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className="w-2 h-2 rounded-full bg-blue-300 shrink-0" /></div>
               <div>
-                <span className="text-[11px] font-semibold text-gray-700">{h.status}</span>
-                <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</p>
+                <span className="text-xs font-semibold text-gray-700">{h.status}</span>
+                <p className="text-xs text-gray-700 font-semibold">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</p>
               </div>
             </div>
           ))}
           <div className="flex items-start gap-2 pl-1">
             <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /></div>
             <div>
-              <span className="text-[11px] font-semibold text-gray-700">Converted to Deal</span>
-              <p className="text-[10px] text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
+              <span className="text-xs font-semibold text-gray-700">Converted to Deal</span>
+              <p className="text-xs text-gray-700 font-semibold">{fmt(convertedDate)} {fmtTime(convertedDate)}</p>
             </div>
           </div>
         </>
@@ -362,8 +362,8 @@ function DealStageJourney({ deal }) {
         <div className="flex items-start gap-2">
           <div className="w-2 h-2 rounded-full bg-gray-400 mt-0.5 shrink-0" />
           <div>
-            <span className="text-[11px] font-semibold text-gray-600">Lead Created</span>
-            <p className="text-[10px] text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
+            <span className="text-xs font-semibold text-gray-600">Lead Created</span>
+            <p className="text-xs text-gray-700 font-semibold">{fmt(createdDate)} {fmtTime(createdDate)}</p>
           </div>
         </div>
       )}
@@ -371,9 +371,9 @@ function DealStageJourney({ deal }) {
       <div className="flex items-start gap-2 pl-1">
         <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" /></div>
         <div>
-          <span className="text-[11px] font-semibold text-gray-700">Qualification</span>
-          <span className="text-[10px] text-gray-400 ml-1">(deal start)</span>
-          <p className="text-[10px] text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
+          <span className="text-xs font-semibold text-gray-700">Qualification</span>
+          <span className="text-xs text-gray-400 ml-1">(deal start)</span>
+          <p className="text-xs text-gray-400">{fmt(convertedDate || createdDate)} {fmtTime(convertedDate || createdDate)}</p>
         </div>
       </div>
       {stageHistory.map((h, hi) => {
@@ -383,9 +383,9 @@ function DealStageJourney({ deal }) {
           <div key={hi} className="flex items-start gap-2 pl-1">
             <div className="flex flex-col items-center gap-0.5"><div className="w-px h-2 bg-gray-200" /><div className={`w-2 h-2 rounded-full ${STAGE_DOT[h.stage] || "bg-gray-300"} shrink-0`} /></div>
             <div>
-              <span className="text-[11px] font-semibold text-gray-700">{h.stage}</span>
-              {diff !== null && <span className="text-[10px] text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
-              <p className="text-[10px] text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
+              <span className="text-xs font-semibold text-gray-700">{h.stage}</span>
+              {diff !== null && <span className="text-xs text-gray-400 ml-1">({diff === 0 ? "same day" : `+${diff}d`})</span>}
+              <p className="text-xs text-gray-700 font-semibold">{fmt(h.movedAt)} {fmtTime(h.movedAt)}</p>
             </div>
           </div>
         );
@@ -400,18 +400,18 @@ function LeadStatusJourney({ lead }) {
   if (!lead.createdAt) return null;
   return (
     <div className="border-t border-gray-100 px-3 py-2.5 bg-white/60 space-y-1">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Status Journey</p>
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Status Journey</p>
       <div className="flex items-center gap-0.5">
         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-        <span className="text-[10px] text-gray-600 font-medium ml-1">Cold</span>
-        <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(lead.createdAt)}</span>
+        <span className="text-xs text-gray-600 font-medium ml-1">Cold</span>
+        <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(lead.createdAt)}</span>
       </div>
       {history.map((h, hi) => (
         <div key={hi} className="flex items-center gap-0.5 pl-1">
           <div className="w-px h-2 bg-gray-200 mr-0.5" />
           <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400" />
-          <span className="text-[10px] text-gray-600 font-medium ml-1">{h.status}</span>
-          <span className="text-[10px] text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
+          <span className="text-xs text-gray-600 font-medium ml-1">{h.status}</span>
+          <span className="text-xs text-gray-700 font-semibold ml-1">{fmt(h.changedAt)} {fmtTime(h.changedAt)}</span>
         </div>
       ))}
     </div>
@@ -462,15 +462,15 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, isActiveTargetL
       <div className="px-3 pt-3 pb-2.5">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">{icon} {resolvedFromLead ? "Linked Lead → Deal" : "Linked Deal"}</p>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-800 truncate flex-1">{dealName}</p>
               {dueDate && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#008ecc] bg-white text-[#008ecc] font-semibold shrink-0 flex items-center gap-1" title="Due date for this deal">
+                <span className="text-xs px-2 py-0.5 rounded-full border border-[#008ecc] bg-white text-[#008ecc] font-semibold shrink-0 flex items-center gap-1" title="Due date for this deal">
                   <Calendar size={9} />Due {fmt(dueDate)}
                 </span>
               )}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${STAGE_COLOR[stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{stage}</span>
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -485,17 +485,17 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, isActiveTargetL
           </div>
         </div>
         {linkedBadgeText && (
-          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1">{linkedBadgeText}</span>
+          <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1">{linkedBadgeText}</span>
         )}
         {isActiveTargetLink && (
-          <span className="inline-block text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 flex items-center gap-1 w-fit"><Flag size={9}/>Linked to active Target</span>
+          <span className="inline-block text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 flex items-center gap-1 w-fit"><Flag size={9}/>Linked to active Target</span>
         )}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-          {deal.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
-          {deal.value && <span className={`text-[10px] font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
-          {deal.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
-          {deal.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
-          {totalDays !== null && <span className="text-[10px] text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
+          {deal.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{deal.companyName}</span>}
+          {deal.value && <span className={`text-xs font-bold ${isWon ? "text-emerald-700" : "text-gray-700"}`}>{deal.currency || "INR"} {deal.value}</span>}
+          {deal.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={8} />{deal.phoneNumber}</span>}
+          {deal.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{deal.email}</span>}
+          {totalDays !== null && <span className="text-xs text-emerald-600 flex items-center gap-0.5"><Clock size={8} />{totalDays === 0 ? "Same day" : `${totalDays}d to close`}</span>}
         </div>
       </div>
 
@@ -504,7 +504,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, isActiveTargetL
       {expanded && totalDays !== null && (
         <div className="px-3 py-2 bg-emerald-100/70 flex items-center gap-1.5">
           <Clock size={11} className="text-emerald-600 shrink-0" />
-          <p className="text-[11px] font-bold text-emerald-700">
+          <p className="text-xs font-bold text-emerald-700">
             {totalDays === 0 ? "Closed same day" : `Total: ${totalDays} day${totalDays !== 1 ? "s" : ""} from deal creation to won`}
           </p>
         </div>
@@ -549,15 +549,15 @@ function LeadLinkCard({ lead, linkedBadgeText, isActiveTargetLink, canUnlink, ba
       <div className="p-3">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><FileText size={11} /> Linked Lead</p>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-800 truncate flex-1">{lead.leadName}</p>
               {dueDate && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#008ecc] bg-white text-[#008ecc] font-semibold shrink-0 flex items-center gap-1" title="Due date for this lead">
+                <span className="text-xs px-2 py-0.5 rounded-full border border-[#008ecc] bg-white text-[#008ecc] font-semibold shrink-0 flex items-center gap-1" title="Due date for this lead">
                   <Calendar size={9} />Due {fmt(dueDate)}
                 </span>
               )}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${LEAD_STATUS_COLOR[lead.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{lead.status}</span>
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -572,16 +572,16 @@ function LeadLinkCard({ lead, linkedBadgeText, isActiveTargetLink, canUnlink, ba
           </div>
         </div>
         {linkedBadgeText && (
-          <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1">{linkedBadgeText}</span>
+          <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 mt-1 mr-1">{linkedBadgeText}</span>
         )}
         {isActiveTargetLink && (
-          <span className="inline-block text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 flex items-center gap-1 w-fit"><Flag size={9}/>Linked to active Target</span>
+          <span className="inline-block text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full border border-purple-200 mt-1 flex items-center gap-1 w-fit"><Flag size={9}/>Linked to active Target</span>
         )}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-          {lead.companyName && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
-          {lead.phoneNumber && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
-          {lead.email && <span className="text-[10px] text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
-          {lead.createdAt && <span className="text-[10px] text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
+          {lead.companyName && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={8} />{lead.companyName}</span>}
+          {lead.phoneNumber && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={8} />{lead.phoneNumber}</span>}
+          {lead.email && <span className="text-xs text-gray-500 flex items-center gap-1 truncate max-w-[160px]"><Mail size={8} />{lead.email}</span>}
+          {lead.createdAt && <span className="text-xs text-gray-300 flex items-center gap-1"><Calendar size={8} />Added {fmt(lead.createdAt)}</span>}
         </div>
       </div>
       {expanded && <LeadStatusJourney lead={lead} />}
@@ -616,7 +616,7 @@ function LinkedItemDetail({ task, linkedBadgeText, canUnlink, baseUrl, headers, 
     <div className="space-y-4">
       {dealItems.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><Briefcase size={11}/> Linked Deals</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><Briefcase size={11}/> Linked Deals</p>
           {dealItems.map((deal) => (
             <DealLinkCard
               key={deal._id}
@@ -638,7 +638,7 @@ function LinkedItemDetail({ task, linkedBadgeText, canUnlink, baseUrl, headers, 
       )}
       {leadItems.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><FileText size={11}/> Linked Leads</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 border-b border-gray-100 pb-1"><FileText size={11}/> Linked Leads</p>
           {leadItems.map((lead) => {
             // A converted lead has no pipeline of its own — the real stage
             // journey now lives on the deal it became. task.convertedDealRefsByLeadId
@@ -755,11 +755,11 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-blue-600">{leads.total}</p>
-          <p className="text-[11px] text-gray-500 mt-0.5">Total Leads</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Leads</p>
         </div>
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-indigo-600">{deals.total}</p>
-          <p className="text-[11px] text-gray-500 mt-0.5">Total Deals</p>
+          <p className="text-xs text-gray-500 mt-0.5">Total Deals</p>
         </div>
       </div>
 
@@ -794,14 +794,14 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
             placeholder={tab === "leads" ? "Search leads..." : "Search deals..."} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-7 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30"
+            className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30"
           />
         </div>
         {tab === "leads" && (
           <select 
             value={leadStatusFilter} 
             onChange={(e) => setLeadStatusFilter(e.target.value)}
-            className="w-24 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+            className="w-24 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
           >
             <option value="">All Status</option>
             <option value="Hot">Hot</option>
@@ -814,7 +814,7 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
           <select 
             value={dealStageFilter} 
             onChange={(e) => setDealStageFilter(e.target.value)}
-            className="w-28 text-[11px] border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
+            className="w-28 text-xs border border-gray-200 rounded-md px-2 focus:outline-none focus:border-[#008ecc] focus:ring-1 focus:ring-[#008ecc]/30 text-gray-600"
           >
             <option value="">All Stages</option>
             <option value="Qualification">Qualification</option>
@@ -830,9 +830,9 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
       <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
         {tab === "leads" && leads.list.length > 0 && (
           <div className="flex items-center justify-between px-1 py-1 border-b border-gray-100">
-            <span className="text-[11px] font-semibold text-gray-500">Tick leads to link with this task</span>
+            <span className="text-xs font-semibold text-gray-500">Tick leads to link with this task</span>
             {selectedLeadIds.length > 0 && (
-              <button type="button" onClick={() => selectedLeadIds.forEach((id) => onToggleLead(id))} className="text-[11px] font-bold text-[#008ecc] hover:underline">
+              <button type="button" onClick={() => selectedLeadIds.forEach((id) => onToggleLead(id))} className="text-xs font-bold text-[#008ecc] hover:underline">
                 Clear all
               </button>
             )}
@@ -840,9 +840,9 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
         )}
         {tab === "deals" && deals.list.length > 0 && (
           <div className="flex items-center justify-between px-1 py-1 border-b border-gray-100">
-            <span className="text-[11px] font-semibold text-gray-500">Tick deals to link with this task</span>
+            <span className="text-xs font-semibold text-gray-500">Tick deals to link with this task</span>
             {selectedDealIds.length > 0 && (
-              <button type="button" onClick={() => selectedDealIds.forEach((id) => onToggleDeal(id))} className="text-[11px] font-bold text-[#008ecc] hover:underline">
+              <button type="button" onClick={() => selectedDealIds.forEach((id) => onToggleDeal(id))} className="text-xs font-bold text-[#008ecc] hover:underline">
                 Clear all
               </button>
             )}
@@ -873,8 +873,8 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <p className="text-xs font-semibold text-gray-800 truncate">{l.leadName}</p>
                     <div className="flex items-center gap-1 shrink-0">
-                      {(inUse || l.inActiveTask) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in task</span>}
-                      {l.inActiveTarget && <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in target</span>}
+                      {(inUse || l.inActiveTask) && <span className="text-xs px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in task</span>}
+                      {l.inActiveTarget && <span className="text-xs px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in target</span>}
                       {isNewLead && (
                         <div
                           className="flex items-center gap-1.5 rounded-full border border-[#008ecc] bg-white shadow-sm pl-2.5 pr-2 py-1"
@@ -892,13 +892,13 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
                           />
                         </div>
                       )}
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${LEAD_STATUS_COLOR[l.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{l.status}</span>
                     </div>
                   </div>
-                  {l.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{l.companyName}</p>}
-                  {l.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</p>}
-                  {l.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{l.email}</p>}
-                  <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Added {fmt(l.createdAt)}</p>
+                  {l.companyName && <p className="text-xs text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{l.companyName}</p>}
+                  {l.phoneNumber && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{l.phoneNumber}</p>}
+                  {l.email && <p className="text-xs text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{l.email}</p>}
+                  <p className="text-xs text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Added {fmt(l.createdAt)}</p>
                 </div>
               </div>
               );
@@ -930,8 +930,8 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
                     <div className="flex items-start justify-between gap-1 mb-1">
                       <p className="text-xs font-semibold text-gray-800 truncate">{d.dealName}</p>
                       <div className="flex items-center gap-1 shrink-0">
-                        {(inUse || d.inActiveTask) && <span className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in task</span>}
-                        {d.inActiveTarget && <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in target</span>}
+                        {(inUse || d.inActiveTask) && <span className="text-xs px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 font-bold shrink-0">Already in task</span>}
+                        {d.inActiveTarget && <span className="text-xs px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-600 font-bold shrink-0">Already in target</span>}
                         {isNewDeal && (
                           <div
                             className="flex items-center gap-1.5 rounded-full border border-[#008ecc] bg-white shadow-sm pl-2.5 pr-2 py-1"
@@ -949,19 +949,19 @@ function TaskSalesPersonPreview({ userId, baseUrl, headers, selectedLeadIds, sel
                             />
                           </div>
                         )}
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${STAGE_COLOR[d.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>{d.stage}</span>
                       </div>
                     </div>
                     {adminBadge && (
-                      <span className="inline-block text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
+                      <span className="inline-block text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded border border-orange-200 mb-1" title={adminBadge.title}>{adminBadge.text}</span>
                     )}
-                    {d.companyName && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{d.companyName}</p>}
+                    {d.companyName && <p className="text-xs text-gray-400 flex items-center gap-1 truncate mb-0.5"><Building2 size={9} />{d.companyName}</p>}
                     <div className="flex flex-wrap gap-2 mb-0.5">
-                      {d.value && <p className="text-[11px] font-bold text-gray-700">{d.currency} {d.value}</p>}
-                      {d.phoneNumber && <p className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
+                      {d.value && <p className="text-xs font-bold text-gray-700">{d.currency} {d.value}</p>}
+                      {d.phoneNumber && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} className="text-gray-400" />{d.phoneNumber}</p>}
                     </div>
-                    {d.email && <p className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
-                    <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
+                    {d.email && <p className="text-xs text-gray-500 flex items-center gap-1 truncate"><Mail size={9} className="text-gray-400" />{d.email}</p>}
+                    <p className="text-xs text-gray-300 mt-1 flex items-center gap-1"><Calendar size={9} />Created {fmt(d.createdAt)}</p>
                   </div>
                 </div>
               );
@@ -978,8 +978,8 @@ function ConfirmModal({ open, title, message, confirmLabel = "Delete", onConfirm
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-base font-bold text-gray-800 mb-2">{title}</h3>
-        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <h3 className="text-slate-700 mb-2">{title}</h3>
+        <p className="text-base text-slate-600 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
           <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">
             Cancel
@@ -1125,7 +1125,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[88vh] max-h-[820px] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-slate-900 flex items-center gap-2">
             {editTask ? <Edit2 size={18} className="text-[#008ecc]" /> : <Plus size={20} className="text-[#008ecc]" />}
             {editTask ? "Edit Task" : "Create & Assign Task"}
           </h2>
@@ -1216,11 +1216,11 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
             {/* Linked summary chip */}
             {(form.leadRefs.length > 0 || form.dealRefs.length > 0) && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-1">
-                <p className="text-[11px] font-bold text-blue-700">Linked to this task:</p>
-                {form.leadRefs.length > 0 && <p className="text-[11px] text-blue-600">✓ {form.leadRefs.length} lead{form.leadRefs.length > 1 ? "s" : ""} selected</p>}
-                {form.dealRefs.length > 0 && <p className="text-[11px] text-blue-600">✓ {form.dealRefs.length} deal{form.dealRefs.length > 1 ? "s" : ""} selected</p>}
+                <p className="text-xs font-bold text-blue-700">Linked to this task:</p>
+                {form.leadRefs.length > 0 && <p className="text-xs text-blue-600">✓ {form.leadRefs.length} lead{form.leadRefs.length > 1 ? "s" : ""} selected</p>}
+                {form.dealRefs.length > 0 && <p className="text-xs text-blue-600">✓ {form.dealRefs.length} deal{form.dealRefs.length > 1 ? "s" : ""} selected</p>}
                 {(newLeadIds.length > 0 || newDealIds.length > 0) && (
-                  <p className="text-[11px] text-amber-600 font-semibold pt-1">Set a due date for each newly linked lead/deal on the right →</p>
+                  <p className="text-xs text-amber-600 font-semibold pt-1">Set a due date for each newly linked lead/deal on the right →</p>
                 )}
               </div>
             )}
@@ -1296,14 +1296,14 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
         {/* Header */}
         <div className="flex items-start justify-between mb-1">
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-gray-800 text-sm truncate">{task.title}</h3>
-            <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+            <h3 className="text-slate-700 truncate">{task.title}</h3>
+            <p className="text-base text-slate-600 flex items-center gap-1 mt-1">
               <User size={9} />{task.assignedTo?.firstName} {task.assignedTo?.lastName}
               {task.assignedTo?.email && <span className="truncate">· {task.assignedTo.email}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${STATUS_STYLES[task.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{task.status || "New"}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${STATUS_STYLES[task.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{task.status || "New"}</span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(task); }} className="p-1 hover:bg-blue-50 rounded-full text-gray-400 hover:text-[#008ecc] transition-colors" title="Edit task"><Edit2 size={14} /></button>
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(task); }} className="p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors" title="Delete task"><Trash2 size={14} /></button>
@@ -1311,7 +1311,7 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
         </div>
 
         {adminTookTask && (
-          <span className="inline-block w-fit text-[10px] bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 mb-2">
+          <span className="inline-block w-fit text-xs bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 mb-2">
             Admin took this task — {adminTookTask}
           </span>
         )}
@@ -1319,7 +1319,7 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
         {hasPendingIssue && (
           <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-rose-50 border border-rose-200 rounded-lg w-fit">
             <Flag size={11} className="text-rose-500 shrink-0" />
-            <span className="text-[11px] font-bold text-rose-700">Pending Admin Review</span>
+            <span className="text-xs font-bold text-rose-700">Pending Admin Review</span>
           </div>
         )}
 
@@ -1328,13 +1328,13 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
             <div className="flex items-start gap-2 mb-2">
               <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[11px] font-bold text-red-700">Rejection Requested</p>
-                <p className="text-[11px] text-red-600 mt-0.5 break-words">Reason: {task.rejectionReason}</p>
+                <p className="text-xs font-bold text-red-700">Rejection Requested</p>
+                <p className="text-xs text-red-600 mt-0.5 break-words">Reason: {task.rejectionReason}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => onApproveRejection(task, "approve")} className="flex-1 py-1.5 bg-red-500 text-white text-[11px] font-semibold rounded hover:bg-red-600">Approve</button>
-              <button onClick={() => onApproveRejection(task, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+              <button onClick={() => onApproveRejection(task, "approve")} className="flex-1 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600">Approve</button>
+              <button onClick={() => onApproveRejection(task, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
             </div>
           </div>
         )}
@@ -1344,18 +1344,18 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
             <div className="flex items-start gap-2 mb-2">
               <Info size={14} className="text-purple-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[11px] font-bold text-purple-700">Hold Pending</p>
-                <p className="text-[11px] text-purple-600 mt-0.5 break-words">Reason: {task.holdReason}</p>
+                <p className="text-xs font-bold text-purple-700">Hold Pending</p>
+                <p className="text-xs text-purple-600 mt-0.5 break-words">Reason: {task.holdReason}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => onApproveHold(task, "approve")} className="flex-1 py-1.5 bg-purple-500 text-white text-[11px] font-semibold rounded hover:bg-purple-600">Approve</button>
-              <button onClick={() => onApproveHold(task, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+              <button onClick={() => onApproveHold(task, "approve")} className="flex-1 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded hover:bg-purple-600">Approve</button>
+              <button onClick={() => onApproveHold(task, "deny")} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
             </div>
           </div>
         )}
 
-        <div className={`flex items-center gap-1.5 text-[11px] mb-2 mt-1 ${isOverdue ? "text-red-500 font-semibold" : "text-gray-400"}`}>
+        <div className={`flex items-center gap-1.5 text-xs mb-2 mt-1 ${isOverdue ? "text-red-500 font-semibold" : "text-gray-400"}`}>
           <Calendar size={11} /><span>Created {fmt(task.createdAt)} — Due {fmt(task.dueDate)}{isOverdue ? " (Overdue)" : ""}</span>
         </div>
 
@@ -1367,8 +1367,8 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
           <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
             <StickyNote size={12} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Task Description</p>
-              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{task.description}</p>
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-0.5">Task Description</p>
+              <p className="text-xs text-amber-800 font-medium leading-relaxed">{task.description}</p>
             </div>
           </div>
         )}
@@ -1378,8 +1378,8 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
           <div className="mb-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
             <StickyNote size={12} className="text-blue-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[9px] font-bold text-blue-600 uppercase tracking-wide mb-0.5">Sales Notes</p>
-              <p className="text-[11px] text-blue-800 font-medium leading-relaxed break-words">{task.completionNotes}</p>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-0.5">Sales Notes</p>
+              <p className="text-xs text-blue-800 font-medium leading-relaxed break-words">{task.completionNotes}</p>
             </div>
           </div>
         )}
@@ -1400,7 +1400,7 @@ function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl,
           </div>
         )}
 
-        {task.createdBy && <p className="text-[10px] text-gray-300 mt-3">Created by {task.createdBy.firstName} {task.createdBy.lastName}</p>}
+        {task.createdBy && <p className="text-xs text-gray-300 mt-3">Created by {task.createdBy.firstName} {task.createdBy.lastName}</p>}
       </div>
     </div>
   );
@@ -1415,7 +1415,7 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
       {/* Table header */}
       <div className="grid grid-cols-[2fr_1.3fr_1fr_1fr_1fr_1.4fr_1.2fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
         {["Task", "Assigned To", "Priority", "Status", "Due Date", "Linked Lead/Deal", "Actions"].map((h, i) => (
-          <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i >= 2 && i <= 4 ? "text-center" : i === 6 ? "text-center" : ""}`}>{h}</div>
+          <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i >= 2 && i <= 4 ? "text-center" : i === 6 ? "text-center" : ""}`}>{h}</div>
         ))}
       </div>
 
@@ -1442,18 +1442,18 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
                 <div className={`w-1.5 h-8 rounded-full shrink-0 ${PRIORITY_BORDER[task.priority]?.replace("border-l-", "bg-") || "bg-gray-300"}`} />
                 <div className="min-w-0">
                   <p className="font-bold text-gray-900 text-sm truncate">{task.title}</p>
-                  {task.description && <p className="text-[11px] text-gray-400 truncate mt-0.5">{task.description}</p>}
+                  {task.description && <p className="text-xs text-gray-400 truncate mt-0.5">{task.description}</p>}
                 </div>
                 <div className="ml-1 shrink-0">{isExpanded ? <ChevronUp size={14} className="text-[#008ecc]" /> : <ChevronDown size={14} className="text-gray-400" />}</div>
               </div>
               {/* Assigned To */}
               <div className="flex flex-col justify-center min-w-0">
                 <p className="text-xs font-semibold text-gray-700 truncate">{task.assignedTo?.firstName} {task.assignedTo?.lastName}</p>
-                {task.assignedTo?.email && <p className="text-[10px] text-gray-400 truncate">{task.assignedTo.email}</p>}
+                {task.assignedTo?.email && <p className="text-xs text-gray-400 truncate">{task.assignedTo.email}</p>}
               </div>
               {/* Priority */}
               <div className="flex items-center justify-center">
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
               </div>
               {/* Status — a deal-linked task shows the deal's own pipeline stage
                   (Qualification / Proposal Sent-Negotiation / ...) instead of the
@@ -1462,27 +1462,27 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
                   with no linked deal, once the task itself is Completed). */}
               <div className="flex items-center justify-center">
                 {task.dealRef?.stage ? (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${task.dealRef.stage === "Closed Won" ? STATUS_STYLES.Completed + " border-transparent" : STAGE_COLOR[task.dealRef.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${task.dealRef.stage === "Closed Won" ? STATUS_STYLES.Completed + " border-transparent" : STAGE_COLOR[task.dealRef.stage] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
                     {task.dealRef.stage === "Closed Won" ? "Completed" : task.dealRef.stage === "Closed Lost" ? "Deal Lost" : task.dealRef.stage}
                   </span>
                 ) : (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${STATUS_STYLES[task.status]}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${STATUS_STYLES[task.status]}`}>
                     {task.status}
                   </span>
                 )}
               </div>
               {/* Due Date */}
               <div className="flex items-center justify-center">
-                <span className={`text-[11px] font-semibold flex items-center gap-1 ${isOverdue ? "text-red-500" : "text-gray-600"}`}>
+                <span className={`text-xs font-semibold flex items-center gap-1 ${isOverdue ? "text-red-500" : "text-gray-600"}`}>
                   <Calendar size={9} />{fmt(task.dueDate)}
                 </span>
               </div>
               {/* Linked Lead/Deal */}
               <div className="flex flex-col justify-center gap-0.5 min-w-0">
-                {leadName && <span className="text-[11px] text-gray-700 truncate flex items-center gap-1"><FileText size={9} className="text-blue-500 shrink-0" />{leadName}</span>}
-                {dealName && <span className="text-[11px] text-gray-700 truncate flex items-center gap-1"><Briefcase size={9} className="text-blue-500 shrink-0" />{dealName}</span>}
-                {linkedBadgeText && <span className="text-[10px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 w-fit truncate max-w-full">{linkedBadgeText}</span>}
-                {!leadName && !dealName && <span className="text-[11px] text-gray-300">—</span>}
+                {leadName && <span className="text-xs text-gray-700 truncate flex items-center gap-1"><FileText size={9} className="text-blue-500 shrink-0" />{leadName}</span>}
+                {dealName && <span className="text-xs text-gray-700 truncate flex items-center gap-1"><Briefcase size={9} className="text-blue-500 shrink-0" />{dealName}</span>}
+                {linkedBadgeText && <span className="text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 w-fit truncate max-w-full">{linkedBadgeText}</span>}
+                {!leadName && !dealName && <span className="text-xs text-gray-300">—</span>}
               </div>
               {/* Actions — just Edit/Delete; status is read-only, driven by the
                   task's own progress (or its linked deal's stage) above. */}
@@ -1497,13 +1497,13 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
                 <div className="flex items-start gap-2">
                   <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[11px] font-bold text-red-700">Rejection Requested</p>
-                    <p className="text-[11px] text-red-600 mt-0.5 break-words">Reason: {task.rejectionReason}</p>
+                    <p className="text-xs font-bold text-red-700">Rejection Requested</p>
+                    <p className="text-xs text-red-600 mt-0.5 break-words">Reason: {task.rejectionReason}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => onApproveRejection(task, "approve")} className="px-3 py-1.5 bg-red-500 text-white text-[11px] font-semibold rounded hover:bg-red-600">Approve Rejection</button>
-                  <button onClick={() => onApproveRejection(task, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+                  <button onClick={() => onApproveRejection(task, "approve")} className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600">Approve Rejection</button>
+                  <button onClick={() => onApproveRejection(task, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
                 </div>
               </div>
             )}
@@ -1513,13 +1513,13 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
                 <div className="flex items-start gap-2">
                   <Info size={14} className="text-purple-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[11px] font-bold text-purple-700">Hold Pending</p>
-                    <p className="text-[11px] text-purple-600 mt-0.5 break-words">Reason: {task.holdReason}</p>
+                    <p className="text-xs font-bold text-purple-700">Hold Pending</p>
+                    <p className="text-xs text-purple-600 mt-0.5 break-words">Reason: {task.holdReason}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => onApproveHold(task, "approve")} className="px-3 py-1.5 bg-purple-500 text-white text-[11px] font-semibold rounded hover:bg-purple-600">Approve Hold</button>
-                  <button onClick={() => onApproveHold(task, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-300">Deny</button>
+                  <button onClick={() => onApproveHold(task, "approve")} className="px-3 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded hover:bg-purple-600">Approve Hold</button>
+                  <button onClick={() => onApproveHold(task, "deny")} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Deny</button>
                 </div>
               </div>
             )}
@@ -1544,9 +1544,9 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
                       <div key={i} className="flex items-start gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#008ecc] mt-1 shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold text-gray-700">{h.event}</p>
-                          {h.detail && <p className="text-[10px] text-gray-500 break-words">{h.detail}</p>}
-                          <p className="text-[10px] text-gray-400">{fmt(h.at)} {fmtTime(h.at)}</p>
+                          <p className="text-xs font-semibold text-gray-700">{h.event}</p>
+                          {h.detail && <p className="text-xs text-gray-500 break-words">{h.detail}</p>}
+                          <p className="text-xs text-gray-400">{fmt(h.at)} {fmtTime(h.at)}</p>
                         </div>
                       </div>
                     ))}
@@ -1926,8 +1926,8 @@ export default function TaskManagement() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Task Management</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Assign and track tasks for your sales team</p>
+          <h1 className="text-gray-900">Task Management</h1>
+          <p className="text-base text-slate-600 mt-1">Assign and track tasks for your sales team</p>
         </div>
         <button
           onClick={() => { setEditTask(null); setModalOpen(true); }}
@@ -1942,7 +1942,7 @@ export default function TaskManagement() {
           numbers immediately regardless of whether any Target exists yet. */}
       {mainView === "tasks" && orgDashStats && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">Monthly Overview</h2>
+          <h2 className="text-slate-900 mb-3">Monthly Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={orgDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={orgDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
@@ -1979,7 +1979,7 @@ export default function TaskManagement() {
         >
           <Bell size={13} /> Notifications & Reminders
           {unreadTaskNotifCount > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+            <span className="ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
               {unreadTaskNotifCount}
             </span>
           )}
@@ -1996,7 +1996,7 @@ export default function TaskManagement() {
         >
           <Flag size={13} /> Reason Notes
           {reasonNotes.filter((n) => n.status === "pending").length > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+            <span className="ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
               {reasonNotes.filter((n) => n.status === "pending").length}
             </span>
           )}
@@ -2051,7 +2051,7 @@ export default function TaskManagement() {
       {mainView === "notifications" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <Bell size={16} className="text-amber-500" /> Notifications & Reminders
             </h2>
             <div className="flex items-center gap-3">
@@ -2086,19 +2086,19 @@ export default function TaskManagement() {
                   {icon}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-800">{n.title}</p>
-                    <p className="text-[12px] text-gray-700 font-medium mt-0.5 leading-relaxed whitespace-pre-line">{n.message}</p>
+                    <p className="text-xs text-gray-700 font-medium mt-0.5 leading-relaxed whitespace-pre-line">{n.message}</p>
                     {n.meta?.linkedName && (
                       <div className="mt-2 bg-white/70 border border-gray-100 rounded-lg px-2.5 py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
+                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
                           {n.meta.linkedType === "deal" ? <Briefcase size={10} /> : <FileText size={10} />}
                           {n.meta.linkedType === "deal" ? "Deal" : "Lead"}: {n.meta.linkedName}
                         </span>
-                        {n.meta.linkedCompany && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Building2 size={9} />{n.meta.linkedCompany}</span>}
-                        {n.meta.linkedPhone && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={9} />{n.meta.linkedPhone}</span>}
-                        {n.meta.linkedEmail && <span className="text-[11px] text-gray-500 flex items-center gap-1 truncate"><Mail size={9} />{n.meta.linkedEmail}</span>}
+                        {n.meta.linkedCompany && <span className="text-xs text-gray-500 flex items-center gap-1"><Building2 size={9} />{n.meta.linkedCompany}</span>}
+                        {n.meta.linkedPhone && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={9} />{n.meta.linkedPhone}</span>}
+                        {n.meta.linkedEmail && <span className="text-xs text-gray-500 flex items-center gap-1 truncate"><Mail size={9} />{n.meta.linkedEmail}</span>}
                       </div>
                     )}
-                    <p className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
+                    <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1"><Clock size={9} />{fmt(n.createdAt)} {fmtTime(n.createdAt)}</p>
                   </div>
                   <div className="flex flex-col gap-1 ml-2 shrink-0 items-end">
                     {isUnread && (
@@ -2107,7 +2107,7 @@ export default function TaskManagement() {
                           e.stopPropagation();
                           handleMarkNotifRead(n);
                         }}
-                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
                         title="Mark as read"
                       >
                         <CheckCheck size={11} /> Mark as read
@@ -2135,7 +2135,7 @@ export default function TaskManagement() {
         return (
           <div className="space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h2 className="text-slate-900 flex items-center gap-2">
                 <Flag size={16} className="text-rose-500" /> Reason Notes from Sales Team
                 <span className="text-xs font-normal text-gray-400 ml-1">({reasonNotes.length} total)</span>
               </h2>
@@ -2192,9 +2192,9 @@ export default function TaskManagement() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-bold text-gray-900">{n.taskTitle}</p>
-                            {isPending && <span className="text-[10px] bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 rounded-full">Pending Admin Review</span>}
-                            {!isPending && !isReactivated && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Resolved</span>}
-                            {isReactivated && <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Kept with same person</span>}
+                            {isPending && <span className="text-xs bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 rounded-full">Pending Admin Review</span>}
+                            {!isPending && !isReactivated && <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Resolved</span>}
+                            {isReactivated && <span className="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Check size={8} /> Kept with same person</span>}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -2212,11 +2212,11 @@ export default function TaskManagement() {
                       </div>
 
                       <div className="mx-4 mb-3 bg-white rounded-xl border border-gray-100 px-3 py-2.5 space-y-2">
-                        <p className="text-[12px] text-gray-800 font-medium leading-relaxed border-l-2 border-rose-300 pl-2.5">"{n.note}"</p>
+                        <p className="text-xs text-gray-800 font-medium leading-relaxed border-l-2 border-rose-300 pl-2.5">"{n.note}"</p>
 
                         {(leadName || dealName) && (
                           <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 border-t border-gray-100">
-                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
+                            <span className="text-xs font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
                               {dealName ? <Briefcase size={10} /> : <FileText size={10} />}
                               {dealName ? "Deal" : "Lead"}: {leadName || dealName}
                             </span>
@@ -2224,14 +2224,14 @@ export default function TaskManagement() {
                         )}
 
                         <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-gray-100">
-                          <p className="text-[11px] text-gray-600 font-medium flex items-center gap-1">
+                          <p className="text-xs text-gray-600 font-medium flex items-center gap-1">
                             <Users size={10} className="text-gray-400" />
                             {n.assignedTo?.firstName} {n.assignedTo?.lastName}
                           </p>
-                          <p className="text-[11px] text-gray-500 flex items-center gap-1"><Clock size={9} />{fmt(n.addedAt)} {fmtTime(n.addedAt)}</p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1"><Clock size={9} />{fmt(n.addedAt)} {fmtTime(n.addedAt)}</p>
                         </div>
                         {(n.status === "resolved" || isReactivated) && n.reassignedTo && (
-                          <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                          <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                             <ArrowRightLeft size={10} />
                             {isReactivated ? "Kept with" : "Reassigned to"} {n.reassignedTo?.firstName} {n.reassignedTo?.lastName}
                             {n.reassignNote && <span className="text-gray-500 font-normal ml-1">· "{n.reassignNote}"</span>}
@@ -2269,7 +2269,7 @@ export default function TaskManagement() {
         return (
           <div className="space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <h2 className="text-slate-900 flex items-center gap-2">
                 <Trophy size={16} className="text-indigo-500" /> Admin Completed Leads &amp; Deals
               </h2>
               <button onClick={fetchAdminActivity} className="text-xs text-[#008ecc] hover:underline font-medium">Refresh</button>
@@ -2278,11 +2278,11 @@ export default function TaskManagement() {
             {/* Summary counts */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center">
-                <p className="text-[11px] text-purple-600 font-semibold">Leads Converted by Admin</p>
+                <p className="text-xs text-purple-600 font-semibold">Leads Converted by Admin</p>
                 <p className="text-xl font-bold text-purple-700">{leads.length}</p>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                <p className="text-[11px] text-emerald-600 font-semibold">Deal Closed by Admin</p>
+                <p className="text-xs text-emerald-600 font-semibold">Deal Closed by Admin</p>
                 <p className="text-xl font-bold text-emerald-700">{deals.length}</p>
               </div>
             </div>
@@ -2299,15 +2299,15 @@ export default function TaskManagement() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
                   {["Type", "Name", "Company", "Salesperson", "Date & Time", "Actions"].map((h, i) => (
-                    <div key={i} className={`text-[11px] font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
+                    <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i === 5 ? "text-right" : ""}`}>{h}</div>
                   ))}
                 </div>
                 {rows.map((r) => (
                   <div key={r.key} className="grid grid-cols-[1.6fr_1.6fr_1.4fr_1.4fr_1.6fr_0.8fr] px-4 py-3 border-b border-gray-100 last:border-0 items-center hover:bg-gray-50/70">
-                    <div><span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${r.typeClass}`}>{r.typeLabel}</span></div>
+                    <div><span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${r.typeClass}`}>{r.typeLabel}</span></div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-800 truncate">{r.name}</p>
-                      {r.value && <p className="text-[11px] font-bold text-emerald-600">{r.value}</p>}
+                      {r.value && <p className="text-xs font-bold text-emerald-600">{r.value}</p>}
                     </div>
                     <div className="text-xs text-gray-600 truncate">{r.company || "—"}</div>
                     <div className="text-xs text-gray-600 truncate">{r.salesperson}</div>
@@ -2442,8 +2442,8 @@ function ApproveHoldModal({ open, task, onClose, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Approve Hold Request</h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <h3 className="text-slate-700 mb-4">Approve Hold Request</h3>
+        <p className="text-base text-slate-600 mb-4">
           Are you sure you want to approve the hold request for "{task.title}"?
           Please provide a new due date to extend the task timeline.
         </p>
@@ -2479,21 +2479,21 @@ function WorkflowExplanationModal({ open, onClose }) {
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
           <X size={20} />
         </button>
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="text-slate-700 mb-4 flex items-center gap-2">
           <Info className="text-blue-500" />
           How Tasks & Targets Work
         </h3>
         
         <div className="space-y-6 text-sm text-gray-700">
           <section>
-            <h4 className="font-semibold text-lg text-gray-800 mb-2 border-b pb-1">🏢 Company Viewpoint</h4>
+            <h3 className="text-slate-700 mb-2 border-b pb-1">🏢 Company Viewpoint</h3>
             <p className="mb-2">
               Our workflow is fully automated to ensure complete transparency between what the <strong>Admin assigns</strong> and what the <strong>Salesperson achieves</strong>. The system automatically tracks real progress, eliminating manual status updates.
             </p>
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👤 Salesperson Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👤 Salesperson Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Auto-Progress:</strong> You cannot manually change a status to "In Progress" or "Completed". As soon as you convert a linked Lead, win a Deal, or log a Call/Meeting, the system automatically moves your task/target to <strong>In Progress</strong>.</li>
               <li><strong>Hold Requests:</strong> If you are blocked, you can request a "Hold". If the Admin approves, the task pauses. As soon as you make further progress, it automatically resumes to <strong>In Progress</strong>.</li>
@@ -2502,7 +2502,7 @@ function WorkflowExplanationModal({ open, onClose }) {
           </section>
 
           <section>
-            <h4 className="font-semibold text-gray-800 mb-2">👑 Admin Workflow</h4>
+            <h3 className="text-slate-700 mb-2">👑 Admin Workflow</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Verification:</strong> When a salesperson achieves their goal, it moves to the Admin's feed. The Admin verifies the actual Deals/Leads.</li>
               <li><strong>Admin Completed:</strong> Once the Admin is satisfied, they click <strong>"Admin Completed"</strong>. This finalizes the item and moves it to the permanent <em>Admin Completed</em> list.</li>

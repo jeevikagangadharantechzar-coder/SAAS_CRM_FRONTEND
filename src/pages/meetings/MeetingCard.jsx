@@ -32,10 +32,10 @@ export default function MeetingCard({ meeting, onEdit, onCancel }) {
           <div className="bg-blue-50 p-2 rounded-lg shrink-0">
             <Video className="w-4 h-4 text-blue-600" />
           </div>
-          <h3 className="font-semibold text-gray-800 truncate text-sm">{meeting.title}</h3>
+          <h3 className="text-slate-700 truncate">{meeting.title}</h3>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">
+          <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">
             {meeting.provider === "zoom" ? "Zoom" : "Google Meet"}
           </span>
           <span

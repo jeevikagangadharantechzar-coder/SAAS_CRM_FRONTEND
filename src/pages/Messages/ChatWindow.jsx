@@ -272,8 +272,8 @@ const ChatWindow = () => {
         <div className="w-20 h-20 rounded-full bg-[#e8f7ff] flex items-center justify-center mb-4">
           <Send size={32} className="text-[#008ecc]" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-700">Your Messages</h3>
-        <p className="text-sm text-gray-400 mt-1">Select a contact or group to start chatting</p>
+        <h3 className="text-slate-700">Your Messages</h3>
+        <p className="text-base text-slate-600 mt-1">Select a contact or group to start chatting</p>
       </div>
     );
   }
@@ -314,12 +314,12 @@ const ChatWindow = () => {
                 >
                   {activeGroup.memberCount} members
                   {currentIsAdmin && (
-                    <span className="text-[10px] bg-[#e8f7ff] text-[#008ecc] rounded px-1.5 py-0.5">
+                    <span className="text-xs bg-[#e8f7ff] text-[#008ecc] rounded px-1.5 py-0.5">
                       You're admin
                     </span>
                   )}
                   {activeGroup.onlyAdminsCanMessage && (
-                    <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5">
+                    <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 rounded px-1.5 py-0.5 inline-flex items-center gap-0.5">
                       <Lock size={8} /> Admins only
                     </span>
                   )}
@@ -393,7 +393,7 @@ const ChatWindow = () => {
       {/* ── Members panel — closes on outside click ─────────────── */}
       {isGroupActive && showMembers && (
         <div ref={membersRef} className="bg-white border-b border-gray-100 px-5 py-3 max-h-56 overflow-y-auto shadow-sm">
-          <p className="text-[11px] font-semibold text-gray-400 mb-3 uppercase tracking-wider">Members</p>
+          <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">Members</p>
           <div className="space-y-2.5">
             {(activeGroup.members || []).map((m) => {
               const mId       = String(m._id || m);
@@ -412,13 +412,13 @@ const ChatWindow = () => {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm font-medium text-gray-800">{m.name || "Member"}</span>
                         {isAdminM && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded px-1.5 py-0.5">
+                          <span className="inline-flex items-center gap-0.5 text-xs bg-amber-50 text-amber-600 border border-amber-200 rounded px-1.5 py-0.5">
                             <Shield size={9} /> Admin
                           </span>
                         )}
-                        {isSelf && <span className="text-[10px] text-gray-400">(you)</span>}
+                        {isSelf && <span className="text-xs text-gray-400">(you)</span>}
                       </div>
-                      <span className={`text-[11px] ${isOnlineM ? "text-green-500" : "text-gray-400"}`}>
+                      <span className={`text-xs ${isOnlineM ? "text-green-500" : "text-gray-400"}`}>
                         {isOnlineM ? "● Online" : "● Offline"}
                       </span>
                     </div>
@@ -537,7 +537,7 @@ const ChatWindow = () => {
         <div className="mx-4 mb-1 flex items-center gap-2 bg-[#f0faff] border border-[#008ecc]/20 rounded-xl px-3 py-2">
           <div className="w-0.5 h-8 bg-[#008ecc] rounded-full flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold text-[#008ecc]">{replyTo.senderName}</p>
+            <p className="text-xs font-semibold text-[#008ecc]">{replyTo.senderName}</p>
             <p className="text-xs text-gray-500 truncate">{replyTo.message || "📎 Attachment"}</p>
           </div>
           <button onClick={() => setReplyTo(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
@@ -615,7 +615,7 @@ const ChatWindow = () => {
               }
             </button>
           </div>
-          <p className="text-[10px] text-gray-400 mt-1 px-1">Enter to send · Shift+Enter new line</p>
+          <p className="text-xs text-gray-400 mt-1 px-1">Enter to send · Shift+Enter new line</p>
         </div>
       )}
 

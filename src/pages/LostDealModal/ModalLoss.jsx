@@ -48,7 +48,7 @@ const LostDealModal = ({
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+              <h2 className="text-slate-900">{title}</h2>
               {dealName && (
                 <p className="text-sm text-gray-600 mt-1">Deal: {dealName}</p>
               )}

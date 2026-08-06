@@ -78,7 +78,7 @@ const ProposalBoard = () => {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl">Proposal Board</h1>
+        <h1 className="">Proposal Board</h1>
     <div className="flex justify-between items-center gap-2">
     <Link to="/proposal">
           <svg
@@ -166,7 +166,7 @@ const ProposalBoard = () => {
                   >
                     {/* Header */}
                     <div className="flex gap-5 justify-between items-center mb-4 border-b pb-2">
-                      <h2 className="text-lg font-semibold text-gray-800">
+                      <h2 className="text-slate-900">
                         {status}
                       </h2>
                       <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
@@ -189,10 +189,10 @@ const ProposalBoard = () => {
                               {...provided.dragHandleProps}
                               className="bg-gray-50 hover:bg-gray-100 p-4 rounded-xl border border-gray-200 shadow-sm transition-all"
                             >
-                              <h3 className="font-semibold text-gray-800">
+                              <h3 className="text-slate-700">
                                 {proposal.title}
                               </h3>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-base text-slate-600">
                                 {proposal.dealTitle}
                               </p>
                               <p className="text-sm text-gray-400">

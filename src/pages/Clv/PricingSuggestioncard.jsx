@@ -260,7 +260,7 @@ const PricingSuggestionCard = ({ dealValue, onClose }) => {
       <div className="flex items-center justify-between mb-3 pr-6">
         <div className="flex items-center gap-2">
           <TrendingUp size={18} className="text-blue-500" />
-          <h3 className="font-semibold text-gray-800">Smart Pricing Recommendation</h3>
+          <h3 className="text-slate-700">Smart Pricing Recommendation</h3>
         </div>
         <div className="flex items-center gap-2">
           {pricingData.classification && (

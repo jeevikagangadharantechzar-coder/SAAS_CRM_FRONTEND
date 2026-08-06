@@ -151,7 +151,7 @@ export const AddWidgetModal = ({
   const renderStandardWidgets = () => (
     <div className="py-2 space-y-6 max-h-[60vh] overflow-y-auto pr-2">
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3">Default Widgets</h3>
+        <h3 className="text-slate-700 mb-3">Default Widgets</h3>
         <div className="space-y-3">
           {builtinWidgetsConfig.map((widget) => (
             <div key={widget.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -164,7 +164,7 @@ export const AddWidgetModal = ({
 
       {(customWidgets.length > 0 || dashboardNotes.length > 0) && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3">Created Widgets</h3>
+          <h3 className="text-slate-700 mb-3">Created Widgets</h3>
           <div className="space-y-3">
             {customWidgets.map((widget) => (
               <div key={widget.id} className="flex items-center justify-between p-3 bg-blue-50/50 rounded-lg border border-blue-100">

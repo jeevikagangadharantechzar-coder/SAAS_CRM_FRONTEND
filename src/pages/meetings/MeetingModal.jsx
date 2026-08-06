@@ -103,7 +103,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2 className="text-slate-900">
             {editMeeting ? "Edit Meeting" : "New Meeting"}
           </h2>
           <button
@@ -169,7 +169,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
                   })}
                 </div>
                 {zoomMeetingsEnabled && !zoomConfigured && (
-                  <p className="text-[11px] text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-1">
                     Zoom is not configured for this workspace — contact your administrator.
                   </p>
                 )}

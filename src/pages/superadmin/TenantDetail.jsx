@@ -193,8 +193,8 @@ const TenantDetail = () => {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{tenant.name} Details</h2>
-          <p className="text-slate-500 text-sm">Review full parameters and subscription metrics for this CRM workspace.</p>
+          <h2 className="text-slate-900">{tenant.name} Details</h2>
+          <p className="text-base text-slate-600">Review full parameters and subscription metrics for this CRM workspace.</p>
         </div>
       </div>
 
@@ -205,7 +205,7 @@ const TenantDetail = () => {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center space-x-2 text-slate-800">
               <Building2 className="text-[#008ecc]" size={20} />
-              <h3 className="text-lg font-bold">Workspace Configuration</h3>
+              <h3 className="">Workspace Configuration</h3>
             </div>
             
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
@@ -249,7 +249,7 @@ const TenantDetail = () => {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center space-x-2 text-slate-800">
               <UserCheck className="text-[#008ecc]" size={20} />
-              <h3 className="text-lg font-bold">Active Statistics</h3>
+              <h3 className="">Active Statistics</h3>
             </div>
             
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
@@ -271,7 +271,7 @@ const TenantDetail = () => {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center space-x-2 text-slate-800">
               <CreditCard className="text-[#008ecc]" size={20} />
-              <h3 className="text-lg font-bold">Plans History Log</h3>
+              <h3 className="">Plans History Log</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left text-slate-600">
@@ -301,7 +301,7 @@ const TenantDetail = () => {
                           {h.final_price === 0 ? "Free / Custom" : `$${h.final_price.toFixed(2)}`}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${
                             h.type === "mid_cycle" ? "bg-cyan-50 text-cyan-700 border-cyan-200" : "bg-purple-50 text-purple-700 border-purple-200"
                           }`}>
                             {h.type === "mid_cycle" ? "Mid-Cycle" : "Expired / Limit"}
@@ -327,7 +327,7 @@ const TenantDetail = () => {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
             <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
               <CreditCard className="text-[#008ecc]" size={20} />
-              <h3 className="text-sm font-bold text-slate-850 uppercase tracking-wider">Plan Boundaries</h3>
+              <h3 className="text-slate-700">Plan Boundaries</h3>
             </div>
 
             <div className="space-y-4 text-xs font-medium">
@@ -367,7 +367,7 @@ const TenantDetail = () => {
 
               <div className="flex justify-between py-2 border-b border-slate-100">
                 <span className="text-slate-400">Status</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${
                   tenant.plan_status === "active" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
                 }`}>
                   {tenant.plan_status}
@@ -384,8 +384,8 @@ const TenantDetail = () => {
           <div className="flex items-center space-x-2 text-slate-800">
             <ScrollText className="text-[#008ecc]" size={20} />
             <div>
-              <h3 className="text-lg font-bold">Tenant Activity Logs</h3>
-              <p className="text-slate-500 text-xs">{logTotal.toLocaleString()} entries for this tenant</p>
+              <h3 className="">Tenant Activity Logs</h3>
+              <p className="text-base text-slate-600">{logTotal.toLocaleString()} entries for this tenant</p>
             </div>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -513,7 +513,7 @@ const TenantDetail = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {log.method ? (
-                        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                           {log.method}
                         </span>
                       ) : "—"}

@@ -61,7 +61,7 @@ export const CustomizeDashboardModal = ({
           
           {/* Default Widgets */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3">Default Widgets</h3>
+            <h3 className="text-slate-700 mb-3">Default Widgets</h3>
             <div className="space-y-3">
               {builtinWidgetsConfig.map((widget) => (
                 <div key={widget.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -77,7 +77,7 @@ export const CustomizeDashboardModal = ({
 
           {/* Custom Widgets */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3">Custom Widgets</h3>
+            <h3 className="text-slate-700 mb-3">Custom Widgets</h3>
             {customWidgets.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No custom widgets created yet.</p>
             ) : (

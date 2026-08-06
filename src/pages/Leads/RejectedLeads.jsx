@@ -214,10 +214,10 @@ export default function RejectedLeads() {
           >
             <ArrowLeft className="w-4 h-4" /> Back to Leads
           </button>
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-slate-900 flex items-center gap-2">
             <Ban className="w-6 h-6 text-red-500" /> Rejected Leads
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Leads rejected by admin, with their reason, who rejected them, and when</p>
+          <p className="text-base text-slate-600 mt-1">Leads rejected by admin, with their reason, who rejected them, and when</p>
         </div>
 
         {selectedLeads.length > 0 && (
@@ -449,9 +449,9 @@ export default function RejectedLeads() {
           onMouseLeave={handleReasonLeave}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Rejection Reason</p>
             {hoveredLead.rejectedAt && (
-              <p className="text-[10px] text-gray-400 font-medium shrink-0 ml-2">{formatDateTime(hoveredLead.rejectedAt)}</p>
+              <p className="text-xs text-gray-400 font-medium shrink-0 ml-2">{formatDateTime(hoveredLead.rejectedAt)}</p>
             )}
           </div>
           <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{hoveredLead.rejectionReason}</p>

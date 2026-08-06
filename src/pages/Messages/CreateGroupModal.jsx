@@ -108,8 +108,8 @@ const CreateGroupModal = ({ onClose }) => {
               <Users size={17} className="text-[#008ecc]" />
             </div>
             <div>
-              <h2 className="font-semibold text-gray-800 text-sm">New Group</h2>
-              <p className="text-[11px] text-gray-400">Step {step} of 2</p>
+              <h2 className="text-slate-900">New Group</h2>
+              <p className="text-base text-slate-600">Step {step} of 2</p>
             </div>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition">
@@ -165,7 +165,7 @@ const CreateGroupModal = ({ onClose }) => {
                     onChange={setOnlyAdminMsg}
                     label="Only admins can send messages"
                   />
-                  <p className="text-[11px] text-gray-400 -mt-1.5">Members can only read, not send</p>
+                  <p className="text-xs text-gray-400 -mt-1.5">Members can only read, not send</p>
                 </div>
               </div>
             </div>
@@ -219,7 +219,7 @@ const CreateGroupModal = ({ onClose }) => {
                       <button
                         onClick={(e) => toggleAdmin(c._id, e)}
                         title={adminSet ? "Remove admin" : "Make admin"}
-                        className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border transition flex-shrink-0
+                        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition flex-shrink-0
                           ${adminSet
                             ? "bg-amber-50 border-amber-200 text-amber-600"
                             : "bg-gray-50 border-gray-200 text-gray-400 hover:border-amber-200 hover:text-amber-500"}`}
@@ -250,7 +250,7 @@ const CreateGroupModal = ({ onClose }) => {
                   const contact = contacts.find((c) => c._id === s.id);
                   if (!contact) return null;
                   return (
-                    <span key={s.id} className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border
+                    <span key={s.id} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border
                       ${s.isAdmin ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-[#f0faff] border-[#008ecc]/20 text-[#008ecc]"}`}
                     >
                       {s.isAdmin && <Shield size={9} />}

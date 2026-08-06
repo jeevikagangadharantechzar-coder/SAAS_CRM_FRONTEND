@@ -513,8 +513,8 @@ const ClientReviewTable = () => {
           {/* Header with title */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">Client Review Table</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-slate-900">Client Review Table</h2>
+              <p className="text-base text-slate-600 mt-1">
                 {userRole === "Admin" 
                   ? "All clients with Closed Won deals requiring health review"
                   : "Your assigned clients with Closed Won deals"}
@@ -886,7 +886,7 @@ const ClientReviewTable = () => {
         <div className="fixed inset-0 bg-black/20 backdrop-blur-lg flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              <h3 className="text-slate-700 mb-4">
                 {selectedDeal.hasReview ? "Edit Client Review" : "New Client Review"}
               </h3>
 
@@ -895,7 +895,7 @@ const ClientReviewTable = () => {
                   <div className="flex items-start gap-3">
                     <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-amber-800">This client needs a review</h4>
+                      <h3 className="text-amber-800">This client needs a review</h3>
                       <p className="text-sm text-amber-700 mt-1">
                         Complete this review to classify the client and update their CLV metrics.
                       </p>
@@ -905,10 +905,10 @@ const ClientReviewTable = () => {
               )}
 
               <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1">
+                <h3 className="text-blue-800 mb-2 flex items-center gap-1">
                   <Info size={14} />
                   Client Information
-                </h4>
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-blue-600">Client Name:</p>

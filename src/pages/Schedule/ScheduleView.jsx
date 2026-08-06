@@ -64,10 +64,10 @@ const WeekDayEvent = ({ event }) => {
   const timeText = getEventTimeText(event);
   return (
     <div className="leading-tight overflow-hidden" title={`${event.title} (${timeText})`}>
-      <div className="font-bold text-[11px] uppercase tracking-wide truncate">
+      <div className="font-bold text-xs uppercase tracking-wide truncate">
         {event.isGroup ? event.title : `${meta.shortLabel || event.type} · ${timeText}`}
       </div>
-      {!event.isGroup && <div className="text-[11px] truncate opacity-90">{event.title}</div>}
+      {!event.isGroup && <div className="text-xs truncate opacity-90">{event.title}</div>}
     </div>
   );
 };
@@ -369,8 +369,8 @@ const ScheduleView = () => {
         <div className="flex items-center gap-3 mb-6">
           <CalendarClock size={28} className="text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Calendar</h1>
-            <p className="text-sm text-slate-600 mt-0.5">
+            <h1 className="text-gray-900">Calendar</h1>
+            <p className="text-base text-slate-600 mt-1">
               Everything with a date, in one place — click any item to open its real page
             </p>
           </div>
@@ -448,7 +448,7 @@ const ScheduleView = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeNoteModal}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <h3 className="text-slate-700 flex items-center gap-2">
                 <StickyNote size={18} className="text-amber-600" />
                 {editingNoteId ? "Edit Note" : "Add Note"}
               </h3>
@@ -495,7 +495,7 @@ const ScheduleView = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setGroupModalOpen(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <h3 className="text-slate-700 flex items-center gap-2">
                 <Layers size={18} className="text-slate-500" />
                 {groupModalItems.length} items
               </h3>

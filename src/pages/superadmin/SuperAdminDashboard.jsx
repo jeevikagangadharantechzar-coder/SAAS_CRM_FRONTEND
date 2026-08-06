@@ -154,8 +154,8 @@ const SuperAdminDashboard = () => {
       {/* Header Panel */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">System Overview</h2>
-          <p className="text-slate-500 text-sm">Real-time status of your multi-tenant CRM deployment.</p>
+          <h2 className="text-slate-900">System Overview</h2>
+          <p className="text-base text-slate-600">Real-time status of your multi-tenant CRM deployment.</p>
         </div>
         <button
           onClick={fetchStats}
@@ -189,8 +189,8 @@ const SuperAdminDashboard = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{card.title}</p>
-                    <h3 className="text-3xl font-extrabold text-slate-900 mt-2">{card.value}</h3>
-                    <p className="text-xs text-slate-400 mt-2 font-medium">{card.description}</p>
+                    <h3 className="text-slate-700 mt-2">{card.value}</h3>
+                    <p className="text-base text-slate-600 mt-1">{card.description}</p>
                   </div>
                   <div className={`p-3 rounded-2xl ${card.bg}`}>{card.icon}</div>
                 </div>

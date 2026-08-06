@@ -154,8 +154,8 @@ const SuperAdminTenants = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Tenant Organizations</h2>
-          <p className="text-slate-500 text-sm">Provision, inspect, and configure multi-tenant databases.</p>
+          <h2 className="text-slate-900">Tenant Organizations</h2>
+          <p className="text-base text-slate-600">Provision, inspect, and configure multi-tenant databases.</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -312,7 +312,7 @@ const SuperAdminTenants = () => {
             <div className="px-6 py-5 bg-red-600 text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={22} className="animate-bounce" />
-                <h3 className="text-lg font-bold">Critical Action: Delete Tenant</h3>
+                <h3 className="">Critical Action: Delete Tenant</h3>
               </div>
               <button
                 onClick={() => setDeleteTarget(null)}
@@ -326,8 +326,8 @@ const SuperAdminTenants = () => {
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3 text-red-800">
                 <AlertTriangle size={24} className="flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-sm">Destructive Action Warning</h4>
-                  <p className="text-xs mt-1 leading-relaxed">
+                  <h3 className="">Destructive Action Warning</h3>
+                  <p className="text-base text-slate-600 mt-1 leading-relaxed">
                     Deleting the tenant <strong>{deleteTarget.name}</strong> is permanent. This wipes all CRM leads, deals, proposals, invoices, settings, and documents under slug <strong>{deleteTarget.slug}</strong>. There is no undo.
                   </p>
                 </div>
@@ -375,7 +375,7 @@ const SuperAdminTenants = () => {
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center space-x-2 text-slate-800">
                 <Building2 size={20} className="text-[#008ecc]" />
-                <h3 className="text-lg font-bold">Edit Tenant Details</h3>
+                <h3 className="">Edit Tenant Details</h3>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}

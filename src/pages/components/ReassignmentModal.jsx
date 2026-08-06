@@ -53,10 +53,10 @@ const ReassignmentModal = ({ isOpen, onClose, onConfirm, hasTasks, hasTargets, i
               <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4 mx-auto">
                 <AlertCircle className="text-red-600" size={24} />
               </div>
-              <h2 className="text-xl font-semibold text-center text-gray-800 mb-2">
+              <h2 className="text-slate-900 text-center mb-2">
                 Active Assignments Detected
               </h2>
-              <p className="text-gray-600 text-center mb-6">
+              <p className="text-base text-slate-600 text-center mb-6">
                 This {itemType} is currently linked to active work for the current salesperson. 
                 Reassigning it will affect their pipeline. Are you sure you want to proceed?
               </p>
@@ -91,17 +91,17 @@ const ReassignmentModal = ({ isOpen, onClose, onConfirm, hasTasks, hasTargets, i
             </>
           ) : (
             <>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              <h2 className="text-slate-900 mb-4">
                 Reassignment Options
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-base text-slate-600 mb-6">
                 How would you like to handle the existing active work linked to this {itemType}?
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {hasTasks && (
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <h3 className="text-slate-700 mb-3 flex items-center gap-2">
                       <CheckSquare className="text-blue-600" size={18} /> Task Reassignment
                     </h3>
                     
@@ -165,7 +165,7 @@ const ReassignmentModal = ({ isOpen, onClose, onConfirm, hasTasks, hasTargets, i
 
                 {hasTargets && (
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <h3 className="text-slate-700 mb-3 flex items-center gap-2">
                       <TargetIcon className="text-purple-600" size={18} /> Target Reassignment
                     </h3>
                     

@@ -1015,7 +1015,7 @@ export default function CreateLeads() {
       className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm"
     >
       <div className="flex items-center justify-between border-b pb-2">
-        <h2 className={`text-lg font-semibold ${group.color}`}>
+        <h2 className={`border-b pb-2 ${group.color}`}>
           {group.title}
         </h2>
         <button
@@ -1603,7 +1603,7 @@ export default function CreateLeads() {
 
             {/* Attachments Section */}
             <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">
-              <h2 className="text-lg font-semibold border-b pb-2 text-indigo-600 flex items-center gap-2">
+              <h2 className="border-b pb-2 text-indigo-600 flex items-center gap-2">
                 <Upload size={20} /> Attachments
               </h2>
 
@@ -1649,7 +1649,7 @@ export default function CreateLeads() {
                             e.stopPropagation();
                             handleRemoveFile(idx, "existing");
                           }}
-                          className="text-[12px] text-red-600 hover:underline mt-1"
+                          className="text-xs text-red-600 hover:underline mt-1"
                         >
                           Remove
                         </button>
@@ -1679,7 +1679,7 @@ export default function CreateLeads() {
                         <p className="text-xs text-gray-500">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
-                        <p className="text-[10px] text-gray-700 truncate w-full text-center">
+                        <p className="text-xs text-gray-700 truncate w-full text-center">
                           {file.name}
                         </p>
                         <button
@@ -1688,7 +1688,7 @@ export default function CreateLeads() {
                             e.stopPropagation();
                             handleRemoveFile(idx, "new");
                           }}
-                          className="text-[12px] text-red-600 hover:underline mt-1"
+                          className="text-xs text-red-600 hover:underline mt-1"
                         >
                           Remove
                         </button>

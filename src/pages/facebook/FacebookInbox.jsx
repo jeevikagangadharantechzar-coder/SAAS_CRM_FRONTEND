@@ -351,8 +351,8 @@ export default function FacebookInbox() {
         <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{ background: FB_LIGHT }}>
           <FBIcon size={40} color={FB_BLUE} />
         </div>
-        <h2 className="text-xl font-bold text-gray-700 mb-2">No Facebook Page connected</h2>
-        <p className="text-gray-400 text-sm max-w-xs mb-6">
+        <h2 className="text-slate-900 mb-2">No Facebook Page connected</h2>
+        <p className="text-base text-slate-600 max-w-xs mb-6">
           Connect your Facebook Business Page from the Integrations page to get started.
         </p>
         <button
@@ -655,7 +655,7 @@ export default function FacebookInbox() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{lead.leadName}</p>
                         <p className="text-xs text-gray-500 truncate">{lead.phoneNumber || lead.email}</p>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${lead.source?.includes("Instagram") ? "bg-pink-100 text-pink-600" : "bg-blue-100 text-blue-600"
+                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${lead.source?.includes("Instagram") ? "bg-pink-100 text-pink-600" : "bg-blue-100 text-blue-600"
                           }`}>
                           {lead.source}
                         </span>
@@ -677,8 +677,8 @@ export default function FacebookInbox() {
             <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{ background: FB_LIGHT }}>
               <FBIcon size={48} color={FB_BLUE} />
             </div>
-            <h3 className="text-xl font-bold text-gray-700 mb-2">Facebook Inbox</h3>
-            <p className="text-gray-400 text-sm max-w-xs">
+            <h3 className="text-slate-700 mb-2">Facebook Inbox</h3>
+            <p className="text-base text-slate-600 max-w-xs">
               {activeTab === "messenger"
                 ? "Select a conversation to start chatting"
                 : activeTab === "comments"

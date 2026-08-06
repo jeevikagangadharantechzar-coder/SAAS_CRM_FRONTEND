@@ -67,11 +67,11 @@ export default function DeviceRequests() {
       <ToastContainer position="top-right" autoClose={3000} theme="light" />
 
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+        <h2 className="text-slate-900 flex items-center gap-2">
           <ShieldAlert className="w-6 h-6 text-[#008ecc]" />
           Device Login Requests
         </h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-base text-slate-600 mt-1">
           Sales users are limited to one web and one mobile session at a time. Approve a request below
           to let them sign in on a new device — this will sign them out of their existing device of the
           same type.

@@ -338,8 +338,8 @@ const CLVDashboard = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertTriangle size={48} className="text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load dashboard</h2>
-        <p className="text-gray-600 mb-4">{error}</p>
+        <h2 className="text-slate-900 mb-2">Failed to load dashboard</h2>
+        <p className="text-base text-slate-600 mb-4">{error}</p>
         <button
           onClick={fetchDashboardData}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -503,13 +503,13 @@ const CLVDashboard = () => {
           <div className="bg-white rounded-xl w-full max-w-md mx-4">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Upsell Criteria</h2>
+                <h2 className="text-slate-900">Upsell Criteria</h2>
                 <button onClick={() => setShowUpsellCriteriaModal(false)} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-3 sm:p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <h3 className="font-medium text-purple-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                <h3 className="text-purple-800 mb-3 flex items-center gap-2">
                   <Zap size={16} />
                   Upsell Qualification Rules
                 </h3>
@@ -546,13 +546,13 @@ const CLVDashboard = () => {
           <div className="bg-white rounded-xl w-full max-w-md mx-4">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Top Value Criteria</h2>
+                <h2 className="text-slate-900">Top Value Criteria</h2>
                 <button onClick={() => setShowTopValueCriteriaModal(false)} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
-                <h3 className="font-medium text-green-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                <h3 className="text-green-800 mb-3 flex items-center gap-2">
                   <Star size={16} />
                   Top Value Qualification Rules
                 </h3>
@@ -573,13 +573,13 @@ const CLVDashboard = () => {
           <div className="bg-white rounded-xl w-full max-w-md mx-4">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">At Risk Criteria</h2>
+                <h2 className="text-slate-900">At Risk Criteria</h2>
                 <button onClick={() => setShowAtRiskCriteriaModal(false)} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-3 sm:p-4 bg-red-50 rounded-lg border border-red-200">
-                <h3 className="font-medium text-red-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                <h3 className="text-red-800 mb-3 flex items-center gap-2">
                   <AlertTriangle size={16} />
                   At Risk Qualification Rules
                 </h3>
@@ -612,13 +612,13 @@ const CLVDashboard = () => {
           <div className="bg-white rounded-xl w-full max-w-md mx-4">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Dormant Criteria</h2>
+                <h2 className="text-slate-900">Dormant Criteria</h2>
                 <button onClick={() => setShowDormantCriteriaModal(false)} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                <h3 className="text-slate-700 mb-3 flex items-center gap-2">
                   <Clock size={16} />
                   Dormant Qualification Rules
                 </h3>
@@ -637,8 +637,8 @@ const CLVDashboard = () => {
       {/* Header - Mobile Responsive - SEARCH REMOVED */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
         <div className="mb-3 sm:mb-0">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Client Life Time Value (CLTV) Dashboard</h1>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1">
+          <h1 className="text-gray-900">Client Life Time Value (CLTV) Dashboard</h1>
+          <p className="text-base text-slate-600 mt-1">
             {userRole === "Admin" 
               ? "Monitor client profitability"
               : "Monitor your assigned clients"}
@@ -740,7 +740,7 @@ const CLVDashboard = () => {
                 </button>
               </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-600 truncate">{data.summary.dormantCount || 0}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
+              <p className="text-xs sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
             </div>
             <div className="p-2 sm:p-3 bg-gray-100 rounded-lg flex-shrink-0">
               <Clock className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-600" />
@@ -768,7 +768,7 @@ const CLVDashboard = () => {
                 </button>
               </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600 truncate">{data.summary.upsellCount || 0}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
+              <p className="text-xs sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
             </div>
             <div className="p-2 sm:p-3 bg-purple-100 rounded-lg flex-shrink-0">
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-600" />
@@ -796,7 +796,7 @@ const CLVDashboard = () => {
                 </button>
               </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-600 truncate">{data.summary.atRiskCount || 0}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
+              <p className="text-xs sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
             </div>
             <div className="p-2 sm:p-3 bg-red-100 rounded-lg flex-shrink-0">
               <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-600" />
@@ -824,7 +824,7 @@ const CLVDashboard = () => {
                 </button>
               </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 truncate">{data.summary.topValueCount || 0}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
+              <p className="text-xs sm:text-xs text-gray-400 mt-0.5 hidden sm:block">Click to view</p>
             </div>
             <div className="p-2 sm:p-3 bg-green-100 rounded-lg flex-shrink-0">
               <Star className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600" />
@@ -844,7 +844,7 @@ const CLVDashboard = () => {
             <div className="min-w-0 flex-1">
               <p className="text-xs text-gray-500 mb-1">Total CLV</p>
               <p className="text-base sm:text-lg md:text-2xl font-bold text-gray-800 truncate">{formatCurrency(data.summary.totalCLV)}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-1">Avg: {formatCurrency(data.summary.avgCLV)}</p>
+              <p className="text-xs sm:text-xs text-gray-400 mt-1">Avg: {formatCurrency(data.summary.avgCLV)}</p>
             </div>
             <div className="p-2 sm:p-3 bg-blue-100 rounded-lg flex-shrink-0">
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600" />
@@ -858,7 +858,7 @@ const CLVDashboard = () => {
             <div className="min-w-0 flex-1">
               <p className="text-xs text-gray-500 mb-1">At Risk %</p>
               <p className="text-base sm:text-lg md:text-2xl font-bold text-gray-800">{formatNumber(data.summary.clientsAtRiskPercent || 0)}%</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-1 truncate">
+              <p className="text-xs sm:text-xs text-gray-400 mt-1 truncate">
                 ({(data.summary.atRiskCount || 0) + (data.summary.dormantCount || 0)}/{data.summary.totalClients || 1})
               </p>
             </div>
@@ -892,11 +892,11 @@ const CLVDashboard = () => {
         {/* Revenue Trend */}
         <div className="lg:col-span-2 bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               <span className="truncate">Revenue Trend</span>
             </h2>
-            <span className="text-[10px] sm:text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full whitespace-nowrap">
+            <span className="text-xs sm:text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full whitespace-nowrap">
               6 Months
             </span>
           </div>
@@ -908,19 +908,19 @@ const CLVDashboard = () => {
           {/* Monthly Revenue Summary - Responsive */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
             <div>
-              <p className="text-[10px] sm:text-xs text-gray-500">Total</p>
+              <p className="text-xs sm:text-xs text-gray-500">Total</p>
               <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">
                 {currencySymbol}{(monthlyData.values.reduce((a, b) => a + b, 0) / 100000).toFixed(1)}L
               </p>
             </div>
             <div>
-              <p className="text-[10px] sm:text-xs text-gray-500">Avg</p>
+              <p className="text-xs sm:text-xs text-gray-500">Avg</p>
               <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">
                 {currencySymbol}{Math.round(monthlyData.values.reduce((a, b) => a + b, 0) / 6 / 1000)}K
               </p>
             </div>
             <div>
-              <p className="text-[10px] sm:text-xs text-gray-500">Growth</p>
+              <p className="text-xs sm:text-xs text-gray-500">Growth</p>
               <p className={`text-xs sm:text-sm font-semibold ${monthlyData.values[5] >= monthlyData.values[0] ? 'text-green-600' : 'text-red-600'}`}>
                 {monthlyData.values[5] >= monthlyData.values[0] ? '↑' : '↓'} 
                 {Math.abs(growthPercent)}%
@@ -931,7 +931,7 @@ const CLVDashboard = () => {
 
         {/* Client Classification */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Classification</h2>
+          <h2 className="text-slate-900 mb-3 sm:mb-4">Classification</h2>
           <div className="h-48 sm:h-56 md:h-64">
             {Object.keys(data.classificationDistribution).length > 0 ? (
               <Doughnut
@@ -967,7 +967,7 @@ const CLVDashboard = () => {
         {/* Top Value Clients */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <Star size={16} className="text-yellow-500" />
               <span>Top Value</span>
             </h2>
@@ -1010,13 +1010,13 @@ const CLVDashboard = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                        <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs">
+                        <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-xs">
                           <span className="text-gray-500 truncate">{formatCurrency(client.clv)}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 ml-1 flex-shrink-0">
-                      <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">{client.supportTickets || 0}</span>
+                      <span className="text-xs sm:text-xs text-gray-500 hidden sm:inline">{client.supportTickets || 0}</span>
                       <Eye size={14} className="text-gray-400" />
                     </div>
                   </div>
@@ -1054,7 +1054,7 @@ const CLVDashboard = () => {
         {/* Upsell Clients */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <Zap size={16} className="text-purple-500" />
               <span>Upsell</span>
             </h2>
@@ -1097,13 +1097,13 @@ const CLVDashboard = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                        <p className="text-xs sm:text-xs text-gray-500 truncate">
                           {formatCurrency(client.clv)}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                      <span className="text-[10px] sm:text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full whitespace-nowrap">
+                      <span className="text-xs sm:text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full whitespace-nowrap">
                         Ready
                       </span>
                     </div>
@@ -1145,7 +1145,7 @@ const CLVDashboard = () => {
         {/* At Risk Clients */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <AlertTriangle size={16} className="text-red-500" />
               <span>At Risk</span>
             </h2>
@@ -1188,13 +1188,13 @@ const CLVDashboard = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                        <p className="text-xs sm:text-xs text-gray-500 truncate">
                           {client.daysSinceFollowUp || 0}d without follow-up
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                      <span className="text-[10px] sm:text-xs text-red-600 font-medium">
+                      <span className="text-xs sm:text-xs text-red-600 font-medium">
                         Risk
                       </span>
                     </div>
@@ -1233,7 +1233,7 @@ const CLVDashboard = () => {
         {/* Dormant Clients */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <h2 className="text-slate-900 flex items-center gap-2">
               <Clock size={16} className="text-gray-500" />
               <span>Dormant</span>
             </h2>
@@ -1276,7 +1276,7 @@ const CLVDashboard = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{client.companyName}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                        <p className="text-xs sm:text-xs text-gray-500 truncate">
                           {client.daysSinceFollowUp || 0}d
                         </p>
                       </div>
@@ -1287,7 +1287,7 @@ const CLVDashboard = () => {
                           e.stopPropagation();
                           navigate(`/cltv/client/${encodeURIComponent(client.companyName)}`);
                         }}
-                        className="text-[10px] sm:text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 whitespace-nowrap"
+                        className="text-xs sm:text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 whitespace-nowrap"
                       >
                         Engage
                       </button>
@@ -1328,7 +1328,7 @@ const CLVDashboard = () => {
       {/* Recent Reviews Section - Mobile Optimized */}
       {data.recentReviews?.length > 0 && (
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Recent Reviews</h2>
+          <h2 className="text-slate-900 mb-3 sm:mb-4">Recent Reviews</h2>
           <div className="space-y-3">
             {data.recentReviews.map((review, idx) => (
               <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-2">
@@ -1338,13 +1338,13 @@ const CLVDashboard = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{review.companyName}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 truncate">
+                    <p className="text-xs sm:text-xs text-gray-500 truncate">
                       {new Date(review.reviewedAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-auto sm:ml-0">
-                  <span className={`text-[10px] sm:text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+                  <span className={`text-xs sm:text-xs px-2 py-1 rounded-full whitespace-nowrap ${
                     review.progress === "Excellent" ? "bg-green-100 text-green-700" :
                     review.progress === "Good" ? "bg-blue-100 text-blue-700" :
                     review.progress === "Average" ? "bg-yellow-100 text-yellow-700" :
@@ -1352,7 +1352,7 @@ const CLVDashboard = () => {
                   }`}>
                     {review.progress}
                   </span>
-                  <span className="text-[10px] sm:text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full whitespace-nowrap">
+                  <span className="text-xs sm:text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full whitespace-nowrap">
                     {review.clientHealthScore}
                   </span>
                 </div>
@@ -1368,7 +1368,7 @@ const CLVDashboard = () => {
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto mx-3">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">CLV Breakdown</h2>
+                <h2 className="text-slate-900">CLV Breakdown</h2>
                 <button onClick={() => setShowTotalCLVModal(false)} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
@@ -1376,31 +1376,31 @@ const CLVDashboard = () => {
               
               <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-green-600">High Value</p>
+                  <p className="text-xs sm:text-xs text-green-600">High Value</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.valueCategories?.["High Value"] || 0}</p>
                 </div>
                 <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-yellow-600">Medium Value</p>
+                  <p className="text-xs sm:text-xs text-yellow-600">Medium Value</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.valueCategories?.["Medium Value"] || 0}</p>
                 </div>
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-gray-600">Low Value</p>
+                  <p className="text-xs sm:text-xs text-gray-600">Low Value</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.valueCategories?.["Low Value"] || 0}</p>
                 </div>
                 <div className="bg-purple-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-purple-600">Upsell</p>
+                  <p className="text-xs sm:text-xs text-purple-600">Upsell</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.summary.upsellCount || 0}</p>
                 </div>
                 <div className="bg-green-100 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-green-700">Top Value</p>
+                  <p className="text-xs sm:text-xs text-green-700">Top Value</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.summary.topValueCount || 0}</p>
                 </div>
                 <div className="bg-red-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-red-600">At Risk</p>
+                  <p className="text-xs sm:text-xs text-red-600">At Risk</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.summary.atRiskCount || 0}</p>
                 </div>
                 <div className="bg-gray-100 p-3 sm:p-4 rounded-lg">
-                  <p className="text-[10px] sm:text-xs text-gray-600">Dormant</p>
+                  <p className="text-xs sm:text-xs text-gray-600">Dormant</p>
                   <p className="text-base sm:text-lg md:text-2xl font-bold">{data.summary.dormantCount || 0}</p>
                 </div>
               </div>

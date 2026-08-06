@@ -144,12 +144,12 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
       }`}
     >
       {plan.is_recommended && (
-        <span className="absolute -top-3 right-8 bg-[#008ecc] text-white px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow">
+        <span className="absolute -top-3 right-8 bg-[#008ecc] text-white px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest shadow">
           Recommended
         </span>
       )}
       {isCurrent && (
-        <span className="absolute -top-3 left-8 bg-emerald-500 text-white px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow">
+        <span className="absolute -top-3 left-8 bg-emerald-500 text-white px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest shadow">
           Your Plan
         </span>
       )}
@@ -157,8 +157,8 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-xl font-bold text-slate-900">{plan.plan_name}</h3>
-          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+          <h3 className="text-slate-700">{plan.plan_name}</h3>
+          <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${
             plan.plan_type === "free"
               ? "bg-slate-100 text-slate-500"
               : plan.plan_type === "enterprise"
@@ -216,12 +216,12 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
         {!featuresOpen && (
           <div className="flex flex-wrap gap-1.5">
             {enabledFeatures.slice(0, 6).map((k) => (
-              <span key={k} className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-medium">
+              <span key={k} className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-medium">
                 {FEATURE_LABELS[k] || k}
               </span>
             ))}
             {enabledFeatures.length > 6 && (
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
                 +{enabledFeatures.length - 6} more
               </span>
             )}
@@ -367,7 +367,7 @@ const ViewPlans = () => {
             <div className="bg-gradient-to-r from-[#008ecc] to-[#0068a0] px-6 py-5 flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-1">Your Current Plan</p>
-                <h2 className="text-2xl font-black text-white">
+                <h2 className="text-white">
                   {currentPlan?.plan_name || "Trial / Free"}
                 </h2>
               </div>
@@ -393,7 +393,7 @@ const ViewPlans = () => {
               {/* Key metrics row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
                     <CreditCard size={11} /> Price
                   </div>
                   <div className="text-lg font-black text-slate-900">
@@ -402,7 +402,7 @@ const ViewPlans = () => {
                 </div>
 
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
                     <Users size={11} /> User Seats
                   </div>
                   <div className="text-lg font-black text-slate-900">
@@ -411,7 +411,7 @@ const ViewPlans = () => {
                 </div>
 
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
                     <Calendar size={11} /> Start Date
                   </div>
                   <div className="text-sm font-bold text-slate-800">
@@ -425,7 +425,7 @@ const ViewPlans = () => {
                   isGrace ? "bg-orange-50 border-orange-200" :
                   "bg-slate-50 border-slate-100"
                 }`}>
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
                     <Calendar size={11} /> End Date
                   </div>
                   <div className={`text-sm font-bold ${
@@ -436,7 +436,7 @@ const ViewPlans = () => {
                   }`}>
                     {formatDate(endDate)}
                     {daysLeft !== null && !isGrace && daysLeft >= 0 && (
-                      <span className="block text-[10px] font-semibold mt-0.5 opacity-70">
+                      <span className="block text-xs font-semibold mt-0.5 opacity-70">
                         {daysLeft === 0 ? "Expires today" : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`}
                       </span>
                     )}
@@ -481,7 +481,7 @@ const ViewPlans = () => {
               {currentPlan?.features && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                    <h3 className="text-slate-700">
                       Features ({enabledFeatures.length} enabled)
                     </h3>
                     <button
@@ -506,10 +506,10 @@ const ViewPlans = () => {
               <ShieldCheck size={14} />
               <span>All Available Plans</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-slate-900">
               Upgrade or Switch Your Plan
             </h2>
-            <p className="text-sm text-slate-500 font-medium max-w-xl mx-auto">
+            <p className="text-base text-slate-600 max-w-xl mx-auto">
               Choose from our available subscription tiers to unlock more features and user seats.
             </p>
           </div>
