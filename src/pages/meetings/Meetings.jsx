@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Video, AlertTriangle, RefreshCw, X } from "lucide-react";
+import { Plus, Video, AlertTriangle, RefreshCw, X, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import useMeetings from "./useMeetings";
 import MeetingCard from "./MeetingCard";
@@ -150,7 +150,7 @@ export function Meetings() {
       {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
-          <h1 className="text-gray-900">Meetings</h1>
+          <h1 className="text-gray-900  flex items-center gap-3"> <Calendar />Meetings</h1>
         </div>
         <div className="flex items-center gap-2">
           <button

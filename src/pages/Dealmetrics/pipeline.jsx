@@ -1717,11 +1717,9 @@ function DealIntelligenceDashboard() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg flex-shrink-0">
-                <Brain size={24} className="text-white" />
-              </div>
+              
               <div className="flex-1 min-w-0">
-                <h1 className="text-gray-900 break-words">Deal Analysis & Intelligence</h1>
+                <h1 className="text-gray-900  flex items-center gap-3"> <BarChart3 />Deal Analysis & Intelligence</h1>
                 <p className="text-base text-slate-600 mt-1 break-words">AI-powered pipeline management with stage-based actions</p>
               </div>
             </div>

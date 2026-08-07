@@ -112,7 +112,7 @@ const EditModal = ({ open, setOpen, deal }) => {
       <DialogContent className="max-w-2xl sm:max-w-6xl !top-5 !translate-y-0 max-h-[80vh] overflow-y-auto">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <DialogHeader>
-            <DialogTitle className="text-center font-bold mb-4 text-[30px]">
+            <DialogTitle className="text-center font-bold mb-4 text-[1.875rem]">
               Edit Content
             </DialogTitle>
             <DialogDescription>

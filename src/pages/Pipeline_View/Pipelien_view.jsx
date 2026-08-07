@@ -12,7 +12,7 @@
   } from "../../components/ui/dialog";
   import { useNavigate, useParams } from "react-router-dom";
   import { TourProvider, useTour } from "@reactour/tour";
-  import { Eye, Flag, Target } from "lucide-react";
+  import { Eye, Flag, GitBranch, Target } from "lucide-react";
   import LinkedWorkModal from "../components/LinkedWorkModal";
 
   // Import the Lost Deal components
@@ -742,8 +742,8 @@ const STAGES = [
         {/* Toolbar */}
         <div className="mx-auto mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between max-w-[1600px] px-2 sm:px-0">
           <div>
-            <h1 className="">
-               Pipeline View - Deal Stages
+            <h1 className="text-gray-900  flex items-center gap-3">
+              <GitBranch /> Pipeline View - Deal Stages
             </h1>
             <p className="text-base text-slate-600 mt-1">
               {userRole === "Admin"

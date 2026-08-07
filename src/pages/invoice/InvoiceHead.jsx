@@ -646,7 +646,7 @@ const InvoiceHead = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-gray-900">Invoices</h1>
+            <h1 className="text-gray-900  flex items-center gap-3"><Receipt />Invoices</h1>
             <p className="text-base text-slate-600 mt-1">Manage and track your invoices and payments</p>
           </div>
           <button

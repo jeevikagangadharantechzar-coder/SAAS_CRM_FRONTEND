@@ -773,7 +773,7 @@ const pipeline = () => {
           >
             
             <TabsList>
-              <div className="flex items-center text-gray-400 font-b text-[15px]">
+              <div className="flex items-center text-gray-400 font-b text-[0.9375rem]">
                 <span className="mr-3 text-black font-Extrabold-300">
                   Total Deals :
                 </span>{" "}
@@ -1112,12 +1112,12 @@ const pipeline = () => {
                                                     />
                                                   )}
 
-                                                  <span className="ml-2 text-[14px]">
+                                                  <span className="ml-2 text-[0.875rem]">
                                                     {deal.owner}
                                                   </span>
                                                 </div>
                                                 <div>
-                                                  <p className="text-[14px]">
+                                                  <p className="text-[0.875rem]">
                                                     <span className="font-bold">
                                                       $
                                                     </span>{" "}

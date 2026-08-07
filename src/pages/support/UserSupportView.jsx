@@ -176,10 +176,10 @@ const UserSupportView = () => {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-full bg-[#f2fbff] flex items-center justify-center">
-          <LifeBuoy className="text-[#008ecc]" size={20} />
+     
         </div>
         <div>
-          <h1 className="text-gray-900">Support</h1>
+          <h1 className="text-gray-900  flex items-center gap-3"><LifeBuoy /> Support</h1>
           <p className="text-base text-slate-600">Raise a ticket and our team will get back to you</p>
         </div>
       </div>

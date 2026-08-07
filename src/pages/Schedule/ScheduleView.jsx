@@ -295,7 +295,7 @@ const ScheduleView = () => {
         borderRadius: "6px",
         padding: "4px 6px",
         fontWeight: event.isGroup ? 700 : 500,
-        fontSize: "12px",
+        fontSize: "0.75rem",
         borderLeft: `4px solid ${event.pending ? "#dc2626" : meta.color}`,
       },
     };
@@ -367,9 +367,9 @@ const ScheduleView = () => {
       <style>{`.rbc-time-view .rbc-event-label { display: none; }`}</style>
       <div className="max-w-[1600px] mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <CalendarClock size={28} className="text-blue-600" />
+       
           <div>
-            <h1 className="text-gray-900">Calendar</h1>
+            <h1 className="text-gray-900  flex items-center gap-3"> <CalendarClock />Calendar</h1>
             <p className="text-base text-slate-600 mt-1">
               Everything with a date, in one place — click any item to open its real page
             </p>

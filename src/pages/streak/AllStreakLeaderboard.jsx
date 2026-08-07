@@ -327,12 +327,10 @@ const AllStreakLeaderboard = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-4 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 rounded-2xl shadow-lg shadow-orange-200">
-                <Trophy className="w-8 h-8 text-white" />
-              </div>
+             
               <div>
-                <h1 className="text-gray-900">
-                  Leaderboard
+                <h1 className="text-gray-900  flex items-center gap-3">
+                  <Trophy /> Leaderboard
                 </h1>
                 <p className="text-base text-slate-600 mt-1">Track top performers and sales streaks across your team</p>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">

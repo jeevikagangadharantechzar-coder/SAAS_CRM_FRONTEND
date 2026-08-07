@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Users, Plus, MessageSquare, Trash2, Pin, MoreVertical, PinOff } from "lucide-react";
+import { Search, Users, Plus, MessageSquare, Trash2, Pin, MoreVertical, PinOff, MessagesSquare } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 import CreateGroupModal from "./CreateGroupModal";
 import DeleteModal from "./DeleteModal";
@@ -172,7 +172,7 @@ const ContactList = () => {
     <div className="flex flex-col h-full bg-white border-r border-gray-100">
       {/* Header */}
       <div className="px-4 pt-5 pb-3 border-b border-gray-100">
-        <h2 className="text-slate-900 mb-3">Messages</h2>
+        <h2 className="text-gray-900  flex items-center gap-3"><MessagesSquare/> Messages</h2>
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input

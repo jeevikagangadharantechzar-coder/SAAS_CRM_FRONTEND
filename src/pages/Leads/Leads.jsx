@@ -31,7 +31,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
-  Target
+  Target,
+  Users
 } from "lucide-react";
 
 import LeadsPipelineView from "./LeadsPipelineView";
@@ -1109,8 +1110,9 @@ const updateFilter = (key, value, setter) => {
       />
 
       {/* Page Title */}
+      
       <div className="mb-5">
-        <h1 className="text-gray-900">Leads</h1>
+        <h1 className="text-gray-900  flex items-center gap-3"> <Users /> Leads </h1>
         <p className="text-base text-slate-600 mt-1">Manage and track your potential customers</p>
       </div>
 

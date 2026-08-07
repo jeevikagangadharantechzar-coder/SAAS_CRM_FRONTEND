@@ -964,8 +964,8 @@ export default function LostDealAnalytics() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between">
           <div>
-            <h1 className="text-gray-900">
-              Lost Deal Analysis & Intelligence
+            <h1 className="text-gray-900  flex items-center gap-3">
+            <TrendingDown />  Lost Deal Analysis & Intelligence
             </h1>
             <p className="text-base text-slate-600 mt-1">
               Analyze patterns and recover lost opportunities
@@ -1859,7 +1859,7 @@ export default function LostDealAnalytics() {
           <XAxis
             dataKey="month"
             interval={0}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: "0.75rem" }}
           />
 
           <YAxis

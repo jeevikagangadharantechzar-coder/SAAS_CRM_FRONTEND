@@ -637,17 +637,13 @@ const CLVDashboard = () => {
       {/* Header - Mobile Responsive - SEARCH REMOVED */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
         <div className="mb-3 sm:mb-0">
-          <h1 className="text-gray-900">Client Life Time Value (CLTV) Dashboard</h1>
+          <h1 className="text-gray-900  flex items-center gap-3"> <TrendingUp />Client Life Time Value (CLTV) Dashboard</h1>
           <p className="text-base text-slate-600 mt-1">
             {userRole === "Admin" 
               ? "Monitor client profitability"
               : "Monitor your assigned clients"}
           </p>
-          {lastUpdated && (
-            <p className="text-xs text-gray-400 mt-1">
-              Updated: {lastUpdated.toLocaleTimeString()}
-            </p>
-          )}
+        
         </div>
         
         {/* Action Buttons - Mobile Optimized */}
