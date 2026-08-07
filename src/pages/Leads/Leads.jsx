@@ -1170,7 +1170,7 @@ const updateFilter = (key, value, setter) => {
             </button>
           </div>
 
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <>
               <input
                 ref={importFileInputRef}

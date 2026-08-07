@@ -62,6 +62,8 @@ export default function CreateLeads() {
   const [userId, setUserId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  // Live "already exists" hints — { exists: true, leadName } | { exists: false } | undefined
+  const [duplicateHints, setDuplicateHints] = useState({});
   const [isAutoAssigned, setIsAutoAssigned] = useState(false);
   const [isCustomIndustry, setIsCustomIndustry] = useState(false);
   const ALLOWED_FILE_TYPES = [
@@ -390,6 +392,44 @@ export default function CreateLeads() {
       }
     }
   };
+
+  // Live "this email/phone is already used by another lead" hint — debounced
+  // so it doesn't fire an API call on every keystroke. In edit mode the
+  // lead's own current email/phone must be excluded, or it would always
+  // flag itself as a duplicate of itself.
+  useEffect(() => {
+    const email = formData.email?.trim();
+    const phoneNumber = formData.phoneNumber?.trim();
+
+    // Clear any stale hint the moment its field is emptied, rather than
+    // leaving a "already used by X" warning showing for a blank field.
+    setDuplicateHints((prev) => {
+      const next = { ...prev };
+      if (!email) delete next.email;
+      if (!phoneNumber) delete next.phoneNumber;
+      return next;
+    });
+    if (!email && !phoneNumber) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const params = {};
+        if (email) params.email = email;
+        if (phoneNumber) params.phoneNumber = phoneNumber;
+        if (leadId) params.excludeId = leadId;
+        const res = await axios.get(`${API_URL}/leads/check-duplicate`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        });
+        setDuplicateHints((prev) => ({ ...prev, ...res.data }));
+      } catch {
+        // Non-critical UI hint — a failed check just means no hint shows.
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.email, formData.phoneNumber, leadId, API_URL]);
 
   const handleFollowUpDateChange = (date) => {
     setFollowUpDateObj(date);
@@ -1105,6 +1145,11 @@ export default function CreateLeads() {
                       ✓ Valid phone number
                     </p>
                   )}
+                {duplicateHints.phoneNumber?.exists && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ This phone number is already used by "{duplicateHints.phoneNumber.leadName}"
+                  </p>
+                )}
               </div>
             ) : field.name === "alternatePhoneNumber" ? (
               <div>
@@ -1279,6 +1324,11 @@ export default function CreateLeads() {
                 {fieldErrors[field.name] && (
                   <p className="text-sm text-red-500 mt-1">
                     {fieldErrors[field.name]}
+                  </p>
+                )}
+                {field.name === "email" && duplicateHints.email?.exists && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ This email is already used by "{duplicateHints.email.leadName}"
                   </p>
                 )}
               </div>

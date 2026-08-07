@@ -541,15 +541,6 @@ const LEAD_ACTIVITY_TYPE_META = {
   email_cancelled:     { icon: XCircle,          bg: "bg-red-100",     iconColor: "text-red-600" },
   default:             { icon: Clock,            bg: "bg-slate-100",   iconColor: "text-slate-500" },
 };
-const ActivityItem = ({ color, icon, label, date }) => (
-  <div className="flex items-start">
-    <div className={`w-10 h-10 ${color} rounded-full flex items-center justify-center flex-shrink-0`}>{icon}</div>
-    <div className="ml-4">
-      <h3 className="text-slate-700">{label}</h3>
-      <p className="text-base text-slate-600 mt-1">{new Date(date).toLocaleString()}</p>
-    </div>
-  </div>
-);
 
 // ════════════════════════════════════════════════════════════
 // Main ViewLead
