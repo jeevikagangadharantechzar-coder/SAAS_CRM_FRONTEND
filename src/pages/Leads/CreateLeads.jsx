@@ -66,15 +66,18 @@ export default function CreateLeads() {
   const [duplicateHints, setDuplicateHints] = useState({});
   const [isAutoAssigned, setIsAutoAssigned] = useState(false);
   const [isCustomIndustry, setIsCustomIndustry] = useState(false);
+  // Documents only — photos have their own dedicated Images field/upload
+  // below, so Attachments no longer accepts image mimetypes.
   const ALLOWED_FILE_TYPES = [
     "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/jpg",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "text/csv",
   ];
 
   const [formData, setFormData] = useState({
@@ -101,12 +104,14 @@ export default function CreateLeads() {
     clientType: "",
     NumberOfEmployees: "",
     attachments: [],
+    images: [],
   });
 
   const [errors, setErrors] = useState({});
   const [salesUsers, setSalesUsers] = useState([]);
   const [countries] = useState(getNames());
   const [existingAttachments, setExistingAttachments] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [phoneCountryCode, setPhoneCountryCode] = useState("in");
@@ -200,6 +205,7 @@ export default function CreateLeads() {
     const isCustom = contactFormData.industry && !STANDARD_INDUSTRIES.includes(contactFormData.industry);
     setIsCustomIndustry(!!isCustom);
     setExistingAttachments(contactFormData.attachments || []);
+    setExistingImages(contactFormData.images || []);
   }, [contactFormData, leadId]);
 
   //  Fetch lead if editing
@@ -222,6 +228,7 @@ export default function CreateLeads() {
           setIsCustomIndustry(!!isCustom);
 
           setExistingAttachments(leadData.attachments || []);
+          setExistingImages(leadData.images || []);
           setFormData({
             leadName: leadData.leadName || "",
             companyName: leadData.companyName || "",
@@ -266,6 +273,7 @@ export default function CreateLeads() {
               return leadData.notes || "";
             })(),
             attachments: [],
+            images: [],
           });
           setOriginalAssignTo(leadData.assignTo?._id || null);
           setCustomFields(
@@ -562,7 +570,7 @@ export default function CreateLeads() {
     );
 
     if (invalidFiles.length > 0) {
-      toast.error("Only PDF, Image, Word, Excel files are allowed");
+      toast.error("Only PDF, Word, Excel, or PowerPoint files are allowed — use the Images section for photos");
       return;
     }
 
@@ -596,6 +604,63 @@ export default function CreateLeads() {
       setExistingAttachments((prev) => prev.filter((_, i) => i !== idx));
     }
   };
+
+/* ── Process Images Function ─────────────────────── */
+
+  const processImages = (files) => {
+    const totalFiles = formData.images.length + files.length + existingImages.length;
+    if (totalFiles > 5) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+    const invalidFiles = files.filter((file) => !file.type.startsWith("image/"));
+    if (invalidFiles.length > 0) {
+      toast.error("Only image files are allowed");
+      return;
+    }
+    const oversizedFiles = files.filter((file) => file.size > 20 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error("Some images exceed the 20MB size limit");
+      return;
+    }
+    setFormData((p) => ({ ...p, images: [...p.images, ...files] }));
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    processImages(files);
+  };
+
+  const handleRemoveImage = (idx, type = "new") => {
+    if (type === "new") {
+      setFormData((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }));
+    } else {
+      setExistingImages((prev) => prev.filter((_, i) => i !== idx));
+    }
+  };
+
+  // Dedicated drag-drop state/handlers for the Images dropzone — reusing the
+  // Attachments section's handleDrop would route dropped files through
+  // processFiles (the documents-only validator) instead of processImages.
+  const [isDraggingImages, setIsDraggingImages] = useState(false);
+  const handleImageDragOver = (e) => {
+    e.preventDefault();
+    setIsDraggingImages(true);
+  };
+  const handleImageDragLeave = (e) => {
+    e.preventDefault();
+    setIsDraggingImages(false);
+  };
+  const handleImageDrop = (e) => {
+    e.preventDefault();
+    setIsDraggingImages(false);
+    processImages(Array.from(e.dataTransfer.files));
+  };
+
+  // /uploads is served as public static files (see app.js), so an already-
+  // uploaded image can be shown directly — no authenticated fetch needed.
+  const buildImageUrl = (path) =>
+    `${API_URL.replace("/api", "")}/${String(path || "").replace(/^\/+/, "")}`;
 
 /* ──Form Validation Function ─────────────────────── */
   const validateForm = () => {
@@ -709,9 +774,9 @@ export default function CreateLeads() {
           continue;
         }
         if (key === "attachments") {
-          dataToSubmit.attachments.forEach((file) =>
-            dataToSend.append("attachments", file)
-          );
+          dataToSubmit.attachments.forEach((file) => dataToSend.append("attachments", file));
+        } else if (key === "images") {
+          dataToSubmit.images.forEach((file) => dataToSend.append("images", file));
         } else if (key === "followUpDate" && dataToSubmit.followUpDate) {
           const [mm, dd, yyyy] = dataToSubmit.followUpDate.split("/");
           dataToSend.append(key, `${yyyy}-${mm}-${dd}`);
@@ -740,6 +805,7 @@ export default function CreateLeads() {
         "existingAttachments",
         JSON.stringify(existingAttachments)
       );
+      dataToSend.append("existingImages", JSON.stringify(existingImages));
 
       dataToSend.append(
         "customFields",
@@ -1793,7 +1859,135 @@ export default function CreateLeads() {
                     <span className="font-medium">Max size:</span> 20MB
                   </div>
                   <div>
-                    <span className="font-medium">Supported types:</span>  PDF, JPG, PNG, Word, Excel
+                    <span className="font-medium">Supported types:</span> PDF, Word, Excel, PowerPoint
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Images Section */}
+            <div className="space-y-6 p-6 border border-gray-200 rounded-xl shadow-sm">
+              <h2 className="border-b pb-2 text-indigo-600 flex items-center gap-2">
+                <Upload size={20} /> Images
+              </h2>
+
+              <div className="space-y-4">
+                <div
+                  className={`flex flex-col items-center justify-center w-full min-h-32 border-2 border-dashed rounded-xl cursor-pointer transition p-6 ${
+                    isDraggingImages
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50"
+                  }`}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
+                  onDrop={handleImageDrop}
+                  onClick={() => document.getElementById("images").click()}
+                >
+                  <div className="w-full flex flex-wrap gap-4">
+                    {existingImages.map((image, idx) => (
+                      <div
+                        key={`existing-${idx}`}
+                        className="flex flex-col items-center justify-center w-28 h-28 bg-white border rounded-xl shadow-sm p-2 relative group"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(idx, "existing");
+                          }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                        <img
+                          src={buildImageUrl(image.path)}
+                          alt={image.name}
+                          className="w-16 h-16 object-cover rounded-md mb-1"
+                        />
+                        <p className="text-xs text-gray-500 truncate w-full text-center">
+                          {image.name}
+                        </p>
+                      </div>
+                    ))}
+
+                    {formData.images.map((image, idx) => (
+                      <div
+                        key={`new-${idx}`}
+                        className="flex flex-col items-center justify-center w-28 h-28 bg-white border rounded-xl shadow-sm p-2 relative group"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(idx, "new");
+                          }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={image.name}
+                          className="w-16 h-16 object-cover rounded-md mb-1"
+                        />
+                        <p className="text-xs text-gray-500">
+                          {(image.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <p className="text-xs text-gray-700 truncate w-full text-center">
+                          {image.name}
+                        </p>
+                      </div>
+                    ))}
+
+                    {existingImages.length === 0 &&
+                      formData.images.length === 0 && (
+                        <div className="flex flex-col items-center justify-center text-center w-full">
+                          <Upload size={48} className="text-indigo-300 mb-2" />
+                          <p className="text-sm text-gray-600">
+                            Drag & drop images here or click to browse
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Max 5 images, 20MB Limit
+                          </p>
+                        </div>
+                      )}
+                  </div>
+
+                  <input
+                    id="images"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      handleImageChange(e);
+                      e.target.value = "";
+                    }}
+                    className="hidden"
+                    disabled={
+                      formData.images.length +
+                        existingImages.length >=
+                      5
+                    }
+                  />
+                </div>
+
+                <div className="text-sm text-gray-600 flex flex-wrap gap-4 items-center">
+                  <div>
+                    <span
+                      className={`font-medium ${
+                        formData.images.length + existingImages.length >= 5
+                          ? "text-red-500"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      Images: {formData.images.length + existingImages.length}/5
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Max size:</span> 20MB
+                  </div>
+                  <div>
+                    <span className="font-medium">Supported types:</span> JPG, PNG, GIF, WEBP
                   </div>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -247,9 +247,17 @@ const SendProposal = () => {
           {isEditing ? "Edit Proposal" : "Send Proposal"}
         </h1>
         <p className="text-base text-slate-600">|</p>
-        <Link to="/proposal">
-          <p className="text-base text-blue-600 hover:underline">Back</p>
-        </Link>
+        <button
+          type="button"
+          onClick={() =>
+            returnToDealId && tenantSlug
+              ? navigate(`/${tenantSlug}/Pipelineview/${returnToDealId}`)
+              : navigate("/proposal")
+          }
+          className="text-base text-blue-600 hover:underline"
+        >
+          Back
+        </button>
       </div>
 
       {/* Form */}

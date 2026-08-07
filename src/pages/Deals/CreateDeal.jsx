@@ -225,6 +225,7 @@ export default function CreateDeal() {
     latitude: "",
     longitude: "",
     attachments: [],
+    images: [],
     lossReason: "",
     lossNotes: "",
     followUpDate: null,
@@ -239,6 +240,7 @@ export default function CreateDeal() {
   const [salesUsers, setSalesUsers] = useState([]);
   // existingAttachments stores normalised { filePath, fileName } objects
   const [existingAttachments, setExistingAttachments] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [userRole, setUserRole] = useState("");
   const [userId, setUserId] = useState("");
   const [userCurrency, setUserCurrency] = useState("USD");
@@ -352,6 +354,7 @@ export default function CreateDeal() {
         longitude: existingDeal.longitude || "",
         clientType: existingDeal.clientType || "",
         attachments: [],
+        images: [],
         lossReason: existingDeal.lossReason || "",
         lossNotes: existingDeal.lossNotes || "",
         followUpDate: parsedFollowUpDate,
@@ -363,6 +366,10 @@ export default function CreateDeal() {
       if (existingDeal.attachments && existingDeal.attachments.length > 0) {
         const normalised = existingDeal.attachments.map(normaliseAttachment);
         setExistingAttachments(normalised);
+      }
+      if (existingDeal.images && existingDeal.images.length > 0) {
+        const normalisedImages = existingDeal.images.map(normaliseAttachment);
+        setExistingImages(normalisedImages);
       }
 
       setCustomFields(
@@ -566,6 +573,39 @@ export default function CreateDeal() {
     }
   }, []);
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    const totalFiles = formData.images.length + files.length + existingImages.length;
+    if (totalFiles > 5) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+    const invalidFiles = files.filter((file) => !file.type.startsWith("image/"));
+    if (invalidFiles.length > 0) {
+      toast.error("Only image files are allowed");
+      return;
+    }
+    const oversizedFiles = files.filter((file) => file.size > 20 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error("Some images exceed the 20MB size limit");
+      return;
+    }
+    setFormData((prev) => ({ ...prev, images: [...prev.images, ...files] }));
+  };
+
+  const handleRemoveImage = (idx, type = "new") => {
+    if (type === "new") {
+      setFormData((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }));
+    } else {
+      setExistingImages((prev) => prev.filter((_, i) => i !== idx));
+    }
+  };
+
+  // /uploads is served as public static files (see backend app.js), so an
+  // already-uploaded image can be shown directly — no authenticated fetch needed.
+  const buildImageUrl = (path) =>
+    `${API_URL.replace("/api", "")}/${String(path || "").replace(/^\/+/, "")}`;
+
 /* ── Close Preview Function ─────────────────────── */
   const closePreview = useCallback(() => {
     if (previewFile) {
@@ -669,7 +709,7 @@ export default function CreateDeal() {
       const data = new FormData();
 
       Object.keys(formDataToSubmit).forEach((key) => {
-        if (key !== "attachments") {
+        if (key !== "attachments" && key !== "images") {
           if (key === "followUpDate" && formDataToSubmit[key] instanceof Date) {
             data.append(key, formDataToSubmit[key].toISOString());
           } else if ((key === "phoneNumber" || key === "alternativeNumber") && formDataToSubmit[key]) {
@@ -689,10 +729,16 @@ export default function CreateDeal() {
       formDataToSubmit.attachments.forEach((file) => {
         data.append("attachments", file);
       });
+      formDataToSubmit.images.forEach((file) => {
+        data.append("images", file);
+      });
 
       // ──  send only the raw file paths to the backend ──
       const rawPaths = existingAttachments.map((a) => a.filePath).filter(Boolean);
       data.append("existingAttachments", JSON.stringify(rawPaths));
+
+      const rawImagePaths = existingImages.map((a) => a.filePath).filter(Boolean);
+      data.append("existingImages", JSON.stringify(rawImagePaths));
 
       data.append(
         "customFields",
@@ -1825,9 +1871,117 @@ export default function CreateDeal() {
                 <input
                   id="attachments"
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
                   multiple
                   onChange={handleFileChange}
                   className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Images */}
+          <div className="p-6 border rounded-xl shadow-sm">
+            <h2 className="text-slate-900 border-b pb-2">
+              Images
+            </h2>
+
+            {existingImages.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {existingImages.map((image, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col items-center justify-center w-full bg-white border rounded-xl shadow-sm p-3 relative group"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(idx, "existing")}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={12} />
+                    </button>
+                    <img
+                      src={buildImageUrl(image.filePath)}
+                      alt={image.fileName}
+                      className="w-16 h-16 object-cover rounded-md mb-1 cursor-pointer"
+                      onClick={() => handleFileDownload(image.filePath)}
+                    />
+                    <p className="text-xs text-indigo-600 truncate w-full text-center">
+                      {image.fileName}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload new images */}
+            <div className="mt-4">
+              <label
+                htmlFor="images"
+                className="flex flex-col items-center justify-center w-full min-h-32 border-2 border-dashed border-indigo-300 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition p-6"
+              >
+                {formData.images.length === 0 ? (
+                  <>
+                    <svg
+                      className="w-8 h-8 text-gray-400 mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M7 16V8m0 0l-4 4m4-4l4 4M17 8v8m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                    <span className="text-sm text-gray-600">
+                      Click to browse images (Max 5 images, 20MB each)
+                    </span>
+                  </>
+                ) : (
+                  <div className="w-full flex flex-wrap gap-4">
+                    {formData.images.map((image, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-col items-center justify-center w-28 h-28 bg-white border rounded-xl shadow-sm p-2 relative group"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(idx, "new");
+                          }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={image.name}
+                          className="w-16 h-16 object-cover rounded-md mb-1"
+                        />
+                        <p className="text-xs text-gray-500">
+                          {(image.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <p className="text-xs text-gray-700 truncate w-full text-center">
+                          {image.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  id="images"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    handleImageChange(e);
+                    e.target.value = "";
+                  }}
+                  className="hidden"
+                  disabled={formData.images.length + existingImages.length >= 5}
                 />
               </label>
             </div>

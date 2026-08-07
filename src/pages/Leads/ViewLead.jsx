@@ -246,6 +246,12 @@ const EXT_TO_MIME = {
 const getExt      = (name = "") => (name.split(".").pop() || "").toLowerCase().trim();
 const getMime     = (file)      => EXT_TO_MIME[getExt(file.name)] || "application/octet-stream";
 const formatSize  = (b)         => !b ? "" : b < 1024 ? `${b} B` : b < 1048576 ? `${(b/1024).toFixed(1)} KB` : `${(b/1048576).toFixed(1)} MB`;
+// /uploads is served as public static files (see backend app.js), so an
+// already-uploaded image thumbnail can be shown directly — no authenticated
+// fetch needed (the bigger click-to-enlarge preview still goes through the
+// existing authenticated PreviewModal/ImagePreview for consistency).
+const buildImageUrl = (path) =>
+  `${API_URL.replace("/api", "")}/${String(path || "").replace(/^\/+/, "")}`;
 
 const getCategory = (file) => {
   const ext = getExt(file.name);
@@ -268,15 +274,17 @@ const STYLES = {
   other: { bg: "bg-blue-100",   fg: "text-blue-600",   Icon: File      },
 };
 
+// Documents only — photos have their own dedicated Images tab/upload.
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
 ];
 
 // ─── Authenticated fetch → ArrayBuffer ───────
@@ -528,6 +536,7 @@ const LEAD_ACTIVITY_TYPE_META = {
   lead_edited:         { icon: Edit,             bg: "bg-slate-200",   iconColor: "text-slate-600" },
   notes_updated:       { icon: StickyNote,       bg: "bg-yellow-100",  iconColor: "text-yellow-600" },
   followup_note:       { icon: Calendar,         bg: "bg-purple-100",  iconColor: "text-purple-600" },
+  followup_rescheduled:{ icon: Calendar,         bg: "bg-purple-100",  iconColor: "text-purple-600" },
   attachment_uploaded: { icon: Paperclip,        bg: "bg-cyan-100",    iconColor: "text-cyan-600" },
   lead_rejected:       { icon: Ban,              bg: "bg-red-100",     iconColor: "text-red-600" },
   lead_converted:      { icon: Handshake,        bg: "bg-emerald-100", iconColor: "text-emerald-600" },
@@ -563,14 +572,32 @@ const ViewLead = () => {
   const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
 
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Swipe navigation between leads — the ordered list of {_id, leadName}
   // this lead was opened from (Leads table), passed via navigation state by
   // the caller. Mirrors the same pattern used on the Deal Details page.
-  const leadSequence = useMemo(
-    () => location.state?.leadSequence || [],
-    [location.state],
+  const [leadSequence, setLeadSequence] = useState(
+    () => location.state?.leadSequence || []
   );
+
+  useEffect(() => {
+    const fetchFullSequence = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const searchParams = location.search ? `${location.search}&sequenceOnly=true` : `?sequenceOnly=true`;
+        const { data } = await axios.get(`${API_URL}/leads/getAllLead${searchParams}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (data && data.sequence) {
+          setLeadSequence(data.sequence);
+        }
+      } catch (err) {
+        console.error("Failed to fetch full lead sequence:", err);
+      }
+    };
+    fetchFullSequence();
+  }, [location.search]);
   const leadSequenceIndex = leadSequence.findIndex((l) => l._id === id);
   const prevLeadInfo =
     leadSequenceIndex > 0 ? leadSequence[leadSequenceIndex - 1] : null;
@@ -1300,6 +1327,7 @@ const ViewLead = () => {
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
+        existingImages: JSON.stringify(lead.images || []),
         customFields: JSON.stringify(
           (editFormData.customFields || []).map((f) => ({
             cardTitle: f.cardTitle,
@@ -1571,7 +1599,7 @@ const ViewLead = () => {
     if (totalFiles > 5) return toast.error("Maximum 5 attachments allowed");
 
     if (fileList.some((file) => !ALLOWED_FILE_TYPES.includes(file.type)))
-      return toast.error("Only PDF, Image, Word, Excel files are allowed");
+      return toast.error("Only PDF, Word, Excel, or PowerPoint files are allowed — use the Images tab for photos");
 
     if (fileList.some((file) => file.size > 20 * 1024 * 1024))
       return toast.error("Some files exceed the 20MB size limit");
@@ -1593,6 +1621,87 @@ const ViewLead = () => {
       toast.error(err.response?.data?.message || "Failed to upload attachment");
     } finally {
       setIsUploadingAttachment(false);
+    }
+  };
+
+/* ── Images: upload ─────────────────────── */
+  const handleUploadImages = async (files) => {
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    const totalFiles = (lead.images?.length || 0) + fileList.length;
+    if (totalFiles > 5) return toast.error("Maximum 5 images allowed");
+
+    if (fileList.some((file) => !file.type.startsWith("image/")))
+      return toast.error("Only image files are allowed");
+
+    if (fileList.some((file) => file.size > 20 * 1024 * 1024))
+      return toast.error("Some images exceed the 20MB size limit");
+
+    try {
+      setIsUploadingImage(true);
+      const token = localStorage.getItem("token");
+      const dataToSend = new FormData();
+      fileList.forEach((file) => dataToSend.append("images", file));
+      dataToSend.append("existingImages", JSON.stringify(lead.images || []));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success(fileList.length > 1 ? "Images uploaded" : "Image uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload image");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+/* ── Attachments/Images: delete ─────────────────────── */
+  const [deletingAttachmentIdx, setDeletingAttachmentIdx] = useState(null);
+  const handleDeleteAttachment = async (idx) => {
+    if (!window.confirm("Delete this attachment?")) return;
+    try {
+      setDeletingAttachmentIdx(idx);
+      const token = localStorage.getItem("token");
+      const remaining = (lead.attachments || []).filter((_, i) => i !== idx);
+      const dataToSend = new FormData();
+      dataToSend.append("existingAttachments", JSON.stringify(remaining));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success("Attachment deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete attachment");
+    } finally {
+      setDeletingAttachmentIdx(null);
+    }
+  };
+
+  const [deletingImageIdx, setDeletingImageIdx] = useState(null);
+  const handleDeleteImage = async (idx) => {
+    if (!window.confirm("Delete this image?")) return;
+    try {
+      setDeletingImageIdx(idx);
+      const token = localStorage.getItem("token");
+      const remaining = (lead.images || []).filter((_, i) => i !== idx);
+      const dataToSend = new FormData();
+      dataToSend.append("existingImages", JSON.stringify(remaining));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success("Image deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete image");
+    } finally {
+      setDeletingImageIdx(null);
     }
   };
 
@@ -1760,7 +1869,7 @@ const ViewLead = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
-          {["details", "tasks_targets", "attachments", "activity", "followups", "notes", "meetings", "email"].map((tab) => (
+          {["details", "tasks_targets", "attachments", "images", "activity", "followups", "notes", "meetings", "email"].map((tab) => (
             <button
               key={tab}
               className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -1781,6 +1890,12 @@ const ViewLead = () => {
                 lead.attachments?.length > 0 && (
                   <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
                     {lead.attachments.length}
+                  </span>
+                )}
+              {tab === "images" &&
+                lead.images?.length > 0 && (
+                  <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
+                    {lead.images.length}
                   </span>
                 )}
             </button>
@@ -2518,6 +2633,18 @@ const ViewLead = () => {
                                 <Download size={15} />
                                 <span className="hidden sm:inline">Download</span>
                               </button>
+                              <button
+                                onClick={() => handleDeleteAttachment(idx)}
+                                disabled={deletingAttachmentIdx === idx}
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {deletingAttachmentIdx === idx ? (
+                                  <span className="inline-block w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Trash2 size={15} />
+                                )}
+                                <span className="hidden sm:inline">Delete</span>
+                              </button>
                             </div>
                           </li>
                         );
@@ -2530,6 +2657,91 @@ const ViewLead = () => {
                       </div>
                       <p className="text-slate-500 font-medium">No attachments found</p>
                       <p className="text-slate-400 text-sm mt-1">Files uploaded with this lead will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Images ── */}
+            {activeTab === "images" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-slate-900">Images</h2>
+                    <p className="text-base text-slate-600 mt-1">Photos related to this lead</p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingImage ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Plus size={15} />
+                    {isUploadingImage ? "Uploading…" : "Upload"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingImage}
+                      onChange={(e) => {
+                        handleUploadImages(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="p-6">
+                  {lead.images?.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {lead.images.map((image, idx) => (
+                        <div
+                          key={`${image.path}-${idx}`}
+                          className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 cursor-pointer hover:border-blue-300 transition-colors"
+                          onClick={() => openPreview(image)}
+                        >
+                          <img
+                            src={buildImageUrl(image.path)}
+                            alt={image.name}
+                            className="w-full h-32 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                            <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                            <p className="text-xs text-white truncate">{image.name}</p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadFile(image.path, image.name);
+                            }}
+                            className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 hover:text-blue-600 transition-opacity"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteImage(idx);
+                            }}
+                            disabled={deletingImageIdx === idx}
+                            className="absolute top-1.5 right-9 p-1.5 rounded-lg bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-opacity disabled:opacity-50"
+                          >
+                            {deletingImageIdx === idx ? (
+                              <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileImage size={24} className="text-slate-400" />
+                      </div>
+                      <p className="text-slate-500 font-medium">No images found</p>
+                      <p className="text-slate-400 text-sm mt-1">Photos uploaded with this lead will appear here</p>
                     </div>
                   )}
                 </div>
