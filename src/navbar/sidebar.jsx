@@ -579,13 +579,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       <div className="mb-8 flex flex-col items-center justify-center relative">
         <NavLink to="dashboard" className="cursor-pointer block">
           <img
-            src={logo || "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png"}
+            src={logo || "https://tzicrm.com/images/TZI-Logo.svg"}
             alt="Company Logo"
             className={`w-auto object-contain mx-auto hover:opacity-80 transition-all duration-300 ${
               isOpen ? "h-16" : "h-7"
             }`}
             onError={(e) => {
-              e.target.src = "https://tzi.zaarapp.com//storage/uploads/logo//logo-dark.png";
+              e.target.src = "https://tzicrm.com/images/TZI-Logo.svg";
             }}
           />
         </NavLink>
