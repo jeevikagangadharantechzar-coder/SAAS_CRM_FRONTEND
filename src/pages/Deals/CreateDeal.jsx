@@ -234,6 +234,8 @@ export default function CreateDeal() {
   });
 
   const [errors, setErrors] = useState({});
+  // Live "already exists" hints — { exists: true, dealName } | { exists: false } | undefined
+  const [duplicateHints, setDuplicateHints] = useState({});
   const [salesUsers, setSalesUsers] = useState([]);
   // existingAttachments stores normalised { filePath, fileName } objects
   const [existingAttachments, setExistingAttachments] = useState([]);
@@ -431,6 +433,42 @@ export default function CreateDeal() {
 
     setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
+
+  // Live "this email/phone is already used by another deal" hint — same
+  // debounced (500ms) check as CreateLeads.jsx. In edit mode the deal's own
+  // current email/phone must be excluded, or it would always flag itself.
+  useEffect(() => {
+    const email = formData.email?.trim();
+    const phoneNumber = formData.phoneNumber?.trim();
+
+    // Clear any stale hint the moment its field is emptied.
+    setDuplicateHints((prev) => {
+      const next = { ...prev };
+      if (!email) delete next.email;
+      if (!phoneNumber) delete next.phoneNumber;
+      return next;
+    });
+    if (!email && !phoneNumber) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const params = {};
+        if (email) params.email = email;
+        if (phoneNumber) params.phoneNumber = phoneNumber;
+        if (isEditMode && existingDeal?._id) params.excludeId = existingDeal._id;
+        const res = await axios.get(`${API_URL}/deals/check-duplicate`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        });
+        setDuplicateHints((prev) => ({ ...prev, ...res.data }));
+      } catch {
+        // Non-critical UI hint — a failed check just means no hint shows.
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.email, formData.phoneNumber, isEditMode, existingDeal, API_URL]);
 
 /* ── Use Current Location (Geolocation + Reverse Geocoding) ─────────────────────── */
   const handleUseCurrentLocation = () => {
@@ -1408,6 +1446,11 @@ export default function CreateDeal() {
                       {errors[field.name] && (
                         <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
                       )}
+                      {field.name === "phoneNumber" && duplicateHints.phoneNumber?.exists && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          ⚠ This phone number is already used by "{duplicateHints.phoneNumber.dealName}"
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>
@@ -1423,6 +1466,11 @@ export default function CreateDeal() {
                       />
                       {errors[field.name] && (field.name === "email" || field.name === "alternativeEmail") && (
                         <p className="text-red-500 text-xs mt-1">Invalid email format</p>
+                      )}
+                      {field.name === "email" && duplicateHints.email?.exists && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          ⚠ This email is already used by "{duplicateHints.email.dealName}"
+                        </p>
                       )}
                     </>
                   )}

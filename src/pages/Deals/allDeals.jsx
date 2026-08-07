@@ -862,7 +862,7 @@ function AllDealsComponent() {
               <Plus className="w-4 h-4" /> Create Deal
             </button>
           )}
-          {userRole === "Admin" && (
+          {(userRole === "Admin" || userRole === "Sales") && (
             <>
               <input
                 ref={importFileInputRef}
