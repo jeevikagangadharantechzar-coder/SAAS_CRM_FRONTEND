@@ -827,46 +827,32 @@ const AdminDashboard = () => {
 
 
 
-  // Dashboard needs ALL records, not paginated 10.
-  // Pass limit=9999 so the backend returns everything in one shot.
-  // This only applies to the dashboard — LeadTable still uses limit=10.
+  // Single combined call — backend's /dashboard/overview fans out to
+  // leads/deals/invoices/summary internally so this page fires one request
+  // instead of four. Other pages keep hitting the individual endpoints directly.
   const fetchAll = useCallback(async (range) => {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
 
-    const isAllTime = !range.start && !range.end;
-    const leadsParams = isAllTime
-      ? { overallLead: "all" }
-      : { start: range.start, end: range.end, limit: 9999, page: 1 };
+    const res = await axios.get(`${API_URL}/dashboard/overview`, {
+      params: { start: range.start, end: range.end },
+      headers,
+    });
+    const d = res.data;
 
-    const [leadsRes, dealsRes, summaryRes, invoicesRes] = await Promise.all([
-      axios.get(`${API_URL}/leads/getAllLead`, { params: leadsParams, headers }),
-      axios.get(`${API_URL}/deals/getAll`, { params: { start: range.start, end: range.end }, headers }),
-      axios.get(`${API_URL}/dashboard/summary`, { params: { start: range.start, end: range.end }, headers }),
-      axios.get(`${API_URL}/invoices/getInvoice`, { params: { start: range.start, end: range.end }, headers }),
-    ]);
-
-    const normaliseLeads = (res) => {
-      const d = res.data;
-      if (Array.isArray(d)) return d;
-      if (d && Array.isArray(d.leads)) return d.leads;
-      if (d && Array.isArray(d.data)) return d.data;
-      return [];
-    };
-    const normalise = (res) => {
-      const d = res.data;
-      if (Array.isArray(d)) return d;
-      if (d && Array.isArray(d.data)) return d.data;
-      if (d && Array.isArray(d.deals)) return d.deals;
-      if (d && Array.isArray(d.invoices)) return d.invoices;
+    const normaliseArray = (val, ...keys) => {
+      if (Array.isArray(val)) return val;
+      for (const key of keys) if (Array.isArray(val?.[key])) return val[key];
       return [];
     };
 
     return {
-      leads: normaliseLeads(leadsRes),
-      deals: normalise(dealsRes),
-      invoices: normalise(invoicesRes),
-      summary: summaryRes.data,
+      leads: normaliseArray(d.leads, "leads", "data"),
+      deals: normaliseArray(d.deals, "data", "deals"),
+      dealsWon: normaliseArray(d.dealsWon, "data", "deals"),
+      dealsLost: normaliseArray(d.dealsLost, "data", "deals"),
+      invoices: normaliseArray(d.invoices, "data", "invoices"),
+      summary: d.summary,
     };
   }, []);
 
@@ -897,35 +883,25 @@ const AdminDashboard = () => {
 
       const totalLeads = current.leads.length;
 
-      const dealsWon = current.deals.filter((d) => {
-        if (!isWonDeal(d.stage)) return false;
-        if (!range.start || !range.end) return true;
-        const wonDate = new Date(d.wonAt || d.updatedAt || d.createdAt);
-        const startDate = new Date(range.start);
-        const endDate = new Date(range.end);
-        endDate.setHours(23, 59, 59, 999);
-        return wonDate >= startDate && wonDate <= endDate;
-      }).length;
+      // current.dealsWon is already scoped to wonAt within the range (backend
+      // dealType=won filter) — a deal created before the range but won inside
+      // it still counts, unlike filtering current.deals by createdAt would.
+      const dealsWon = current.dealsWon.filter((d) => isWonDeal(d.stage)).length;
 
       const totalRevenue = Object.values(summary.revenueByCurrency || {}).reduce((s, d) => s + (d.preferredCurrencyValue || 0), 0);
-      const pendingCount = current.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length;
-
-      const prevRevenue = {};
-      previous.invoices.forEach((inv) => {
-        const curr = inv.currency || "USD";
-        const amt = Number(inv.total ?? inv.amount ?? inv.grandTotal ?? inv.totalAmount ?? 0);
-        if (amt > 0) {
-          prevRevenue[curr] = prevRevenue[curr] || { amount: 0 };
-          prevRevenue[curr].amount += amt;
-        }
-      });
-      const prevTotalRevenue = Object.values(prevRevenue).reduce((s, d) => s + d.amount, 0);
+      // Sourced from the backend summary (date + paid-status scoped) rather
+      // than re-deriving from the raw invoices array, so it's on the same
+      // basis as totalRevenue above instead of mixing paid-only vs all-status
+      // totals, and stays correctly scoped to the selected date range.
+      const pendingCount = Object.values(summary.pendingInvoicesByCurrency || {}).reduce((s, d) => s + (d.count || 0), 0);
+      const prevTotalRevenue = Object.values(previous.summary.revenueByCurrency || {}).reduce((s, d) => s + (d.preferredCurrencyValue || 0), 0);
+      const prevPendingCount = Object.values(previous.summary.pendingInvoicesByCurrency || {}).reduce((s, d) => s + (d.count || 0), 0);
 
       setSummaryCards([
         { id: "totalLeads", value: totalLeads, change: computeChange(totalLeads, previous.leads.length), color: "blue", icon: <Users className="h-5 w-5" /> },
-        { id: "dealsWon", value: dealsWon, change: computeChange(dealsWon, previous.deals.filter((d) => isWonDeal(d.stage)).length), color: "green", icon: <Trophy className="h-5 w-5" /> },
+        { id: "dealsWon", value: dealsWon, change: computeChange(dealsWon, previous.dealsWon.filter((d) => isWonDeal(d.stage)).length), color: "green", icon: <Trophy className="h-5 w-5" /> },
         { id: "totalRevenue", value: totalRevenue, prefix: userCurrencySymbol, change: computeChange(totalRevenue, prevTotalRevenue), color: "purple", icon: <span className="h-5 w-5 flex items-center justify-center font-bold text-base leading-none">{userCurrencySymbol}</span> },
-        { id: "pendingInvoices", value: pendingCount, change: computeChange(pendingCount, previous.invoices.filter((inv) => ["pending", "unpaid"].includes(inv.status?.toLowerCase())).length), color: "orange", icon: <FileText className="h-5 w-5" /> },
+        { id: "pendingInvoices", value: pendingCount, change: computeChange(pendingCount, prevPendingCount), color: "orange", icon: <FileText className="h-5 w-5" /> },
       ]);
 
       setPipelineLeads(totalLeads);
@@ -945,7 +921,9 @@ const AdminDashboard = () => {
 
       // FIX: compute each count separately using the corrected helpers
       const openCount = current.deals.filter((d) => isOpenDeal(d.stage)).length;
-      const lostCount = current.deals.filter((d) => isLostDeal(d.stage)).length;
+      // Same wonAt-vs-createdAt issue as dealsWon, fixed the same way:
+      // current.dealsLost is scoped by lostDate, not creation date.
+      const lostCount = current.dealsLost.filter((d) => isLostDeal(d.stage)).length;
 
       setDealCounts({
         open: openCount,
@@ -953,7 +931,7 @@ const AdminDashboard = () => {
         lost: lostCount,
       });
 
-      if (dealsWon > 5 && dealsWon > previous.deals.filter((d) => isWonDeal(d.stage)).length) {
+      if (dealsWon > 5 && dealsWon > previous.dealsWon.filter((d) => isWonDeal(d.stage)).length) {
         confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
       }
     } catch (err) {
