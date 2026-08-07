@@ -359,7 +359,7 @@ const MassEmail = () => {
       {/* Page Header */}
       <div className="mb-6 flex justify-between items-start">
         <div>
-          <h1 className="text-gray-900">Email Campaign</h1>
+          <h1 className="text-gray-900  flex items-center gap-3"><Send /> Email Campaign</h1>
           <p className="text-base text-slate-600 mt-1">
             Communicate with multiple lead and deal contacts via email
           </p>

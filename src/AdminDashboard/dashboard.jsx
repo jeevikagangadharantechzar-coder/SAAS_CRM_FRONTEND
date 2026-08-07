@@ -994,7 +994,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-gray-900 flex items-center gap-3">
-            <BarChart3 className="h-8 w-8 text-purple-600" />{t("dashboard.title")}
+            <BarChart3  />{t("dashboard.title")}
           </h1>
           <p className="text-base text-slate-600 mt-1">{t("dashboard.subtitle")}</p>
         </div>

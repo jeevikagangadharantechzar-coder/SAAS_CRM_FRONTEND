@@ -339,8 +339,8 @@ function UserManagementInner() {
         <div className="w-full mb-6 flex flex-col items-center">
           <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <div className="text-center md:text-left">
-              <h1 className="text-gray-900">
-                User &amp; Role Management
+              <h1 className="text-gray-900  flex items-center gap-3">
+              <Shield />  User &amp; Role Management
               </h1>
               <p className="text-base text-slate-600 mt-1">Manage users and their access permissions</p>
             </div>

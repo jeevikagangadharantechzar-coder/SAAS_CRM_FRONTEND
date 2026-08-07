@@ -12,7 +12,8 @@ import {
   Calendar, X, Edit2, StickyNote,
   FileText, Briefcase, Bell, ArrowRightLeft, Check, ChevronDown, ChevronUp, History,
   Users, Building2, Phone, Mail, LayoutGrid, List, Trophy, Award, XCircle, 
-  TrendingUp, Flag, Activity, Target, AlertCircle, Info, CheckCheck, Search
+  TrendingUp, Flag, Activity, Target, AlertCircle, Info, CheckCheck, Search,
+  ClipboardList
 } from "lucide-react";
 
 import TaskPipelineView from "./TaskPipelineView";
@@ -1926,7 +1927,7 @@ export default function TaskManagement() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900">Task Management</h1>
+          <h1 className="text-gray-900  flex items-center gap-3"><ClipboardList />Task Management</h1>
           <p className="text-base text-slate-600 mt-1">Assign and track tasks for your sales team</p>
         </div>
         <button

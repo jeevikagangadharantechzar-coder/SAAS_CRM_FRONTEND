@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target, Filter, ChevronDown } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target, Filter, ChevronDown, TrendingUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -836,7 +836,7 @@ function AllDealsComponent() {
       {/* Compact Toolbar Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white border-b border-gray-200 px-6 py-3 mb-4 shadow-sm rounded-t-lg tour-deals-header">
         <div className="flex items-center gap-3">
-          <h2 className="text-slate-900">All Deals</h2>
+          <h2 className="text-gray-900  flex items-center gap-3"> <TrendingUp/>All Deals</h2>
           <button
             onClick={() => updateFilter("showFilters", showFilters ? "" : "true", setShowFilters)}
             className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"

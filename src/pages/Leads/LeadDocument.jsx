@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Users,
 } from "lucide-react";
 import {
   Dialog,
@@ -367,7 +368,7 @@ const LeadDocument = () => {
       />
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
-        <h2 className="text-slate-900">Lead Documents</h2>
+        <h2 className="text-gray-900  flex items-center gap-3"> <Users />Lead Documents</h2>
       </div>
 
       <div className="mb-4 relative w-full sm:w-80">

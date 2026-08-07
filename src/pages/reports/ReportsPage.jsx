@@ -9,6 +9,7 @@ import {
 } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
+import { BarChart3 } from "lucide-react";
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
 
@@ -392,7 +393,7 @@ const ReportsPage = () => {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div>
-              <h1 className="text-gray-900">Team Analytics</h1>
+              <h1 className="text-gray-900  flex items-center gap-3"> <BarChart3/>Team Analytics</h1>
               <p className="text-base text-slate-600 mt-1">Insights and performance metrics for your sales team</p>
             </div>
             {/* Subtle refresh indicator — replaces full-page spinner for filter changes */}

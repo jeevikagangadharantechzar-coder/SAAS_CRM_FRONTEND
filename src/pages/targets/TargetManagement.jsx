@@ -2325,7 +2325,7 @@ export default function TargetManagement() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900">Target Management</h1>
+          <h1 className="text-gray-900  flex items-center gap-3"><Target />Target Management</h1>
           <p className="text-base text-slate-600 mt-1">Set and track sales targets — weekly & monthly</p>
         </div>
         <button onClick={() => setModalOpen(true)}

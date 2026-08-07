@@ -239,8 +239,8 @@ export default function TrashPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Trash2 className="w-6 h-6 text-gray-500" /> Trash
+          <h2 className="text-gray-900  flex items-center gap-3">
+            <Trash2  /> Trash
           </h2>
           <p className="text-sm text-gray-500 mt-1">Deleted leads and deals — restore them or delete permanently.</p>
         </div>
