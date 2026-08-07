@@ -87,7 +87,7 @@ export default function CreateLeads() {
     companyName: "",
     industry: "",
     requirement: "",
-    status: "Cold",
+    status: "New",
     assignTo: "",
     address: "",
     city: "",
@@ -234,7 +234,7 @@ export default function CreateLeads() {
             clientType: leadData.clientType || "",
             NumberOfEmployees: leadData.NumberOfEmployees ?? "",
             requirement: leadData.requirement || "",
-            status: leadData.status || "Cold",
+            status: leadData.status || "New",
             assignTo: leadData.assignTo?._id || "",
             address: leadData.address || "",
             city: leadData.city || "",
@@ -1015,7 +1015,7 @@ export default function CreateLeads() {
           label: "Status",
           icon: <UserCheck size={16} />,
           type: "select",
-          options: ["Hot", "Warm", "Cold", "Junk"],
+          options: ["New", "Hot", "Warm", "Cold", "Junk"],
         },
         ...(userRole !== "Sales"
           ? [

@@ -12,6 +12,13 @@ const ItemTypes = {
 
 const STAGES = [
   {
+    id: "New",
+    title: "New",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    borderColor: "border-indigo-200",
+  },
+  {
     id: "Cold",
     title: "Cold",
     color: "text-blue-600",
@@ -216,6 +223,14 @@ export default function LeadsPipelineView({
 
   const moveLead = async (leadId, fromStage, toStage) => {
     if (fromStage === toStage) return;
+
+    if (toStage === "Cold" && (fromStage === "Warm" || fromStage === "Hot" || fromStage === "New")) {
+      const leadObj = localLeads.find(l => l._id === leadId);
+      if (leadObj && onRejectClick) {
+        onRejectClick({ ...leadObj, isDowngrade: true });
+        return;
+      }
+    }
 
     if (toStage === "Rejected") {
       if (userRole !== "Admin") {

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import WhatsAppMessageModal from "../../components/whatsapp/WhatsAppMessageModal";
+import LeadLossModal from "./LeadLossModal";
 import axios from "axios";
 import {
   ArrowLeft, ChevronRight, ChevronLeft, User, Mail, Phone, Building, Building2,
@@ -859,7 +860,7 @@ const ViewLead = () => {
   const cfIdRef = useRef(0);
   const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
 
-  useEffect(() => {
+  const fetchLead = useCallback(() => {
     const token = localStorage.getItem("token");
     axios.get(`${API_URL}/leads/getLead/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => setLead(r.data))
@@ -961,6 +962,10 @@ const ViewLead = () => {
   useEffect(() => {
     fetchLeadEmails();
   }, [fetchLeadEmails]);
+
+  useEffect(() => {
+    fetchLead();
+  }, [fetchLead]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -1514,20 +1519,19 @@ const ViewLead = () => {
   };
 
   // ── Reject ───────────────────────────────────
-  const handleRejectSubmit = async () => {
-    if (!rejectReason.trim()) return toast.error("Please enter a reason for rejecting this lead");
+  const handleRejectSubmit = async (lossData) => {
     setRejecting(true);
     try {
       const token = localStorage.getItem("token");
       await axios.patch(
         `${API_URL}/leads/${id}/reject`,
-        { reason: rejectReason.trim() },
+        { reason: lossData.reason, customReason: lossData.customReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Lead rejected");
       setShowRejectModal(false);
       setRejectReason("");
-      setTimeout(() => navigate(leadsListPath), 1200);
+      fetchLead();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
@@ -1746,7 +1750,7 @@ const ViewLead = () => {
               )}
               {canReject && (
                 <button
-                  onClick={() => { setRejectReason(""); setShowRejectModal(true); }}
+                  onClick={() => setShowRejectModal(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
                 >
                   <Ban size={16} />
