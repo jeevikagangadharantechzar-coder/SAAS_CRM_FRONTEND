@@ -399,9 +399,9 @@ const RevenueTrendChart = ({ revenueData, loading, invoices }) => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="month" tick={{ fill: "#6B7280", fontSize: 12 }} />
+                <XAxis dataKey="month" tick={{ fill: "#6B7280", fontSize: "0.75rem" }} />
                 <YAxis
-                  tick={{ fill: "#6B7280", fontSize: 12 }}
+                  tick={{ fill: "#6B7280", fontSize: "0.75rem" }}
                   tickFormatter={(v) => `${userSymbol}${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -531,8 +531,8 @@ const SalesPipelineChart = ({ pipelineBarData, loading, totalPipelineLeads }) =>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                    <XAxis dataKey="month" tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 10 }} minTickGap={10} interval="preserveStartEnd" />
-                    <YAxis tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: 12 }} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: "0.625rem" }} minTickGap={10} interval="preserveStartEnd" />
+                    <YAxis tickLine={false} axisLine={{ stroke: "#E5E7EB", strokeWidth: 1 }} tick={{ fill: "#6B7280", fontSize: "0.75rem" }} />
                     <Tooltip content={<CustomPipelineTooltip />} />
                     <Bar dataKey="Open" name={t("dashboard.salesPipeline.openOpportunities")} fill="url(#gOpen)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={400} animationDuration={1500} />
                     <Bar dataKey="Won" name={t("dashboard.salesPipeline.wonDeals")} fill="url(#gWon)" barSize={24} radius={[4, 4, 0, 0]} isAnimationActive animationBegin={800} animationDuration={1500} />

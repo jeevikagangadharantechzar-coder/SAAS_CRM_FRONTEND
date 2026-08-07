@@ -295,7 +295,7 @@ const ScheduleView = () => {
         borderRadius: "6px",
         padding: "4px 6px",
         fontWeight: event.isGroup ? 700 : 500,
-        fontSize: "12px",
+        fontSize: "0.75rem",
         borderLeft: `4px solid ${event.pending ? "#dc2626" : meta.color}`,
       },
     };

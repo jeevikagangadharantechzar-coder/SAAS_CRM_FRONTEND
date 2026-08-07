@@ -338,7 +338,7 @@ const WebsiteContactForm = () => {
                             inputStyle={{
                               width: "100%",
                               height: "42px",
-                              fontSize: "14px",
+                              fontSize: "0.875rem",
                               paddingLeft: "55px",
                               borderRadius: "0.5rem",
                               boxSizing: "border-box",

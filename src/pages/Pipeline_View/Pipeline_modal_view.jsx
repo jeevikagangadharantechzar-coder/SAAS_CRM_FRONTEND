@@ -118,7 +118,7 @@ const currencyOptions = [
 const phoneInputStyle = {
   width: "100%",
   height: "42px",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   paddingLeft: "55px",
   borderRadius: "0.5rem",
   border: "none",
@@ -2647,7 +2647,7 @@ function Pipeline_modal_view() {
                   <span className="truncate">{prevDealInfo.dealName}</span>
                 </button>
               )}
-              <h1 className="text-gray-900 text-[16px]">
+              <h1 className="text-gray-900 text-[1rem]">
                 {deal.dealName}
               </h1>
               <div
@@ -3289,13 +3289,13 @@ function Pipeline_modal_view() {
                               >
                                 <XAxis
                                   dataKey="name"
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
                                 <YAxis
                                   allowDecimals={false}
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
@@ -3305,7 +3305,7 @@ function Pipeline_modal_view() {
                                     borderRadius: "0.5rem",
                                     border: "none",
                                     color: "#fff",
-                                    fontSize: "11px",
+                                    fontSize: "0.6875rem",
                                   }}
                                   formatter={(value, name) => [
                                     `${value} pts`,
@@ -3392,12 +3392,12 @@ function Pipeline_modal_view() {
                                     borderRadius: "0.5rem",
                                     border: "none",
                                     color: "#fff",
-                                    fontSize: "11px",
+                                    fontSize: "0.6875rem",
                                   }}
                                 />
                                 <Legend
                                   iconSize={8}
-                                  wrapperStyle={{ fontSize: "10px" }}
+                                  wrapperStyle={{ fontSize: "0.625rem" }}
                                 />
                               </PieChart>
                             </ResponsiveContainer>
@@ -3464,13 +3464,13 @@ function Pipeline_modal_view() {
                               >
                                 <XAxis
                                   dataKey="name"
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
                                 <YAxis
                                   allowDecimals={false}
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
@@ -3480,7 +3480,7 @@ function Pipeline_modal_view() {
                                     borderRadius: "0.5rem",
                                     border: "none",
                                     color: "#fff",
-                                    fontSize: "11px",
+                                    fontSize: "0.6875rem",
                                   }}
                                 />
                                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -4436,7 +4436,7 @@ function Pipeline_modal_view() {
                                 <div key={f.id}>
                                   <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
                                     {f.name}
-                                    <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                    <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                                       Custom
                                     </span>
                                     <button

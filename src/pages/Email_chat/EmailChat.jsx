@@ -139,7 +139,7 @@ const GmailConnectScreen = ({
               <button
                 onClick={onConnect} disabled={isConnecting}
                 className="w-full flex items-center justify-center gap-3 py-3 px-5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 shadow-sm disabled:opacity-60"
-                style={{ color: "#3c4043", fontSize: "15px", fontWeight: 500 }}
+                style={{ color: "#3c4043", fontSize: "0.9375rem", fontWeight: 500 }}
               >
                 {isConnecting ? (
                   <><FaSpinner className="animate-spin" size={18} style={{ color: "#1a73e8" }} /><span>Connecting...</span></>

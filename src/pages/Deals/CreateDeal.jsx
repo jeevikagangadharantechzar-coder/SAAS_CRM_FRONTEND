@@ -988,7 +988,7 @@ export default function CreateDeal() {
         <div key={f.id} className={f.type === "textarea" ? "md:col-span-3" : ""}>
           <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
             {f.name}
-            <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
+            <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
               Custom
             </span>
             <button
@@ -1429,7 +1429,7 @@ export default function CreateDeal() {
                           inputStyle={{
                             width: "100%",
                             height: "42px",
-                            fontSize: "14px",
+                            fontSize: "0.875rem",
                             paddingLeft: "55px",
                             borderRadius: "0.5rem",
                             border: "none",
