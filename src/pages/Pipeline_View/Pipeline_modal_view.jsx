@@ -2647,7 +2647,7 @@ function Pipeline_modal_view() {
                   <span className="truncate">{prevDealInfo.dealName}</span>
                 </button>
               )}
-              <h1 className="text-gray-900">
+              <h1 className="text-gray-900 text-[16px]">
                 {deal.dealName}
               </h1>
               <div

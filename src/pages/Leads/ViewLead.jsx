@@ -1692,7 +1692,7 @@ const ViewLead = () => {
                   <span className="truncate">{prevLeadInfo.leadName}</span>
                 </button>
               )}
-              <h1 className="text-gray-900">
+              <h1 className="text-gray-900 text-[16px]">
                 {lead.leadName}
               </h1>
               {nextLeadInfo && (
