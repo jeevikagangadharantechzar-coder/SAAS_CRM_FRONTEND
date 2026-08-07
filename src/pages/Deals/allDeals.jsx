@@ -1354,7 +1354,12 @@ function AllDealsComponent() {
                     <td className="px-6 py-4">
                       <button
                         onClick={(e) => toggleDropdown(deal._id, e)}
-                        className="p-2 rounded hover:bg-gray-200"
+                        disabled={deal.stage === "Closed Won"}
+                        className={`p-2 rounded ${
+                          deal.stage === "Closed Won"
+                            ? "opacity-40 cursor-not-allowed"
+                            : "hover:bg-gray-200"
+                        }`}
                       >
                         <MoreVertical size={18} />
                       </button>
