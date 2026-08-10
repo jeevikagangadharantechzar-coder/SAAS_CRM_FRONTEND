@@ -484,6 +484,7 @@ export default function ChatWidget() {
       setMessages(prev => [...prev, { id: Date.now(), text: ' Unable to connect to server.', sender: 'bot', timestamp: new Date() }]);
     } finally {
       setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
   /* ── Submit Handler ─────────────────────── */
