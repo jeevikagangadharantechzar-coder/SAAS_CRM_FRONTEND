@@ -524,7 +524,7 @@ export default function ChatWidget() {
             <div className="flex items-center space-x-3">
               <AILogo size="medium" />
               <div>
-                <h3 className="">ZIYA PULSE CRM</h3>
+                <h3 className="font-bold text-white tracking-wide">ZIYA PULSE CRM</h3>
                 <p className="text-xs text-blue-100 opacity-90">
                   {callInProgress ? 'Session tracking active...' : 'Click to expand • Ready to help'}
                 </p>
@@ -558,7 +558,7 @@ export default function ChatWidget() {
         <div className="flex items-center space-x-3">
           <AILogo size="medium" />
           <div>
-            <h3 className="">ZIYA PULSE CRM</h3>
+            <h3 className="font-bold text-white tracking-wide">ZIYA PULSE CRM</h3>
             <p className="text-xs text-blue-100 opacity-90">
               {callInProgress ? 'WhatsApp session tracking...' : 'Connected to your CRM dashboard'}
             </p>
