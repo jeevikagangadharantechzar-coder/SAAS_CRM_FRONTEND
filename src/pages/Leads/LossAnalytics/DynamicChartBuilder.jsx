@@ -153,7 +153,7 @@ const DynamicChartBuilder = ({ data }) => {
               </div>
             ) : (
               <div className="overflow-x-auto w-full h-full pb-4">
-                <div className="h-full min-w-[600px]">
+                <div className="h-full min-w-[1200px]">
                   <ResponsiveContainer width="100%" height="100%">
                     {chartType === "Bar" ? (
                       <BarChart data={dynamicChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>

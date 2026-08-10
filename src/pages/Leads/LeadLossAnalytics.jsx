@@ -11,6 +11,7 @@ import DynamicChartBuilder from "./LossAnalytics/DynamicChartBuilder";
 import LostLeadsTables from "./LossAnalytics/LostLeadsTables";
 import AssigneeAnalyticsModal from "./LossAnalytics/AssigneeAnalyticsModal";
 import StandardAnalytics from "./LossAnalytics/StandardAnalytics";
+import KpiDetailsSection from "./LossAnalytics/KpiDetailsSection";
 
 export default function LeadLossAnalytics() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -39,6 +40,7 @@ export default function LeadLossAnalytics() {
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
   const [modalAssignee, setModalAssignee] = useState(null);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [activeKpiCard, setActiveKpiCard] = useState(null);
 
   const clearFilters = () => {
     setFilterType("allTime");
@@ -176,7 +178,10 @@ export default function LeadLossAnalytics() {
       ) : (
         <div className={`transition-opacity duration-300 ${isFetching ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 relative overflow-hidden group">
+            <div 
+              onClick={() => setActiveKpiCard("lossRate")}
+              className={`bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 relative overflow-hidden group cursor-pointer ${activeKpiCard === "lossRate" ? "ring-2 ring-indigo-500 scale-[1.02]" : ""}`}
+            >
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Lead Loss Rate</h3>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-4xl font-black text-slate-800">{data.kpis.totalLost}</p>
@@ -191,7 +196,9 @@ export default function LeadLossAnalytics() {
               </p>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 relative overflow-hidden group">
+            <div 
+              className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 relative overflow-hidden group"
+            >
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total Junk Leads</h3>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-4xl font-black text-slate-800">{data.kpis.totalJunk}</p>
@@ -199,7 +206,10 @@ export default function LeadLossAnalytics() {
               <p className="text-sm text-slate-500 mt-2 font-medium">Disqualified before sales process</p>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300">
+            <div 
+              onClick={() => setActiveKpiCard("topReason")}
+              className={`bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${activeKpiCard === "topReason" ? "ring-2 ring-indigo-500 scale-[1.02]" : ""}`}
+            >
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Top Loss Reason</h3>
               <p className="text-2xl font-black text-blue-600 mt-2 line-clamp-1" title={data.kpis.highestReason?.reason}>
                 {data.kpis.highestReason?.reason || "N/A"}
@@ -209,7 +219,10 @@ export default function LeadLossAnalytics() {
               </p>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300">
+            <div 
+              onClick={() => setActiveKpiCard("topStage")}
+              className={`bg-white/70 backdrop-blur-md p-6 rounded-2xl shadow-xl shadow-indigo-100/50 border border-white/50 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${activeKpiCard === "topStage" ? "ring-2 ring-indigo-500 scale-[1.02]" : ""}`}
+            >
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Highest Loss Stage</h3>
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-2xl font-black text-violet-600 truncate">{data.kpis.highestLossStage?.stage || "N/A"}</p>
@@ -219,6 +232,8 @@ export default function LeadLossAnalytics() {
               </p>
             </div>
           </div>
+
+          <KpiDetailsSection activeCard={activeKpiCard} data={data} onClose={() => setActiveKpiCard(null)} />
 
           <StandardAnalytics data={data} />
           <DynamicChartBuilder data={data} />

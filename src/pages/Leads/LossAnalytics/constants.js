@@ -2,8 +2,8 @@ export const COLORS = ['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#8b5cf6', '#
 
 export const STANDARD_REASONS = [
   "Price too high",
-  "Went with a competitor",
-  "Missing features/functionality",
+  "Choosen competitor",
+  "Missing features",
   "No budget",
   "Timing is not right",
   "Not interested",

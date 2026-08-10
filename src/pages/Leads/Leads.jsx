@@ -1161,13 +1161,7 @@ function LeadTableComponent() {
               >
                 <Ban className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => navigate(`/${tenantSlug}/leads/lead-loss-analysis`)}
-                className="text-orange-500 hover:text-orange-700 p-1.5 rounded-md hover:bg-orange-50 transition-colors"
-                title="Loss Analytics"
-              >
-                <BarChart className="w-4 h-4" />
-              </button>
+
             </>
           )}
 

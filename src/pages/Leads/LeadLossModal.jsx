@@ -4,7 +4,7 @@ import { FaTimes, FaChevronDown, FaSpinner } from "react-icons/fa";
 const REASONS = [
   "Price too high",
   "Choosen competitor",
-  "Missing features/functionality",
+  "Missing features",
   "No budget",
   "Timing is not right",
   "Not interested",
