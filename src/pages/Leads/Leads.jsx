@@ -1463,8 +1463,8 @@ const updateFilter = (key, value, setter) => {
             {leads.length > 0 ? (
               leads.map((lead, idx) => {
                 const isTerminal = lead.status === "Rejected";
-                const isActiveDisabled = lead.isActive === false && userRole !== "Admin";
-                const isDisabled = isTerminal || isActiveDisabled;
+                const isActiveDisabled = false; // Overdue items no longer disabled here
+                const isDisabled = isTerminal;
                 const rejectedByObj = lead.rejectedBy && typeof lead.rejectedBy === 'object' ? lead.rejectedBy : usersList.find(u => String(u._id) === String(lead.rejectedBy));
                 const convertedByObj = lead.convertedBy && typeof lead.convertedBy === 'object' ? lead.convertedBy : usersList.find(u => String(u._id) === String(lead.convertedBy));
                 const rejectedByName = rejectedByObj ? `${rejectedByObj.firstName || ""} ${rejectedByObj.lastName || ""}`.trim() : "";

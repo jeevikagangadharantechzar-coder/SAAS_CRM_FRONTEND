@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
+import { isDateOverdue } from "../../utils/dateValidation";
 import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
   Trophy, ArrowRight, Award, Clock, ChevronDown,
@@ -383,6 +384,16 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
       <div className={`h-1.5 w-full ${getProgressColor(overall)}`} />
 
       <div className="p-5">
+        {/* Header: Title */}
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-bold text-gray-800 text-lg truncate pr-2">
+            {t.title || "Untitled Target"}
+          </h3>
+          <div className="flex items-center gap-1 text-[11px] text-gray-400 shrink-0">
+            <Calendar size={10} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
+          </div>
+        </div>
+
         {/* Period + dates */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -390,9 +401,6 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
               {t.period}
             </span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <Calendar size={10} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
           </div>
         </div>
 
@@ -1056,7 +1064,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
         )}
 
         {t.createdBy && (
-          <p className="text-xs text-gray-300 mt-3 text-right">Assigned by {t.createdBy.firstName} {t.createdBy.lastName}</p>
+          <p className="text-xs text-gray-300 mt-3 text-right">Assigned by {t.createdBy.firstName} {t.createdBy.lastName && t.createdBy.lastName !== t.createdBy.firstName ? t.createdBy.lastName : ''}</p>
         )}
       </div>
     </div>
@@ -1080,6 +1088,9 @@ export default function MyTargets() {
   const socket = useSocket();
   const targetSocket = useTargetSocket();
   const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
+
+  const [overdueReasonNote, setOverdueReasonNote] = useState("");
+  const [submittingOverdueReason, setSubmittingOverdueReason] = useState(false);
 
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
@@ -1248,9 +1259,76 @@ export default function MyTargets() {
 
   const activeTasks = tasks.filter(t => t.status !== "Completed" && t.status !== "Archived");
 
+  const overdueBlockingTarget = targets.find((t) => {
+    if (t.status === "Completed" || t.status === "Rejected") return false;
+    const isOverdue = isDateOverdue(t.endDate);
+    if (!isOverdue) return false;
+    
+    const lastNote = t.reasonNotes && t.reasonNotes.length > 0 ? t.reasonNotes[t.reasonNotes.length - 1] : null;
+    if (!lastNote) return true; // Needs reason
+    if (lastNote.status !== "pending") return true; // Needs NEW reason if rejected, resolved, or reactivated
+    return false;
+  });
+
+  const handleOverdueSubmit = async () => {
+    if (!overdueReasonNote.trim()) return;
+    setSubmittingOverdueReason(true);
+    try {
+      await axios.post(`${baseUrl}/targets/${overdueBlockingTarget._id}/reason-note`, { 
+        note: overdueReasonNote,
+        itemType: "target",
+        itemId: overdueBlockingTarget._id,
+        itemName: overdueBlockingTarget.title || "Overall Target"
+      }, { headers });
+      toast.success("Reason submitted to admin for review");
+      fetchTargets();
+      setOverdueReasonNote("");
+    } catch (e) {
+      toast.error("Failed to submit reason");
+    } finally {
+      setSubmittingOverdueReason(false);
+    }
+  };
+
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    <div className="p-6 min-h-screen bg-gray-50 relative">
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {overdueBlockingTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-[90%] max-w-md">
+            <div className="flex items-center gap-3 mb-4 text-red-600">
+              <AlertCircle size={28} />
+              <h2 className="text-xl font-bold">Overdue Target Block</h2>
+            </div>
+            <p className="text-gray-700 mb-2">
+              Your target from <strong>{fmt(overdueBlockingTarget.startDate)} to {fmt(overdueBlockingTarget.endDate)}</strong> is overdue.
+            </p>
+            {overdueBlockingTarget.reasonNotes?.length > 0 && overdueBlockingTarget.reasonNotes[overdueBlockingTarget.reasonNotes.length - 1].status === "rejected" && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-4 border border-red-200">
+                <strong>Reason Rejected:</strong> {overdueBlockingTarget.reasonNotes[overdueBlockingTarget.reasonNotes.length - 1].rejectReason || "Your previous reason was rejected by the admin. Please submit a valid reason."}
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mb-4">
+              You must submit a reason for the delay to continue using your Targets.
+            </p>
+            <textarea
+              className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              rows={4}
+              placeholder="Explain why this target is delayed..."
+              value={overdueReasonNote}
+              onChange={(e) => setOverdueReasonNote(e.target.value)}
+            />
+            <button
+              onClick={handleOverdueSubmit}
+              disabled={submittingOverdueReason || !overdueReasonNote.trim()}
+              className="mt-4 w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {submittingOverdueReason ? "Submitting..." : "Submit Reason for Approval"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 flex items-center justify-between">
         <div>

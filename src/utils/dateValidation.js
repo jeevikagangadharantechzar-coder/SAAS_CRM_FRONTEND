@@ -54,6 +54,15 @@ export function validateTaskDueDate(dueDate) {
   return null;
 }
 
+export const isDateOverdue = (dateString) => {
+  if (!dateString) return false;
+  const due = new Date(dateString);
+  const now = new Date();
+  due.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  return due < now;
+};
+
 // Build a YYYY-MM-DD string from a date's LOCAL calendar day — never use
 // .toISOString() for this, it converts to UTC and shifts the day backward
 // in positive-UTC-offset timezones (e.g. IST) whenever the local time is

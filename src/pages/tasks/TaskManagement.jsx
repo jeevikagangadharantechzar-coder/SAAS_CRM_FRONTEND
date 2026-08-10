@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
 import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
-import { todayISO, validateTaskDueDate } from "../../utils/dateValidation";
+import { todayISO, validateTaskDueDate, isDateOverdue } from "../../utils/dateValidation";
 import { isTaskTabNotif, getNotificationAccentClass } from "../../utils/taskNotifications";
 import {
   Plus, Trash2, CheckCircle, Clock, User,
@@ -1027,7 +1027,10 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
           title: editTask.title || "",
           description: editTask.description || "",
           priority: editTask.priority || "Medium",
-          dueDate: editTask.dueDate ? editTask.dueDate.split("T")[0] : "",
+          dueDate: editTask.dueDate ? (() => {
+            const d = new Date(editTask.dueDate);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          })() : "",
           assignedTo: editTask.assignedTo?._id || "",
           leadRefs: editLeadRefs,
           dealRefs: editDealRefs,
@@ -1267,11 +1270,56 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
   );
 }
 
+/* ── Compact Task Card (Admin) ─────────────────────── */
+function CompactTaskCard({ task, onClick }) {
+  const isCompleted = task.status === "Completed";
+  const isOverdue = task.dueDate && isDateOverdue(task.dueDate) && !isCompleted;
+  const progressPct = STATUS_PROGRESS[task.status] ?? 0;
+  
+  return (
+    <div 
+      onClick={() => onClick(task)}
+      className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-shadow p-4 relative overflow-hidden group flex flex-col justify-between h-full min-h-[140px]"
+    >
+      <div className={`absolute top-0 left-0 h-1 w-full ${progressPct === 100 ? "bg-emerald-500" : progressPct >= 50 ? "bg-amber-400" : "bg-blue-500"}`} />
+      
+      <div>
+        <div className="flex justify-between items-start mb-2 mt-1 gap-2">
+          <div className="min-w-0">
+            <h4 className="font-semibold text-gray-800 text-sm truncate" title={task.title || "Untitled Task"}>
+              {task.title || "Untitled Task"}
+            </h4>
+            <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1 truncate" title={task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Unassigned"}>
+              <User size={11} className="shrink-0" />
+              <span className="truncate">{task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Unassigned"}</span>
+            </p>
+          </div>
+          <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded border font-semibold ${isCompleted ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : task.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+            {task.status || "To Do"}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center text-[11px] text-gray-500 pt-3 border-t border-gray-50 mt-auto">
+        <div className="flex items-center gap-1.5">
+          <Calendar size={11} className={isOverdue ? "text-red-500" : "text-gray-400"} />
+          <span className={isOverdue ? "text-red-500 font-medium" : ""}>
+            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date"}
+          </span>
+        </div>
+        <div className="text-[10px] font-bold text-[#008ecc] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+          View Details <ArrowRightLeft size={9} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Task Card ─────────────────────── */
 function TaskCard({ task, onEdit, onDelete, targets, progressFallbacks, baseUrl, headers, onRefresh, onApproveRejection, onApproveHold }) {
   const [expanded, setExpanded] = useState(false);
   const isCompleted = task.status === "Completed";
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted;
+  const isOverdue = task.dueDate && isDateOverdue(task.dueDate) && !isCompleted;
 
   const primaryLead = task.leadRefs?.length ? task.leadRefs[0] : task.leadRef;
   const primaryDeal = task.dealRefs?.length ? task.dealRefs[0] : task.dealRef;
@@ -1422,7 +1470,7 @@ function TaskTableView({ tasks, onEdit, onDelete, onApproveRejection, onApproveH
 
       {tasks.map((task) => {
         const isCompleted = task.status === "Completed";
-        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted;
+        const isOverdue = task.dueDate && isDateOverdue(task.dueDate) && !isCompleted;
         const primaryLead = task.leadRefs?.length ? task.leadRefs[0] : task.leadRef;
         const primaryDeal = task.dealRefs?.length ? task.dealRefs[0] : task.dealRef;
         const leadName = primaryLead?.leadName || null;
@@ -1599,6 +1647,9 @@ export default function TaskManagement() {
   // any Target currently exists (a target-derived sum here would show
   // nothing at all the moment the tenant has zero active targets).
   const [orgDashStats, setOrgDashStats] = useState(null);
+  const [dashFilter, setDashFilter] = useState("all");
+  const [dashStartDate, setDashStartDate] = useState("");
+  const [dashEndDate, setDashEndDate] = useState("");
   const [viewMode, setViewMode] = useState("card"); // "card" | "table"
   const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
 
@@ -1612,9 +1663,17 @@ export default function TaskManagement() {
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [adminActivity, setAdminActivity] = useState(null); // { leadsConvertedByAdmin, dealsWonByAdmin, counts }
   const [loadingAdminActivity, setLoadingAdminActivity] = useState(false);
+  const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
   const [selectedNotes, setSelectedNotes] = useState(new Set());
   const [noteDeleteConfirm, setNoteDeleteConfirm] = useState(null); // { taskId, noteIdx, isBulk, count }
   const [approveHoldTask, setApproveHoldTask] = useState(null);
+
+  const [rejectNoteModal, setRejectNoteModal] = useState({ open: false, note: null });
+  const [rejectNoteReason, setRejectNoteReason] = useState("");
+  const [rejectingNote, setRejectingNote] = useState(false);
+
+  const [reassignNoteModal, setReassignNoteModal] = useState({ open: false, note: null });
+  const [reassigningNote, setReassigningNote] = useState(false);
 
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
@@ -1693,20 +1752,47 @@ export default function TaskManagement() {
     // of one-after-another is what makes the Progress card populate right
     // away instead of visibly filling in over several seconds after the task
     // cards themselves have already appeared.
-    const [targetsRes, dashStatsRes, fallbacksRes] = await Promise.allSettled([
+    const [targetsRes, fallbacksRes] = await Promise.allSettled([
       axios.get(`${baseUrl}/targets`, { headers }),
-      axios.get(`${baseUrl}/targets/dashboard-stats`, { headers }),
       axios.get(`${baseUrl}/tasks/progress/all`, { headers }),
     ]);
 
     if (reqId !== targetsReqId.current) return;
     if (targetsRes.status === "fulfilled") setTargets(targetsRes.value.data);
     else console.error("Failed to load target data", targetsRes.reason);
-    if (dashStatsRes.status === "fulfilled") setOrgDashStats(dashStatsRes.value.data);
-    else console.error("Failed to load dashboard stats", dashStatsRes.reason);
     if (fallbacksRes.status === "fulfilled") setProgressFallbacks(fallbacksRes.value.data);
     else console.error("Failed to load progress fallbacks", fallbacksRes.reason);
   }, [baseUrl]);
+
+  const fetchDashStats = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ period: dashFilter });
+      if (dashFilter === "custom") {
+        if (dashStartDate) params.append("startDate", dashStartDate);
+        if (dashEndDate) params.append("endDate", dashEndDate);
+      }
+      const statsRes = await axios.get(`${baseUrl}/targets/dashboard-stats?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+      setOrgDashStats(statsRes.data);
+    } catch (error) {
+      console.error("Failed to fetch dash stats", error);
+    }
+  }, [baseUrl, dashFilter, dashStartDate, dashEndDate, token]);
+
+  const fetchReasonNotes = useCallback(async () => {
+    setLoadingNotes(true);
+    try {
+      const { data } = await axios.get(`${baseUrl}/tasks/reason-notes/all`, { headers });
+      setReasonNotes(data);
+    } catch {
+      toast.error("Failed to load reason notes");
+    } finally {
+      setLoadingNotes(false);
+    }
+  }, [baseUrl]);
+
+  useEffect(() => {
+    if (token) fetchDashStats();
+  }, [fetchDashStats, token]);
 
   useEffect(() => {
     fetchTasks(true); // show loading spinner only on initial mount
@@ -1736,10 +1822,10 @@ export default function TaskManagement() {
   // task reflects here instantly, no manual page refresh, no loading-spinner blink.
   useEffect(() => {
     if (!socket) return;
-    const handler = () => { fetchTasks(false); fetchTargetData(); };
+    const handler = () => { fetchTasks(false); fetchTargetData(); fetchReasonNotes(); };
     socket.on("tasks_refresh", handler);
     return () => socket.off("tasks_refresh", handler);
-  }, [socket, fetchTasks, fetchTargetData]);
+  }, [socket, fetchTasks, fetchTargetData, fetchReasonNotes]);
 
   // A Target created/updated/reassigned for a sales person (on the separate
   // target socket channel — see MyTargets.jsx for the same pattern) should
@@ -1808,35 +1894,53 @@ export default function TaskManagement() {
     });
   };
 
-  const fetchReasonNotes = useCallback(async () => {
-    setLoadingNotes(true);
-    try {
-      const { data } = await axios.get(`${baseUrl}/tasks/reason-notes/all`, { headers });
-      setReasonNotes(data);
-    } catch {
-      toast.error("Failed to load reason notes");
-    } finally {
-      setLoadingNotes(false);
-    }
-  }, [baseUrl]);
 
-  const handleMarkReasonNoteRead = async (note) => {
+
+  const handleAcceptReasonNote = async (reassignToUserId, extendDueDate, adminNote) => {
+    setReassigningNote(true);
     try {
-      const { data } = await axios.post(`${baseUrl}/tasks/${note.taskId}/reason-notes/${note.noteIdx}/read`, {}, { headers });
-      setReasonNotes((prev) => prev.map((n) => (n.taskId === note.taskId && n.noteIdx === note.noteIdx ? { ...n, status: "resolved" } : n)));
+      const note = reassignNoteModal.note;
+      const { data } = await axios.post(`${baseUrl}/tasks/${note.taskId}/reason-notes/${note.noteIdx}/reassign`, {
+        reassignToUserId,
+        extendDueDate,
+        adminNote
+      }, { headers });
+      
       toast.success(data.message);
-      // Clean up local notifications
-      setNotifications((prev) =>
-        prev.filter((n) => !(n.type === "task" && n.meta?.reasonNote && String(n.meta?.taskId) === String(note.taskId) && n.meta?.noteIdx === note.noteIdx))
-      );
+      setReasonNotes((prev) => prev.filter(n => !(n.taskId === note.taskId && n.noteIdx === note.noteIdx)));
+      setReassignNoteModal({ open: false, note: null });
+      fetchTasks(); // Refresh tasks to show new dates/assignee
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Failed to reassign task");
+    } finally {
+      setReassigningNote(false);
+    }
+  };
+
+  const handleRejectReasonNote = async () => {
+    if (!rejectNoteReason.trim()) return;
+    setRejectingNote(true);
+    try {
+      const note = rejectNoteModal.note;
+      await axios.post(`${baseUrl}/tasks/${note.taskId}/reason-notes/${note.noteIdx}/reject`, { rejectReason: rejectNoteReason }, { headers });
+      toast.success("Reason rejected");
+      setReasonNotes((prev) => prev.map((n) => (n.taskId === note.taskId && n.noteIdx === note.noteIdx ? { ...n, status: "rejected", rejectReason: rejectNoteReason } : n)));
+      setRejectNoteModal({ open: false, note: null });
+      setRejectNoteReason("");
     } catch {
-      toast.error("Failed to mark note as read");
+      toast.error("Failed to reject reason");
+    } finally {
+      setRejectingNote(false);
     }
   };
 
   useEffect(() => {
+    fetchReasonNotes(); // Always fetch on mount so the badge works on other tabs
+  }, [fetchReasonNotes]);
+
+  useEffect(() => {
     if (mainView !== "reasonNotes") return;
-    fetchReasonNotes();
+    fetchReasonNotes(); // Refresh when they open the tab just in case
     setSelectedNotes(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainView]);
@@ -1943,7 +2047,37 @@ export default function TaskManagement() {
           numbers immediately regardless of whether any Target exists yet. */}
       {mainView === "tasks" && orgDashStats && (
         <div className="mb-6">
-          <h2 className="text-slate-900 mb-3">Monthly Overview</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-slate-900">Dashboard Overview</h2>
+            <div className="flex items-center gap-2">
+              <select 
+                value={dashFilter}
+                onChange={(e) => setDashFilter(e.target.value)}
+                className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+              >
+                <option value="all">All Time</option>
+                <option value="this_month">This Month</option>
+                <option value="custom">Custom Date</option>
+              </select>
+              {dashFilter === "custom" && (
+                <div className="flex items-center gap-1">
+                  <input 
+                    type="date" 
+                    value={dashStartDate}
+                    onChange={(e) => setDashStartDate(e.target.value)}
+                    className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+                  />
+                  <span className="text-xs text-gray-500">to</span>
+                  <input 
+                    type="date" 
+                    value={dashEndDate}
+                    onChange={(e) => setDashEndDate(e.target.value)}
+                    className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={orgDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={orgDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
@@ -2200,10 +2334,16 @@ export default function TaskManagement() {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isPending && (
-                            <button onClick={() => handleMarkReasonNoteRead(n)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
-                              <Check size={12} /> Mark as read
-                            </button>
+                            <>
+                              <button onClick={() => setReassignNoteModal({ open: true, note: n })}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
+                                <Check size={12} /> Accept
+                              </button>
+                              <button onClick={() => setRejectNoteModal({ open: true, note: n })}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600">
+                                <X size={12} /> Reject
+                              </button>
+                            </>
                           )}
                           <button onClick={() => setNoteDeleteConfirm({ taskId: n.taskId, noteIdx: n.noteIdx, isBulk: false, count: 1 })}
                             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete note">
@@ -2347,20 +2487,12 @@ export default function TaskManagement() {
           <p className="text-sm">No tasks in this category</p>
         </div>
       ) : viewMode === "card" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
           {filtered.map((task) => (
-            <TaskCard
+            <CompactTaskCard
               key={task._id}
               task={task}
-              targets={targets}
-              progressFallbacks={progressFallbacks}
-              onEdit={(t) => { setEditTask(t); setModalOpen(true); }}
-              onDelete={(t) => setDeleteTarget(t)}
-              onApproveRejection={(t, action) => handleApproveRejection(t._id, action)}
-              onApproveHold={handleApproveHoldAction}
-              baseUrl={baseUrl}
-              headers={headers}
-              onRefresh={() => { fetchTasks(false); fetchTargetData(); }}
+              onClick={setSelectedTaskDetails}
             />
           ))}
         </div>
@@ -2425,6 +2557,82 @@ export default function TaskManagement() {
         onConfirm={submitApproveHold}
       />
       <WorkflowExplanationModal open={showWorkflowExplanation} onClose={() => setShowWorkflowExplanation(false)} />
+
+      {/* ── Reject Reason Note Modal ── */}
+      {rejectNoteModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <XCircle size={20} className="text-red-500" />
+              Reject Reason
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Provide a reason for rejecting this note. The sales person will be notified to submit a new reason.
+            </p>
+            <textarea
+              autoFocus
+              className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none mb-4"
+              rows={4}
+              placeholder="Why is this reason invalid?"
+              value={rejectNoteReason}
+              onChange={(e) => setRejectNoteReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setRejectNoteModal({ open: false, note: null }); setRejectNoteReason(""); }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectReasonNote}
+                disabled={rejectingNote || !rejectNoteReason.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {rejectingNote ? "Rejecting..." : "Reject Reason"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reassign Reason Note Modal ── */}
+      <ReassignReasonNoteModal
+        open={reassignNoteModal.open}
+        note={reassignNoteModal.note}
+        salesUsers={salesUsers}
+        loading={reassigningNote}
+        onClose={() => setReassignNoteModal({ open: false, note: null })}
+        onConfirm={handleAcceptReasonNote}
+      />
+
+      {/* Full Task Details Modal */}
+      {selectedTaskDetails && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 sm:p-6" onClick={() => setSelectedTaskDetails(null)}>
+          <div className="bg-transparent w-full max-w-4xl max-h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-t-xl px-4 py-3 border-b flex justify-between items-center sticky top-0 z-10">
+              <h3 className="font-bold text-gray-800">Task Details</h3>
+              <button onClick={() => setSelectedTaskDetails(null)} className="text-gray-500 hover:text-gray-800 bg-gray-100 p-1.5 rounded-full">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-b-xl border border-t-0 border-gray-100 shadow-xl">
+              <TaskCard
+                task={selectedTaskDetails}
+                targets={targets}
+                progressFallbacks={progressFallbacks}
+                onEdit={(t) => { setEditTask(t); setModalOpen(true); setSelectedTaskDetails(null); }}
+                onDelete={(t) => { setDeleteTarget(t); setSelectedTaskDetails(null); }}
+                onApproveRejection={(t, action) => { handleApproveRejection(t._id, action); setSelectedTaskDetails(null); }}
+                onApproveHold={(t, action) => { handleApproveHoldAction(t, action); setSelectedTaskDetails(null); }}
+                baseUrl={baseUrl}
+                headers={headers}
+                onRefresh={() => { fetchTasks(false); fetchTargetData(); setSelectedTaskDetails(null); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2434,7 +2642,7 @@ function ApproveHoldModal({ open, task, onClose, onConfirm }) {
 
   useEffect(() => {
     if (open && task) {
-      setNewDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "");
+      setNewDueDate(task.dueDate ? (() => { const d = new Date(task.dueDate); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : "");
     }
   }, [open, task]);
 
@@ -2466,6 +2674,171 @@ function ApproveHoldModal({ open, task, onClose, onConfirm }) {
             }
             onConfirm(task._id, "approve", newDueDate);
           }} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Approve Hold</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReassignReasonNoteModal({ open, note, salesUsers, onClose, onConfirm, loading }) {
+  const [reassignTo, setReassignTo] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [adminNote, setAdminNote] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    if (open && note) {
+      setReassignTo(note.assignedTo?._id || "");
+      setNewDueDate("");
+      setAdminNote("");
+      setShowConfirm(false);
+    }
+  }, [open, note]);
+
+  if (!open || !note) return null;
+
+  if (showConfirm) {
+    const leadsCount = note.remainingLeadsCount !== undefined ? note.remainingLeadsCount : (note.leadRefs?.length || (note.leadRef ? 1 : 0));
+    const dealsCount = note.remainingDealsCount !== undefined ? note.remainingDealsCount : (note.dealRefs?.length || (note.dealRef ? 1 : 0));
+
+    let msgParts = [];
+    if (leadsCount > 0) msgParts.push(`${leadsCount} lead(s)`);
+    if (dealsCount > 0) msgParts.push(`${dealsCount} deal(s)`);
+    
+    // Calculate overlaps for UI
+    const overlapLeads = note.overlappingTargetLeads || [];
+    const overlapDeals = note.overlappingTargetDeals || [];
+    const hasAnyOverlap = overlapLeads.length > 0 || overlapDeals.length > 0;
+
+    return (
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] flex flex-col">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Reassignment</h3>
+          <p className="text-sm text-gray-600 mb-4 shrink-0">
+            Are you sure you want to reassign this task? The underlying {msgParts.join(" and ")} will also be completely reassigned to the new salesperson.
+          </p>
+
+          {(note.remainingLeads?.length > 0 || note.remainingDeals?.length > 0) && (
+            <div className="mb-4 overflow-y-auto flex-1 min-h-0 border border-gray-100 rounded-lg bg-gray-50/50 p-2 space-y-1.5">
+              {note.remainingLeads?.map(l => {
+                const overlap = overlapLeads.find(ol => String(ol._id) === String(l._id));
+                return (
+                  <div key={l._id} className={`p-2 rounded-md border text-sm flex flex-col gap-1 ${overlap ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
+                    <div className="flex items-center gap-2 font-medium text-gray-800">
+                      <span className="text-xs uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">Lead</span>
+                      {l.leadName}
+                    </div>
+                    {overlap && (
+                      <div className="text-xs text-amber-700 flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Also linked to Target: "{overlap.targetName}" ({l.leadName} will also be reassigned)
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {note.remainingDeals?.map(d => {
+                const overlap = overlapDeals.find(od => String(od._id) === String(d._id));
+                return (
+                  <div key={d._id} className={`p-2 rounded-md border text-sm flex flex-col gap-1 ${overlap ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
+                    <div className="flex items-center gap-2 font-medium text-gray-800">
+                      <span className="text-xs uppercase tracking-wider text-purple-600 font-bold bg-purple-50 px-1.5 py-0.5 rounded">Deal</span>
+                      {d.dealName || d.dealTitle}
+                    </div>
+                    {overlap && (
+                      <div className="text-xs text-amber-700 flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Also linked to Target: "{overlap.targetName}" ({d.dealName || d.dealTitle} will also be reassigned)
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {hasAnyOverlap && (
+            <div className="mb-4 text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 font-medium">
+              Items highlighted in yellow are shared with active Targets. Proceeding will automatically split those Targets to reassign the shared items to the new salesperson.
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 shrink-0 pt-2">
+            <button onClick={() => setShowConfirm(false)} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+            <button onClick={() => {
+              setShowConfirm(false);
+              onConfirm(reassignTo, newDueDate, adminNote);
+            }} disabled={loading} className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50">
+              {loading ? "Confirming..." : "Yes, Reassign"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Accept Reason & Reassign Task</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          You are accepting the reason note. Please select the assignee (you can keep the same person) and assign a new due date for this task.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Assign To <span className="text-red-500">*</span></label>
+            <select
+              value={reassignTo}
+              onChange={(e) => setReassignTo(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">Select Sales Person</option>
+              {salesUsers.map((u) => (
+                <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">New Due Date <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Note (Optional)</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              rows={2}
+              placeholder="Add a note to the assignee..."
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+          <button onClick={() => {
+            if (!reassignTo) return toast.error("Please select a sales person");
+            if (!newDueDate) return toast.error("Please select a new due date");
+
+            const isSamePerson = note.assignedTo?._id === reassignTo;
+            const leadsCount = note.remainingLeadsCount !== undefined ? note.remainingLeadsCount : (note.leadRefs?.length || (note.leadRef ? 1 : 0));
+            const dealsCount = note.remainingDealsCount !== undefined ? note.remainingDealsCount : (note.dealRefs?.length || (note.dealRef ? 1 : 0));
+
+            if (!isSamePerson && (leadsCount > 0 || dealsCount > 0)) {
+              setShowConfirm(true);
+              return;
+            }
+
+            onConfirm(reassignTo, newDueDate, adminNote);
+          }} disabled={loading} className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50">
+            {loading ? "Reassigning..." : "Accept & Reassign"}
+          </button>
         </div>
       </div>
     </div>
