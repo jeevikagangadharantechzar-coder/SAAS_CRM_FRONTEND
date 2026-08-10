@@ -1859,7 +1859,7 @@ export default function LostDealAnalytics() {
           <XAxis
             dataKey="month"
             interval={0}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: "0.75rem" }}
           />
 
           <YAxis

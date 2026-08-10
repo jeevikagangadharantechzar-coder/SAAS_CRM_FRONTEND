@@ -9,6 +9,7 @@ import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2 } from 
 
 import { Settings, Plug } from "lucide-react";
 
+import { useFontSize } from "../context/FontSizeContext";
 import PasswordUpdate from "../pages/password/PasswordUpdate";
 import { formatDistanceToNow } from "date-fns";
 import { FaWhatsapp, FaUserCircle } from "react-icons/fa";
@@ -46,6 +47,7 @@ const Navbar = ({ toggleSidebar }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { notifications, setNotifications } = useNotifications();
+  const { fontSize, setFontSize } = useFontSize();
   const [notifAvatarErrorIds, setNotifAvatarErrorIds] = useState(() => new Set());
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -605,6 +607,31 @@ const handleLogout = async () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {user?.email || "No email"}
                   </p>
+                </div>
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Font Size
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { key: "small", sizeClass: "text-xs" },
+                      { key: "normal", sizeClass: "text-sm" },
+                      { key: "large", sizeClass: "text-lg" },
+                    ].map(({ key, sizeClass }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFontSize(key)}
+                        className={`flex-1 py-1.5 rounded-lg border font-medium transition-colors ${sizeClass} ${
+                          fontSize === key
+                            ? "border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500"
+                            : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        AA
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="py-1">
                   <button

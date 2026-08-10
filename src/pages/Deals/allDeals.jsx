@@ -135,8 +135,12 @@ function AllDealsComponent() {
   const [exportMode, setExportMode] = useState("all"); // "all" | "followups"
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => parseInt(sessionStorage.getItem("deals_currentPage")) || 1);
   const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    sessionStorage.setItem("deals_currentPage", currentPage);
+  }, [currentPage]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [users, setUsers] = useState([]);
   const [userRole, setUserRole] = useState("");
@@ -743,12 +747,9 @@ function AllDealsComponent() {
   useEffect(() => {
     const pages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage));
     setTotalPages(pages);
-    if (currentPage > pages) setCurrentPage(pages);
-  }, [filteredDeals.length, itemsPerPage]);
+    if (!loading && currentPage > pages) setCurrentPage(pages);
+  }, [filteredDeals.length, itemsPerPage, loading]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [itemsPerPage]);
 
   const paginatedDeals = filteredDeals.slice(
     (currentPage - 1) * itemsPerPage,
@@ -1353,7 +1354,12 @@ function AllDealsComponent() {
                     <td className="px-6 py-4">
                       <button
                         onClick={(e) => toggleDropdown(deal._id, e)}
-                        className="p-2 rounded hover:bg-gray-200"
+                        disabled={deal.stage === "Closed Won"}
+                        className={`p-2 rounded ${
+                          deal.stage === "Closed Won"
+                            ? "opacity-40 cursor-not-allowed"
+                            : "hover:bg-gray-200"
+                        }`}
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -1379,7 +1385,10 @@ function AllDealsComponent() {
             <span>Rows per page:</span>
             <select
               value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
               className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
             >
               <option value={5}>5</option>

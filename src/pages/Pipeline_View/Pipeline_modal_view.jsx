@@ -16,6 +16,7 @@ import {
   Mail,
   Paperclip,
   Tag,
+  Trash2,
   Clock,
   User,
   Building,
@@ -118,7 +119,7 @@ const currencyOptions = [
 const phoneInputStyle = {
   width: "100%",
   height: "42px",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   paddingLeft: "55px",
   borderRadius: "0.5rem",
   border: "none",
@@ -1286,6 +1287,88 @@ function Pipeline_modal_view() {
     }
   };
 
+  // Same pattern as handleUploadAttachments — not sending `existingImages`
+  // lets the backend keep the deal's current images as-is and just append.
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const handleUploadImages = async (files) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    if (fileList.some((f) => !f.type.startsWith("image/")))
+      return toast.error("Only image files are allowed");
+    try {
+      setIsUploadingImage(true);
+      const formData = new FormData();
+      fileList.forEach((f) => formData.append("images", f));
+      await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      toast.success(fileList.length > 1 ? "Images uploaded" : "Image uploaded");
+      fetchDealDetails();
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to upload image:", err);
+      toast.error(err.response?.data?.message || "Failed to upload image");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Deletes work by explicitly resending existingAttachments/existingImages
+  // with that one item removed — the same "existing list minus new files"
+  // shape update-deal already expects, just with nothing appended.
+  const [deletingAttachmentIdx, setDeletingAttachmentIdx] = useState(null);
+  const handleDeleteAttachment = async (idx) => {
+    if (!window.confirm("Delete this attachment?")) return;
+    try {
+      setDeletingAttachmentIdx(idx);
+      const remaining = (deal.attachments || []).filter((_, i) => i !== idx);
+      const formData = new FormData();
+      formData.append("existingAttachments", JSON.stringify(remaining));
+      await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      toast.success("Attachment deleted");
+      fetchDealDetails();
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to delete attachment:", err);
+      toast.error(err.response?.data?.message || "Failed to delete attachment");
+    } finally {
+      setDeletingAttachmentIdx(null);
+    }
+  };
+
+  const [deletingImageIdx, setDeletingImageIdx] = useState(null);
+  const handleDeleteImage = async (idx) => {
+    if (!window.confirm("Delete this image?")) return;
+    try {
+      setDeletingImageIdx(idx);
+      const remaining = (deal.images || []).filter((_, i) => i !== idx);
+      const formData = new FormData();
+      formData.append("existingImages", JSON.stringify(remaining));
+      await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      toast.success("Image deleted");
+      fetchDealDetails();
+      fetchActivity();
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      toast.error(err.response?.data?.message || "Failed to delete image");
+    } finally {
+      setDeletingImageIdx(null);
+    }
+  };
+
   const fetchDealScore = useCallback(async () => {
     try {
       const res = await axios.get(
@@ -1744,6 +1827,13 @@ function Pipeline_modal_view() {
   };
 
   // ── Download handler ────────────────────────────────────────
+  // /uploads is served as public static files (see backend app.js), so an
+  // already-uploaded image thumbnail can be shown directly — no
+  // authenticated fetch needed (click-to-enlarge still goes through the
+  // existing authenticated openPreview for consistency with Attachments).
+  const buildImageUrl = (path) =>
+    `${API_URL.replace("/api", "")}/${String(path || "").replace(/^\/+/, "")}`;
+
   const downloadFile = useCallback(
     async (filePath, fileName) => {
       if (!filePath) return toast.error("File path is missing");
@@ -2647,7 +2737,7 @@ function Pipeline_modal_view() {
                   <span className="truncate">{prevDealInfo.dealName}</span>
                 </button>
               )}
-              <h1 className="text-gray-900 text-[16px]">
+              <h1 className="text-gray-900 text-[1rem]">
                 {deal.dealName}
               </h1>
               <div
@@ -2740,6 +2830,19 @@ function Pipeline_modal_view() {
             {deal.attachments &&
               deal.attachments.length > 0 &&
               `(${deal.attachments.length})`}
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === "images"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab("images")}
+          >
+            Images{" "}
+            {deal.images &&
+              deal.images.length > 0 &&
+              `(${deal.images.length})`}
           </button>
           <button
             className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -3289,13 +3392,13 @@ function Pipeline_modal_view() {
                               >
                                 <XAxis
                                   dataKey="name"
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
                                 <YAxis
                                   allowDecimals={false}
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
@@ -3305,7 +3408,7 @@ function Pipeline_modal_view() {
                                     borderRadius: "0.5rem",
                                     border: "none",
                                     color: "#fff",
-                                    fontSize: "11px",
+                                    fontSize: "0.6875rem",
                                   }}
                                   formatter={(value, name) => [
                                     `${value} pts`,
@@ -3392,12 +3495,12 @@ function Pipeline_modal_view() {
                                     borderRadius: "0.5rem",
                                     border: "none",
                                     color: "#fff",
-                                    fontSize: "11px",
+                                    fontSize: "0.6875rem",
                                   }}
                                 />
                                 <Legend
                                   iconSize={8}
-                                  wrapperStyle={{ fontSize: "10px" }}
+                                  wrapperStyle={{ fontSize: "0.625rem" }}
                                 />
                               </PieChart>
                             </ResponsiveContainer>
@@ -3464,13 +3567,13 @@ function Pipeline_modal_view() {
                               >
                                 <XAxis
                                   dataKey="name"
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
                                 <YAxis
                                   allowDecimals={false}
-                                  tick={{ fontSize: 10, fill: "#64748b" }}
+                                  tick={{ fontSize: "0.625rem", fill: "#64748b" }}
                                   axisLine={false}
                                   tickLine={false}
                                 />
@@ -3480,7 +3583,7 @@ function Pipeline_modal_view() {
                                     borderRadius: "0.5rem",
                                     border: "none",
                                     color: "#fff",
-                                    fontSize: "11px",
+                                    fontSize: "0.6875rem",
                                   }}
                                 />
                                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -4436,7 +4539,7 @@ function Pipeline_modal_view() {
                                 <div key={f.id}>
                                   <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
                                     {f.name}
-                                    <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                    <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                                       Custom
                                     </span>
                                     <button
@@ -4733,6 +4836,21 @@ function Pipeline_modal_view() {
                                   Download
                                 </span>
                               </button>
+                              <button
+                                onClick={() => handleDeleteAttachment(idx)}
+                                disabled={deletingAttachmentIdx === idx}
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete file"
+                              >
+                                {deletingAttachmentIdx === idx ? (
+                                  <span className="inline-block w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Trash2 size={15} />
+                                )}
+                                <span className="hidden sm:inline">
+                                  Delete
+                                </span>
+                              </button>
                             </div>
                           </li>
                         );
@@ -4748,6 +4866,106 @@ function Pipeline_modal_view() {
                       </p>
                       <p className="text-slate-400 text-sm mt-1">
                         Files uploaded with this deal will appear here
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Images */}
+            {activeTab === "images" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-slate-900">Images</h2>
+                    <p className="text-base text-slate-600 mt-1">
+                      Photos related to this deal
+                    </p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingImage ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Plus size={15} />
+                    {isUploadingImage ? "Uploading…" : "Upload"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingImage}
+                      onChange={(e) => {
+                        handleUploadImages(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="p-6">
+                  {deal.images && deal.images.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {deal.images.map((image, idx) => {
+                        const fileName =
+                          image.name || image.path?.split("/").pop() || `Image ${idx + 1}`;
+                        const isLoadingThis = previewLoading === `image-${idx}`;
+                        return (
+                          <div
+                            key={idx}
+                            className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 cursor-pointer hover:border-blue-300 transition-colors"
+                            onClick={() => openPreview(image, `image-${idx}`)}
+                          >
+                            <img
+                              src={buildImageUrl(image.path)}
+                              alt={fileName}
+                              className="w-full h-32 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                              {isLoadingThis ? (
+                                <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                              <p className="text-xs text-white truncate">{fileName}</p>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadFile(image.path, fileName);
+                              }}
+                              className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 hover:text-blue-600 transition-opacity"
+                            >
+                              <Download size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteImage(idx);
+                              }}
+                              disabled={deletingImageIdx === idx}
+                              className="absolute top-1.5 right-9 p-1.5 rounded-lg bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-opacity disabled:opacity-50"
+                            >
+                              {deletingImageIdx === idx ? (
+                                <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileImage size={24} className="text-slate-400" />
+                      </div>
+                      <p className="text-slate-500 font-medium">
+                        No images found
+                      </p>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Photos uploaded with this deal will appear here
                       </p>
                     </div>
                   )}

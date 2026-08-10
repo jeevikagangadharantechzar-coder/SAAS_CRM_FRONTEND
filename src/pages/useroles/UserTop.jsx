@@ -395,7 +395,7 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
           duration: 4000,
           style: {
             borderRadius: "8px",
-            fontSize: "14px",
+            fontSize: "0.875rem",
             fontWeight: "500",
             boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
           },
@@ -575,7 +575,7 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
                   inputStyle={{
                     width: "100%",
                     height: "42px",
-                    fontSize: "14px",
+                    fontSize: "0.875rem",
                     paddingLeft: "55px",
                     borderRadius: "0.5rem",
                     border: "none",

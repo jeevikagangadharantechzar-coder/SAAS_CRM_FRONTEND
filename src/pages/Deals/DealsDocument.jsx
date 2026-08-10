@@ -271,6 +271,7 @@ const DealsDocument = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [attachmentsDeal, setAttachmentsDeal] = useState(null);
+  const [imagesDeal, setImagesDeal] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
 
   useEffect(() => {
@@ -390,6 +391,7 @@ const DealsDocument = () => {
               <th className="px-6 py-3 text-left">Deal Name</th>
               <th className="px-6 py-3 text-left">Assignee</th>
               <th className="px-6 py-3 text-left">Attachment</th>
+              <th className="px-6 py-3 text-left">Image</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -520,6 +522,68 @@ const DealsDocument = () => {
             <div className="text-center py-8">
               <Paperclip size={24} className="text-slate-400 mx-auto mb-2" />
               <p className="text-slate-500 font-medium">No attachment</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!imagesDeal} onOpenChange={(open) => !open && setImagesDeal(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-gray-800">
+              Image — {imagesDeal?.dealName}
+            </DialogTitle>
+          </DialogHeader>
+
+          {imagesDeal?.images?.length > 0 ? (
+            <ul className="space-y-3">
+              {imagesDeal.images.map((file, idx) => {
+                const cat = getCategory(file);
+                const s = STYLES[cat];
+                return (
+                  <li
+                    key={`${file.path}-${idx}`}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                  >
+                    <div className="flex items-center min-w-0 flex-1">
+                      <div className={`p-2 rounded-lg mr-3 flex-shrink-0 ${s.bg}`}>
+                        <s.Icon size={18} className={s.fg} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{file.name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {cat.toUpperCase()}
+                          {file.size && <span> • {formatSize(file.size)}</span>}
+                          {file.uploadedAt && <span> • {new Date(file.uploadedAt).toLocaleDateString()}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                      {canPreview(file) && (
+                        <button
+                          onClick={() => openPreview(file)}
+                          className="p-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="Preview"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => downloadFile(file.path, file.name)}
+                        className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Download"
+                      >
+                        <Download size={16} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="text-center py-8">
+              <Paperclip size={24} className="text-slate-400 mx-auto mb-2" />
+              <p className="text-slate-500 font-medium">No image</p>
             </div>
           )}
         </DialogContent>

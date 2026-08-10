@@ -277,7 +277,7 @@ function UserManagementInner() {
           duration: 4000,
           style: {
             borderRadius: "8px",
-            fontSize: "14px",
+            fontSize: "0.875rem",
             fontWeight: "500",
             boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
           },

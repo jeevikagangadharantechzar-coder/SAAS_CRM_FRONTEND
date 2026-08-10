@@ -227,10 +227,14 @@ function LeadTableComponent() {
 
   const [loading, setLoading] = useState(true);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => parseInt(sessionStorage.getItem("leads_currentPage")) || 1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    sessionStorage.setItem("leads_currentPage", currentPage);
+  }, [currentPage]);
 
   const [menuOpen, setMenuOpen] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 1 });
@@ -313,8 +317,9 @@ function LeadTableComponent() {
   const [historyLead, setHistoryLead] = useState(null);
 
   const startTour = () => setIsOpen(true);
-  const updateFilter = (key, value, setter) => {
-    setter(value);
+const updateFilter = (key, value, setter) => {
+  setter(value);
+  setCurrentPage(1);
 
     const params = new URLSearchParams(searchParams);
 
@@ -355,15 +360,16 @@ function LeadTableComponent() {
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
+      setDebouncedSearch((prev) => {
+        if (prev !== searchQuery) {
+          setCurrentPage(1);
+        }
+        return searchQuery;
+      });
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, sourceFilter, assigneeFilter, followUpFilter, itemsPerPage]);
 
   // currencies
   const allowedCurrencies = [
@@ -1797,19 +1803,22 @@ function LeadTableComponent() {
             </tbody>
           </table>
 
-          <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <span>Rows per page:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-              </select>
-            </div>
+        <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <span>Rows per page:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+          </div>
 
             <span>
               {t("leads.pagination.showing")} {firstItem}–{lastItem} {t("leads.pagination.of")} {totalLeads}
