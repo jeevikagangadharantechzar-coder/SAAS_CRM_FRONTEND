@@ -28,6 +28,7 @@ import "react-phone-input-2/lib/style.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ReassignmentModal from "../components/ReassignmentModal";
+import LeadLossModal from "./LeadLossModal";
 
 const STANDARD_INDUSTRIES = [
   "IT",
@@ -131,6 +132,7 @@ export default function CreateLeads() {
   const [reassignmentCheckData, setReassignmentCheckData] = useState(null);
   const [pendingSubmitData, setPendingSubmitData] = useState(null);
   const [rawNotesArray, setRawNotesArray] = useState([]);
+  const [showLossModal, setShowLossModal] = useState(false);
 
   //  Load user role and ID - Only auto-assign for new leads and if not already assigned
   useEffect(() => {
@@ -382,6 +384,10 @@ export default function CreateLeads() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
+
+    if (name === "status" && value === "Cold" && leadId) {
+      setShowLossModal(true);
+    }
 
     if (name === "assignTo") {
       setIsAutoAssigned(true);
@@ -2026,6 +2032,24 @@ export default function CreateLeads() {
         hasTargets={reassignmentCheckData?.hasActiveTargets}
         itemType="lead"
       />
+
+      {showLossModal && (
+        <LeadLossModal
+          isOpen={showLossModal}
+          onClose={() => {
+            setShowLossModal(false);
+          }}
+          onSubmit={(lossData) => {
+            setFormData((prev) => ({
+              ...prev,
+              rejectionReason: lossData.customReason || lossData.reason
+            }));
+            setShowLossModal(false);
+          }}
+          isDowngrade={true}
+          leadName={formData.leadName}
+        />
+      )}
 
       <ToastContainer position="top-right" autoClose={3000} theme="light" />
     </>

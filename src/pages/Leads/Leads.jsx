@@ -747,11 +747,32 @@ const updateFilter = (key, value, setter) => {
     setMenuOpen(null);
   };
 
-  const handleRejectClick = (lead) => {
-    setLeadToReject({ id: lead._id, name: lead.leadName, isDowngrade: lead.isDowngrade });
-    setRejectReason("");
-    setShowRejectModal(true);
-    setMenuOpen(null);
+  const handleRejectClick = async (lead) => {
+    if (lead.isDowngrade) {
+      setLeadToReject({ id: lead._id || lead.id, name: lead.leadName, isDowngrade: true });
+      setRejectReason("");
+      setShowRejectModal(true);
+      setMenuOpen(null);
+    } else {
+      setMenuOpen(null);
+      if (!window.confirm("Are you sure you want to reject this lead?")) return;
+      setRejecting(true);
+      try {
+        const token = localStorage.getItem("token");
+        await axios.patch(
+          `${API_URL}/leads/${lead._id || lead.id}/reject`,
+          { reason: "Rejected by user", customReason: "" },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("Lead rejected");
+        setPipelineTrigger((prev) => prev + 1);
+        fetchLeads();
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Failed to reject lead");
+      } finally {
+        setRejecting(false);
+      }
+    }
   };
 
   const handleRejectSubmit = async (lossData) => {
@@ -1035,7 +1056,7 @@ const updateFilter = (key, value, setter) => {
 
   const handleStatusChange = async (leadId, newStatus) => {
     const lead = leads.find(l => l._id === leadId);
-    if (newStatus === "Cold" && lead && (lead.status === "Warm" || lead.status === "Hot" || lead.status === "New")) {
+    if (newStatus === "Cold" && lead && lead.status !== "Cold") {
       handleRejectClick({ ...lead, isDowngrade: true });
       return;
     }
