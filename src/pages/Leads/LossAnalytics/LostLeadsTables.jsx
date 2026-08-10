@@ -102,8 +102,8 @@ const LostLeadsTables = ({ data, selectedAssignee, setModalAssignee }) => {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col xl:flex-row justify-between items-center mt-4 gap-6 xl:gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3 text-center">
                 <span className="text-sm text-slate-600">
                   Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTableLeads.length)} of {filteredTableLeads.length} leads
                 </span>
@@ -122,7 +122,7 @@ const LostLeadsTables = ({ data, selectedAssignee, setModalAssignee }) => {
                 </select>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
