@@ -239,6 +239,10 @@ function LeadTableComponent() {
   const [menuOpen, setMenuOpen] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 1 });
 
+  // Row selection (checkboxes) — used only for bulk "Move to Trash"
+  const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [bulkTrashing, setBulkTrashing] = useState(false);
+
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
   const [targetLinkedLeadIds, setTargetLinkedLeadIds] = useState(new Map());
@@ -513,6 +517,7 @@ const updateFilter = (key, value, setter) => {
       setLeads(leadsArr);
       setTotalLeads(total);
       setTotalPages(pages);
+      setSelectedLeadIds([]);
 
     } catch (err) {
       console.error("Fetch leads error:", err);
@@ -820,8 +825,49 @@ const updateFilter = (key, value, setter) => {
       );
       toast.success("Lead moved to trash");
       setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+      setSelectedLeadIds((prev) => prev.filter((id) => id !== lead._id));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to move lead to trash");
+    }
+  };
+
+  // Checkbox selection helpers — selection is scoped to the current page's rows
+  const isAllOnPageSelected =
+    leads.length > 0 && leads.every((l) => selectedLeadIds.includes(l._id));
+
+  const toggleSelectAllOnPage = () => {
+    if (isAllOnPageSelected) {
+      setSelectedLeadIds((prev) => prev.filter((id) => !leads.some((l) => l._id === id)));
+    } else {
+      setSelectedLeadIds((prev) => [...new Set([...prev, ...leads.map((l) => l._id)])]);
+    }
+  };
+
+  const toggleSelectLead = (leadId) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+    );
+  };
+
+  const handleBulkTrash = async () => {
+    if (!selectedLeadIds.length) return;
+    if (!window.confirm(`Are you sure you want to move ${selectedLeadIds.length} lead(s) to trash?`)) return;
+
+    setBulkTrashing(true);
+    try {
+      const token = localStorage.getItem("token");
+      await Promise.all(
+        selectedLeadIds.map((id) =>
+          axios.patch(`${API_URL}/leads/${id}/trash`, {}, { headers: { Authorization: `Bearer ${token}` } })
+        )
+      );
+      toast.success(`${selectedLeadIds.length} lead(s) moved to trash`);
+      setLeads((prev) => prev.filter((l) => !selectedLeadIds.includes(l._id)));
+      setSelectedLeadIds([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to move leads to trash");
+    } finally {
+      setBulkTrashing(false);
     }
   };
 
@@ -1179,7 +1225,7 @@ const updateFilter = (key, value, setter) => {
             <Eye className="w-4 h-4" />
           </button>
 
-          {userRole === "Admin" && (
+          {/* {userRole === "Admin" && (
             <>
               <button
                 onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
@@ -1190,7 +1236,7 @@ const updateFilter = (key, value, setter) => {
               </button>
 
             </>
-          )}
+          )} */}
 
           {(userRole === "Admin" || userRole === "Sales") && (
             <button
@@ -1483,11 +1529,45 @@ const updateFilter = (key, value, setter) => {
           pipelineTrigger={pipelineTrigger}
         />
       ) : (
-        <div className="overflow-x-auto tour-lead-table">
+        <div className="tour-lead-table">
+          {userRole === "Admin" && selectedLeadIds.length > 0 && (
+            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-3">
+              <span className="text-sm font-medium text-blue-700">
+                {selectedLeadIds.length} lead{selectedLeadIds.length === 1 ? "" : "s"} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedLeadIds([])}
+                  className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={handleBulkTrash}
+                  disabled={bulkTrashing}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-60"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {bulkTrashing ? "Moving..." : `Move to Trash (${selectedLeadIds.length})`}
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="overflow-x-auto">
           <table className="min-w-max w-full table-auto divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr className="whitespace-nowrap">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky left-0 z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">{t("leads.table.lead")}</th>
+                {userRole === "Admin" && (
+                  <th className="w-10 px-4 py-3 sticky left-0 z-20 bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={isAllOnPageSelected}
+                      onChange={toggleSelectAllOnPage}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </th>
+                )}
+                <th className={`px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"}`}>{t("leads.table.lead")}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
@@ -1529,7 +1609,19 @@ const updateFilter = (key, value, setter) => {
                             : ""
                         }`}
                     >
-                      <td className={`px-4 py-3 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                      {userRole === "Admin" && (
+                        <td className={`w-10 px-4 py-3 sticky left-0 z-10 ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={selectedLeadIds.includes(lead._id)}
+                            onChange={() => toggleSelectLead(lead._id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
+                      )}
+                      <td className={`px-4 py-3 sticky z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"} ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
                         }`}>
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
@@ -1784,18 +1876,6 @@ const updateFilter = (key, value, setter) => {
                               </button>
                             )}
 
-                            {userRole === "Admin" && !isTerminal && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRejectClick(lead);
-                                }}
-                                className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
-                              >
-                                <Ban className="w-4 h-4 mr-2" /> Reject
-                              </button>
-                            )}
-
                             {userRole === "Admin" && (
                               <button
                                 onClick={(e) => {
@@ -1816,13 +1896,14 @@ const updateFilter = (key, value, setter) => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={12} className="px-4 py-12 text-center text-gray-500 text-sm">
+                  <td colSpan={13} className="px-4 py-12 text-center text-gray-500 text-sm">
                     {t("leads.table.noLeads")}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
 
         <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
