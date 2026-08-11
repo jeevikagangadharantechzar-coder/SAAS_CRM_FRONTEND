@@ -1534,7 +1534,7 @@ function AllDealsComponent() {
             {(() => {
               const activeDeal = baseDeals.find((d) => d._id === openDropdownId);
               const activeIsTerminal = activeDeal?.stage === "Rejected" || activeDeal?.stage === "Closed Won";
-              const editDisabled = (activeDeal?.isActive === false && userRole !== "Admin") || activeIsTerminal;
+              const editDisabled = activeIsTerminal;
               return (
                 <>
                   <button

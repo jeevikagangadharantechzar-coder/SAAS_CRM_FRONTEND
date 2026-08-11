@@ -7,6 +7,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
 import { isTaskTabNotif, getNotificationAccentClass } from "../../utils/taskNotifications";
+import { isDateOverdue } from "../../utils/dateValidation";
 import {
   CheckCircle, Clock, AlertCircle, Calendar, Flag, User,
   ClipboardList, ArrowRight, StickyNote, X, FileText, Briefcase,
@@ -871,7 +872,7 @@ function CompleteModal({ open, task, onClose, onConfirm }) {
 /* ── Task Card ─────────────────────── */
 function AssignedTaskCard({ task, baseUrl, headers, onRefresh, targets, progressFallback }) {
   const [expanded, setExpanded] = useState(false);
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "Completed";
+  const isOverdue = task.dueDate && isDateOverdue(task.dueDate) && task.status !== "Completed";
   const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
   const adminTookTask = getAdminTookTaskBadge(task);
 
@@ -1003,7 +1004,7 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
       </div>
 
       {tasks.map((task) => {
-        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "Completed";
+        const isOverdue = task.dueDate && isDateOverdue(task.dueDate) && task.status !== "Completed";
         const isCompleted = task.status === "Completed";
         const isPending = task.status === "Pending";
         const isInProgress = task.status === "In Progress";
@@ -1153,9 +1154,15 @@ export default function AssignedTasks() {
   // (services/taskProgressService.js, independent of Target Management).
   const [progressFallback, setProgressFallback] = useState({});
   const [myDashStats, setMyDashStats] = useState(null);
+  const [dashFilter, setDashFilter] = useState("all");
+  const [dashStartDate, setDashStartDate] = useState("");
+  const [dashEndDate, setDashEndDate] = useState("");
   const socket = useSocket();
   const targetSocket = useTargetSocket();
   const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
+
+  const [overdueReasonNote, setOverdueReasonNote] = useState("");
+  const [submittingOverdueReason, setSubmittingOverdueReason] = useState(false);
 
   // Deadline reminder/due-today/approval notifications — real-time via the shared socket,
   // no page refresh needed.
@@ -1197,23 +1204,35 @@ export default function AssignedTasks() {
     // of one-after-another is what makes the Progress card populate right
     // away instead of visibly filling in over several seconds after the task
     // cards themselves have already appeared.
-    const [targetsRes, dashStatsRes, fallbackRes] = await Promise.allSettled([
+    const [targetsRes, fallbackRes] = await Promise.allSettled([
       axios.get(`${baseUrl}/targets/my`, { headers }),
-      // "My Monthly Overview" header — self-scoped, no admin check needed —
-      // so it always shows real numbers even when you have zero active
-      // Targets (a Target-derived sum would show nothing at all in that case).
-      axios.get(`${baseUrl}/targets/my-dashboard-stats`, { headers }),
       axios.get(`${baseUrl}/tasks/progress/mine`, { headers }),
     ]);
 
     if (reqId !== targetsReqId.current) return;
     if (targetsRes.status === "fulfilled") setTargets(targetsRes.value.data);
     else console.error("Failed to load targets", targetsRes.reason);
-    if (dashStatsRes.status === "fulfilled") setMyDashStats(dashStatsRes.value.data);
-    else console.error("Failed to load my dashboard stats", dashStatsRes.reason);
     if (fallbackRes.status === "fulfilled") setProgressFallback(fallbackRes.value.data);
     else console.error("Failed to load progress fallback", fallbackRes.reason);
   }, [baseUrl]);
+
+  const fetchDashStats = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ period: dashFilter });
+      if (dashFilter === "custom") {
+        if (dashStartDate) params.append("startDate", dashStartDate);
+        if (dashEndDate) params.append("endDate", dashEndDate);
+      }
+      const statsRes = await axios.get(`${baseUrl}/targets/my-dashboard-stats?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+      setMyDashStats(statsRes.data);
+    } catch (error) {
+      console.error("Failed to fetch dash stats", error);
+    }
+  }, [baseUrl, dashFilter, dashStartDate, dashEndDate, token]);
+
+  useEffect(() => {
+    if (token) fetchDashStats();
+  }, [fetchDashStats, token]);
 
   const handleMarkNotifRead = (n) => {
     if (n.read || n.isRead || !n._id || String(n._id).includes("-")) return;
@@ -1367,10 +1386,72 @@ export default function AssignedTasks() {
   const FILTERS = ["All", "New Task"];
   const filtered = filter === "New Task" ? tasks.filter((t) => t.status === "Pending") : tasks;
 
+  const overdueBlockingTask = tasks.find((t) => {
+    if (t.status === "Completed" || t.status === "Rejected") return false;
+    const isOverdue = isDateOverdue(t.dueDate);
+    if (!isOverdue) return false;
+    
+    const lastNote = t.reasonNotes && t.reasonNotes.length > 0 ? t.reasonNotes[t.reasonNotes.length - 1] : null;
+    if (!lastNote) return true; // Needs reason
+    if (lastNote.status !== "pending") return true; // Needs NEW reason if rejected, resolved, or reactivated
+    return false;
+  });
+
+  const handleOverdueSubmit = async () => {
+    if (!overdueReasonNote.trim()) return;
+    setSubmittingOverdueReason(true);
+    try {
+      await axios.post(`${baseUrl}/tasks/${overdueBlockingTask._id}/reason-note`, { note: overdueReasonNote }, { headers });
+      toast.success("Reason submitted to admin for review");
+      fetchTasks();
+      setOverdueReasonNote("");
+    } catch (e) {
+      toast.error("Failed to submit reason");
+    } finally {
+      setSubmittingOverdueReason(false);
+    }
+  };
+
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    <div className="p-6 min-h-screen bg-gray-50 relative">
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {overdueBlockingTask && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-[90%] max-w-md">
+            <div className="flex items-center gap-3 mb-4 text-red-600">
+              <AlertCircle size={28} />
+              <h2 className="text-xl font-bold">Overdue Task Block</h2>
+            </div>
+            <p className="text-gray-700 mb-2">
+              Your task <strong>"{overdueBlockingTask.title}"</strong> is overdue.
+            </p>
+            {overdueBlockingTask.reasonNotes?.length > 0 && overdueBlockingTask.reasonNotes[overdueBlockingTask.reasonNotes.length - 1].status === "rejected" && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-4 border border-red-200">
+                <strong>Reason Rejected:</strong> {overdueBlockingTask.reasonNotes[overdueBlockingTask.reasonNotes.length - 1].rejectReason || "Your previous reason was rejected by the admin. Please submit a valid reason."}
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mb-4">
+              You must submit a reason for the delay to continue using your Tasks.
+            </p>
+            <textarea
+              className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              rows={4}
+              placeholder="Explain why this task is delayed..."
+              value={overdueReasonNote}
+              onChange={(e) => setOverdueReasonNote(e.target.value)}
+            />
+            <button
+              onClick={handleOverdueSubmit}
+              disabled={submittingOverdueReason || !overdueReasonNote.trim()}
+              className="mt-4 w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {submittingOverdueReason ? "Submitting..." : "Submit Reason for Approval"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-5 flex items-center justify-between">
@@ -1407,7 +1488,37 @@ export default function AssignedTasks() {
           Targets. */}
       {mainView === "tasks" && myDashStats && (
         <div className="mb-5">
-          <h2 className="text-slate-900 mb-3">My Monthly Overview</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-slate-900">My Dashboard Overview</h2>
+            <div className="flex items-center gap-2">
+              <select 
+                value={dashFilter}
+                onChange={(e) => setDashFilter(e.target.value)}
+                className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+              >
+                <option value="all">All Time</option>
+                <option value="this_month">This Month</option>
+                <option value="custom">Custom Date</option>
+              </select>
+              {dashFilter === "custom" && (
+                <div className="flex items-center gap-1">
+                  <input 
+                    type="date" 
+                    value={dashStartDate}
+                    onChange={(e) => setDashStartDate(e.target.value)}
+                    className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+                  />
+                  <span className="text-xs text-gray-500">to</span>
+                  <input 
+                    type="date" 
+                    value={dashEndDate}
+                    onChange={(e) => setDashEndDate(e.target.value)}
+                    className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={myDashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={myDashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
