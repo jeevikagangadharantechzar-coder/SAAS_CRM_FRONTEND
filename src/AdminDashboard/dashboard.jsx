@@ -665,8 +665,15 @@ const MeetingsCard = ({ meetings, loading, onClick }) => {
 
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
-  const completedMeetingsCount = (meetings || []).filter(m => m?.status?.toLowerCase() === "completed").length;
-  const scheduledMeetingsCount = (meetings || []).filter(m => m?.status?.toLowerCase() === "scheduled").length;
+  const effectiveStatus = (m) => {
+    if (m?.status?.toLowerCase() === "cancelled") return "cancelled";
+    if (m?.status?.toLowerCase() === "completed") return "completed";
+    if (m?.endDateTime && new Date(m.endDateTime) < new Date()) return "completed";
+    return m?.status?.toLowerCase() || "scheduled";
+  };
+
+  const completedMeetingsCount = (meetings || []).filter(m => effectiveStatus(m) === "completed").length;
+  const scheduledMeetingsCount = (meetings || []).filter(m => effectiveStatus(m) === "scheduled").length;
   const totalRelevant = completedMeetingsCount + scheduledMeetingsCount;
 
   return (
