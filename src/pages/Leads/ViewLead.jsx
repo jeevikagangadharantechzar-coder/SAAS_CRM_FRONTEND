@@ -84,11 +84,12 @@ const phoneButtonStyle = {
 };
 
 const formatNotesMeta = (record) => {
-  const authorName = record?.notesUpdatedBy
-    ? `${record.notesUpdatedBy.firstName || ""} ${record.notesUpdatedBy.lastName || ""}`.trim()
+  const latest = record?.notesList?.[0];
+  const authorName = latest?.createdBy
+    ? `${latest.createdBy.firstName || ""} ${latest.createdBy.lastName || ""}`.trim()
     : "";
-  const dateLabel = record?.notesUpdatedAt
-    ? new Date(record.notesUpdatedAt).toLocaleDateString("en-US", {
+  const dateLabel = latest?.createdAt
+    ? new Date(latest.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -135,29 +136,16 @@ const NotesPopup = ({ record, onClose }) => {
         </div>
         <div className="flex-1 overflow-auto p-5">
           <div className="space-y-4">
-            {(() => {
-              let parsedNotes = [];
-              try {
-                if (record.notes) {
-                  const p = JSON.parse(record.notes);
-                  if (Array.isArray(p)) parsedNotes = p;
-                  else parsedNotes = [{ id: "legacy", text: record.notes }];
-                }
-              } catch (e) {
-                if (record.notes) parsedNotes = [{ id: "legacy", text: record.notes }];
-              }
-              
-              return parsedNotes.map((n, idx) => (
-                <div key={n.id || idx} className="bg-white border border-slate-200 rounded-xl p-4">
-                  <div className="mb-3">
-                    <p className="text-slate-800 text-[0.9375rem] whitespace-pre-wrap break-words">{n.text}</p>
-                  </div>
-                  <p className="text-[0.8125rem] text-slate-500 font-medium">
-                    {n.id === "legacy" ? "Original note" : `${record.assignTo?.firstName || "Unknown User"} ${record.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(record.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                  </p>
+            {(record.notesList || []).map((n) => (
+              <div key={n._id} className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="mb-3">
+                  <p className="text-slate-800 text-[0.9375rem] whitespace-pre-wrap break-words">{n.text}</p>
                 </div>
-              ));
-            })()}
+                <p className="text-[0.8125rem] text-slate-500 font-medium">
+                  {n.createdBy ? `${n.createdBy.firstName || ""} ${n.createdBy.lastName || ""}`.trim() || "Unknown User" : "Unknown User"} — {new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -877,6 +865,7 @@ const ViewLead = () => {
   const [editingSingleNoteId, setEditingSingleNoteId] = useState(null);
   const [editingSingleNoteText, setEditingSingleNoteText] = useState("");
   const [isSavingSingleNote, setIsSavingSingleNote] = useState(false);
+  const [deletingSingleNoteId, setDeletingSingleNoteId] = useState(null);
   const [salesUsers, setSalesUsers] = useState([]);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
@@ -1006,13 +995,6 @@ const ViewLead = () => {
       alternatePhoneNumber: lead.alternatePhoneNumber || "",
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
-      notes: (() => {
-        try {
-          const parsed = JSON.parse(lead.notes);
-          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
-        } catch (e) {}
-        return lead.notes || "";
-      })(),
       address: lead.address || "",
       city: lead.city || "",
       state: lead.state || "",
@@ -1202,31 +1184,12 @@ const ViewLead = () => {
     );
   };
 
-  const parseNotes = (notesStr) => {
-    if (!notesStr) return [];
-    try {
-      const parsed = JSON.parse(notesStr);
-      if (Array.isArray(parsed)) return parsed;
-      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
-    } catch {
-      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
-    }
-  };
-
   const handleAddNote = async () => {
     if (!noteInput.trim()) return;
     try {
       setIsNoteSubmitting(true);
       const token = localStorage.getItem("token");
-      const existingNotes = parseNotes(lead.notes);
-      const newNote = {
-        id: Date.now().toString(),
-        text: noteInput.trim(),
-        createdAt: new Date().toISOString()
-      };
-      const updatedNotesString = JSON.stringify([newNote, ...existingNotes]);
-
-      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+      const res = await axios.post(`${API_URL}/leads/${id}/notes`, { text: noteInput.trim() }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLead(res.data.lead);
@@ -1240,7 +1203,7 @@ const ViewLead = () => {
   };
 
   const startEditSingleNote = (note) => {
-    setEditingSingleNoteId(note.id);
+    setEditingSingleNoteId(note._id);
     setEditingSingleNoteText(note.text);
   };
 
@@ -1254,13 +1217,7 @@ const ViewLead = () => {
     try {
       setIsSavingSingleNote(true);
       const token = localStorage.getItem("token");
-      const existingNotes = parseNotes(lead.notes);
-      const updatedNotesArray = existingNotes.map(n => 
-        n.id === noteId ? { ...n, text: editingSingleNoteText.trim() } : n
-      );
-      const updatedNotesString = JSON.stringify(updatedNotesArray);
-
-      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+      const res = await axios.patch(`${API_URL}/leads/${id}/notes/${noteId}`, { text: editingSingleNoteText.trim() }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLead(res.data.lead);
@@ -1270,6 +1227,23 @@ const ViewLead = () => {
       toast.error(err.response?.data?.message || "Failed to update note");
     } finally {
       setIsSavingSingleNote(false);
+    }
+  };
+
+  const handleDeleteSingleNote = async (noteId) => {
+    if (!window.confirm("Delete this note?")) return;
+    try {
+      setDeletingSingleNoteId(noteId);
+      const token = localStorage.getItem("token");
+      const res = await axios.delete(`${API_URL}/leads/${id}/notes/${noteId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLead(res.data.lead);
+      toast.success("Note deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete note");
+    } finally {
+      setDeletingSingleNoteId(null);
     }
   };
 
@@ -1310,7 +1284,6 @@ const ViewLead = () => {
           : editFormData.alternatePhoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
-        notes: editFormData.notes,
         address: editFormData.address,
         city: editFormData.city,
         state: editFormData.state,
@@ -1495,13 +1468,7 @@ const ViewLead = () => {
     setDealData({
       value: lead.value || "",
       currency: lead.currency || "USD",
-      notes: (() => {
-        try {
-          const parsed = JSON.parse(lead.notes);
-          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
-        } catch (e) {}
-        return lead.notes || "";
-      })(),
+      notes: (lead.notesList || []).map(n => n.text).join("\n\n"),
       stage: "Qualification",
     });
     setConvertModalOpen(true);
@@ -1994,7 +1961,7 @@ const ViewLead = () => {
                       </div>
                     )}
 
-                    {lead.notes && (
+                    {lead.notesList?.length > 0 && (
                       <div className="mt-2 pt-6 border-t border-slate-200 p-6">
                         <button
                           type="button"
@@ -2007,13 +1974,7 @@ const ViewLead = () => {
                               Additional Notes
                             </p>
                             <p className="text-slate-900 truncate mt-1">
-                              {(() => {
-                                try {
-                                  const parsed = JSON.parse(lead.notes);
-                                  if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].text;
-                                } catch (e) {}
-                                return lead.notes;
-                              })()}
+                              {lead.notesList[0].text}
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5">{formatNotesMeta(lead)}</p>
                           </div>
@@ -2259,16 +2220,6 @@ const ViewLead = () => {
                             name="requirement"
                             rows={3}
                             value={editFormData.requirement}
-                            onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                          <textarea
-                            name="notes"
-                            rows={4}
-                            value={editFormData.notes}
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                           />
@@ -2874,10 +2825,11 @@ const ViewLead = () => {
                     <div className="h-px bg-slate-200 flex-1 ml-4" />
                   </div>
                   
-                  {parseNotes(lead.notes).map((n, idx) => {
-                    const isEditing = editingSingleNoteId === n.id;
+                  {(lead.notesList || []).map((n) => {
+                    const isEditing = editingSingleNoteId === n._id;
+                    const isDeleting = deletingSingleNoteId === n._id;
                     return (
-                      <div key={n.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-4 transition-colors hover:bg-slate-100/50">
+                      <div key={n._id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 transition-colors hover:bg-slate-100/50">
                         {isEditing ? (
                           <>
                             <textarea
@@ -2896,7 +2848,7 @@ const ViewLead = () => {
                                 Cancel
                               </button>
                               <button
-                                onClick={() => handleEditSingleNote(n.id)}
+                                onClick={() => handleEditSingleNote(n._id)}
                                 disabled={!editingSingleNoteText.trim() || isSavingSingleNote}
                                 className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
                               >
@@ -2908,12 +2860,21 @@ const ViewLead = () => {
                           <>
                             <div className="flex justify-between items-start mb-3">
                               <p className="text-slate-800 text-[0.9375rem] whitespace-pre-wrap break-words">{n.text}</p>
-                              <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 -mr-1.5 -mt-1.5 rounded-md hover:bg-blue-50 transition-colors">
-                                <Edit size={14} />
-                              </button>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors">
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSingleNote(n._id)}
+                                  disabled={isDeleting}
+                                  className="text-slate-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
                             <p className="text-[0.8125rem] text-slate-500 font-medium">
-                              {n.id === "legacy" ? "Original note" : `${lead.assignTo?.firstName || "Unknown User"} ${lead.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(lead.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              {n.createdBy ? `${n.createdBy.firstName || ""} ${n.createdBy.lastName || ""}`.trim() || "Unknown User" : "Unknown User"} — {new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                             </p>
                           </>
                         )}
