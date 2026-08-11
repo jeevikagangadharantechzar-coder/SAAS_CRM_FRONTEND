@@ -88,6 +88,21 @@ export const MODULE_CONFIG = {
     endpoint: "/tasks",
     useTenantBase: true
   },
+  leaderboard: {
+    label: "Leaderboard",
+    filters: [
+      { value: "all", label: "Top Performers" }
+    ],
+    fields: [
+      { value: "name", label: "Name" },
+      { value: "streak", label: "Streak (Days)" },
+      { value: "totalLeads", label: "Total Leads" },
+      { value: "convertedLeads", label: "Converted Leads" },
+      { value: "productiveDays", label: "Productive Days" },
+    ],
+    endpoint: "/streak/leaderboard",
+    useTenantBase: true
+  },
   targets: {
     label: "Targets",
     filters: [

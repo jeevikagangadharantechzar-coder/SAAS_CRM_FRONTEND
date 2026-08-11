@@ -677,7 +677,7 @@ const MeetingsCard = ({ meetings, loading, onClick }) => {
   const totalRelevant = completedMeetingsCount + scheduledMeetingsCount;
 
   return (
-    <Card 
+    <Card
       onClick={onClick}
       className="shadow-lg border-0 bg-indigo-50/50 backdrop-blur-sm flex flex-col cursor-pointer transition-all hover:shadow-xl h-full"
     >
@@ -725,7 +725,7 @@ const AdminDashboard = () => {
     { id: "summary", title: "Summary Cards", visible: true },
     { id: "currency", title: "Currency Breakdown", visible: true },
     { id: "pending", title: "Pending Invoices", visible: true },
-    { id: "leaderboard", title: "Leaderboard/Meetings", visible: true },
+    { id: "leaderboard", title: storedUser?.role?.name === "Admin" ? "Streak Leaderboard" : "Meetings", visible: true },
     { id: "revenue", title: "Revenue Trend", visible: true },
     { id: "pipeline", title: "Sales Pipeline", visible: true },
     { id: "distribution", title: "Deal Distribution", visible: true },
@@ -782,12 +782,12 @@ const AdminDashboard = () => {
     localStorage.setItem(`custom_widgets_${storedUser?._id || "default"}`, JSON.stringify(customWidgets));
     localStorage.setItem(`builtin_widgets_${storedUser?._id || "default"}`, JSON.stringify(builtinWidgetsConfig));
     localStorage.setItem(`dashboard_notes_${storedUser?._id || "default"}`, JSON.stringify(dashboardNotes));
-    
+
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    
+
     const syncToDB = async () => {
       try {
         if (!storedUser?._id) return;
@@ -795,21 +795,21 @@ const AdminDashboard = () => {
         const payload = new FormData();
         const configString = JSON.stringify({ customWidgets, builtinWidgetsConfig, dashboardNotes });
         payload.append("dashboardConfig", configString);
-        
+
         await axios.put(`${API_URL}/users/update-user/${storedUser._id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         // Update local user object so refresh uses latest
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
         currentUser.dashboardConfig = configString;
         localStorage.setItem("user", JSON.stringify(currentUser));
-        
+
       } catch (err) {
         console.error("Failed to sync dashboard config to DB:", err);
       }
     };
-    
+
     const timeoutId = setTimeout(syncToDB, 1500); // debounce 1.5s
     return () => clearTimeout(timeoutId);
   }, [customWidgets, builtinWidgetsConfig, dashboardNotes, storedUser?._id]);
@@ -1027,7 +1027,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-gray-900 flex items-center gap-3">
-            <BarChart3  />{t("dashboard.title")}
+            <BarChart3 />{t("dashboard.title")}
           </h1>
           <p className="text-base text-slate-600 mt-1">{t("dashboard.subtitle")}</p>
         </div>
@@ -1066,8 +1066,8 @@ const AdminDashboard = () => {
               </SelectContent>
             </Select>
           )}
-          
-          <button 
+
+          <button
             onClick={() => setIsAddWidgetModalOpen(true)}
             className="p-2 px-3 rounded-lg border bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition-colors text-sm font-medium shadow-sm"
           >
@@ -1164,9 +1164,9 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10 mt-6">
           {customWidgets.filter(cw => cw.visible !== false).map((cw) => (
             <div key={cw.id} className="min-h-[300px]">
-              <CustomListWidget 
-                config={cw} 
-                dateRange={resolvedRange} 
+              <CustomListWidget
+                config={cw}
+                dateRange={resolvedRange}
                 onUpdateTitle={(id, newTitle) => {
                   setCustomWidgets(prev => prev.map(w => w.id === id ? { ...w, title: newTitle } : w));
                 }}
@@ -1181,23 +1181,27 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10 mt-6">
           {dashboardNotes.filter(n => n.visible !== false).map((note) => (
             <div key={note.id} className="min-h-[250px]">
-              <NoteWidget 
-                note={note} 
+              <NoteWidget
+                note={note}
                 onUpdate={(id, newContent) => {
                   setDashboardNotes(prev => prev.map(n => n.id === id ? { ...n, content: newContent } : n));
-                }} 
+                }}
               />
             </div>
           ))}
         </div>
       )}
 
-      <AddWidgetModal 
+      <AddWidgetModal
         isOpen={isAddWidgetModalOpen}
         onClose={() => setIsAddWidgetModalOpen(false)}
         customWidgets={customWidgets}
         setCustomWidgets={setCustomWidgets}
-        builtinWidgetsConfig={builtinWidgetsConfig}
+        builtinWidgetsConfig={builtinWidgetsConfig.map(w => 
+          w.id === "leaderboard" 
+            ? { ...w, title: storedUser?.role?.name === "Admin" ? "Streak Leaderboard" : "Meetings" }
+            : w
+        )}
         setBuiltinWidgetsConfig={setBuiltinWidgetsConfig}
         dashboardNotes={dashboardNotes}
         setDashboardNotes={setDashboardNotes}
