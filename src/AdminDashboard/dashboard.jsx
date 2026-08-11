@@ -666,26 +666,34 @@ const MeetingsCard = ({ meetings, loading, onClick }) => {
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
   const completedMeetingsCount = (meetings || []).filter(m => m.status === "completed").length;
+  const scheduledMeetingsCount = (meetings || []).filter(m => m.status === "scheduled").length;
+  const totalRelevant = completedMeetingsCount + scheduledMeetingsCount;
 
   return (
     <Card 
       onClick={onClick}
-      className="shadow-lg border-0 bg-indigo-50/50 backdrop-blur-sm flex flex-col cursor-pointer transition-all hover:shadow-xl"
+      className="shadow-lg border-0 bg-indigo-50/50 backdrop-blur-sm flex flex-col cursor-pointer transition-all hover:shadow-xl h-full"
     >
       <CardHeader className="pb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Calendar className="h-5 w-5 text-indigo-600" />
-            {t("dashboard.meetings.completedTitle", "Completed Meetings")}
+            {t("dashboard.meetings.title", "Meetings")}
           </CardTitle>
-          <Badge variant="secondary">{completedMeetingsCount}</Badge>
+          <Badge variant="secondary">{totalRelevant}</Badge>
         </div>
-        <div className="mt-4 p-4 bg-white/50 rounded-lg border border-indigo-200">
-          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.meetings.completedMeetings", "Completed Meetings")}</div>
-          <div className="text-2xl font-bold text-gray-900">{completedMeetingsCount}</div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="p-3 bg-white/50 rounded-lg border border-indigo-200 text-center">
+            <div className="text-xs font-medium text-gray-600 mb-1">Scheduled</div>
+            <div className="text-xl font-bold text-blue-600">{scheduledMeetingsCount}</div>
+          </div>
+          <div className="p-3 bg-white/50 rounded-lg border border-indigo-200 text-center">
+            <div className="text-xs font-medium text-gray-600 mb-1">Completed</div>
+            <div className="text-xl font-bold text-green-600">{completedMeetingsCount}</div>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-center items-center text-gray-500 pb-6">
+      <CardContent className="flex-1 flex flex-col justify-center items-center text-gray-500 pb-2">
         <p className="text-sm">Click to view meetings</p>
       </CardContent>
     </Card>
