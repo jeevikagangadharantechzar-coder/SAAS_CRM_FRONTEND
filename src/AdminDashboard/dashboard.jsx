@@ -665,8 +665,8 @@ const MeetingsCard = ({ meetings, loading, onClick }) => {
 
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
-  const completedMeetingsCount = (meetings || []).filter(m => m.status === "completed").length;
-  const scheduledMeetingsCount = (meetings || []).filter(m => m.status === "scheduled").length;
+  const completedMeetingsCount = (meetings || []).filter(m => m?.status?.toLowerCase() === "completed").length;
+  const scheduledMeetingsCount = (meetings || []).filter(m => m?.status?.toLowerCase() === "scheduled").length;
   const totalRelevant = completedMeetingsCount + scheduledMeetingsCount;
 
   return (
