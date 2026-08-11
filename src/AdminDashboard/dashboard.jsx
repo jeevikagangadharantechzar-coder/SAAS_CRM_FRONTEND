@@ -665,6 +665,8 @@ const MeetingsCard = ({ meetings, loading, onClick }) => {
 
   if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
+  const completedMeetingsCount = (meetings || []).filter(m => m.status === "completed").length;
+
   return (
     <Card 
       onClick={onClick}
@@ -674,13 +676,13 @@ const MeetingsCard = ({ meetings, loading, onClick }) => {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Calendar className="h-5 w-5 text-indigo-600" />
-            {t("dashboard.meetings.title", "Meetings")}
+            {t("dashboard.meetings.completedTitle", "Completed Meetings")}
           </CardTitle>
-          <Badge variant="secondary">{meetings?.length || 0}</Badge>
+          <Badge variant="secondary">{completedMeetingsCount}</Badge>
         </div>
         <div className="mt-4 p-4 bg-white/50 rounded-lg border border-indigo-200">
-          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.meetings.totalMeetings", "Total Meetings")}</div>
-          <div className="text-2xl font-bold text-gray-900">{meetings?.length || 0}</div>
+          <div className="text-sm font-medium text-gray-600 mb-1">{t("dashboard.meetings.completedMeetings", "Completed Meetings")}</div>
+          <div className="text-2xl font-bold text-gray-900">{completedMeetingsCount}</div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col justify-center items-center text-gray-500 pb-6">
