@@ -6,7 +6,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
 import { useNotifications } from "../../context/NotificationContext";
-import { validateTargetDates, todayISO, tomorrowISO, toLocalDateString } from "../../utils/dateValidation";
+
+import { validateTargetDates, todayISO, tomorrowISO, toLocalDateString, isDateOverdue } from "../../utils/dateValidation";
 import ReportCallModal from "./components/ReportCallModal";
 import ReportMeetingModal from "./components/ReportMeetingModal";
 import ViewReportsModal from "./components/ViewReportsModal";
@@ -878,6 +879,56 @@ function TableView({ targets, onEdit, onDelete, onUnlinkItem, onApproveRejection
   );
 }
 
+/* ── Compact Target Card (Admin) ─────────────────────── */
+function CompactTargetCard({ target: t, onClick }) {
+  const overall = t.percentages?.overall || 0;
+  const isCompleted = t.status === "Completed";
+  const isOverdue = isDateOverdue(t.endDate) && !isCompleted;
+  
+  return (
+    <div 
+      onClick={() => onClick(t)}
+      className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-shadow p-4 relative overflow-hidden group flex flex-col justify-between h-full min-h-[140px]"
+    >
+      <div className={`absolute top-0 left-0 h-1 w-full ${getProgressColor(overall)}`} />
+      
+      <div>
+        <div className="flex justify-between items-start mb-2 mt-1 gap-2">
+          <div className="min-w-0">
+            <h4 className="font-semibold text-gray-800 text-sm truncate" title={t.title}>
+              {t.title || "Untitled Target"}
+            </h4>
+            <p className="text-[12px] text-gray-600 truncate mt-0.5" title={`${t.salesPerson?.firstName} ${t.salesPerson?.lastName}`}>
+              {t.salesPerson?.firstName} {t.salesPerson?.lastName}
+            </p>
+            {t.salesPerson?.email && (
+              <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1 truncate" title={t.salesPerson.email}>
+                <Mail size={11} className="shrink-0" />
+                <span className="truncate">{t.salesPerson.email}</span>
+              </p>
+            )}
+          </div>
+          <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded border font-semibold ${isCompleted ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : t.status === 'In Progress' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+            {t.status || "In Progress"}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center text-[11px] text-gray-500 pt-3 border-t border-gray-50 mt-auto">
+        <div className="flex items-center gap-1.5">
+          <Calendar size={11} className={isOverdue ? "text-red-500" : "text-gray-400"} />
+          <span className={isOverdue ? "text-red-500 font-medium" : ""}>
+            {t.period === "monthly" ? "Monthly" : "Weekly"} • {new Date(t.endDate).toLocaleDateString()}
+          </span>
+        </div>
+        <div className="text-[10px] font-bold text-[#008ecc] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+          View Details <ArrowRightLeft size={9} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Target Card (Admin) ─────────────────────── */
 function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onApproveRejection, onApproveHold, onViewReports }) {
   const [expanded, setExpanded] = useState(false);
@@ -945,7 +996,8 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
         {/* Header */}
         <div className="flex items-start justify-between mb-1">
           <div>
-            <h3 className="text-slate-700">{t.salesPerson?.firstName} {t.salesPerson?.lastName}</h3>
+            <h3 className="text-slate-700 font-bold text-sm truncate pr-2">{t.title || "Untitled Target"}</h3>
+            <p className="text-xs font-medium text-slate-600 mt-0.5">{t.salesPerson?.firstName} {t.salesPerson?.lastName}</p>
             {t.salesPerson?.email && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Mail size={9} />{t.salesPerson.email}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -1569,7 +1621,7 @@ function TargetCard({ target: t, onDelete, onEdit, salesData, onUnlinkItem, onAp
 
 /* ── Create Target Modal ─────────────────────── */
 function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, headers, inUseLeadIds = [], inUseDealIds = [], inTaskLeadIds = [], inTaskDealIds = [] }) {
-  const [form, setForm] = useState({ salesPerson: "", period: "monthly", startDate: "", endDate: "", targetLeads: "", targetDeals: "", targetCalls: "", targetMeetings: "", description: "" });
+  const [form, setForm] = useState({ title: "", salesPerson: "", period: "monthly", startDate: "", endDate: "", targetLeads: "", targetDeals: "", targetCalls: "", targetMeetings: "", description: "" });
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [selectedDeals, setSelectedDeals] = useState(new Set());
   const [saving, setSaving] = useState(false);
@@ -1587,7 +1639,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
   useEffect(() => {
     if (open) {
       handlePeriodChange("monthly");
-      setForm(f => ({ ...f, salesPerson: "", targetLeads: "0", targetDeals: "0", targetCalls: "", targetMeetings: "", description: "" }));
+      setForm(f => ({ ...f, title: "", salesPerson: "", targetLeads: "0", targetDeals: "0", targetCalls: "", targetMeetings: "", description: "" }));
       setSelectedLeads(new Set());
       setSelectedDeals(new Set());
       setDateError(null);
@@ -1660,6 +1712,12 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
           <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Target Name *</label>
+              <input type="text" required placeholder="e.g. Q3 Sales Push" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sales Person *</label>
@@ -1777,7 +1835,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
 
 /* ── Edit Target Modal ─────────────────────── */
 function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, headers, inUseLeadIds = [], inUseDealIds = [], inTaskLeadIds = [], inTaskDealIds = [] }) {
-  const [form, setForm] = useState({ salesPerson: "", period: "monthly", startDate: "", endDate: "", targetLeads: "", targetDeals: "", targetCalls: "", targetMeetings: "", description: "" });
+  const [form, setForm] = useState({ title: "", salesPerson: "", period: "monthly", startDate: "", endDate: "", targetLeads: "", targetDeals: "", targetCalls: "", targetMeetings: "", description: "" });
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [selectedDeals, setSelectedDeals] = useState(new Set());
   const [saving, setSaving] = useState(false);
@@ -1786,10 +1844,11 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
   useEffect(() => {
     if (open && target) {
       setForm({
+        title: target.title || "",
         salesPerson: target.salesPerson?._id || target.salesPerson || "",
         period: target.period || "monthly",
-        startDate: target.startDate ? new Date(target.startDate).toISOString().split("T")[0] : "",
-        endDate:   target.endDate   ? new Date(target.endDate).toISOString().split("T")[0]   : "",
+        startDate: target.startDate ? (() => { const d = new Date(target.startDate); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : "",
+        endDate: target.endDate ? (() => { const d = new Date(target.endDate); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : "",
         // targetLeads/targetDeals get recomputed from the ticked checkboxes below —
         // these are just placeholders until that effect runs.
         targetLeads:    "0",
@@ -1879,6 +1938,13 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
           <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
+
+            {/* Target Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Target Name *</label>
+              <input type="text" required placeholder="e.g. Q3 Sales Push" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+            </div>
 
             {/* Sales person — read-only */}
             <div>
@@ -2000,6 +2066,9 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
 export default function TargetManagement() {
   const [targets, setTargets] = useState([]);
   const [dashStats, setDashStats] = useState(null);
+  const [dashFilter, setDashFilter] = useState("all");
+  const [dashStartDate, setDashStartDate] = useState("");
+  const [dashEndDate, setDashEndDate] = useState("");
   const [tasks, setTasks] = useState([]);
   const [salesUsers, setSalesUsers] = useState([]);
   const [salesDataMap, setSalesDataMap] = useState({});
@@ -2019,8 +2088,17 @@ export default function TargetManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name } — target to delete
   const [noteDeleteConfirm, setNoteDeleteConfirm] = useState(null); // { targetId, noteIdx, isBulk, count }
   const [approveHoldTarget, setApproveHoldTarget] = useState(null);
+  
+  const [rejectNoteModal, setRejectNoteModal] = useState({ open: false, note: null });
+  const [rejectNoteReason, setRejectNoteReason] = useState("");
+  const [rejectingNote, setRejectingNote] = useState(false);
+  
+  const [reassignNoteModal, setReassignNoteModal] = useState({ open: false, note: null });
+  const [reassigningNote, setReassigningNote] = useState(false);
+  
   const [adminActivity, setAdminActivity] = useState(null); // { leadsConvertedByAdmin, dealsWonByAdmin, counts }
   const [loadingAdminActivity, setLoadingAdminActivity] = useState(false);
+  const [selectedTargetDetails, setSelectedTargetDetails] = useState(null);
   const [dismissConfirm, setDismissConfirm] = useState(null); // { itemType, itemId, itemName }
   const [reportModal, setReportModal] = useState({ open: false, type: null, targetId: null });
   const [viewReportsModal, setViewReportsModal] = useState({ open: false, type: null, targetId: null });
@@ -2064,16 +2142,14 @@ export default function TargetManagement() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [targetsRes, statsRes, usersRes, tasksRes] = await Promise.all([
+      const [targetsRes, usersRes, tasksRes] = await Promise.all([
         axios.get(`${baseUrl}/targets`, { headers }),
-        axios.get(`${baseUrl}/targets/dashboard-stats`, { headers }),
         axios.get(`${API_URL}/users`, { headers }),
         axios.get(`${baseUrl}/tasks`, { headers }),
       ]);
       const targetsData = targetsRes.data;
       setTargets(targetsData);
       setTasks(tasksRes.data);
-      setDashStats(statsRes.data);
       const sales = (usersRes.data.users || usersRes.data).filter(u => u.role?.name !== "Admin");
       setSalesUsers(sales);
 
@@ -2090,6 +2166,24 @@ export default function TargetManagement() {
       toast.error("Failed to load data");
     } finally { setLoading(false); }
   }, [baseUrl]);
+
+  const fetchDashStats = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ period: dashFilter });
+      if (dashFilter === "custom") {
+        if (dashStartDate) params.append("startDate", dashStartDate);
+        if (dashEndDate) params.append("endDate", dashEndDate);
+      }
+      const statsRes = await axios.get(`${baseUrl}/targets/dashboard-stats?${params.toString()}`, { headers });
+      setDashStats(statsRes.data);
+    } catch (error) {
+      console.error("Failed to fetch dash stats", error);
+    }
+  }, [baseUrl, dashFilter, dashStartDate, dashEndDate]);
+
+  useEffect(() => {
+    if (token) fetchDashStats();
+  }, [fetchDashStats, token]);
 
   // "reason_note" is deliberately excluded — it has its own dedicated Reason
   // Notes tab (see mainView === "reasonNotes" below); including it here too
@@ -2114,17 +2208,42 @@ export default function TargetManagement() {
     }
   };
 
-  const handleMarkReasonNoteRead = async (note) => {
+  const handleAcceptReasonNote = async (reassignToUserId, extendEndDate, adminNote) => {
+    setReassigningNote(true);
     try {
-      const { data } = await axios.post(`${baseUrl}/targets/${note.targetId}/reason-notes/${note.noteIdx}/read`, {}, { headers });
-      setReasonNotes(prev => prev.map(n => (n.targetId === note.targetId && n.noteIdx === note.noteIdx ? { ...n, status: "resolved" } : n)));
+      const note = reassignNoteModal.note;
+      const { data } = await axios.post(`${baseUrl}/targets/${note.targetId}/reason-notes/${note.noteIdx}/reassign`, {
+        reassignToUserId,
+        extendEndDate,
+        adminNote
+      }, { headers });
+      
       toast.success(data.message);
-      // Clean up local notifications
-      setGlobalNotifications(prev =>
-        prev.filter(n => !(n.type === "reason_note" && String(n.meta?.targetId) === String(note.targetId) && n.meta?.noteIdx === note.noteIdx))
-      );
+      setReasonNotes((prev) => prev.filter(n => !(n.targetId === note.targetId && n.noteIdx === note.noteIdx)));
+      setReassignNoteModal({ open: false, note: null });
+      fetchAll(); // Refresh targets to show new dates/assignee
+    } catch (e) {
+      console.error(e); // Added to debug errors
+      toast.error(e.response?.data?.message || "Failed to reassign target/item");
+    } finally {
+      setReassigningNote(false);
+    }
+  };
+
+  const handleRejectReasonNote = async () => {
+    if (!rejectNoteReason.trim()) return;
+    setRejectingNote(true);
+    try {
+      const note = rejectNoteModal.note;
+      await axios.post(`${baseUrl}/targets/${note.targetId}/reason-notes/${note.noteIdx}/reject`, { rejectReason: rejectNoteReason }, { headers });
+      toast.success("Reason rejected");
+      setReasonNotes((prev) => prev.map((n) => (n.targetId === note.targetId && n.noteIdx === note.noteIdx ? { ...n, status: "rejected", rejectReason: rejectNoteReason } : n)));
+      setRejectNoteModal({ open: false, note: null });
+      setRejectNoteReason("");
     } catch {
-      toast.error("Failed to update status");
+      toast.error("Failed to reject reason");
+    } finally {
+      setRejectingNote(false);
     }
   };
 
@@ -2336,7 +2455,37 @@ export default function TargetManagement() {
 
       {dashStats && (
         <div className="mb-6">
-          <h2 className="text-slate-900 mb-3">Monthly Overview</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-slate-900">Dashboard Overview</h2>
+            <div className="flex items-center gap-2">
+              <select 
+                value={dashFilter}
+                onChange={(e) => setDashFilter(e.target.value)}
+                className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+              >
+                <option value="all">All Time</option>
+                <option value="this_month">This Month</option>
+                <option value="custom">Custom Date</option>
+              </select>
+              {dashFilter === "custom" && (
+                <div className="flex items-center gap-1">
+                  <input 
+                    type="date" 
+                    value={dashStartDate}
+                    onChange={(e) => setDashStartDate(e.target.value)}
+                    className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+                  />
+                  <span className="text-xs text-gray-500">to</span>
+                  <input 
+                    type="date" 
+                    value={dashEndDate}
+                    onChange={(e) => setDashEndDate(e.target.value)}
+                    className="text-xs border-gray-300 rounded-md py-1 px-2 focus:ring-[#008ecc] focus:border-[#008ecc]"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Leads" value={dashStats.monthly.totalLeads} icon={<Users size={16} />}     color="text-blue-600"   bg="bg-blue-50 border border-blue-100" />
             <StatCard label="Total Deals" value={dashStats.monthly.totalDeals} icon={<Briefcase size={16} />} color="text-sky-600"    bg="bg-sky-50 border border-sky-100" />
@@ -2544,10 +2693,16 @@ export default function TargetManagement() {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isPending && (
-                            <button onClick={() => handleMarkReasonNoteRead(n)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
-                              <Check size={12} /> Mark as read
-                            </button>
+                            <>
+                              <button onClick={() => setReassignNoteModal({ open: true, note: n })}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
+                                <Check size={12} /> Accept
+                              </button>
+                              <button onClick={() => setRejectNoteModal({ open: true, note: n })}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600">
+                                <X size={12} /> Reject
+                              </button>
+                            </>
                           )}
                           <button onClick={() => setNoteDeleteConfirm({ targetId: n.targetId, noteIdx: n.noteIdx, isBulk: false, count: 1 })}
                             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete note">
@@ -2716,9 +2871,9 @@ export default function TargetManagement() {
             <p className="text-xs mt-1">Click "Set Target" to get started</p>
           </div>
         ) : viewMode === "card" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-start">
             {filtered.map(t => (
-              <TargetCard key={t._id} target={t} onDelete={(id) => setDeleteConfirm({ id, name: `${t.salesPerson?.firstName} ${t.salesPerson?.lastName}'s target` })} onEdit={setEditTarget} salesData={salesDataMap[t.salesPerson?._id] || null} onUnlinkItem={setUnlinkConfirm} tasks={tasks} onApproveRejection={(t, action) => handleApproveRejection(t._id, action)} onApproveHold={handleApproveHoldAction} onOpenReport={(id, type) => setReportModal({ open: true, type, targetId: id })} onViewReports={(id, type) => setViewReportsModal({ open: true, type, targetId: id })} />
+              <CompactTargetCard key={t._id} target={t} onClick={setSelectedTargetDetails} />
             ))}
           </div>
         ) : viewMode === "pipeline" ? (
@@ -2883,7 +3038,83 @@ export default function TargetManagement() {
         onClose={() => setApproveHoldTarget(null)}
         onConfirm={submitApproveHold}
       />
+      {/* ── Reject Reason Note Modal ── */}
+      {rejectNoteModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <XCircle size={20} className="text-red-500" />
+              Reject Reason
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Provide a reason for rejecting this note. The sales person will be notified to submit a new reason.
+            </p>
+            <textarea
+              autoFocus
+              className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none mb-4"
+              rows={4}
+              placeholder="Why is this reason invalid?"
+              value={rejectNoteReason}
+              onChange={(e) => setRejectNoteReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setRejectNoteModal({ open: false, note: null }); setRejectNoteReason(""); }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectReasonNote}
+                disabled={rejectingNote || !rejectNoteReason.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {rejectingNote ? "Rejecting..." : "Reject Reason"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reassign Reason Note Modal ── */}
+      <ReassignReasonNoteModal
+        open={reassignNoteModal.open}
+        note={reassignNoteModal.note}
+        salesUsers={salesUsers}
+        loading={reassigningNote}
+        onClose={() => setReassignNoteModal({ open: false, note: null })}
+        onConfirm={handleAcceptReasonNote}
+      />
+
       <WorkflowExplanationModal open={showWorkflowExplanation} onClose={() => setShowWorkflowExplanation(false)} />
+
+      {/* Full Target Details Modal */}
+      {selectedTargetDetails && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 sm:p-6" onClick={() => setSelectedTargetDetails(null)}>
+          <div className="bg-transparent w-full max-w-4xl max-h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-t-xl px-4 py-3 border-b flex justify-between items-center sticky top-0 z-10">
+              <h3 className="font-bold text-gray-800">Target Details</h3>
+              <button onClick={() => setSelectedTargetDetails(null)} className="text-gray-500 hover:text-gray-800 bg-gray-100 p-1.5 rounded-full">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-b-xl border border-t-0 border-gray-100 shadow-xl">
+              <TargetCard 
+                target={selectedTargetDetails} 
+                onDelete={(id) => { setDeleteConfirm({ id, name: `${selectedTargetDetails.salesPerson?.firstName} ${selectedTargetDetails.salesPerson?.lastName}'s target` }); setSelectedTargetDetails(null); }} 
+                onEdit={(t) => { setEditTarget(t); setSelectedTargetDetails(null); }} 
+                salesData={salesDataMap[selectedTargetDetails.salesPerson?._id] || null} 
+                onUnlinkItem={(info) => { setUnlinkConfirm(info); setSelectedTargetDetails(null); }} 
+                tasks={tasks} 
+                onApproveRejection={(t, action) => { handleApproveRejection(t._id, action); setSelectedTargetDetails(null); }} 
+                onApproveHold={(t, action) => { handleApproveHoldAction(t, action); setSelectedTargetDetails(null); }} 
+                onOpenReport={(id, type) => { setReportModal({ open: true, type, targetId: id }); setSelectedTargetDetails(null); }} 
+                onViewReports={(id, type) => { setViewReportsModal({ open: true, type, targetId: id }); setSelectedTargetDetails(null); }} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2893,7 +3124,7 @@ function ApproveHoldModal({ open, target, onClose, onConfirm }) {
 
   useEffect(() => {
     if (open && target) {
-      setNewDueDate(target.endDate ? new Date(target.endDate).toISOString().split('T')[0] : "");
+      setNewDueDate(target.endDate ? (() => { const d = new Date(target.endDate); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : "");
     }
   }, [open, target]);
 
@@ -2925,6 +3156,191 @@ function ApproveHoldModal({ open, target, onClose, onConfirm }) {
             }
             onConfirm(target._id, "approve", newDueDate);
           }} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Approve Hold</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function ReassignReasonNoteModal({ open, note, salesUsers, onClose, onConfirm, loading }) {
+  const [reassignTo, setReassignTo] = useState("");
+  const [newEndDate, setNewEndDate] = useState("");
+  const [adminNote, setAdminNote] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    if (open && note) {
+      setReassignTo(note.salesPerson?._id || "");
+      setNewEndDate("");
+      setAdminNote("");
+      setShowConfirm(false);
+    }
+  }, [open, note]);
+
+  if (!open || !note) return null;
+
+  if (showConfirm) {
+    const leadsCount = note.remainingLeadsCount !== undefined ? note.remainingLeadsCount : 0;
+    const dealsCount = note.remainingDealsCount !== undefined ? note.remainingDealsCount : 0;
+    const callsCount = note.remainingCallsCount !== undefined ? note.remainingCallsCount : 0;
+    const meetingsCount = note.remainingMeetingsCount !== undefined ? note.remainingMeetingsCount : 0;
+
+    let msgParts = [];
+    if (leadsCount > 0) msgParts.push(`${leadsCount} lead(s)`);
+    if (dealsCount > 0) msgParts.push(`${dealsCount} deal(s)`);
+    if (callsCount > 0) msgParts.push(`${callsCount} call(s)`);
+    if (meetingsCount > 0) msgParts.push(`${meetingsCount} meeting(s)`);
+    
+    const isTarget = note.itemType === "target";
+    const messageDetails = isTarget && msgParts.length > 0 
+      ? `The underlying ${msgParts.join(" and ")} will also be completely reassigned to the new salesperson.`
+      : `This ${note.itemType} will be completely reassigned.`;
+
+    // Calculate overlaps for UI
+    const overlapLeads = note.overlappingTaskLeads || [];
+    const overlapDeals = note.overlappingTaskDeals || [];
+    const hasAnyOverlap = overlapLeads.length > 0 || overlapDeals.length > 0;
+
+    return (
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] flex flex-col">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Reassignment</h3>
+          <p className="text-sm text-gray-600 mb-4 shrink-0">
+            Are you sure you want to reassign this {note.itemType}? {messageDetails}
+          </p>
+          
+          {(note.remainingLeads?.length > 0 || note.remainingDeals?.length > 0) && isTarget && (
+            <div className="mb-4 overflow-y-auto flex-1 min-h-0 border border-gray-100 rounded-lg bg-gray-50/50 p-2 space-y-1.5">
+              {note.remainingLeads?.map(l => {
+                const overlap = overlapLeads.find(ol => String(ol._id) === String(l._id));
+                return (
+                  <div key={l._id} className={`p-2 rounded-md border text-sm flex flex-col gap-1 ${overlap ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
+                    <div className="flex items-center gap-2 font-medium text-gray-800">
+                      <span className="text-xs uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">Lead</span>
+                      {l.leadName}
+                    </div>
+                    {overlap && (
+                      <div className="text-xs text-amber-700 flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Also linked to Task: "{overlap.taskTitle}" ({l.leadName} will also be reassigned)
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {note.remainingDeals?.map(d => {
+                const overlap = overlapDeals.find(od => String(od._id) === String(d._id));
+                return (
+                  <div key={d._id} className={`p-2 rounded-md border text-sm flex flex-col gap-1 ${overlap ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
+                    <div className="flex items-center gap-2 font-medium text-gray-800">
+                      <span className="text-xs uppercase tracking-wider text-purple-600 font-bold bg-purple-50 px-1.5 py-0.5 rounded">Deal</span>
+                      {d.dealName || d.dealTitle}
+                    </div>
+                    {overlap && (
+                      <div className="text-xs text-amber-700 flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Also linked to Task: "{overlap.taskTitle}" ({d.dealName || d.dealTitle} will also be reassigned)
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!isTarget && (note.itemType === "lead" || note.itemType === "deal") && hasAnyOverlap && (() => {
+             const overlap = note.itemType === "lead" 
+               ? overlapLeads.find(ol => String(ol._id) === String(note.itemId))
+               : overlapDeals.find(od => String(od._id) === String(note.itemId));
+             
+             if (!overlap) return null;
+             return (
+               <div className="mb-4 p-3 rounded-md bg-amber-50 border border-amber-200">
+                 <div className="text-sm text-amber-800 font-semibold mb-1">Warning: Cross-linked Item</div>
+                 <div className="text-xs text-amber-700">
+                   This {note.itemType} is also linked to the active Task <strong>"{overlap.taskTitle}"</strong>.
+                   Reassigning it will automatically cascade and split that Task for the new salesperson.
+                 </div>
+               </div>
+             );
+          })()}
+
+          {hasAnyOverlap && isTarget && (
+            <div className="mb-4 text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 font-medium">
+              Items highlighted in yellow are shared with active Tasks. Proceeding will automatically split those Tasks to reassign the shared items to the new salesperson.
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 shrink-0 pt-2">
+            <button onClick={() => setShowConfirm(false)} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+            <button onClick={() => {
+              setShowConfirm(false);
+              onConfirm(reassignTo, newEndDate, adminNote);
+            }} disabled={loading} className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50">
+              {loading ? "Confirming..." : "Yes, Reassign"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Accept Reason & Reassign</h3>
+        <p className="text-sm text-gray-600 mb-2">
+          You are accepting the reason note for the <span className="font-semibold uppercase">{note.itemType}</span>: <span className="font-bold text-gray-900">{note.itemName}</span>.
+        </p>
+        <p className="text-sm text-gray-600 mb-4">
+          Please select the assignee (you can keep the same person) and assign a new end date.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Assign To <span className="text-red-500">*</span></label>
+            <select
+              value={reassignTo}
+              onChange={(e) => setReassignTo(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">Select Sales Person</option>
+              {salesUsers.map((u) => (
+                <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">New End Date <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              value={newEndDate}
+              onChange={(e) => setNewEndDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Note (Optional)</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              rows={2}
+              placeholder="Add a note to the assignee..."
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+          <button onClick={() => {
+            if (!reassignTo) return toast.error("Please select a sales person");
+            if (!newEndDate) return toast.error("Please select a new end date");
+            setShowConfirm(true);
+          }} disabled={loading} className="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50">
+            {loading ? "Reassigning..." : "Accept & Reassign"}
+          </button>
         </div>
       </div>
     </div>

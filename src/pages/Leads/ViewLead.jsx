@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import WhatsAppMessageModal from "../../components/whatsapp/WhatsAppMessageModal";
+import LeadLossModal from "./LeadLossModal";
 import axios from "axios";
 import {
   ArrowLeft, ChevronRight, ChevronLeft, User, Mail, Phone, Building, Building2,
@@ -13,6 +14,8 @@ import {
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { getNames } from "country-list";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import LinkedTasksTargetsTab from "../../components/LinkedTasksTargetsTab";
@@ -21,6 +24,25 @@ import useMeetings from "../meetings/useMeetings.js";
 import { GoogleConnectBanner } from "../meetings/Meetings.jsx";
 
 const countryNames = getNames();
+
+const STANDARD_INDUSTRIES = [
+  "IT",
+  "Finance",
+  "Healthcare",
+  "Education",
+  "Manufacturing",
+  "Retail",
+  "Real Estate",
+  "Energy & Utilities",
+  "Construction",
+  "Telecommunications",
+  "Automotive",
+  "Fashion & Apparel",
+  "Food & Beverage",
+  "Media & Advertising",
+  "Non-profit",
+  "Professional Services"
+];
 
 const allowedCurrencies = [
   { code: "USD", symbol: "$", name: "US Dollar" },
@@ -858,8 +880,11 @@ const ViewLead = () => {
   // Lead details edit state
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editFormData, setEditFormData] = useState(null);
+  const [showLossModal, setShowLossModal] = useState(false);
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isCustomIndustry, setIsCustomIndustry] = useState(false);
+  const [followUpDateObj, setFollowUpDateObj] = useState(null);
   const [noteInput, setNoteInput] = useState("");
   const [isNoteSubmitting, setIsNoteSubmitting] = useState(false);
   const [editingSingleNoteId, setEditingSingleNoteId] = useState(null);
@@ -875,7 +900,7 @@ const ViewLead = () => {
   const cfIdRef = useRef(0);
   const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
 
-  useEffect(() => {
+  const fetchLead = useCallback(() => {
     const token = localStorage.getItem("token");
     axios.get(`${API_URL}/leads/getLead/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => setLead(r.data))
@@ -979,6 +1004,10 @@ const ViewLead = () => {
   }, [fetchLeadEmails]);
 
   useEffect(() => {
+    fetchLead();
+  }, [fetchLead]);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
     axios.get(`${API_URL}/users/sales`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => setSalesUsers(r.data.salesUsers || r.data.users || r.data || []))
@@ -1020,6 +1049,11 @@ const ViewLead = () => {
       })),
     });
     setEditErrors({});
+    
+    const isCustom = lead.industry && !STANDARD_INDUSTRIES.includes(lead.industry);
+    setIsCustomIndustry(!!isCustom);
+    setFollowUpDateObj(lead.followUpDate ? new Date(lead.followUpDate) : null);
+    
     setIsEditingDetails(true);
   };
 
@@ -1101,7 +1135,22 @@ const ViewLead = () => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === "industry") {
+      if (value === "Other") {
+        setIsCustomIndustry(true);
+        setEditFormData((prev) => ({ ...prev, industry: "" }));
+        return;
+      } else {
+        setIsCustomIndustry(false);
+      }
+    }
+    
     setEditFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "status" && value !== lead.status && value === "Cold") {
+      setShowLossModal(true);
+    }
 
     if (name === "email") {
       setEditErrors((prev) => ({ ...prev, email: !!value && !validateEmail(value) }));
@@ -1247,7 +1296,7 @@ const ViewLead = () => {
     }
   };
 
-  const saveDetails = async () => {
+  const saveDetails = async (lossDataOverride = null) => {
     if (!editFormData.leadName.trim()) return toast.error("Lead Name is required");
     if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
     if (editFormData.email && !validateEmail(editFormData.email))
@@ -1266,6 +1315,17 @@ const ViewLead = () => {
       !validatePhoneNumber(editFormData.alternatePhoneNumber)
     )
       return toast.error("Please enter a valid alternate phone number");
+
+    // Intercept if status changed to Cold (loss conditions)
+    if (
+      editFormData.status !== lead.status &&
+      editFormData.status === "Cold"
+    ) {
+      if (!lossDataOverride && !editFormData.rejectionReason) {
+        setShowLossModal(true);
+        return;
+      }
+    }
 
     try {
       setIsSavingDetails(true);
@@ -1295,6 +1355,7 @@ const ViewLead = () => {
         source: editFormData.source,
         industry: editFormData.industry,
         status: editFormData.status,
+        rejectionReason: editFormData.rejectionReason,
         NumberOfEmployees: editFormData.NumberOfEmployees,
         followUpDate: editFormData.followUpDate,
         // updateLead always rebuilds attachments from this field — passing the
@@ -1311,6 +1372,16 @@ const ViewLead = () => {
           }))
         ),
       };
+
+      if (lossDataOverride) {
+        if (editFormData.status === "Cold") {
+          payload.rejectionReason = lossDataOverride.reason;
+          payload.lossReason = lossDataOverride.reason;
+          payload.lossNotes = lossDataOverride.customReason;
+        } else if (editFormData.status === "Junk") {
+          payload.junkReason = lossDataOverride.reason;
+        }
+      }
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
@@ -1509,20 +1580,19 @@ const ViewLead = () => {
   };
 
   // ── Reject ───────────────────────────────────
-  const handleRejectSubmit = async () => {
-    if (!rejectReason.trim()) return toast.error("Please enter a reason for rejecting this lead");
+  const handleRejectSubmit = async (lossData) => {
     setRejecting(true);
     try {
       const token = localStorage.getItem("token");
       await axios.patch(
         `${API_URL}/leads/${id}/reject`,
-        { reason: rejectReason.trim() },
+        { reason: lossData.reason, customReason: lossData.customReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Lead rejected");
       setShowRejectModal(false);
       setRejectReason("");
-      setTimeout(() => navigate(leadsListPath), 1200);
+      fetchLead();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
@@ -1822,7 +1892,7 @@ const ViewLead = () => {
               )}
               {canReject && (
                 <button
-                  onClick={() => { setRejectReason(""); setShowRejectModal(true); }}
+                  onClick={() => setShowRejectModal(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
                 >
                   <Ban size={16} />
@@ -2160,19 +2230,28 @@ const ViewLead = () => {
                           <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
                           <select
                             name="industry"
-                            value={editFormData.industry}
+                            value={isCustomIndustry ? "Other" : editFormData.industry}
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           >
                             <option value="">Select Industry</option>
-                            <option value="IT">IT</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Healthcare">Healthcare</option>
-                            <option value="Education">Education</option>
-                            <option value="Manufacturing">Manufacturing</option>
-                            <option value="Retail">Retail</option>
+                            {STANDARD_INDUSTRIES.map((ind) => (
+                              <option key={ind} value={ind}>{ind}</option>
+                            ))}
                             <option value="Other">Other</option>
                           </select>
+                          {isCustomIndustry && (
+                            <input
+                              type="text"
+                              name="industry"
+                              placeholder="Enter custom industry"
+                              value={editFormData.industry || ""}
+                              onChange={(e) => 
+                                setEditFormData((prev) => ({ ...prev, industry: e.target.value }))
+                              }
+                              className="w-full mt-2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            />
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Number of Employees</label>
@@ -2198,6 +2277,7 @@ const ViewLead = () => {
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           >
+                            <option value="New">New</option>
                             <option value="Hot">Hot</option>
                             <option value="Warm">Warm</option>
                             <option value="Cold">Cold</option>
@@ -2206,11 +2286,18 @@ const ViewLead = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Follow-up Date</label>
-                          <input
-                            type="date"
-                            name="followUpDate"
-                            value={editFormData.followUpDate}
-                            onChange={handleEditChange}
+                          <DatePicker
+                            selected={followUpDateObj}
+                            onChange={(date) => {
+                              setFollowUpDateObj(date);
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                followUpDate: date ? date.toISOString() : "",
+                              }));
+                            }}
+                            showTimeSelect
+                            dateFormat="MMMM d, yyyy h:mm aa"
+                            placeholderText="Select Date & Time"
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           />
                         </div>
@@ -3220,6 +3307,26 @@ const ViewLead = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Lead Loss / Junk Modal */}
+      <LeadLossModal
+        isOpen={showLossModal}
+        onClose={() => {
+          setShowLossModal(false);
+          setEditFormData((prev) => ({ ...prev, status: lead.status }));
+        }}
+        onSubmit={(lossData) => {
+          setShowLossModal(false);
+          setEditFormData((prev) => ({
+            ...prev,
+            rejectionReason: lossData.customReason || lossData.reason
+          }));
+        }}
+        leadName={lead?.leadName}
+        isJunk={false}
+        isDowngrade={true}
+        isSubmitting={isSavingDetails}
+      />
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>

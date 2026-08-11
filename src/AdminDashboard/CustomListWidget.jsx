@@ -13,7 +13,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const { module, filter, fields, title } = config;
   const moduleConfig = MODULE_CONFIG[module];
 
@@ -27,13 +27,13 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
       try {
         const tenantSlug = localStorage.getItem("tenantSlug") || paramSlug;
         const token = localStorage.getItem("token");
-        
+
         if (!token) {
           throw new Error("Authentication missing");
         }
 
         const headers = { Authorization: `Bearer ${token}` };
-        
+
         const params = { limit: 100, page: 1 };
         if (dateRange && dateRange.start && dateRange.end) {
           params.start = dateRange.start;
@@ -49,7 +49,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
         }
 
         const response = await axios.get(endpointUrl, { headers, params });
-        
+
         // Normalize data robustly
         let resData = [];
         const d = response.data;
@@ -65,7 +65,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
         else if (d?.data?.invoices && Array.isArray(d.data.invoices)) resData = d.data.invoices;
         else if (d?.data?.tasks && Array.isArray(d.data.tasks)) resData = d.data.tasks;
         else if (d?.data?.targets && Array.isArray(d.data.targets)) resData = d.data.targets;
-        
+
         // Apply filter logic
         let filteredData = resData;
 
@@ -75,10 +75,10 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
           start.setHours(0, 0, 0, 0);
           const end = new Date(dateRange.end);
           end.setHours(23, 59, 59, 999);
-          
+
           filteredData = filteredData.filter(item => {
             const itemDateStr = item.createdAt || item.date || item.created_at || item.updatedAt;
-            if (!itemDateStr) return true; 
+            if (!itemDateStr) return true;
             const itemDate = new Date(itemDateStr);
             return itemDate >= start && itemDate <= end;
           });
@@ -101,7 +101,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
           if (filter === "active") filteredData = resData.filter(t => t.status?.toLowerCase() === "active");
           if (filter === "completed") filteredData = resData.filter(t => t.status?.toLowerCase() === "completed");
         }
-        
+
         // Take top 5 for mini list
         setData(filteredData.slice(0, 5));
       } catch (err) {
@@ -117,7 +117,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
 
   const renderCell = (item, field) => {
     let val = item[field];
-    
+
     // Universal resilient field mapping for all CRM modules
     if (field === "amount_user") val = item.grandTotalUserCurrency || item.valueUserCurrency;
     else if (field === "amount" || field === "total" || field === "value") val = item.total || item.amount || item.grandTotal || item.value || item.totalAmount;
@@ -130,8 +130,8 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
     else if (field === "source") val = item.source || item.leadSource;
     else if (field === "createdAt") val = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "-";
     else if (field === "dueDate" || field === "followUpDate" || field === "endDate" || field === "validUntil") {
-        const d = item.dueDate || item.followUpDate || item.endDate || item.validUntil;
-        val = d ? new Date(d).toLocaleDateString() : "-";
+      const d = item.dueDate || item.followUpDate || item.endDate || item.validUntil;
+      val = d ? new Date(d).toLocaleDateString() : "-";
     }
     else if (field === "assignedTo" || field === "assignTo" || field === "salesPerson") {
       const assignee = item.assignedTo || item.assignTo || item.salesPerson || item.assignee;
@@ -150,7 +150,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
     // Fallback if null, undefined, or empty string
     if (val === null || val === undefined || val === "") return "-";
     if (typeof val === "object") return JSON.stringify(val);
-    
+
     return String(val);
   };
 
@@ -184,7 +184,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
             }}
           />
         ) : (
-          <CardTitle 
+          <CardTitle
             className="text-base font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
             onClick={() => setIsEditingTitle(true)}
             title="Click to edit title"
@@ -228,7 +228,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
                 ))}
               </tbody>
             </table>
-            
+
             <div className="p-3 border-t border-gray-100 bg-gray-50/30 flex justify-center mt-auto">
               <button
                 onClick={() => {
@@ -237,7 +237,7 @@ export const CustomListWidget = ({ config, dateRange, onUpdateTitle }) => {
                   if (module === "proposals") route = "proposal";
                   else if (module === "tasks") route = "task-management";
                   else if (module === "targets") route = "target-management";
-                  
+
                   navigate(`/${tenantSlug}/${route}`);
                 }}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 group"

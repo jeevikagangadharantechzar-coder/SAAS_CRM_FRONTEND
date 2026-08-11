@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
+import { isDateOverdue } from "../utils/dateValidation";
 import { CheckSquare, Target, Clock, ArrowRight, Activity, Calendar } from "lucide-react";
 import moment from "moment";
 
@@ -75,7 +76,7 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {tasks.map(t => {
-              const isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "Completed";
+              const isOverdue = t.dueDate && isDateOverdue(t.dueDate) && t.status !== "Completed";
               return (
                 <div key={t._id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start mb-2">
@@ -117,7 +118,7 @@ export default function LinkedTasksTargetsTab({ itemType, itemId }) {
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {targets.map(t => {
-              const isOverdue = new Date(t.endDate) < new Date() && t.status !== "Completed";
+              const isOverdue = isDateOverdue(t.endDate) && t.status !== "Completed";
               const overall = t.percentages?.overall || 0;
               return (
                 <div key={t._id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">

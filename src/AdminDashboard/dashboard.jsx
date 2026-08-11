@@ -24,6 +24,7 @@ import confetti from "canvas-confetti";
 import StreakLeaderboard from "../pages/StreakLeaderboard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Calendar } from "lucide-react";
 import { AddWidgetModal } from "./AddWidgetModal";
 import { CustomListWidget } from "./CustomListWidget";
 import { NoteWidget } from "./NoteWidget";
@@ -658,6 +659,54 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
   );
 };
 
+/* ── Meetings Card ───────────────────────────────────────────────────────── */
+const MeetingsCard = ({ meetings, loading, onClick }) => {
+  const { t } = useTranslation();
+
+  if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
+
+  const effectiveStatus = (m) => {
+    if (m?.status?.toLowerCase() === "cancelled") return "cancelled";
+    if (m?.status?.toLowerCase() === "completed") return "completed";
+    if (m?.endDateTime && new Date(m.endDateTime) < new Date()) return "completed";
+    return m?.status?.toLowerCase() || "scheduled";
+  };
+
+  const completedMeetingsCount = (meetings || []).filter(m => effectiveStatus(m) === "completed").length;
+  const scheduledMeetingsCount = (meetings || []).filter(m => effectiveStatus(m) === "scheduled").length;
+  const totalRelevant = completedMeetingsCount + scheduledMeetingsCount;
+
+  return (
+    <Card
+      onClick={onClick}
+      className="shadow-lg border-0 bg-indigo-50/50 backdrop-blur-sm flex flex-col cursor-pointer transition-all hover:shadow-xl h-full"
+    >
+      <CardHeader className="pb-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-indigo-600" />
+            {t("dashboard.meetings.title", "Meetings")}
+          </CardTitle>
+          <Badge variant="secondary">{totalRelevant}</Badge>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="p-3 bg-white/50 rounded-lg border border-indigo-200 text-center">
+            <div className="text-xs font-medium text-gray-600 mb-1">Scheduled</div>
+            <div className="text-xl font-bold text-blue-600">{scheduledMeetingsCount}</div>
+          </div>
+          <div className="p-3 bg-white/50 rounded-lg border border-indigo-200 text-center">
+            <div className="text-xs font-medium text-gray-600 mb-1">Completed</div>
+            <div className="text-xl font-bold text-green-600">{completedMeetingsCount}</div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-center items-center text-gray-500 pb-2">
+        <p className="text-sm">Click to view meetings</p>
+      </CardContent>
+    </Card>
+  );
+};
+
 /* ══════════════════════════════════════════════════════════════════════════
    Main Dashboard
 ══════════════════════════════════════════════════════════════════════════ */
@@ -676,7 +725,7 @@ const AdminDashboard = () => {
     { id: "summary", title: "Summary Cards", visible: true },
     { id: "currency", title: "Currency Breakdown", visible: true },
     { id: "pending", title: "Pending Invoices", visible: true },
-    { id: "leaderboard", title: "Streak Leaderboard", visible: true },
+    { id: "leaderboard", title: storedUser?.role?.name === "Admin" ? "Streak Leaderboard" : "Meetings", visible: true },
     { id: "revenue", title: "Revenue Trend", visible: true },
     { id: "pipeline", title: "Sales Pipeline", visible: true },
     { id: "distribution", title: "Deal Distribution", visible: true },
@@ -733,12 +782,12 @@ const AdminDashboard = () => {
     localStorage.setItem(`custom_widgets_${storedUser?._id || "default"}`, JSON.stringify(customWidgets));
     localStorage.setItem(`builtin_widgets_${storedUser?._id || "default"}`, JSON.stringify(builtinWidgetsConfig));
     localStorage.setItem(`dashboard_notes_${storedUser?._id || "default"}`, JSON.stringify(dashboardNotes));
-    
+
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    
+
     const syncToDB = async () => {
       try {
         if (!storedUser?._id) return;
@@ -746,21 +795,21 @@ const AdminDashboard = () => {
         const payload = new FormData();
         const configString = JSON.stringify({ customWidgets, builtinWidgetsConfig, dashboardNotes });
         payload.append("dashboardConfig", configString);
-        
+
         await axios.put(`${API_URL}/users/update-user/${storedUser._id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         // Update local user object so refresh uses latest
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
         currentUser.dashboardConfig = configString;
         localStorage.setItem("user", JSON.stringify(currentUser));
-        
+
       } catch (err) {
         console.error("Failed to sync dashboard config to DB:", err);
       }
     };
-    
+
     const timeoutId = setTimeout(syncToDB, 1500); // debounce 1.5s
     return () => clearTimeout(timeoutId);
   }, [customWidgets, builtinWidgetsConfig, dashboardNotes, storedUser?._id]);
@@ -774,6 +823,8 @@ const AdminDashboard = () => {
   const [leads, setLeads] = useState([]);
   const [deals, setDeals] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [meetings, setMeetings] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [revenueByCurrency, setRevenueByCurrency] = useState({});
   const [summaryCards, setSummaryCards] = useState([]);
   const [pipelineLeads, setPipelineLeads] = useState(0);
@@ -852,6 +903,8 @@ const AdminDashboard = () => {
       dealsWon: normaliseArray(d.dealsWon, "data", "deals"),
       dealsLost: normaliseArray(d.dealsLost, "data", "deals"),
       invoices: normaliseArray(d.invoices, "data", "invoices"),
+      meetings: Array.isArray(d.meetings) ? d.meetings : [],
+      leaderboard: Array.isArray(d.leaderboard) ? d.leaderboard : [],
       summary: d.summary,
     };
   }, []);
@@ -876,6 +929,8 @@ const AdminDashboard = () => {
       setLeads(current.leads);
       setDeals(current.deals);
       setInvoices(current.invoices);
+      setMeetings(current.meetings);
+      setLeaderboard(current.leaderboard);
       setRecentInvoices(current.invoices);
 
       const summary = current.summary;
@@ -972,7 +1027,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-gray-900 flex items-center gap-3">
-            <BarChart3  />{t("dashboard.title")}
+            <BarChart3 />{t("dashboard.title")}
           </h1>
           <p className="text-base text-slate-600 mt-1">{t("dashboard.subtitle")}</p>
         </div>
@@ -1011,8 +1066,8 @@ const AdminDashboard = () => {
               </SelectContent>
             </Select>
           )}
-          
-          <button 
+
+          <button
             onClick={() => setIsAddWidgetModalOpen(true)}
             className="p-2 px-3 rounded-lg border bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition-colors text-sm font-medium shadow-sm"
           >
@@ -1050,13 +1105,22 @@ const AdminDashboard = () => {
           {isWidgetVisible("currency") && <CurrencyBreakdownCard revenueData={revenueByCurrency} loading={loading} />}
           {isWidgetVisible("pending") && <PendingInvoicesCard invoices={recentInvoices} loading={loading} />}
           {isWidgetVisible("leaderboard") && (
-            <StreakLeaderboard
-              loading={loading}
-              deals={deals}
-              leads={leads}
-              startDate={resolvedRange.start}
-              endDate={resolvedRange.end}
-            />
+            storedUser?.role?.name === "Admin" ? (
+              <StreakLeaderboard
+                loading={loading}
+                deals={deals}
+                leads={leads}
+                startDate={resolvedRange.start}
+                endDate={resolvedRange.end}
+                leaderboardData={leaderboard}
+              />
+            ) : (
+              <MeetingsCard
+                meetings={meetings}
+                loading={loading}
+                onClick={() => navigate("/meetings")}
+              />
+            )
           )}
         </div>
 
@@ -1100,9 +1164,9 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10 mt-6">
           {customWidgets.filter(cw => cw.visible !== false).map((cw) => (
             <div key={cw.id} className="min-h-[300px]">
-              <CustomListWidget 
-                config={cw} 
-                dateRange={resolvedRange} 
+              <CustomListWidget
+                config={cw}
+                dateRange={resolvedRange}
                 onUpdateTitle={(id, newTitle) => {
                   setCustomWidgets(prev => prev.map(w => w.id === id ? { ...w, title: newTitle } : w));
                 }}
@@ -1117,23 +1181,27 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10 mt-6">
           {dashboardNotes.filter(n => n.visible !== false).map((note) => (
             <div key={note.id} className="min-h-[250px]">
-              <NoteWidget 
-                note={note} 
+              <NoteWidget
+                note={note}
                 onUpdate={(id, newContent) => {
                   setDashboardNotes(prev => prev.map(n => n.id === id ? { ...n, content: newContent } : n));
-                }} 
+                }}
               />
             </div>
           ))}
         </div>
       )}
 
-      <AddWidgetModal 
+      <AddWidgetModal
         isOpen={isAddWidgetModalOpen}
         onClose={() => setIsAddWidgetModalOpen(false)}
         customWidgets={customWidgets}
         setCustomWidgets={setCustomWidgets}
-        builtinWidgetsConfig={builtinWidgetsConfig}
+        builtinWidgetsConfig={builtinWidgetsConfig.map(w => 
+          w.id === "leaderboard" 
+            ? { ...w, title: storedUser?.role?.name === "Admin" ? "Streak Leaderboard" : "Meetings" }
+            : w
+        )}
         setBuiltinWidgetsConfig={setBuiltinWidgetsConfig}
         dashboardNotes={dashboardNotes}
         setDashboardNotes={setDashboardNotes}
