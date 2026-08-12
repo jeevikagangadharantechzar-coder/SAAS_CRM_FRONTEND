@@ -6,6 +6,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { setCredentials, clearCredentials } from "../../store/authSlice";
 import { initSocket } from "../../utils/socket";
 import ForgotPassword from "../password/ForgotPassword";
+import PrivacyPolicyModal from "../../components/legal/PrivacyPolicyModal";
+import TermsModal from "../../components/legal/TermsModal";
 
 // Stable per-browser device id, persisted so re-logging in on the same
 // browser is always recognized as "the same device" and never needs
@@ -70,6 +72,8 @@ const Login = () => {
   const [platformName, setPlatformName] = useState("");
   const [expiredNotice, setExpiredNotice] = useState(null);
   const [deviceRequestId, setDeviceRequestId] = useState(null);
+  const [pendingAgreement, setPendingAgreement] = useState(null); // "privacy" | "terms" | null
+  const [agreementCtx, setAgreementCtx] = useState(null); // { token, resolvedSlug, successMessage, needsTerms }
 
 
   const navigate = useNavigate();
@@ -179,9 +183,32 @@ const Login = () => {
     return () => window.removeEventListener("storage", evaluateSession);
   }, [tenantSlug, navigate, dispatch]);
 
-  // Shared by both the direct-login-success path and the device-approval
-  // polling path below — everything after "we have a valid token" is
-  // identical either way.
+  // Final step of completeLoginWithToken once no consent modal is (or is no
+  // longer) blocking — shared by the direct-login-success path and the
+  // device-approval polling path below.
+  const finishLogin = (resolvedSlug, successMessage) => {
+    setMessage(successMessage || "Logged in successfully!");
+    setIsError(false);
+
+    setTimeout(() => {
+      navigate(`/${resolvedSlug}/dashboard`);
+    }, 1500);
+  };
+
+  const handlePrivacyAccepted = () => {
+    if (agreementCtx?.needsTerms) {
+      setPendingAgreement("terms");
+    } else {
+      setPendingAgreement(null);
+      finishLogin(agreementCtx.resolvedSlug, agreementCtx.successMessage);
+    }
+  };
+
+  const handleTermsAccepted = () => {
+    setPendingAgreement(null);
+    finishLogin(agreementCtx.resolvedSlug, agreementCtx.successMessage);
+  };
+
   const completeLoginWithToken = async (token, successMessage) => {
     const cleanAxios = axios.create();
 
@@ -215,12 +242,13 @@ const Login = () => {
 
     dispatch(setCredentials({ token, slug: resolvedSlug, user: fullUser }));
 
-    setMessage(successMessage || "Logged in successfully!");
-    setIsError(false);
+    if (fullUser.needsPrivacyPolicy || fullUser.needsTerms) {
+      setAgreementCtx({ token, resolvedSlug, successMessage, needsTerms: fullUser.needsTerms });
+      setPendingAgreement(fullUser.needsPrivacyPolicy ? "privacy" : "terms");
+      return;
+    }
 
-    setTimeout(() => {
-      navigate(`/${resolvedSlug}/dashboard`);
-    }, 1500);
+    finishLogin(resolvedSlug, successMessage);
   };
 
   const handleLogin = async (e) => {
@@ -495,6 +523,20 @@ const Login = () => {
 
       {/* Forgot Password Modal */}
       <ForgotPassword isOpen={isForgotOpen} onClose={() => setIsForgotOpen(false)} />
+
+      {/* First-login consent gate */}
+      <PrivacyPolicyModal
+        open={pendingAgreement === "privacy"}
+        token={agreementCtx?.token}
+        tenantSlug={agreementCtx?.resolvedSlug}
+        onAccepted={handlePrivacyAccepted}
+      />
+      <TermsModal
+        open={pendingAgreement === "terms"}
+        token={agreementCtx?.token}
+        tenantSlug={agreementCtx?.resolvedSlug}
+        onAccepted={handleTermsAccepted}
+      />
 
       {/* Trial / Plan Expired Popup */}
       {expiredNotice && (
