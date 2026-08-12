@@ -479,6 +479,13 @@ const updateFilter = (key, value, setter) => {
         params.append("activeTarget", "true");
       }
 
+      if (dateFilterFrom) {
+        params.append("start", dateFilterFrom);
+      }
+      if (dateFilterTo) {
+        params.append("end", dateFilterTo);
+      }
+
       console.log("Fetching leads with params:", Object.fromEntries(params));
 
       const { data } = await axios.get(
@@ -490,29 +497,6 @@ const updateFilter = (key, value, setter) => {
       let leadsArr = isNew ? data.leads : (Array.isArray(data) ? data : []);
       let total = isNew ? data.totalLeads : leadsArr.length;
       let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
-
-      // Filter by Lead Created Date
-      if (dateFilterFrom || dateFilterTo) {
-        leadsArr = leadsArr.filter((lead) => {
-          if (!lead.createdAt) return true;
-          const createdTime = new Date(lead.createdAt).getTime();
-          let fromTime = 0;
-          let toTime = Infinity;
-          if (dateFilterFrom) {
-            const fromDate = new Date(dateFilterFrom);
-            fromDate.setHours(0, 0, 0, 0);
-            fromTime = fromDate.getTime();
-          }
-          if (dateFilterTo) {
-            const toDate = new Date(dateFilterTo);
-            toDate.setHours(23, 59, 59, 999);
-            toTime = toDate.getTime();
-          }
-          return createdTime >= fromTime && createdTime <= toTime;
-        });
-        total = leadsArr.length;
-        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
-      }
 
       setLeads(leadsArr);
       setTotalLeads(total);
@@ -550,36 +534,17 @@ const updateFilter = (key, value, setter) => {
       if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
         params.append("followUpStatus", followUpFilter);
       }
-      // Date filter applied client-side below
+      
+      const fromVal = startDate || dateFilterFrom;
+      const toVal = endDate || dateFilterTo;
+      if (fromVal) params.append("start", fromVal);
+      if (toVal) params.append("end", toVal);
 
       const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
       let exportRows = isNew ? data.leads : (Array.isArray(data) ? data : []);
-
-      // Filter by Lead Created Date for Export
-      if (startDate || dateFilterFrom || endDate || dateFilterTo) {
-        const fromVal = startDate || dateFilterFrom;
-        const toVal = endDate || dateFilterTo;
-        exportRows = exportRows.filter((lead) => {
-          if (!lead.createdAt) return true;
-          const createdTime = new Date(lead.createdAt).getTime();
-          let fromTime = 0;
-          let toTime = Infinity;
-          if (fromVal) {
-            const fromDate = new Date(fromVal);
-            fromDate.setHours(0, 0, 0, 0);
-            fromTime = fromDate.getTime();
-          }
-          if (toVal) {
-            const toDate = new Date(toVal);
-            toDate.setHours(23, 59, 59, 999);
-            toTime = toDate.getTime();
-          }
-          return createdTime >= fromTime && createdTime <= toTime;
-        });
-      }
 
       if (!exportRows.length) {
         toast.info("No data found for the selected criteria. There is nothing to export.");
@@ -1446,8 +1411,8 @@ const updateFilter = (key, value, setter) => {
               <input
                 type="date"
                 value={dateFilterFrom}
-                // onChange={(e) => setDateFilterFrom(e.target.value)}
                 onChange={(e) => updateFilter("startDate", e.target.value, setDateFilterFrom)}
+                onKeyDown={(e) => e.preventDefault()}
                 max={dateFilterTo || undefined}
                 title="Start Date"
                 className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1456,8 +1421,8 @@ const updateFilter = (key, value, setter) => {
               <input
                 type="date"
                 value={dateFilterTo}
-                // onChange={(e) => setDateFilterTo(e.target.value)}
                 onChange={(e) => updateFilter("endDate", e.target.value, setDateFilterTo)}
+                onKeyDown={(e) => e.preventDefault()}
                 min={dateFilterFrom || undefined}
                 title="End Date"
                 className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
