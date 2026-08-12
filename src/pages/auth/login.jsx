@@ -39,6 +39,11 @@ const getWebDeviceLabel = () => {
   return os ? `${browser} on ${os}` : browser;
 };
 
+// Key for the in-progress consent flow — deliberately separate from the
+// "token"/"tenantSlug" keys authSlice and PrivateRoute treat as "logged in",
+// so a refresh mid-consent can restore the modal without granting access.
+const PENDING_CONSENT_KEY = "pendingConsentAgreement";
+
 // Pure JavaScript JWT Decode Helper
 const decodeToken = (token) => {
   try {
@@ -103,6 +108,31 @@ const Login = () => {
     const decoded = decodeToken(token);
     return !!decoded?.exp && decoded.exp * 1000 > Date.now();
   };
+
+  // Restores an in-progress consent flow after a refresh — the tenant admin
+  // sees the same modal again instead of either (a) silently landing in the
+  // dashboard or (b) losing their place and having to log in from scratch.
+  useEffect(() => {
+    const raw = sessionStorage.getItem(PENDING_CONSENT_KEY);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw);
+      if (saved?.token && saved?.stage && isTokenLive(saved.token)) {
+        setAgreementCtx({
+          token: saved.token,
+          resolvedSlug: saved.resolvedSlug,
+          user: saved.user,
+          successMessage: saved.successMessage,
+          needsTerms: saved.needsTerms,
+        });
+        setPendingAgreement(saved.stage);
+      } else {
+        sessionStorage.removeItem(PENDING_CONSENT_KEY);
+      }
+    } catch {
+      sessionStorage.removeItem(PENDING_CONSENT_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     axios
@@ -185,8 +215,15 @@ const Login = () => {
 
   // Final step of completeLoginWithToken once no consent modal is (or is no
   // longer) blocking — shared by the direct-login-success path and the
-  // device-approval polling path below.
-  const finishLogin = (resolvedSlug, successMessage) => {
+  // device-approval polling path below. Credentials are only persisted here,
+  // not before: PrivateRoute and authSlice both hydrate straight from
+  // localStorage, so persisting any earlier (e.g. as soon as the token
+  // arrives) would let a page refresh during a pending consent modal skip
+  // the modal entirely and land the user in the dashboard.
+  const finishLogin = (token, resolvedSlug, user, successMessage) => {
+    sessionStorage.removeItem(PENDING_CONSENT_KEY);
+    dispatch(setCredentials({ token, slug: resolvedSlug, user }));
+
     setMessage(successMessage || "Logged in successfully!");
     setIsError(false);
 
@@ -198,15 +235,16 @@ const Login = () => {
   const handlePrivacyAccepted = () => {
     if (agreementCtx?.needsTerms) {
       setPendingAgreement("terms");
+      sessionStorage.setItem(PENDING_CONSENT_KEY, JSON.stringify({ ...agreementCtx, stage: "terms" }));
     } else {
       setPendingAgreement(null);
-      finishLogin(agreementCtx.resolvedSlug, agreementCtx.successMessage);
+      finishLogin(agreementCtx.token, agreementCtx.resolvedSlug, agreementCtx.user, agreementCtx.successMessage);
     }
   };
 
   const handleTermsAccepted = () => {
     setPendingAgreement(null);
-    finishLogin(agreementCtx.resolvedSlug, agreementCtx.successMessage);
+    finishLogin(agreementCtx.token, agreementCtx.resolvedSlug, agreementCtx.user, agreementCtx.successMessage);
   };
 
   const completeLoginWithToken = async (token, successMessage) => {
@@ -240,15 +278,16 @@ const Login = () => {
 
     localStorage.setItem("lastActivity", Date.now().toString());
 
-    dispatch(setCredentials({ token, slug: resolvedSlug, user: fullUser }));
-
     if (fullUser.needsPrivacyPolicy || fullUser.needsTerms) {
-      setAgreementCtx({ token, resolvedSlug, successMessage, needsTerms: fullUser.needsTerms });
-      setPendingAgreement(fullUser.needsPrivacyPolicy ? "privacy" : "terms");
+      const stage = fullUser.needsPrivacyPolicy ? "privacy" : "terms";
+      const ctx = { token, resolvedSlug, user: fullUser, successMessage, needsTerms: fullUser.needsTerms };
+      setAgreementCtx(ctx);
+      setPendingAgreement(stage);
+      sessionStorage.setItem(PENDING_CONSENT_KEY, JSON.stringify({ ...ctx, stage }));
       return;
     }
 
-    finishLogin(resolvedSlug, successMessage);
+    finishLogin(token, resolvedSlug, fullUser, successMessage);
   };
 
   const handleLogin = async (e) => {
@@ -269,6 +308,9 @@ const Login = () => {
 
     // 2. Clear stale credentials only when safe to proceed
     dispatch(clearCredentials());
+    sessionStorage.removeItem(PENDING_CONSENT_KEY);
+    setAgreementCtx(null);
+    setPendingAgreement(null);
 
     try {
       // 1. Post to login using a clean axios instance to bypass interceptors
