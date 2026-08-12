@@ -307,7 +307,7 @@ function ConfirmModal({ open, title, message, onConfirm, onClose }) {
 // always available regardless of whether the sales person has a target set.
 // mode="target" (default) is the original per-item report against a Target's
 // reason-note list, still used by MyTargets.jsx.
-function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemName, itemDetails = {}, baseUrl, headers, isReported = false }) {
+function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemName, itemDetails = {}, baseUrl, headers, isReported = false, adminReply = null }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
@@ -318,7 +318,7 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
     setSending(true);
     try {
       if (mode === "task") {
-        await axios.post(`${baseUrl}/tasks/${taskId}/reason-note`, { note }, { headers });
+        await axios.post(`${baseUrl}/tasks/${taskId}/reason-note`, { note, itemType, itemId, itemName }, { headers });
       } else {
         await axios.post(`${baseUrl}/targets/${targetId}/reason-note`, {
           itemType, itemId, itemName, note,
@@ -353,8 +353,14 @@ function ReportBox({ mode = "target", taskId, targetId, itemType, itemId, itemNa
   }
 
   return (
-    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none group">
+    <div className="mt-2 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+      {adminReply && (
+        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg w-full">
+          <p className="text-xs font-bold text-blue-700 mb-1">Admin Reply:</p>
+          <p className="text-xs text-blue-800 leading-relaxed break-words">{adminReply}</p>
+        </div>
+      )}
+      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none group w-fit">
         <div
           role="checkbox"
           aria-checked={open}
@@ -546,7 +552,7 @@ function LeadStatusJourney({ lead }) {
 // (no Target lookup) so it always renders fully regardless of whether the
 // sales person has a target set.
 // One linked deal's card (read-only besides the "dismiss won" trash icon).
-function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, onRefresh, taskStatus }) {
+function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue, adminReply, baseUrl, headers, taskId, onRefresh, taskStatus }) {
   const [expanded, setExpanded] = useState(false);
   const [dismissConfirm, setDismissConfirm] = useState(false);
   const [dismissing, setDismissing] = useState(false);
@@ -617,6 +623,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
             itemDetails={{ companyName: deal.companyName, value: deal.value, currency: deal.currency, phoneNumber: deal.phoneNumber, email: deal.email, statusLabel: stage, statusColor: STAGE_COLOR[stage] }}
             baseUrl={baseUrl} headers={headers}
             isReported={hasPendingIssue}
+            adminReply={adminReply}
           />
         )}
       </div>
@@ -643,7 +650,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
 }
 
 // One linked lead's card (read-only, sales can't unlink leads).
-function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers, taskId, taskStatus }) {
+function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, adminReply, baseUrl, headers, taskId, taskStatus }) {
   const [expanded, setExpanded] = useState(false);
   const isTaskCompleted = taskStatus === "Completed";
   const bgClass = isTaskCompleted ? "bg-emerald-50 border-emerald-200" : "bg-white border-gray-200";
@@ -678,6 +685,7 @@ function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, baseUrl, headers
             itemDetails={{ companyName: lead.companyName, phoneNumber: lead.phoneNumber, email: lead.email, statusLabel: lead.status, statusColor: LEAD_STATUS_COLOR[lead.status] }}
             baseUrl={baseUrl} headers={headers}
             isReported={hasPendingIssue}
+            adminReply={adminReply}
           />
         )}
       </div>
@@ -697,6 +705,9 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
   const primaryDealId = task.dealRef?._id || task.dealRef || null;
   const primaryLeadId = task.leadRef?._id || task.leadRef || null;
   const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
+  
+  const latestResolvedNote = [...(task.reasonNotes || [])].reverse().find(n => n.status === "resolved" && n.adminReply);
+  const adminReply = latestResolvedNote ? latestResolvedNote.adminReply : null;
 
   if (!dealItems.length && !leadItems.length) return null;
 
@@ -712,6 +723,7 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
               linkedBadgeText={String(deal._id) === String(primaryDealId) ? linkedBadgeText : null}
               isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(deal._id)))}
               hasPendingIssue={hasPendingIssue}
+              adminReply={adminReply}
               baseUrl={baseUrl}
               headers={headers}
               taskId={task._id}
@@ -745,6 +757,7 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
                   linkedBadgeText={linkedBadgeText}
                   isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(resolvedFromLead._id)))}
                   hasPendingIssue={hasPendingIssue}
+                  adminReply={adminReply}
                   baseUrl={baseUrl}
                   headers={headers}
                   taskId={task._id}
@@ -760,6 +773,7 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
                 linkedBadgeText={isPrimary ? linkedBadgeText : null}
                 isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedLeads || []).some(id => String(id) === String(lead._id)))}
                 hasPendingIssue={hasPendingIssue}
+                adminReply={adminReply}
                 baseUrl={baseUrl}
                 headers={headers}
                 taskId={task._id}
@@ -1401,7 +1415,7 @@ export default function AssignedTasks() {
     if (!overdueReasonNote.trim()) return;
     setSubmittingOverdueReason(true);
     try {
-      await axios.post(`${baseUrl}/tasks/${overdueBlockingTask._id}/reason-note`, { note: overdueReasonNote }, { headers });
+      await axios.post(`${baseUrl}/tasks/${overdueBlockingTask._id}/reason-note`, { note: overdueReasonNote, itemType: "task", itemName: overdueBlockingTask.title }, { headers });
       toast.success("Reason submitted to admin for review");
       fetchTasks();
       setOverdueReasonNote("");
