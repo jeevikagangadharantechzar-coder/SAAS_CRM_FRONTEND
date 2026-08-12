@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { initSocket } from "../utils/socket";
 import axios from "axios";
 
@@ -44,20 +44,25 @@ export const NotificationProvider = ({ children }) => {
   // so a new identity on every render (e.g. from a socket push updating
   // `notifications`) was tearing down and re-attaching their socket
   // listeners on unrelated notification traffic.
-  const fetchNotifications = useCallback(async () => {
-    const id = getUser()?._id;
-    if (!id) return;
-    try {
-      const tenantSlug = localStorage.getItem("tenantSlug");
-      const url = tenantSlug
-        ? `${SI_URI}/${tenantSlug}/api/notifications/${id}`
-        : `${API_URL}/notifications/${id}`;
-      const token = localStorage.getItem("token");
-      const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
-      setNotifications(response.data);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    }
+  const fetchTimeout = useRef(null);
+
+  const fetchNotifications = useCallback(() => {
+    if (fetchTimeout.current) clearTimeout(fetchTimeout.current);
+    fetchTimeout.current = setTimeout(async () => {
+      const id = getUser()?._id;
+      if (!id) return;
+      try {
+        const tenantSlug = localStorage.getItem("tenantSlug");
+        const url = tenantSlug
+          ? `${SI_URI}/${tenantSlug}/api/notifications/${id}`
+          : `${API_URL}/notifications/${id}`;
+        const token = localStorage.getItem("token");
+        const response = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+        setNotifications(response.data);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    }, 150);
   }, []);
 
   useEffect(() => {

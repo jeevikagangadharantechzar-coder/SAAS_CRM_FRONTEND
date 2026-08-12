@@ -31,7 +31,7 @@ const TASK_META_FLAGS = [
   // silently dropped them — the task got reassigned but the notification
   // never appeared in Notifications & Reminders. That's the "sometimes shows,
   // sometimes doesn't" flakiness for task reassignment.
-  "taskReactivated", "taskRemoved",
+  "taskReactivated", "taskRemoved", "taskReasonRejected",
 ];
 
 // True for any notification that belongs in Task Management / Assigned
@@ -70,6 +70,7 @@ export function getNotificationBadge(n) {
   if (n.meta?.taskCompleted) return { emoji: "✔", label: "Task Completed", className: "bg-amber-100 text-amber-700 border-amber-200" };
   if (n.meta?.leadConverted) return { emoji: "🔄", label: "Lead Converted", className: "bg-purple-100 text-purple-700 border-purple-200" };
   if (n.meta?.leadOrDealEdited) return { emoji: "✏️", label: "Updated by Admin", className: "bg-gray-100 text-gray-600 border-gray-200" };
+  if (n.meta?.taskReasonRejected) return { emoji: "❌", label: "Reason Rejected", className: "bg-red-100 text-red-700 border-red-200" };
   return null;
 }
 
@@ -80,5 +81,6 @@ export function getNotificationBadge(n) {
 export function getNotificationAccentClass(n) {
   if (n.meta?.dealCompletedBySelf || n.meta?.taskCompletedBySelf) return "border-l-emerald-400 bg-emerald-50/60";
   if (n.meta?.dealCompletedByAdmin) return "border-l-blue-400 bg-blue-50/50";
+  if (n.meta?.taskReasonRejected) return "border-l-red-400 bg-red-50/50";
   return "";
 }

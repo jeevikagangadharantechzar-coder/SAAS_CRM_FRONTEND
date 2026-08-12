@@ -72,6 +72,7 @@ import ViewProposal from "./pages/proposal/ViewProposal";
 
 import DealIntelligenceDashboard from "./pages/Dealmetrics/pipeline";
 import LostDealAnalytics from "./pages/LostDealModal/Lostdealreason";
+import LeadLossAnalytics from "./pages/Leads/LeadLossAnalytics";
 import CLVDashboard from "./pages/Clv/CLVDashboard";
 import ClientCLVDetails from "./pages/Clv/ClientCLVDetails";
 import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
@@ -243,6 +244,7 @@ function App() {
                       </Route>
                       <Route element={<PrivateRoute planFeature="loss_analysis" />}>
                         <Route path="LossAnalysis" element={<LostDealAnalytics />} />
+                        <Route path="leads/lead-loss-analysis" element={<LeadLossAnalytics />} />
                       </Route>
                       <Route element={<PrivateRoute planFeature="won_analysis" />}>
                         <Route path="cltv/dashboard" element={<CLVDashboard />} />

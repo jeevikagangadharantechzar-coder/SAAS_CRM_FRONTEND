@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import WhatsAppMessageModal from "../../components/whatsapp/WhatsAppMessageModal";
+import LeadLossModal from "./LeadLossModal";
 import axios from "axios";
 import {
   ArrowLeft, ChevronRight, ChevronLeft, User, Mail, Phone, Building, Building2,
@@ -13,6 +14,8 @@ import {
 import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { getNames } from "country-list";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import LinkedTasksTargetsTab from "../../components/LinkedTasksTargetsTab";
@@ -21,6 +24,25 @@ import useMeetings from "../meetings/useMeetings.js";
 import { GoogleConnectBanner } from "../meetings/Meetings.jsx";
 
 const countryNames = getNames();
+
+const STANDARD_INDUSTRIES = [
+  "IT",
+  "Finance",
+  "Healthcare",
+  "Education",
+  "Manufacturing",
+  "Retail",
+  "Real Estate",
+  "Energy & Utilities",
+  "Construction",
+  "Telecommunications",
+  "Automotive",
+  "Fashion & Apparel",
+  "Food & Beverage",
+  "Media & Advertising",
+  "Non-profit",
+  "Professional Services"
+];
 
 const allowedCurrencies = [
   { code: "USD", symbol: "$", name: "US Dollar" },
@@ -84,11 +106,12 @@ const phoneButtonStyle = {
 };
 
 const formatNotesMeta = (record) => {
-  const authorName = record?.notesUpdatedBy
-    ? `${record.notesUpdatedBy.firstName || ""} ${record.notesUpdatedBy.lastName || ""}`.trim()
+  const latest = record?.notesList?.[0];
+  const authorName = latest?.createdBy
+    ? `${latest.createdBy.firstName || ""} ${latest.createdBy.lastName || ""}`.trim()
     : "";
-  const dateLabel = record?.notesUpdatedAt
-    ? new Date(record.notesUpdatedAt).toLocaleDateString("en-US", {
+  const dateLabel = latest?.createdAt
+    ? new Date(latest.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -135,29 +158,16 @@ const NotesPopup = ({ record, onClose }) => {
         </div>
         <div className="flex-1 overflow-auto p-5">
           <div className="space-y-4">
-            {(() => {
-              let parsedNotes = [];
-              try {
-                if (record.notes) {
-                  const p = JSON.parse(record.notes);
-                  if (Array.isArray(p)) parsedNotes = p;
-                  else parsedNotes = [{ id: "legacy", text: record.notes }];
-                }
-              } catch (e) {
-                if (record.notes) parsedNotes = [{ id: "legacy", text: record.notes }];
-              }
-              
-              return parsedNotes.map((n, idx) => (
-                <div key={n.id || idx} className="bg-white border border-slate-200 rounded-xl p-4">
-                  <div className="mb-3">
-                    <p className="text-slate-800 text-[0.9375rem] whitespace-pre-wrap break-words">{n.text}</p>
-                  </div>
-                  <p className="text-[0.8125rem] text-slate-500 font-medium">
-                    {n.id === "legacy" ? "Original note" : `${record.assignTo?.firstName || "Unknown User"} ${record.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(record.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                  </p>
+            {(record.notesList || []).map((n) => (
+              <div key={n._id} className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="mb-3">
+                  <p className="text-slate-800 text-[0.9375rem] whitespace-pre-wrap break-words">{n.text}</p>
                 </div>
-              ));
-            })()}
+                <p className="text-[0.8125rem] text-slate-500 font-medium">
+                  {n.createdBy ? `${n.createdBy.firstName || ""} ${n.createdBy.lastName || ""}`.trim() || "Unknown User" : "Unknown User"} — {new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -246,6 +256,12 @@ const EXT_TO_MIME = {
 const getExt      = (name = "") => (name.split(".").pop() || "").toLowerCase().trim();
 const getMime     = (file)      => EXT_TO_MIME[getExt(file.name)] || "application/octet-stream";
 const formatSize  = (b)         => !b ? "" : b < 1024 ? `${b} B` : b < 1048576 ? `${(b/1024).toFixed(1)} KB` : `${(b/1048576).toFixed(1)} MB`;
+// /uploads is served as public static files (see backend app.js), so an
+// already-uploaded image thumbnail can be shown directly — no authenticated
+// fetch needed (the bigger click-to-enlarge preview still goes through the
+// existing authenticated PreviewModal/ImagePreview for consistency).
+const buildImageUrl = (path) =>
+  `${API_URL.replace("/api", "")}/${String(path || "").replace(/^\/+/, "")}`;
 
 const getCategory = (file) => {
   const ext = getExt(file.name);
@@ -268,15 +284,17 @@ const STYLES = {
   other: { bg: "bg-blue-100",   fg: "text-blue-600",   Icon: File      },
 };
 
+// Documents only — photos have their own dedicated Images tab/upload.
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
 ];
 
 // ─── Authenticated fetch → ArrayBuffer ───────
@@ -528,6 +546,7 @@ const LEAD_ACTIVITY_TYPE_META = {
   lead_edited:         { icon: Edit,             bg: "bg-slate-200",   iconColor: "text-slate-600" },
   notes_updated:       { icon: StickyNote,       bg: "bg-yellow-100",  iconColor: "text-yellow-600" },
   followup_note:       { icon: Calendar,         bg: "bg-purple-100",  iconColor: "text-purple-600" },
+  followup_rescheduled:{ icon: Calendar,         bg: "bg-purple-100",  iconColor: "text-purple-600" },
   attachment_uploaded: { icon: Paperclip,        bg: "bg-cyan-100",    iconColor: "text-cyan-600" },
   lead_rejected:       { icon: Ban,              bg: "bg-red-100",     iconColor: "text-red-600" },
   lead_converted:      { icon: Handshake,        bg: "bg-emerald-100", iconColor: "text-emerald-600" },
@@ -563,14 +582,32 @@ const ViewLead = () => {
   const [isNotesPopupOpen, setIsNotesPopupOpen] = useState(false);
 
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Swipe navigation between leads — the ordered list of {_id, leadName}
   // this lead was opened from (Leads table), passed via navigation state by
   // the caller. Mirrors the same pattern used on the Deal Details page.
-  const leadSequence = useMemo(
-    () => location.state?.leadSequence || [],
-    [location.state],
+  const [leadSequence, setLeadSequence] = useState(
+    () => location.state?.leadSequence || []
   );
+
+  useEffect(() => {
+    const fetchFullSequence = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const searchParams = location.search ? `${location.search}&sequenceOnly=true` : `?sequenceOnly=true`;
+        const { data } = await axios.get(`${API_URL}/leads/getAllLead${searchParams}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (data && data.sequence) {
+          setLeadSequence(data.sequence);
+        }
+      } catch (err) {
+        console.error("Failed to fetch full lead sequence:", err);
+      }
+    };
+    fetchFullSequence();
+  }, [location.search]);
   const leadSequenceIndex = leadSequence.findIndex((l) => l._id === id);
   const prevLeadInfo =
     leadSequenceIndex > 0 ? leadSequence[leadSequenceIndex - 1] : null;
@@ -843,13 +880,17 @@ const ViewLead = () => {
   // Lead details edit state
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editFormData, setEditFormData] = useState(null);
+  const [showLossModal, setShowLossModal] = useState(false);
   const [editErrors, setEditErrors] = useState({});
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isCustomIndustry, setIsCustomIndustry] = useState(false);
+  const [followUpDateObj, setFollowUpDateObj] = useState(null);
   const [noteInput, setNoteInput] = useState("");
   const [isNoteSubmitting, setIsNoteSubmitting] = useState(false);
   const [editingSingleNoteId, setEditingSingleNoteId] = useState(null);
   const [editingSingleNoteText, setEditingSingleNoteText] = useState("");
   const [isSavingSingleNote, setIsSavingSingleNote] = useState(false);
+  const [deletingSingleNoteId, setDeletingSingleNoteId] = useState(null);
   const [salesUsers, setSalesUsers] = useState([]);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
@@ -859,7 +900,7 @@ const ViewLead = () => {
   const cfIdRef = useRef(0);
   const nextCfId = () => `cf-${Date.now()}-${cfIdRef.current++}`;
 
-  useEffect(() => {
+  const fetchLead = useCallback(() => {
     const token = localStorage.getItem("token");
     axios.get(`${API_URL}/leads/getLead/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => setLead(r.data))
@@ -963,6 +1004,10 @@ const ViewLead = () => {
   }, [fetchLeadEmails]);
 
   useEffect(() => {
+    fetchLead();
+  }, [fetchLead]);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
     axios.get(`${API_URL}/users/sales`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => setSalesUsers(r.data.salesUsers || r.data.users || r.data || []))
@@ -979,13 +1024,6 @@ const ViewLead = () => {
       alternatePhoneNumber: lead.alternatePhoneNumber || "",
       clientType: lead.clientType || "",
       requirement: lead.requirement || "",
-      notes: (() => {
-        try {
-          const parsed = JSON.parse(lead.notes);
-          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
-        } catch (e) {}
-        return lead.notes || "";
-      })(),
       address: lead.address || "",
       city: lead.city || "",
       state: lead.state || "",
@@ -1011,6 +1049,11 @@ const ViewLead = () => {
       })),
     });
     setEditErrors({});
+    
+    const isCustom = lead.industry && !STANDARD_INDUSTRIES.includes(lead.industry);
+    setIsCustomIndustry(!!isCustom);
+    setFollowUpDateObj(lead.followUpDate ? new Date(lead.followUpDate) : null);
+    
     setIsEditingDetails(true);
   };
 
@@ -1092,7 +1135,22 @@ const ViewLead = () => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === "industry") {
+      if (value === "Other") {
+        setIsCustomIndustry(true);
+        setEditFormData((prev) => ({ ...prev, industry: "" }));
+        return;
+      } else {
+        setIsCustomIndustry(false);
+      }
+    }
+    
     setEditFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "status" && value !== lead.status && value === "Cold") {
+      setShowLossModal(true);
+    }
 
     if (name === "email") {
       setEditErrors((prev) => ({ ...prev, email: !!value && !validateEmail(value) }));
@@ -1175,31 +1233,12 @@ const ViewLead = () => {
     );
   };
 
-  const parseNotes = (notesStr) => {
-    if (!notesStr) return [];
-    try {
-      const parsed = JSON.parse(notesStr);
-      if (Array.isArray(parsed)) return parsed;
-      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
-    } catch {
-      return [{ id: "legacy", text: notesStr, createdAt: lead?.createdAt }];
-    }
-  };
-
   const handleAddNote = async () => {
     if (!noteInput.trim()) return;
     try {
       setIsNoteSubmitting(true);
       const token = localStorage.getItem("token");
-      const existingNotes = parseNotes(lead.notes);
-      const newNote = {
-        id: Date.now().toString(),
-        text: noteInput.trim(),
-        createdAt: new Date().toISOString()
-      };
-      const updatedNotesString = JSON.stringify([newNote, ...existingNotes]);
-
-      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+      const res = await axios.post(`${API_URL}/leads/${id}/notes`, { text: noteInput.trim() }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLead(res.data.lead);
@@ -1213,7 +1252,7 @@ const ViewLead = () => {
   };
 
   const startEditSingleNote = (note) => {
-    setEditingSingleNoteId(note.id);
+    setEditingSingleNoteId(note._id);
     setEditingSingleNoteText(note.text);
   };
 
@@ -1227,13 +1266,7 @@ const ViewLead = () => {
     try {
       setIsSavingSingleNote(true);
       const token = localStorage.getItem("token");
-      const existingNotes = parseNotes(lead.notes);
-      const updatedNotesArray = existingNotes.map(n => 
-        n.id === noteId ? { ...n, text: editingSingleNoteText.trim() } : n
-      );
-      const updatedNotesString = JSON.stringify(updatedNotesArray);
-
-      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, { notes: updatedNotesString }, {
+      const res = await axios.patch(`${API_URL}/leads/${id}/notes/${noteId}`, { text: editingSingleNoteText.trim() }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLead(res.data.lead);
@@ -1246,7 +1279,24 @@ const ViewLead = () => {
     }
   };
 
-  const saveDetails = async () => {
+  const handleDeleteSingleNote = async (noteId) => {
+    if (!window.confirm("Delete this note?")) return;
+    try {
+      setDeletingSingleNoteId(noteId);
+      const token = localStorage.getItem("token");
+      const res = await axios.delete(`${API_URL}/leads/${id}/notes/${noteId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLead(res.data.lead);
+      toast.success("Note deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete note");
+    } finally {
+      setDeletingSingleNoteId(null);
+    }
+  };
+
+  const saveDetails = async (lossDataOverride = null) => {
     if (!editFormData.leadName.trim()) return toast.error("Lead Name is required");
     if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
     if (editFormData.email && !validateEmail(editFormData.email))
@@ -1266,6 +1316,17 @@ const ViewLead = () => {
     )
       return toast.error("Please enter a valid alternate phone number");
 
+    // Intercept if status changed to Cold (loss conditions)
+    if (
+      editFormData.status !== lead.status &&
+      editFormData.status === "Cold"
+    ) {
+      if (!lossDataOverride && !editFormData.rejectionReason) {
+        setShowLossModal(true);
+        return;
+      }
+    }
+
     try {
       setIsSavingDetails(true);
       const token = localStorage.getItem("token");
@@ -1283,7 +1344,6 @@ const ViewLead = () => {
           : editFormData.alternatePhoneNumber,
         clientType: editFormData.clientType,
         requirement: editFormData.requirement,
-        notes: editFormData.notes,
         address: editFormData.address,
         city: editFormData.city,
         state: editFormData.state,
@@ -1295,11 +1355,13 @@ const ViewLead = () => {
         source: editFormData.source,
         industry: editFormData.industry,
         status: editFormData.status,
+        rejectionReason: editFormData.rejectionReason,
         NumberOfEmployees: editFormData.NumberOfEmployees,
         followUpDate: editFormData.followUpDate,
         // updateLead always rebuilds attachments from this field — passing the
         // lead's current attachments back verbatim so this save doesn't wipe them.
         existingAttachments: JSON.stringify(lead.attachments || []),
+        existingImages: JSON.stringify(lead.images || []),
         customFields: JSON.stringify(
           (editFormData.customFields || []).map((f) => ({
             cardTitle: f.cardTitle,
@@ -1310,6 +1372,16 @@ const ViewLead = () => {
           }))
         ),
       };
+
+      if (lossDataOverride) {
+        if (editFormData.status === "Cold") {
+          payload.rejectionReason = lossDataOverride.reason;
+          payload.lossReason = lossDataOverride.reason;
+          payload.lossNotes = lossDataOverride.customReason;
+        } else if (editFormData.status === "Junk") {
+          payload.junkReason = lossDataOverride.reason;
+        }
+      }
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
@@ -1467,13 +1539,7 @@ const ViewLead = () => {
     setDealData({
       value: lead.value || "",
       currency: lead.currency || "USD",
-      notes: (() => {
-        try {
-          const parsed = JSON.parse(lead.notes);
-          if (Array.isArray(parsed)) return parsed.map(n => n.text).join("\n\n");
-        } catch (e) {}
-        return lead.notes || "";
-      })(),
+      notes: (lead.notesList || []).map(n => n.text).join("\n\n"),
       stage: "Qualification",
     });
     setConvertModalOpen(true);
@@ -1514,20 +1580,19 @@ const ViewLead = () => {
   };
 
   // ── Reject ───────────────────────────────────
-  const handleRejectSubmit = async () => {
-    if (!rejectReason.trim()) return toast.error("Please enter a reason for rejecting this lead");
+  const handleRejectSubmit = async (lossData) => {
     setRejecting(true);
     try {
       const token = localStorage.getItem("token");
       await axios.patch(
         `${API_URL}/leads/${id}/reject`,
-        { reason: rejectReason.trim() },
+        { reason: lossData.reason, customReason: lossData.customReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Lead rejected");
       setShowRejectModal(false);
       setRejectReason("");
-      setTimeout(() => navigate(leadsListPath), 1200);
+      fetchLead();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to reject lead");
     } finally {
@@ -1571,7 +1636,7 @@ const ViewLead = () => {
     if (totalFiles > 5) return toast.error("Maximum 5 attachments allowed");
 
     if (fileList.some((file) => !ALLOWED_FILE_TYPES.includes(file.type)))
-      return toast.error("Only PDF, Image, Word, Excel files are allowed");
+      return toast.error("Only PDF, Word, Excel, or PowerPoint files are allowed — use the Images tab for photos");
 
     if (fileList.some((file) => file.size > 20 * 1024 * 1024))
       return toast.error("Some files exceed the 20MB size limit");
@@ -1593,6 +1658,87 @@ const ViewLead = () => {
       toast.error(err.response?.data?.message || "Failed to upload attachment");
     } finally {
       setIsUploadingAttachment(false);
+    }
+  };
+
+/* ── Images: upload ─────────────────────── */
+  const handleUploadImages = async (files) => {
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+    const totalFiles = (lead.images?.length || 0) + fileList.length;
+    if (totalFiles > 5) return toast.error("Maximum 5 images allowed");
+
+    if (fileList.some((file) => !file.type.startsWith("image/")))
+      return toast.error("Only image files are allowed");
+
+    if (fileList.some((file) => file.size > 20 * 1024 * 1024))
+      return toast.error("Some images exceed the 20MB size limit");
+
+    try {
+      setIsUploadingImage(true);
+      const token = localStorage.getItem("token");
+      const dataToSend = new FormData();
+      fileList.forEach((file) => dataToSend.append("images", file));
+      dataToSend.append("existingImages", JSON.stringify(lead.images || []));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success(fileList.length > 1 ? "Images uploaded" : "Image uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload image");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+/* ── Attachments/Images: delete ─────────────────────── */
+  const [deletingAttachmentIdx, setDeletingAttachmentIdx] = useState(null);
+  const handleDeleteAttachment = async (idx) => {
+    if (!window.confirm("Delete this attachment?")) return;
+    try {
+      setDeletingAttachmentIdx(idx);
+      const token = localStorage.getItem("token");
+      const remaining = (lead.attachments || []).filter((_, i) => i !== idx);
+      const dataToSend = new FormData();
+      dataToSend.append("existingAttachments", JSON.stringify(remaining));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success("Attachment deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete attachment");
+    } finally {
+      setDeletingAttachmentIdx(null);
+    }
+  };
+
+  const [deletingImageIdx, setDeletingImageIdx] = useState(null);
+  const handleDeleteImage = async (idx) => {
+    if (!window.confirm("Delete this image?")) return;
+    try {
+      setDeletingImageIdx(idx);
+      const token = localStorage.getItem("token");
+      const remaining = (lead.images || []).filter((_, i) => i !== idx);
+      const dataToSend = new FormData();
+      dataToSend.append("existingImages", JSON.stringify(remaining));
+
+      const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+
+      setLead(res.data.lead);
+      toast.success("Image deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete image");
+    } finally {
+      setDeletingImageIdx(null);
     }
   };
 
@@ -1746,7 +1892,7 @@ const ViewLead = () => {
               )}
               {canReject && (
                 <button
-                  onClick={() => { setRejectReason(""); setShowRejectModal(true); }}
+                  onClick={() => setShowRejectModal(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
                 >
                   <Ban size={16} />
@@ -1760,7 +1906,7 @@ const ViewLead = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
-          {["details", "tasks_targets", "attachments", "activity", "followups", "notes", "meetings", "email"].map((tab) => (
+          {["details", "tasks_targets", "attachments", "images", "activity", "followups", "notes", "meetings", "email"].map((tab) => (
             <button
               key={tab}
               className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -1781,6 +1927,12 @@ const ViewLead = () => {
                 lead.attachments?.length > 0 && (
                   <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
                     {lead.attachments.length}
+                  </span>
+                )}
+              {tab === "images" &&
+                lead.images?.length > 0 && (
+                  <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
+                    {lead.images.length}
                   </span>
                 )}
             </button>
@@ -1879,7 +2031,7 @@ const ViewLead = () => {
                       </div>
                     )}
 
-                    {lead.notes && (
+                    {lead.notesList?.length > 0 && (
                       <div className="mt-2 pt-6 border-t border-slate-200 p-6">
                         <button
                           type="button"
@@ -1892,13 +2044,7 @@ const ViewLead = () => {
                               Additional Notes
                             </p>
                             <p className="text-slate-900 truncate mt-1">
-                              {(() => {
-                                try {
-                                  const parsed = JSON.parse(lead.notes);
-                                  if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].text;
-                                } catch (e) {}
-                                return lead.notes;
-                              })()}
+                              {lead.notesList[0].text}
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5">{formatNotesMeta(lead)}</p>
                           </div>
@@ -2084,19 +2230,28 @@ const ViewLead = () => {
                           <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
                           <select
                             name="industry"
-                            value={editFormData.industry}
+                            value={isCustomIndustry ? "Other" : editFormData.industry}
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           >
                             <option value="">Select Industry</option>
-                            <option value="IT">IT</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Healthcare">Healthcare</option>
-                            <option value="Education">Education</option>
-                            <option value="Manufacturing">Manufacturing</option>
-                            <option value="Retail">Retail</option>
+                            {STANDARD_INDUSTRIES.map((ind) => (
+                              <option key={ind} value={ind}>{ind}</option>
+                            ))}
                             <option value="Other">Other</option>
                           </select>
+                          {isCustomIndustry && (
+                            <input
+                              type="text"
+                              name="industry"
+                              placeholder="Enter custom industry"
+                              value={editFormData.industry || ""}
+                              onChange={(e) => 
+                                setEditFormData((prev) => ({ ...prev, industry: e.target.value }))
+                              }
+                              className="w-full mt-2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                            />
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Number of Employees</label>
@@ -2122,6 +2277,7 @@ const ViewLead = () => {
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           >
+                            <option value="New">New</option>
                             <option value="Hot">Hot</option>
                             <option value="Warm">Warm</option>
                             <option value="Cold">Cold</option>
@@ -2130,11 +2286,18 @@ const ViewLead = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Follow-up Date</label>
-                          <input
-                            type="date"
-                            name="followUpDate"
-                            value={editFormData.followUpDate}
-                            onChange={handleEditChange}
+                          <DatePicker
+                            selected={followUpDateObj}
+                            onChange={(date) => {
+                              setFollowUpDateObj(date);
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                followUpDate: date ? date.toISOString() : "",
+                              }));
+                            }}
+                            showTimeSelect
+                            dateFormat="MMMM d, yyyy h:mm aa"
+                            placeholderText="Select Date & Time"
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           />
                         </div>
@@ -2144,16 +2307,6 @@ const ViewLead = () => {
                             name="requirement"
                             rows={3}
                             value={editFormData.requirement}
-                            onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                          <textarea
-                            name="notes"
-                            rows={4}
-                            value={editFormData.notes}
                             onChange={handleEditChange}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                           />
@@ -2518,6 +2671,18 @@ const ViewLead = () => {
                                 <Download size={15} />
                                 <span className="hidden sm:inline">Download</span>
                               </button>
+                              <button
+                                onClick={() => handleDeleteAttachment(idx)}
+                                disabled={deletingAttachmentIdx === idx}
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {deletingAttachmentIdx === idx ? (
+                                  <span className="inline-block w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Trash2 size={15} />
+                                )}
+                                <span className="hidden sm:inline">Delete</span>
+                              </button>
                             </div>
                           </li>
                         );
@@ -2530,6 +2695,91 @@ const ViewLead = () => {
                       </div>
                       <p className="text-slate-500 font-medium">No attachments found</p>
                       <p className="text-slate-400 text-sm mt-1">Files uploaded with this lead will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Images ── */}
+            {activeTab === "images" && (
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-slate-900">Images</h2>
+                    <p className="text-base text-slate-600 mt-1">Photos related to this lead</p>
+                  </div>
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0 cursor-pointer ${isUploadingImage ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Plus size={15} />
+                    {isUploadingImage ? "Uploading…" : "Upload"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={isUploadingImage}
+                      onChange={(e) => {
+                        handleUploadImages(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="p-6">
+                  {lead.images?.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {lead.images.map((image, idx) => (
+                        <div
+                          key={`${image.path}-${idx}`}
+                          className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 cursor-pointer hover:border-blue-300 transition-colors"
+                          onClick={() => openPreview(image)}
+                        >
+                          <img
+                            src={buildImageUrl(image.path)}
+                            alt={image.name}
+                            className="w-full h-32 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                            <Eye size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                            <p className="text-xs text-white truncate">{image.name}</p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadFile(image.path, image.name);
+                            }}
+                            className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 hover:text-blue-600 transition-opacity"
+                          >
+                            <Download size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteImage(idx);
+                            }}
+                            disabled={deletingImageIdx === idx}
+                            className="absolute top-1.5 right-9 p-1.5 rounded-lg bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-opacity disabled:opacity-50"
+                          >
+                            {deletingImageIdx === idx ? (
+                              <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileImage size={24} className="text-slate-400" />
+                      </div>
+                      <p className="text-slate-500 font-medium">No images found</p>
+                      <p className="text-slate-400 text-sm mt-1">Photos uploaded with this lead will appear here</p>
                     </div>
                   )}
                 </div>
@@ -2662,10 +2912,11 @@ const ViewLead = () => {
                     <div className="h-px bg-slate-200 flex-1 ml-4" />
                   </div>
                   
-                  {parseNotes(lead.notes).map((n, idx) => {
-                    const isEditing = editingSingleNoteId === n.id;
+                  {(lead.notesList || []).map((n) => {
+                    const isEditing = editingSingleNoteId === n._id;
+                    const isDeleting = deletingSingleNoteId === n._id;
                     return (
-                      <div key={n.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-4 transition-colors hover:bg-slate-100/50">
+                      <div key={n._id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 transition-colors hover:bg-slate-100/50">
                         {isEditing ? (
                           <>
                             <textarea
@@ -2684,7 +2935,7 @@ const ViewLead = () => {
                                 Cancel
                               </button>
                               <button
-                                onClick={() => handleEditSingleNote(n.id)}
+                                onClick={() => handleEditSingleNote(n._id)}
                                 disabled={!editingSingleNoteText.trim() || isSavingSingleNote}
                                 className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
                               >
@@ -2696,12 +2947,21 @@ const ViewLead = () => {
                           <>
                             <div className="flex justify-between items-start mb-3">
                               <p className="text-slate-800 text-[0.9375rem] whitespace-pre-wrap break-words">{n.text}</p>
-                              <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 -mr-1.5 -mt-1.5 rounded-md hover:bg-blue-50 transition-colors">
-                                <Edit size={14} />
-                              </button>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => startEditSingleNote(n)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors">
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSingleNote(n._id)}
+                                  disabled={isDeleting}
+                                  className="text-slate-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
                             <p className="text-[0.8125rem] text-slate-500 font-medium">
-                              {n.id === "legacy" ? "Original note" : `${lead.assignTo?.firstName || "Unknown User"} ${lead.assignTo?.lastName || ""}`.trim()} — {n.createdAt ? new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : new Date(lead.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              {n.createdBy ? `${n.createdBy.firstName || ""} ${n.createdBy.lastName || ""}`.trim() || "Unknown User" : "Unknown User"} — {new Date(n.createdAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                             </p>
                           </>
                         )}
@@ -3047,6 +3307,26 @@ const ViewLead = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Lead Loss / Junk Modal */}
+      <LeadLossModal
+        isOpen={showLossModal}
+        onClose={() => {
+          setShowLossModal(false);
+          setEditFormData((prev) => ({ ...prev, status: lead.status }));
+        }}
+        onSubmit={(lossData) => {
+          setShowLossModal(false);
+          setEditFormData((prev) => ({
+            ...prev,
+            rejectionReason: lossData.customReason || lossData.reason
+          }));
+        }}
+        leadName={lead?.leadName}
+        isJunk={false}
+        isDowngrade={true}
+        isSubmitting={isSavingDetails}
+      />
 
       {/* Reject Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>

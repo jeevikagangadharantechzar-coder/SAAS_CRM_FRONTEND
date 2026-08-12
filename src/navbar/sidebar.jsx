@@ -768,7 +768,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           open={showAnalysis}
           onToggle={() => setShowAnalysis((s) => !s)}
           sidebarOpen={isOpen}
-          activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv"]}
+          activePaths={["/DealAnalysis", "/LossAnalysis", "/cltv", "/leads/lead-loss-analysis"]}
           hasPermission={
             (isAdmin || userPermissions.deal_analysis || userPermissions.won_analysis || userPermissions.loss_analysis) &&
             (hasPlanFeature("deal_analysis") || hasPlanFeature("won_analysis") || hasPlanFeature("loss_analysis"))
@@ -790,6 +790,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             to="LossAnalysis"
             icon={<TrendingDown />}
             label={t("sidebar.lossAnalysis")}
+            hasPermission={isAdmin || userPermissions.loss_analysis}
+          />
+          <SmallLink
+            to="leads/lead-loss-analysis"
+            icon={<TrendingDown />}
+            label="Lead Loss Analysis"
             hasPermission={isAdmin || userPermissions.loss_analysis}
           />
         </Collapsible>

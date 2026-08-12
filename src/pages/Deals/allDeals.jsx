@@ -135,9 +135,17 @@ function AllDealsComponent() {
   const [exportMode, setExportMode] = useState("all"); // "all" | "followups"
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => parseInt(sessionStorage.getItem("deals_currentPage")) || 1);
   const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    sessionStorage.setItem("deals_currentPage", currentPage);
+  }, [currentPage]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+
+  // Row selection (checkboxes) — used only for bulk "Move to Trash"
+  const [selectedDealIds, setSelectedDealIds] = useState([]);
+  const [bulkTrashingDeals, setBulkTrashingDeals] = useState(false);
   const [users, setUsers] = useState([]);
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
@@ -415,6 +423,7 @@ function AllDealsComponent() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDeals(res.data || []);
+      setSelectedDealIds([]);
     } catch (err) {
       console.error("Fetch deals error:", err);
       toast.error("Failed to fetch deals");
@@ -743,12 +752,9 @@ function AllDealsComponent() {
   useEffect(() => {
     const pages = Math.max(1, Math.ceil(filteredDeals.length / itemsPerPage));
     setTotalPages(pages);
-    if (currentPage > pages) setCurrentPage(pages);
-  }, [filteredDeals.length, itemsPerPage]);
+    if (!loading && currentPage > pages) setCurrentPage(pages);
+  }, [filteredDeals.length, itemsPerPage, loading]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [itemsPerPage]);
 
   const paginatedDeals = filteredDeals.slice(
     (currentPage - 1) * itemsPerPage,
@@ -809,8 +815,49 @@ function AllDealsComponent() {
       );
       toast.success("Deal moved to trash");
       setDeals((prev) => prev.filter((d) => d._id !== deal._id));
+      setSelectedDealIds((prev) => prev.filter((id) => id !== deal._id));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to move deal to trash");
+    }
+  };
+
+  // Checkbox selection helpers — selection is scoped to the current page's rows
+  const isAllDealsOnPageSelected =
+    paginatedDeals.length > 0 && paginatedDeals.every((d) => selectedDealIds.includes(d._id));
+
+  const toggleSelectAllDealsOnPage = () => {
+    if (isAllDealsOnPageSelected) {
+      setSelectedDealIds((prev) => prev.filter((id) => !paginatedDeals.some((d) => d._id === id)));
+    } else {
+      setSelectedDealIds((prev) => [...new Set([...prev, ...paginatedDeals.map((d) => d._id)])]);
+    }
+  };
+
+  const toggleSelectDeal = (dealId) => {
+    setSelectedDealIds((prev) =>
+      prev.includes(dealId) ? prev.filter((id) => id !== dealId) : [...prev, dealId]
+    );
+  };
+
+  const handleBulkTrashDeals = async () => {
+    if (!selectedDealIds.length) return;
+    if (!window.confirm(`Are you sure you want to move ${selectedDealIds.length} deal(s) to trash?`)) return;
+
+    setBulkTrashingDeals(true);
+    try {
+      const token = localStorage.getItem("token");
+      await Promise.all(
+        selectedDealIds.map((id) =>
+          axios.patch(`${API_URL}/deals/${id}/trash`, {}, { headers: { Authorization: `Bearer ${token}` } })
+        )
+      );
+      toast.success(`${selectedDealIds.length} deal(s) moved to trash`);
+      setDeals((prev) => prev.filter((d) => !selectedDealIds.includes(d._id)));
+      setSelectedDealIds([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to move deals to trash");
+    } finally {
+      setBulkTrashingDeals(false);
     }
   };
 
@@ -1191,11 +1238,45 @@ function AllDealsComponent() {
       )}
 
       {/* Deals Table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm tour-deals-table">
+      <div className="tour-deals-table">
+        {userRole === "Admin" && selectedDealIds.length > 0 && (
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-3">
+            <span className="text-sm font-medium text-blue-700">
+              {selectedDealIds.length} deal{selectedDealIds.length === 1 ? "" : "s"} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedDealIds([])}
+                className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleBulkTrashDeals}
+                disabled={bulkTrashingDeals}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-60"
+              >
+                <Trash2 className="w-4 h-4" />
+                {bulkTrashingDeals ? "Moving..." : `Move to Trash (${selectedDealIds.length})`}
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
         <table className="min-w-full text-sm text-gray-700">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">Deal Name</th>
+              {userRole === "Admin" && (
+                <th className="w-10 px-6 py-3 sticky left-0 z-20 bg-gray-100">
+                  <input
+                    type="checkbox"
+                    checked={isAllDealsOnPageSelected}
+                    onChange={toggleSelectAllDealsOnPage}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
+              )}
+              <th className={`px-6 py-3 text-left sticky z-20 bg-gray-100 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"}`}>Deal Name</th>
 
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
@@ -1231,7 +1312,20 @@ function AllDealsComponent() {
                     key={deal._id}
                     className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-50`}
                   >
-                    <td className={`px-6 py-4 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
+                    {userRole === "Admin" && (
+                      <td className={`w-10 px-6 py-4 sticky left-0 z-10 ${
+                        idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDealIds.includes(deal._id)}
+                          onChange={() => toggleSelectDeal(deal._id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                    )}
+                    <td className={`px-6 py-4 sticky z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"} ${
                       idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
                     }`}>
                       <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2 min-w-0">
@@ -1353,7 +1447,12 @@ function AllDealsComponent() {
                     <td className="px-6 py-4">
                       <button
                         onClick={(e) => toggleDropdown(deal._id, e)}
-                        className="p-2 rounded hover:bg-gray-200"
+                        disabled={deal.stage === "Closed Won"}
+                        className={`p-2 rounded ${
+                          deal.stage === "Closed Won"
+                            ? "opacity-40 cursor-not-allowed"
+                            : "hover:bg-gray-200"
+                        }`}
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -1364,7 +1463,7 @@ function AllDealsComponent() {
             ) : (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-6 py-8 text-center text-gray-500"
                 >
                   No deals found
@@ -1373,13 +1472,17 @@ function AllDealsComponent() {
             )}
           </tbody>
         </table>
+        </div>
 
         <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <span>Rows per page:</span>
             <select
               value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
               className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
             >
               <option value={5}>5</option>
@@ -1525,7 +1628,7 @@ function AllDealsComponent() {
             {(() => {
               const activeDeal = baseDeals.find((d) => d._id === openDropdownId);
               const activeIsTerminal = activeDeal?.stage === "Rejected" || activeDeal?.stage === "Closed Won";
-              const editDisabled = (activeDeal?.isActive === false && userRole !== "Admin") || activeIsTerminal;
+              const editDisabled = activeIsTerminal;
               return (
                 <>
                   <button

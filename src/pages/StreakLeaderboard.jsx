@@ -59,7 +59,8 @@ const CardBubbles = ({ seed = 0, count = 12, colorPalette = ["#F59E0B", "#FBBF24
 //   leads        – lead array from dashboard (used as fallback)
 //   startDate    – ISO date string from dashboard's active filter  e.g. "2026-04-01"
 //   endDate      – ISO date string from dashboard's active filter  e.g. "2026-04-30"
-const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], startDate, endDate }) => {
+//   leaderboardData - Leaderboard data array passed from parent (dashboard)
+const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], startDate, endDate, leaderboardData = null }) => {
   const [topPerformer, setTopPerformer] = useState(null);
   const [loading, setLoading]           = useState(true);
   const [apiSuccess, setApiSuccess]     = useState(false);
@@ -146,12 +147,19 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
       if (endDate)   params.endDate   = endDate;
       if (!startDate && !endDate) params.allTime = true;
 
-      const { data } = await axios.get(`${API_URL}/streak/leaderboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params,
-      });
+      let rows = [];
+      
+      if (leaderboardData !== null) {
+        // Use data passed from the dashboard to avoid extra API calls
+        rows = Array.isArray(leaderboardData) ? leaderboardData : [];
+      } else {
+        const { data } = await axios.get(`${API_URL}/streak/leaderboard`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        });
+        rows = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+      }
 
-      let rows = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
       // To satisfy the dashboard requirement: "who has converted large number in total and fastest first"
       // Re-sort the available rows so the top performer is always the one with most converted leads
       rows = [...rows].sort((a, b) => b.convertedLeads !== a.convertedLeads ? b.convertedLeads - a.convertedLeads : b.conversionRate - a.conversionRate);
@@ -172,7 +180,7 @@ const StreakLeaderboard = ({ loading: externalLoading, deals = [], leads = [], s
   // Re-fetch whenever the dashboard's resolved date range changes
   useEffect(() => {
     fetchTopPerformer();
-  }, [startDate, endDate, fetchTopPerformer]);
+  }, [startDate, endDate, leaderboardData, fetchTopPerformer]);
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading || externalLoading) {

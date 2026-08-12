@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
+import { isDateOverdue } from "../../utils/dateValidation";
 import {
   Target, Users, Phone, TrendingUp, Calendar, CheckCircle,
   Trophy, ArrowRight, Award, Clock, ChevronDown,
@@ -173,7 +174,7 @@ function NotesSection({ target, baseUrl, headers, onNoteAdded }) {
 }
 
 /* ── Report Checkbox — self-contained per lead/deal ─────────────────────── */
-function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, baseUrl, headers, isReported = false }) {
+function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, baseUrl, headers, isReported = false, adminReply = null }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
@@ -207,7 +208,7 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
   // Already reported — show disabled badge (either from server data or just submitted)
   if (isReported || localReported) {
     return (
-      <div className="mt-2 flex items-center gap-2 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+      <div className="mt-2 flex items-center gap-2 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg w-fit">
         <div className="w-4 h-4 rounded border-2 border-amber-400 bg-amber-400 flex items-center justify-center shrink-0">
           <Check size={10} className="text-white" strokeWidth={3} />
         </div>
@@ -217,9 +218,15 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
   }
 
   return (
-    <div className="mt-2" onClick={e => e.stopPropagation()}>
+    <div className="mt-2 flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+      {adminReply && (
+        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg w-full">
+          <p className="text-xs font-bold text-blue-700 mb-1">Admin Reply:</p>
+          <p className="text-xs text-blue-800 leading-relaxed break-words">{adminReply}</p>
+        </div>
+      )}
       {/* Checkbox toggle */}
-      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none group">
+      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none group w-fit">
         <div
           role="checkbox"
           aria-checked={open}
@@ -383,6 +390,16 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
       <div className={`h-1.5 w-full ${getProgressColor(overall)}`} />
 
       <div className="p-5">
+        {/* Header: Title */}
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-bold text-gray-800 text-lg truncate pr-2">
+            {t.title || "Untitled Target"}
+          </h3>
+          <div className="flex items-center gap-1 text-[11px] text-gray-400 shrink-0">
+            <Calendar size={10} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
+          </div>
+        </div>
+
         {/* Period + dates */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -390,9 +407,6 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold capitalize ${t.period === "weekly" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
               {t.period}
             </span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <Calendar size={10} /><span>{fmt(t.startDate)} — {fmt(t.endDate)}</span>
           </div>
         </div>
 
@@ -794,11 +808,20 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           </div>
                         </button>
                         <div className="px-2.5 pb-2.5">
-                          <ReportBox
-                            targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName || d.dealTitle}
-                            itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage, statusColor: STAGE_COLOR[d.stage], dateNote: d.createdAt ? `since ${fmt(d.createdAt)}` : null }}
-                            baseUrl={baseUrl} headers={headers}
-                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
+                          {(() => {
+                            const latestNote = [...(t.reasonNotes || [])].reverse().find(n => String(n.itemId) === String(d._id));
+                            const hasPendingIssue = latestNote?.status === "pending";
+                            const adminReply = latestNote?.status === "resolved" ? latestNote.adminReply : null;
+                            return (
+                              <ReportBox
+                                targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName || d.dealTitle}
+                                itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage, statusColor: STAGE_COLOR[d.stage], dateNote: d.createdAt ? `since ${fmt(d.createdAt)}` : null }}
+                                baseUrl={baseUrl} headers={headers}
+                                isReported={hasPendingIssue}
+                                adminReply={adminReply}
+                              />
+                            );
+                          })()}
                         </div>
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2 space-y-1.5">
@@ -866,11 +889,20 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         </button>
                         {l.status !== "Converted" && (
                           <div className="px-2.5 pb-2.5">
-                            <ReportBox
-                              targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
-                              itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
-                              baseUrl={baseUrl} headers={headers}
-                              isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(l._id) && n.status === "pending")} />
+                            {(() => {
+                              const latestNote = [...(t.reasonNotes || [])].reverse().find(n => String(n.itemId) === String(l._id));
+                              const hasPendingIssue = latestNote?.status === "pending";
+                              const adminReply = latestNote?.status === "resolved" ? latestNote.adminReply : null;
+                              return (
+                                <ReportBox
+                                  targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
+                                  itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
+                                  baseUrl={baseUrl} headers={headers}
+                                  isReported={hasPendingIssue}
+                                  adminReply={adminReply}
+                                />
+                              );
+                            })()}
                           </div>
                         )}
                         {isOpen && (
@@ -1056,7 +1088,7 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
         )}
 
         {t.createdBy && (
-          <p className="text-xs text-gray-300 mt-3 text-right">Assigned by {t.createdBy.firstName} {t.createdBy.lastName}</p>
+          <p className="text-xs text-gray-300 mt-3 text-right">Assigned by {t.createdBy.firstName} {t.createdBy.lastName && t.createdBy.lastName !== t.createdBy.firstName ? t.createdBy.lastName : ''}</p>
         )}
       </div>
     </div>
@@ -1080,6 +1112,9 @@ export default function MyTargets() {
   const socket = useSocket();
   const targetSocket = useTargetSocket();
   const [showWorkflowExplanation, setShowWorkflowExplanation] = useState(false);
+
+  const [overdueReasonNote, setOverdueReasonNote] = useState("");
+  const [submittingOverdueReason, setSubmittingOverdueReason] = useState(false);
 
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
@@ -1248,9 +1283,76 @@ export default function MyTargets() {
 
   const activeTasks = tasks.filter(t => t.status !== "Completed" && t.status !== "Archived");
 
+  const overdueBlockingTarget = targets.find((t) => {
+    if (t.status === "Completed" || t.status === "Rejected") return false;
+    const isOverdue = isDateOverdue(t.endDate);
+    if (!isOverdue) return false;
+    
+    const lastNote = t.reasonNotes && t.reasonNotes.length > 0 ? t.reasonNotes[t.reasonNotes.length - 1] : null;
+    if (!lastNote) return true; // Needs reason
+    if (lastNote.status !== "pending") return true; // Needs NEW reason if rejected, resolved, or reactivated
+    return false;
+  });
+
+  const handleOverdueSubmit = async () => {
+    if (!overdueReasonNote.trim()) return;
+    setSubmittingOverdueReason(true);
+    try {
+      await axios.post(`${baseUrl}/targets/${overdueBlockingTarget._id}/reason-note`, { 
+        note: overdueReasonNote,
+        itemType: "target",
+        itemId: overdueBlockingTarget._id,
+        itemName: overdueBlockingTarget.title || "Overall Target"
+      }, { headers });
+      toast.success("Reason submitted to admin for review");
+      fetchTargets();
+      setOverdueReasonNote("");
+    } catch (e) {
+      toast.error("Failed to submit reason");
+    } finally {
+      setSubmittingOverdueReason(false);
+    }
+  };
+
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    <div className="p-6 min-h-screen bg-gray-50 relative">
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {overdueBlockingTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-[90%] max-w-md">
+            <div className="flex items-center gap-3 mb-4 text-red-600">
+              <AlertCircle size={28} />
+              <h2 className="text-xl font-bold">Overdue Target Block</h2>
+            </div>
+            <p className="text-gray-700 mb-2">
+              Your target from <strong>{fmt(overdueBlockingTarget.startDate)} to {fmt(overdueBlockingTarget.endDate)}</strong> is overdue.
+            </p>
+            {overdueBlockingTarget.reasonNotes?.length > 0 && overdueBlockingTarget.reasonNotes[overdueBlockingTarget.reasonNotes.length - 1].status === "rejected" && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-4 border border-red-200">
+                <strong>Reason Rejected:</strong> {overdueBlockingTarget.reasonNotes[overdueBlockingTarget.reasonNotes.length - 1].rejectReason || "Your previous reason was rejected by the admin. Please submit a valid reason."}
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mb-4">
+              You must submit a reason for the delay to continue using your Targets.
+            </p>
+            <textarea
+              className="w-full border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              rows={4}
+              placeholder="Explain why this target is delayed..."
+              value={overdueReasonNote}
+              onChange={(e) => setOverdueReasonNote(e.target.value)}
+            />
+            <button
+              onClick={handleOverdueSubmit}
+              disabled={submittingOverdueReason || !overdueReasonNote.trim()}
+              className="mt-4 w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {submittingOverdueReason ? "Submitting..." : "Submit Reason for Approval"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 flex items-center justify-between">
         <div>

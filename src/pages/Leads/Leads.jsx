@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
-import { useNavigate, useParams, useLocation,useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
@@ -32,11 +32,13 @@ import {
   ChevronRight,
   Flag,
   Target,
+  BarChart,
   Users
 } from "lucide-react";
 
 import LeadsPipelineView from "./LeadsPipelineView";
 import LinkedWorkModal from "../components/LinkedWorkModal";
+import LeadLossModal from "./LeadLossModal";
 
 import { initSocket, getSocket } from "../../utils/socket";
 import {
@@ -71,25 +73,25 @@ const guessAudioMime = (filename = "") => {
 // `fieldGroups`) exactly, so the template reads like the form itself.
 const LEAD_COLUMNS = [
   // Basic Information
-  { key: "leadName",     label: "Lead Name" },
-  { key: "companyName",  label: "Company Name" },
-  { key: "phoneNumber",  label: "Phone Number" },
-  { key: "email",        label: "Email" },
-  { key: "address",      label: "Address", wrap: true },
-  { key: "country",      label: "Country" },
+  { key: "leadName", label: "Lead Name" },
+  { key: "companyName", label: "Company Name" },
+  { key: "phoneNumber", label: "Phone Number" },
+  { key: "email", label: "Email" },
+  { key: "address", label: "Address", wrap: true },
+  { key: "country", label: "Country" },
   // Business Details
-  { key: "clientType",   label: "Client Type (B2B/B2C)" },
-  { key: "industry",     label: "Industry" },
-  { key: "source",       label: "Source" },
-  { key: "requirement",  label: "Requirement", wrap: true },
+  { key: "clientType", label: "Client Type (B2B/B2C)" },
+  { key: "industry", label: "Industry" },
+  { key: "source", label: "Source" },
+  { key: "requirement", label: "Requirement", wrap: true },
   // Lead Management
-  { key: "status",       label: "Status" },
-  { key: "assignTo",     label: "Assign To (Email)" },
+  { key: "status", label: "Status" },
+  { key: "assignTo", label: "Assign To (Email)" },
   { key: "followUpDate", label: "Follow-up Date (YYYY-MM-DD)", type: "date" },
   // Additional Information
-  { key: "notes",        label: "Notes", wrap: true },
+  { key: "notes", label: "Notes", wrap: true },
   // Read-only, export only
-  { key: "createdAt",    label: "Created At", type: "date", exportOnly: true },
+  { key: "createdAt", label: "Created At", type: "date", exportOnly: true },
 ];
 
 // "Export Follow-ups" columns — one row PER follow-up note (same entries as
@@ -97,22 +99,22 @@ const LEAD_COLUMNS = [
 // own timestamp, not the lead's single next-scheduled-follow-up field.
 // A lead with 3 notes produces 3 rows; a lead with none gets one blank row.
 const FOLLOWUP_EXPORT_COLUMNS = [
-  { key: "leadName",     label: "Lead" },
-  { key: "companyName",  label: "Company" },
-  { key: "assignTo",     label: "Assign To" },
+  { key: "leadName", label: "Lead" },
+  { key: "companyName", label: "Company" },
+  { key: "assignTo", label: "Assign To" },
   { key: "followUpDate", label: "Follow-up Date" },
   { key: "followUpNote", label: "Follow-up Note", wrap: true },
 ];
 
 /* ── Tour Steps (i18n-aware) ─────────────────────── */
 const getTourSteps = (t) => [
-  { selector: ".tour-lead-header",   content: t("leads.tour.welcome") },
-  { selector: ".tour-create-lead",   content: t("leads.tour.createLead") },
-  { selector: ".tour-search",        content: t("leads.tour.search") },
-  { selector: ".tour-filters",       content: t("leads.tour.filters") },
-  { selector: ".tour-lead-table",    content: t("leads.tour.table") },
-  { selector: ".tour-lead-actions",  content: t("leads.tour.actions") },
-  { selector: ".tour-finish",        content: t("leads.tour.finish") },
+  { selector: ".tour-lead-header", content: t("leads.tour.welcome") },
+  { selector: ".tour-create-lead", content: t("leads.tour.createLead") },
+  { selector: ".tour-search", content: t("leads.tour.search") },
+  { selector: ".tour-filters", content: t("leads.tour.filters") },
+  { selector: ".tour-lead-table", content: t("leads.tour.table") },
+  { selector: ".tour-lead-actions", content: t("leads.tour.actions") },
+  { selector: ".tour-finish", content: t("leads.tour.finish") },
 ];
 
 /* ── Follow-up voice note player ─────────────────────── */
@@ -177,7 +179,7 @@ function LeadTableComponent() {
   const location = useLocation();
   const { setIsOpen } = useTour();
   const { t } = useTranslation();
-const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [leads, setLeads] = useState([]);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'pipeline'
@@ -225,13 +227,21 @@ const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => parseInt(sessionStorage.getItem("leads_currentPage")) || 1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  useEffect(() => {
+    sessionStorage.setItem("leads_currentPage", currentPage);
+  }, [currentPage]);
+
   const [menuOpen, setMenuOpen] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 1 });
+
+  // Row selection (checkboxes) — used only for bulk "Move to Trash"
+  const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [bulkTrashing, setBulkTrashing] = useState(false);
 
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
@@ -245,10 +255,10 @@ const [searchParams, setSearchParams] = useSearchParams();
   // const [sourceFilter, setSourceFilter] = useState("");
   // const [clientTypeFilter, setClientTypeFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState(
-  searchParams.get("assignee") || "");
+    searchParams.get("assignee") || "");
   const [statusFilter, setStatusFilter] = useState(
-  searchParams.get("status") || ""
-);
+    searchParams.get("status") || ""
+  );
   const [sourceFilter, setSourceFilter] = useState(
     searchParams.get("source") || ""
   );
@@ -269,7 +279,7 @@ const [searchParams, setSearchParams] = useSearchParams();
   const [dateFilterTo, setDateFilterTo] = useState(
     searchParams.get("endDate") || ""
   );
-  
+
   // Store users with their IDs for assignee filter
   const [usersList, setUsersList] = useState([]);
 
@@ -313,17 +323,18 @@ const [searchParams, setSearchParams] = useSearchParams();
   const startTour = () => setIsOpen(true);
 const updateFilter = (key, value, setter) => {
   setter(value);
+  setCurrentPage(1);
 
-  const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams);
 
-  if (value) {
-    params.set(key, value);
-  } else {
-    params.delete(key);
-  }
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
 
-  setSearchParams(params);
-};
+    setSearchParams(params);
+  };
   // user role
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -353,15 +364,16 @@ const updateFilter = (key, value, setter) => {
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
+      setDebouncedSearch((prev) => {
+        if (prev !== searchQuery) {
+          setCurrentPage(1);
+        }
+        return searchQuery;
+      });
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, sourceFilter, assigneeFilter, followUpFilter, itemsPerPage]);
 
   // currencies
   const allowedCurrencies = [
@@ -429,43 +441,50 @@ const updateFilter = (key, value, setter) => {
         limit: itemsPerPage,
       });
 
-    // Search filter - make sure it's properly trimmed
-    if (debouncedSearch && debouncedSearch.trim()) {
-      params.append("search", debouncedSearch.trim());
-    }
-    
-    // Status filter - send only if not empty
-    if (statusFilter && statusFilter !== "") {
-      params.append("status", statusFilter);
-    }
-    
-    // Source filter - send only if not empty
-    if (sourceFilter && sourceFilter !== "") {
-      params.append("source", sourceFilter);
-    }
+      // Search filter - make sure it's properly trimmed
+      if (debouncedSearch && debouncedSearch.trim()) {
+        params.append("search", debouncedSearch.trim());
+      }
 
-    // client filter 
-    if (clientTypeFilter && clientTypeFilter !== "") {
-      params.append("clientType", clientTypeFilter);
-    }
+      // Status filter - send only if not empty
+      if (statusFilter && statusFilter !== "") {
+        params.append("status", statusFilter);
+      }
 
-    // Assignee filter - send the user ID directly
-    if (assigneeFilter && assigneeFilter !== "") {
-      params.append("assignee", assigneeFilter);
-    }
+      // Source filter - send only if not empty
+      if (sourceFilter && sourceFilter !== "") {
+        params.append("source", sourceFilter);
+      }
 
-    // Follow-up filter
-    if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
-      params.append("followUpStatus", followUpFilter);
-    }
+      // client filter 
+      if (clientTypeFilter && clientTypeFilter !== "") {
+        params.append("clientType", clientTypeFilter);
+      }
 
-    // Active Linked Work Filters
-    if (activeWorkFilter === "task") {
-      params.append("activeTask", "true");
-    }
-    if (activeWorkFilter === "target") {
-      params.append("activeTarget", "true");
-    }
+      // Assignee filter - send the user ID directly
+      if (assigneeFilter && assigneeFilter !== "") {
+        params.append("assignee", assigneeFilter);
+      }
+
+      // Follow-up filter
+      if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
+        params.append("followUpStatus", followUpFilter);
+      }
+
+      // Active Linked Work Filters
+      if (activeWorkFilter === "task") {
+        params.append("activeTask", "true");
+      }
+      if (activeWorkFilter === "target") {
+        params.append("activeTarget", "true");
+      }
+
+      if (dateFilterFrom) {
+        params.append("start", dateFilterFrom);
+      }
+      if (dateFilterTo) {
+        params.append("end", dateFilterTo);
+      }
 
       console.log("Fetching leads with params:", Object.fromEntries(params));
 
@@ -479,32 +498,10 @@ const updateFilter = (key, value, setter) => {
       let total = isNew ? data.totalLeads : leadsArr.length;
       let pages = isNew ? data.totalPages : Math.ceil(leadsArr.length / itemsPerPage);
 
-      // Filter by Lead Created Date
-      if (dateFilterFrom || dateFilterTo) {
-        leadsArr = leadsArr.filter((lead) => {
-          if (!lead.createdAt) return true;
-          const createdTime = new Date(lead.createdAt).getTime();
-          let fromTime = 0;
-          let toTime = Infinity;
-          if (dateFilterFrom) {
-            const fromDate = new Date(dateFilterFrom);
-            fromDate.setHours(0, 0, 0, 0);
-            fromTime = fromDate.getTime();
-          }
-          if (dateFilterTo) {
-            const toDate = new Date(dateFilterTo);
-            toDate.setHours(23, 59, 59, 999);
-            toTime = toDate.getTime();
-          }
-          return createdTime >= fromTime && createdTime <= toTime;
-        });
-        total = leadsArr.length;
-        pages = Math.ceil(leadsArr.length / itemsPerPage) || 1;
-      }
-
       setLeads(leadsArr);
       setTotalLeads(total);
       setTotalPages(pages);
+      setSelectedLeadIds([]);
 
     } catch (err) {
       console.error("Fetch leads error:", err);
@@ -518,7 +515,7 @@ const updateFilter = (key, value, setter) => {
     fetchLeads();
   }, [fetchLeads]);
 
-/* ── Export Leads to Excel ─────────────────────── */
+  /* ── Export Leads to Excel ─────────────────────── */
   const handleExportLeads = async ({ startDate, endDate } = {}) => {
     try {
       setExporting(true);
@@ -537,36 +534,17 @@ const updateFilter = (key, value, setter) => {
       if (followUpFilter === "missed" || followUpFilter === "completed" || followUpFilter === "today") {
         params.append("followUpStatus", followUpFilter);
       }
-      // Date filter applied client-side below
+      
+      const fromVal = startDate || dateFilterFrom;
+      const toVal = endDate || dateFilterTo;
+      if (fromVal) params.append("start", fromVal);
+      if (toVal) params.append("end", toVal);
 
       const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
       let exportRows = isNew ? data.leads : (Array.isArray(data) ? data : []);
-
-      // Filter by Lead Created Date for Export
-      if (startDate || dateFilterFrom || endDate || dateFilterTo) {
-        const fromVal = startDate || dateFilterFrom;
-        const toVal = endDate || dateFilterTo;
-        exportRows = exportRows.filter((lead) => {
-          if (!lead.createdAt) return true;
-          const createdTime = new Date(lead.createdAt).getTime();
-          let fromTime = 0;
-          let toTime = Infinity;
-          if (fromVal) {
-            const fromDate = new Date(fromVal);
-            fromDate.setHours(0, 0, 0, 0);
-            fromTime = fromDate.getTime();
-          }
-          if (toVal) {
-            const toDate = new Date(toVal);
-            toDate.setHours(23, 59, 59, 999);
-            toTime = toDate.getTime();
-          }
-          return createdTime >= fromTime && createdTime <= toTime;
-        });
-      }
 
       if (!exportRows.length) {
         toast.info("No data found for the selected criteria. There is nothing to export.");
@@ -591,35 +569,35 @@ const updateFilter = (key, value, setter) => {
 
       const flattenedRows = isFollowUpExport
         ? exportRows.flatMap((lead) => {
-            const assignee = lead.assignTo
-              ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim()
-              : "";
-            const notes = Array.isArray(lead.followUpNotes) ? lead.followUpNotes : [];
+          const assignee = lead.assignTo
+            ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim()
+            : "";
+          const notes = Array.isArray(lead.followUpNotes) ? lead.followUpNotes : [];
 
-            if (!notes.length) {
-              return [{
-                leadName: lead.leadName || "",
-                companyName: lead.companyName || "",
-                assignTo: assignee,
-                followUpDate: formatNoteStamp(lead.followUpDate),
-                followUpNote: "",
-              }];
-            }
+          if (!notes.length) {
+            return [{
+              leadName: lead.leadName || "",
+              companyName: lead.companyName || "",
+              assignTo: assignee,
+              followUpDate: formatNoteStamp(lead.followUpDate),
+              followUpNote: "",
+            }];
+          }
 
-            return [...notes]
-              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-              .map((n) => ({
-                leadName: lead.leadName || "",
-                companyName: lead.companyName || "",
-                assignTo: assignee,
-                followUpDate: formatNoteStamp(n.createdAt),
-                followUpNote: n.note || "",
-              }));
-          })
+          return [...notes]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .map((n) => ({
+              leadName: lead.leadName || "",
+              companyName: lead.companyName || "",
+              assignTo: assignee,
+              followUpDate: formatNoteStamp(n.createdAt),
+              followUpNote: n.note || "",
+            }));
+        })
         : exportRows.map((lead) => ({
-            ...lead,
-            assignTo: lead.assignTo?.email || "",
-          }));
+          ...lead,
+          assignTo: lead.assignTo?.email || "",
+        }));
 
       const columns = isFollowUpExport ? FOLLOWUP_EXPORT_COLUMNS : LEAD_COLUMNS;
       const filenamePrefix = isFollowUpExport ? "leads_followups" : "leads";
@@ -642,12 +620,12 @@ const updateFilter = (key, value, setter) => {
     }
   };
 
-/* ── Download Leads Import Template ─────────────────────── */
+  /* ── Download Leads Import Template ─────────────────────── */
   const handleDownloadTemplate = () => {
     downloadExcelTemplate(LEAD_COLUMNS, "leads_import_template.xlsx", "Leads Template");
   };
 
-/* ── Import Leads from Excel ─────────────────────── */
+  /* ── Import Leads from Excel ─────────────────────── */
   const handleImportButtonClick = () => {
     importFileInputRef.current?.click();
   };
@@ -704,7 +682,7 @@ const updateFilter = (key, value, setter) => {
         }));
         setTargetLinkedLeadIds(map);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Pagination helpers
@@ -726,7 +704,7 @@ const updateFilter = (key, value, setter) => {
     if (top + menuHeight > viewportHeight) {
       top = rect.top - menuHeight - 4;
     }
-    
+
     // Ensure it doesn't go off the left side of screen
     if (left < 10) left = 10;
 
@@ -739,25 +717,54 @@ const updateFilter = (key, value, setter) => {
     setMenuOpen(null);
   };
 
-  const handleRejectClick = (lead) => {
-    setLeadToReject({ id: lead._id, name: lead.leadName });
-    setRejectReason("");
-    setShowRejectModal(true);
-    setMenuOpen(null);
+  const handleRejectClick = async (lead) => {
+    if (lead.isDowngrade) {
+      setLeadToReject({ id: lead._id || lead.id, name: lead.leadName, isDowngrade: true });
+      setRejectReason("");
+      setShowRejectModal(true);
+      setMenuOpen(null);
+    } else {
+      setMenuOpen(null);
+      if (!window.confirm("Are you sure you want to reject this lead?")) return;
+      setRejecting(true);
+      try {
+        const token = localStorage.getItem("token");
+        await axios.patch(
+          `${API_URL}/leads/${lead._id || lead.id}/reject`,
+          { reason: "Rejected by user", customReason: "" },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("Lead rejected");
+        setPipelineTrigger((prev) => prev + 1);
+        fetchLeads();
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Failed to reject lead");
+      } finally {
+        setRejecting(false);
+      }
+    }
   };
 
-  const handleRejectSubmit = async () => {
+  const handleRejectSubmit = async (lossData) => {
     if (!leadToReject) return;
-    if (!rejectReason.trim()) return toast.error("Please enter a reason for rejecting this lead");
     setRejecting(true);
     try {
       const token = localStorage.getItem("token");
-      await axios.patch(
-        `${API_URL}/leads/${leadToReject.id}/reject`,
-        { reason: rejectReason.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success("Lead rejected");
+      if (leadToReject.isDowngrade) {
+        await axios.put(
+          `${API_URL}/leads/updateLead/${leadToReject.id}`,
+          { status: "Cold", rejectionReason: lossData.customReason || lossData.reason },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("Lead downgraded to Cold");
+      } else {
+        await axios.patch(
+          `${API_URL}/leads/${leadToReject.id}/reject`,
+          { reason: lossData.reason, customReason: lossData.customReason },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("Lead rejected");
+      }
       setShowRejectModal(false);
       setLeadToReject(null);
       setRejectReason("");
@@ -783,8 +790,49 @@ const updateFilter = (key, value, setter) => {
       );
       toast.success("Lead moved to trash");
       setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+      setSelectedLeadIds((prev) => prev.filter((id) => id !== lead._id));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to move lead to trash");
+    }
+  };
+
+  // Checkbox selection helpers — selection is scoped to the current page's rows
+  const isAllOnPageSelected =
+    leads.length > 0 && leads.every((l) => selectedLeadIds.includes(l._id));
+
+  const toggleSelectAllOnPage = () => {
+    if (isAllOnPageSelected) {
+      setSelectedLeadIds((prev) => prev.filter((id) => !leads.some((l) => l._id === id)));
+    } else {
+      setSelectedLeadIds((prev) => [...new Set([...prev, ...leads.map((l) => l._id)])]);
+    }
+  };
+
+  const toggleSelectLead = (leadId) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+    );
+  };
+
+  const handleBulkTrash = async () => {
+    if (!selectedLeadIds.length) return;
+    if (!window.confirm(`Are you sure you want to move ${selectedLeadIds.length} lead(s) to trash?`)) return;
+
+    setBulkTrashing(true);
+    try {
+      const token = localStorage.getItem("token");
+      await Promise.all(
+        selectedLeadIds.map((id) =>
+          axios.patch(`${API_URL}/leads/${id}/trash`, {}, { headers: { Authorization: `Bearer ${token}` } })
+        )
+      );
+      toast.success(`${selectedLeadIds.length} lead(s) moved to trash`);
+      setLeads((prev) => prev.filter((l) => !selectedLeadIds.includes(l._id)));
+      setSelectedLeadIds([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to move leads to trash");
+    } finally {
+      setBulkTrashing(false);
     }
   };
 
@@ -859,7 +907,7 @@ const updateFilter = (key, value, setter) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isPastDue = followUpDay < today;
-    const hasNotes  = Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0;
+    const hasNotes = Array.isArray(lead.followUpNotes) && lead.followUpNotes.length > 0;
     return isPastDue && !hasNotes;
   };
 
@@ -1018,6 +1066,12 @@ const updateFilter = (key, value, setter) => {
   };
 
   const handleStatusChange = async (leadId, newStatus) => {
+    const lead = leads.find(l => l._id === leadId);
+    if (newStatus === "Cold" && lead && lead.status !== "Cold") {
+      handleRejectClick({ ...lead, isDowngrade: true });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
 
@@ -1040,6 +1094,7 @@ const updateFilter = (key, value, setter) => {
   };
 
   const statusClasses = {
+    New: "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100",
     Hot: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
     Warm: "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
     Cold: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
@@ -1048,20 +1103,20 @@ const updateFilter = (key, value, setter) => {
   };
 
   const getStatusSelectClass = (status) => {
-    return `w-full px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-      statusClasses[status] ||
+    return `w-full px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 ${statusClasses[status] ||
       "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-    } ${
-      status === "Hot"
-        ? "focus:ring-red-300"
-        : status === "Warm"
-        ? "focus:ring-yellow-300"
-        : status === "Cold"
-        ? "focus:ring-blue-300"
-        : status === "Junk"
-        ? "focus:ring-gray-300"
-        : "focus:ring-green-300"
-    }`;
+      } ${status === "New"
+        ? "focus:ring-indigo-300"
+        : status === "Hot"
+          ? "focus:ring-red-300"
+          : status === "Warm"
+            ? "focus:ring-yellow-300"
+            : status === "Cold"
+              ? "focus:ring-blue-300"
+              : status === "Junk"
+                ? "focus:ring-gray-300"
+                : "focus:ring-green-300"
+      }`;
   };
 
   useEffect(() => {
@@ -1104,7 +1159,6 @@ const updateFilter = (key, value, setter) => {
       />
 
       {/* Page Title */}
-      
       <div className="mb-5">
         <h1 className="text-gray-900  flex items-center gap-3"> <Users /> Leads </h1>
         <p className="text-base text-slate-600 mt-1">Manage and track your potential customers</p>
@@ -1137,13 +1191,16 @@ const updateFilter = (key, value, setter) => {
           </button>
 
           {userRole === "Admin" && (
-            <button
-              onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
-              className="text-red-500 hover:text-red-700 p-1.5 rounded-md hover:bg-red-50 transition-colors"
-              title="View Rejected Leads"
-            >
-              <Ban className="w-4 h-4" />
-            </button>
+            <>
+              <button
+                onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
+                className="text-red-500 hover:text-red-700 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                title="View Rejected Leads"
+              >
+                <Ban className="w-4 h-4" />
+              </button>
+
+            </>
           )}
 
           {(userRole === "Admin" || userRole === "Sales") && (
@@ -1154,7 +1211,7 @@ const updateFilter = (key, value, setter) => {
               <Plus className="w-4 h-4" /> {t("leads.buttons.createLead")}
             </button>
           )}
-          
+
           <div className="flex items-center bg-gray-100 rounded-md p-0.5 border border-gray-200">
             <button
               onClick={() => setViewMode("table")}
@@ -1254,9 +1311,9 @@ const updateFilter = (key, value, setter) => {
                 <select
                   value={assigneeFilter}
                   // onChange={(e) => setAssigneeFilter(e.target.value)}
-                    onChange={(e) =>
-                       updateFilter("assignee", e.target.value, setAssigneeFilter)
-                      }
+                  onChange={(e) =>
+                    updateFilter("assignee", e.target.value, setAssigneeFilter)
+                  }
                   className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
                 >
                   <option value="">{t("leads.filters.allAssignees")}</option>
@@ -1273,9 +1330,9 @@ const updateFilter = (key, value, setter) => {
               <select
                 value={statusFilter}
                 // onChange={(e) => setStatusFilter(e.target.value)}
-                  onChange={(e) =>
-                    updateFilter("status", e.target.value, setStatusFilter)
-                   }
+                onChange={(e) =>
+                  updateFilter("status", e.target.value, setStatusFilter)
+                }
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="">{t("leads.filters.allStatus")}</option>
@@ -1291,9 +1348,9 @@ const updateFilter = (key, value, setter) => {
               <select
                 value={sourceFilter}
                 // onChange={(e) => setSourceFilter(e.target.value)}
-                  onChange={(e) =>
-    updateFilter("source", e.target.value, setSourceFilter)
-  }
+                onChange={(e) =>
+                  updateFilter("source", e.target.value, setSourceFilter)
+                }
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="">{t("leads.filters.allSources")}</option>
@@ -1301,7 +1358,7 @@ const updateFilter = (key, value, setter) => {
                 <option value="Referral">{t("leads.source.referral")}</option>
                 <option value="Social Media">{t("leads.source.socialMedia")}</option>
                 <option value="Email">{t("leads.source.email")}</option>
-                <option value="Cold Call">{t("leads.source.coldCall")}</option>
+                <option value="Phone">{t("leads.source.phone")}</option>
                 <option value="Other">{t("leads.source.other")}</option>
               </select>
             </div>
@@ -1310,9 +1367,9 @@ const updateFilter = (key, value, setter) => {
               <select
                 value={clientTypeFilter}
                 // onChange={(e) => setClientTypeFilter(e.target.value)}
-                                    onChange={(e) =>
-    updateFilter("clientType", e.target.value, setClientTypeFilter )
-  }
+                onChange={(e) =>
+                  updateFilter("clientType", e.target.value, setClientTypeFilter)
+                }
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="">{t("leads.filters.allClientTypes")}</option>
@@ -1326,20 +1383,20 @@ const updateFilter = (key, value, setter) => {
                 value={followUpFilter}
                 // onChange={(e) => setFollowUpFilter(e.target.value)}
                 onChange={(e) => {
-  const value = e.target.value;
+                  const value = e.target.value;
 
-  setFollowUpFilter(value);
+                  setFollowUpFilter(value);
 
-  const params = new URLSearchParams(searchParams);
+                  const params = new URLSearchParams(searchParams);
 
-  if (value === "all") {
-    params.delete("followUp"); // don't store the default value
-  } else {
-    params.set("followUp", value);
-  }
+                  if (value === "all") {
+                    params.delete("followUp"); // don't store the default value
+                  } else {
+                    params.set("followUp", value);
+                  }
 
-  setSearchParams(params);
-}}
+                  setSearchParams(params);
+                }}
                 className="w-11/12 md:w-full mx-auto p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm"
               >
                 <option value="all">All Follow-ups</option>
@@ -1354,8 +1411,8 @@ const updateFilter = (key, value, setter) => {
               <input
                 type="date"
                 value={dateFilterFrom}
-                // onChange={(e) => setDateFilterFrom(e.target.value)}
                 onChange={(e) => updateFilter("startDate", e.target.value, setDateFilterFrom)}
+                onKeyDown={(e) => e.preventDefault()}
                 max={dateFilterTo || undefined}
                 title="Start Date"
                 className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1364,8 +1421,8 @@ const updateFilter = (key, value, setter) => {
               <input
                 type="date"
                 value={dateFilterTo}
-                // onChange={(e) => setDateFilterTo(e.target.value)}
                 onChange={(e) => updateFilter("endDate", e.target.value, setDateFilterTo)}
+                onKeyDown={(e) => e.preventDefault()}
                 min={dateFilterFrom || undefined}
                 title="End Date"
                 className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm w-full flex-1 min-w-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1437,356 +1494,391 @@ const updateFilter = (key, value, setter) => {
           pipelineTrigger={pipelineTrigger}
         />
       ) : (
-      <div className="overflow-x-auto tour-lead-table">
-        <table className="min-w-max w-full table-auto divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr className="whitespace-nowrap">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky left-0 z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none">{t("leads.table.lead")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.source")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.status")}</th>
-              {userRole === "Admin" && (
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
-              )}
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-                {t("leads.table.history")}
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tour-lead-actions">{t("leads.table.actions")}</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-200">
-            {leads.length > 0 ? (
-              leads.map((lead, idx) => {
-                const isTerminal = lead.status === "Rejected";
-                const isActiveDisabled = lead.isActive === false && userRole !== "Admin";
-                const isDisabled = isTerminal || isActiveDisabled;
-                const rejectedByObj = lead.rejectedBy && typeof lead.rejectedBy === 'object' ? lead.rejectedBy : usersList.find(u => String(u._id) === String(lead.rejectedBy));
-                const convertedByObj = lead.convertedBy && typeof lead.convertedBy === 'object' ? lead.convertedBy : usersList.find(u => String(u._id) === String(lead.convertedBy));
-                const rejectedByName = rejectedByObj ? `${rejectedByObj.firstName || ""} ${rejectedByObj.lastName || ""}`.trim() : "";
-                const convertedByName = convertedByObj ? `${convertedByObj.firstName || ""} ${convertedByObj.lastName || ""}`.trim() : "";
-                const isSelfRejected = rejectedByObj && String(rejectedByObj._id) === String(currentUserId);
-                const isSelfConverted = convertedByObj && String(convertedByObj._id) === String(currentUserId);
-                const rejectedBadgeText = isSelfRejected ? "You rejected the lead" : `${rejectedByName || "Admin"} rejected the lead`;
-                const convertedBadgeText = isSelfConverted ? "You converted lead to deal" : `${convertedByName || "Someone"} converted lead to deal`;
-                return (
-                <tr
-                  key={lead._id}
-                  title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
-                  className={`group ${
-                    idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } hover:bg-gray-50 whitespace-nowrap ${
-                    isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
-                    : isTerminal ? "pointer-events-none select-none"
-                    : ""
-                  }`}
+        <div className="tour-lead-table">
+          {userRole === "Admin" && selectedLeadIds.length > 0 && (
+            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-3">
+              <span className="text-sm font-medium text-blue-700">
+                {selectedLeadIds.length} lead{selectedLeadIds.length === 1 ? "" : "s"} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedLeadIds([])}
+                  className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1.5"
                 >
-                  <td className={`px-4 py-3 sticky left-0 z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${
-                    idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
-                        {lead.leadName?.charAt(0) || "L"}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5 min-w-0">
-                          <span
-                            onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}${location.search}`, {
-                              state: { leadSequence: leads.map((l) => ({ _id: l._id, leadName: l.leadName })) },
-                            })}
-                            className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none"
+                  Clear
+                </button>
+                <button
+                  onClick={handleBulkTrash}
+                  disabled={bulkTrashing}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-60"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {bulkTrashing ? "Moving..." : `Move to Trash (${selectedLeadIds.length})`}
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="overflow-x-auto">
+          <table className="min-w-max w-full table-auto divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr className="whitespace-nowrap">
+                {userRole === "Admin" && (
+                  <th className="w-10 px-4 py-3 sticky left-0 z-20 bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={isAllOnPageSelected}
+                      onChange={toggleSelectAllOnPage}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </th>
+                )}
+                <th className={`px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"}`}>{t("leads.table.lead")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.source")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.status")}</th>
+                {userRole === "Admin" && (
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
+                )}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                  {t("leads.table.history")}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tour-lead-actions">{t("leads.table.actions")}</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-200">
+              {leads.length > 0 ? (
+                leads.map((lead, idx) => {
+                  const isTerminal = lead.status === "Rejected";
+                  const isActiveDisabled = false; // Overdue items no longer disabled here
+                  const isDisabled = isTerminal;
+                  const rejectedByObj = lead.rejectedBy && typeof lead.rejectedBy === 'object' ? lead.rejectedBy : usersList.find(u => String(u._id) === String(lead.rejectedBy));
+                  const convertedByObj = lead.convertedBy && typeof lead.convertedBy === 'object' ? lead.convertedBy : usersList.find(u => String(u._id) === String(lead.convertedBy));
+                  const rejectedByName = rejectedByObj ? `${rejectedByObj.firstName || ""} ${rejectedByObj.lastName || ""}`.trim() : "";
+                  const convertedByName = convertedByObj ? `${convertedByObj.firstName || ""} ${convertedByObj.lastName || ""}`.trim() : "";
+                  const isSelfRejected = rejectedByObj && String(rejectedByObj._id) === String(currentUserId);
+                  const isSelfConverted = convertedByObj && String(convertedByObj._id) === String(currentUserId);
+                  const rejectedBadgeText = isSelfRejected ? "You rejected the lead" : `${rejectedByName || "Admin"} rejected the lead`;
+                  const convertedBadgeText = isSelfConverted ? "You converted lead to deal" : `${convertedByName || "Someone"} converted lead to deal`;
+                  return (
+                    <tr
+                      key={lead._id}
+                      title={isActiveDisabled ? "Disabled — pending admin reassignment" : undefined}
+                      className={`group ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        } hover:bg-gray-50 whitespace-nowrap ${isActiveDisabled ? "opacity-50 grayscale pointer-events-none select-none"
+                          : isTerminal ? "pointer-events-none select-none"
+                            : ""
+                        }`}
+                    >
+                      {userRole === "Admin" && (
+                        <td className={`w-10 px-4 py-3 sticky left-0 z-10 ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={selectedLeadIds.includes(lead._id)}
+                            onChange={() => toggleSelectLead(lead._id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
+                      )}
+                      <td className={`px-4 py-3 sticky z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"} ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                        }`}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
+                            {lead.leadName?.charAt(0) || "L"}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5 min-w-0">
+                              <span
+                                onClick={() => navigate(`/${tenantSlug}/leads/view/${lead._id}${location.search}`, {
+                                  state: { leadSequence: leads.map((l) => ({ _id: l._id, leadName: l.leadName })) },
+                                })}
+                                className="group relative inline-flex font-medium text-blue-600 text-sm cursor-pointer hover:underline truncate max-w-[90px] sm:max-w-[160px] lg:max-w-none"
+                              >
+                                {lead.leadName || t("leads.table.unnamedLead")}
+                                <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-normal shadow-lg z-50 pointer-events-none">
+                                  <Calendar size={12} className="text-gray-300 shrink-0" />
+                                  {lead.followUpDate
+                                    ? `Follow-up: ${formatDate(lead.followUpDate)}`
+                                    : "No follow-up scheduled"}
+                                </div>
+                              </span>
+                              {lead.status === "Rejected" ? (
+                                <span title={rejectedBadgeText} className="text-xs bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
+                                  {rejectedBadgeText}
+                                </span>
+                              ) : lead.status === "Converted" ? (
+                                <span title={convertedBadgeText} className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
+                                  {convertedBadgeText}
+                                </span>
+                              ) : isActiveDisabled ? (
+                                <span className="text-xs bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
+                                  Pending Reassignment
+                                </span>
+                              ) : null}
+                              {/* Task / Target Icons */}
+                              {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
+                                <div className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLinkedWorkData({
+                                    activeTasks: lead.activeTasks || [],
+                                    activeTargets: lead.activeTargets || [],
+                                    itemName: lead.leadName || t("leads.table.unnamedLead")
+                                  });
+                                  setLinkedWorkModalOpen(true);
+                                }}>
+                                  {(lead.activeTasks && lead.activeTasks.length > 0) && (
+                                    <Flag size={14} className="text-blue-500 hover:text-blue-600 transition-colors" />
+                                  )}
+                                  {(lead.activeTargets && lead.activeTargets.length > 0) && (
+                                    <Target size={14} className="text-purple-500 hover:text-purple-600 transition-colors" />
+                                  )}
+                                </div>
+                              )}
+
+                              {targetLinkedLeadIds.has(String(lead._id)) && (() => {
+                                const tInfo = targetLinkedLeadIds.get(String(lead._id));
+                                const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+                                const fmtT = (d) => d ? new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
+                                const isBellClicked = openBellTooltipId === lead._id;
+                                return (
+                                  <div className="relative inline-flex ml-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenBellTooltipId(isBellClicked ? null : lead._id);
+                                      }}
+                                      className="focus:outline-none transition-transform hover:scale-110"
+                                    >
+                                      <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
+                                    </button>
+                                    {isBellClicked && (
+                                      <div className="absolute top-full left-0 mt-1.5 flex flex-col min-w-[200px] shadow-xl z-50" style={{ borderRadius: "10px", overflow: "hidden", border: "1px solid #fed7aa" }}>
+                                        <div style={{ background: "#f97316" }} className="px-3 py-2 flex justify-between items-center">
+                                          <span className="text-white text-xs font-bold">🎯 This is your target</span>
+                                          <button onClick={(e) => { e.stopPropagation(); setOpenBellTooltipId(null); }} className="text-white hover:text-orange-200">
+                                            <X size={12} />
+                                          </button>
+                                        </div>
+                                        <div className="bg-white px-3 py-2 space-y-1.5">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-xs text-gray-400 w-16 shrink-0">Assigned</span>
+                                            <span className="text-xs font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-xs text-gray-400 w-16 shrink-0">Due Date</span>
+                                            <span className="text-xs font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                            <span className="text-gray-400 text-xs truncate max-w-[100px] sm:max-w-[180px] lg:max-w-none">{lead.email || "-"}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {lead.phoneNumber ? (
+                          <a
+                            href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
+                            className="text-blue-600 hover:underline font-medium"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            {lead.leadName || t("leads.table.unnamedLead")}
-                            <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-normal shadow-lg z-50 pointer-events-none">
-                              <Calendar size={12} className="text-gray-300 shrink-0" />
-                              {lead.followUpDate
-                                ? `Follow-up: ${formatDate(lead.followUpDate)}`
-                                : "No follow-up scheduled"}
-                            </div>
+                            {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
+
+                      <td className="px-4 py-3">
+                        {lead.status === "Rejected" ? (
+                          <span
+                            className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
+                            onMouseEnter={(e) => lead.rejectionReason && handleRejectionHover(lead, e)}
+                            onMouseLeave={handleRejectionLeave}
+                          >
+                            Rejected
                           </span>
-                          {lead.status === "Rejected" ? (
-                            <span title={rejectedBadgeText} className="text-xs bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
-                              {rejectedBadgeText}
+                        ) : lead.status === "Converted" ? (
+                          <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
+                            Converted
+                          </span>
+                        ) : (
+                          <select
+                            value={lead.status}
+                            disabled={isDisabled}
+                            onChange={(e) =>
+                              handleStatusChange(lead._id, e.target.value)
+                            }
+                            className={`${getStatusSelectClass(lead.status)} ${isDisabled ? "cursor-not-allowed opacity-70" : ""}`}
+                          >
+                            <option value="New">New</option>
+                            <option value="Hot">Hot</option>
+                            <option value="Warm">Warm</option>
+                            <option value="Cold">Cold</option>
+                            <option value="Junk">Junk</option>
+                          </select>
+                        )}
+                      </td>
+
+                      {userRole === "Admin" && (
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {lead.assignTo ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim() : "-"}
+                        </td>
+                      )}
+
+
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>
+
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        <div className="relative flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => !isActiveDisabled && openFollowUpPicker(lead._id)}
+                            className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isActiveDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
+                            title={isActiveDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
+                            disabled={followUpSavingId === lead._id || isActiveDisabled}
+                          >
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm">
+                              {followUpSavingId === lead._id
+                                ? t("leads.table.saving")
+                                : formatDate(lead.followUpDate)}
                             </span>
-                          ) : lead.status === "Converted" ? (
-                            <span title={convertedBadgeText} className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-auto truncate max-w-[90px] sm:max-w-[200px]">
-                              {convertedBadgeText}
+                          </button>
+
+                          {isFollowUpMissed(lead) && (
+                            <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
+                              Missed
                             </span>
-                          ) : isActiveDisabled ? (
-                            <span className="text-xs bg-gray-200 text-gray-600 font-bold px-1.5 py-0.5 rounded-full uppercase" title="Overdue — pending admin reassignment">
-                              Pending Reassignment
-                            </span>
-                          ) : null}
-                          {/* Task / Target Icons */}
-                          {((lead.activeTasks && lead.activeTasks.length > 0) || (lead.activeTargets && lead.activeTargets.length > 0)) && (
-                            <div className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => {
-                              e.stopPropagation();
-                              setLinkedWorkData({
-                                activeTasks: lead.activeTasks || [],
-                                activeTargets: lead.activeTargets || [],
-                                itemName: lead.leadName || t("leads.table.unnamedLead")
-                              });
-                              setLinkedWorkModalOpen(true);
-                            }}>
-                              {(lead.activeTasks && lead.activeTasks.length > 0) && (
-                                <Flag size={14} className="text-blue-500 hover:text-blue-600 transition-colors" />
-                              )}
-                              {(lead.activeTargets && lead.activeTargets.length > 0) && (
-                                <Target size={14} className="text-purple-500 hover:text-purple-600 transition-colors" />
-                              )}
-                            </div>
                           )}
 
-                          {targetLinkedLeadIds.has(String(lead._id)) && (() => {
-                            const tInfo = targetLinkedLeadIds.get(String(lead._id));
-                            const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
-                            const fmtT = (d) => d ? new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "";
-                            const isBellClicked = openBellTooltipId === lead._id;
-                            return (
-                              <div className="relative inline-flex ml-1">
-                                <button 
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    setOpenBellTooltipId(isBellClicked ? null : lead._id); 
-                                  }}
-                                  className="focus:outline-none transition-transform hover:scale-110"
-                                >
-                                  <Bell size={16} className="text-orange-500 animate-pulse drop-shadow-sm" />
-                                </button>
-                                {isBellClicked && (
-                                  <div className="absolute top-full left-0 mt-1.5 flex flex-col min-w-[200px] shadow-xl z-50" style={{borderRadius:"10px", overflow:"hidden", border:"1px solid #fed7aa"}}>
-                                    <div style={{background:"#f97316"}} className="px-3 py-2 flex justify-between items-center">
-                                      <span className="text-white text-xs font-bold">🎯 This is your target</span>
-                                      <button onClick={(e) => { e.stopPropagation(); setOpenBellTooltipId(null); }} className="text-white hover:text-orange-200">
-                                        <X size={12} />
-                                      </button>
-                                    </div>
-                                    <div className="bg-white px-3 py-2 space-y-1.5">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-xs text-gray-400 w-16 shrink-0">Assigned</span>
-                                        <span className="text-xs font-semibold text-gray-700">{fmtD(tInfo?.assignedAt)} {fmtT(tInfo?.assignedAt)}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-xs text-gray-400 w-16 shrink-0">Due Date</span>
-                                        <span className="text-xs font-semibold text-orange-600">{fmtD(tInfo?.endDate)}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })()}
+                          {editingFollowUpId === lead._id && (
+                            <input
+                              ref={(el) => (dateInputRefs.current[lead._id] = el)}
+                              type="date"
+                              defaultValue={toDateInputValue(lead.followUpDate)}
+                              className="absolute left-0 top-0 w-0 h-0 opacity-0"
+                              onChange={(e) => updateFollowUpDateInline(lead._id, e.target.value)}
+                              onBlur={() => setEditingFollowUpId(null)}
+                            />
+                          )}
                         </div>
-                        <span className="text-gray-400 text-xs truncate max-w-[100px] sm:max-w-[180px] lg:max-w-none">{lead.email || "-"}</span>
-                      </div>
-                    </div>
-                  </td>
+                      </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {lead.phoneNumber ? (
-                      <a
-                        href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
-                        className="text-blue-600 hover:underline font-medium"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
-                      </a>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
-
-                  <td className="px-4 py-3">
-                    {lead.status === "Rejected" ? (
-                      <span
-                        className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
-                        onMouseEnter={(e) => lead.rejectionReason && handleRejectionHover(lead, e)}
-                        onMouseLeave={handleRejectionLeave}
-                      >
-                        Rejected
-                      </span>
-                    ) : lead.status === "Converted" ? (
-                      <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
-                        Converted
-                      </span>
-                    ) : (
-                      <select
-                        value={lead.status}
-                        disabled={isDisabled}
-                        onChange={(e) =>
-                          handleStatusChange(lead._id, e.target.value)
-                        }
-                        className={`${getStatusSelectClass(lead.status)} ${isDisabled ? "cursor-not-allowed opacity-70" : ""}`}
-                      >
-                        <option value="Hot">Hot</option>
-                        <option value="Warm">Warm</option>
-                        <option value="Cold">Cold</option>
-                        <option value="Junk">Junk</option>
-                      </select>
-                    )}
-                  </td>
-
-                  {userRole === "Admin" && (
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {lead.assignTo ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim() : "-"}
-                    </td>
-                  )}
-           
-
-                  <td className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>
-
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    <div className="relative flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => !isActiveDisabled && openFollowUpPicker(lead._id)}
-                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isActiveDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
-                        title={isActiveDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
-                        disabled={followUpSavingId === lead._id || isActiveDisabled}
-                      >
-                        <Calendar className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">
-                          {followUpSavingId === lead._id
-                            ? t("leads.table.saving")
-                            : formatDate(lead.followUpDate)}
-                        </span>
-                      </button>
-
-                      {isFollowUpMissed(lead) && (
-                        <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
-                          Missed
-                        </span>
-                      )}
-
-                      {editingFollowUpId === lead._id && (
-                        <input
-                          ref={(el) => (dateInputRefs.current[lead._id] = el)}
-                          type="date"
-                          defaultValue={toDateInputValue(lead.followUpDate)}
-                          className="absolute left-0 top-0 w-0 h-0 opacity-0"
-                          onChange={(e) => updateFollowUpDateInline(lead._id, e.target.value)}
-                          onBlur={() => setEditingFollowUpId(null)}
-                        />
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      type="button"
-                      onClick={() => openHistoryModal(lead)}
-                      className={`inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                        isFollowUpMissed(lead) ? "text-red-500 hover:text-red-600" : "text-gray-500 hover:text-blue-600"
-                      }`}
-                      title={isFollowUpMissed(lead) ? "Missed follow-up — view history" : "View follow-up history"}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-
-                  <td className="px-4 py-3 text-right relative">
-                    <div className="relative inline-block text-left">
-                      <button
-                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                        onClick={(e) => handleMenuToggle(lead._id, e)}
-                      >
-                        <MoreVertical className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
-
-                    {menuOpen === lead._id && ReactDOM.createPortal(
-                      <div
-                        className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
-                        style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <td className="px-4 py-3 text-center">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isActiveDisabled) return;
-                            handleEdit(lead._id);
-                          }}
-                          disabled={isActiveDisabled}
-                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isActiveDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                          type="button"
+                          onClick={() => openHistoryModal(lead)}
+                          className={`inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors ${isFollowUpMissed(lead) ? "text-red-500 hover:text-red-600" : "text-gray-500 hover:text-blue-600"
+                            }`}
+                          title={isFollowUpMissed(lead) ? "Missed follow-up — view history" : "View follow-up history"}
                         >
-                          <Edit className="w-4 h-4 mr-2" /> {t("leads.actions.edit")}
+                          <Eye className="w-4 h-4" />
                         </button>
+                      </td>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isActiveDisabled) return;
-                            openAddNoteModal(lead);
-                          }}
-                          disabled={isActiveDisabled}
-                          className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isActiveDisabled ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-gray-100"}`}
-                        >
-                          <MessageSquarePlus className="w-4 h-4 mr-2" /> Add Follow-up Note
-                        </button>
-
-                        {lead.status !== "Converted" && (
+                      <td className="px-4 py-3 text-right relative">
+                        <div className="relative inline-block text-left">
                           <button
-                            onClick={(e) => { e.stopPropagation(); openConvertModal(lead); }}
-                            disabled={isDisabled}
-                            className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:bg-gray-100"}`}
+                            className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                            onClick={(e) => handleMenuToggle(lead._id, e)}
                           >
-                            <Handshake className="w-4 h-4 mr-2" /> {t("leads.actions.convert")}
+                            <MoreVertical className="w-5 h-5 text-gray-600" />
                           </button>
-                        )}
+                        </div>
 
-                        {userRole === "Admin" && !isTerminal && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRejectClick(lead);
-                            }}
-                            className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
+                        {menuOpen === lead._id && ReactDOM.createPortal(
+                          <div
+                            className="fixed z-[9999] w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1"
+                            style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Ban className="w-4 h-4 mr-2" /> Reject
-                          </button>
-                        )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isActiveDisabled) return;
+                                handleEdit(lead._id);
+                              }}
+                              disabled={isActiveDisabled}
+                              className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isActiveDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"}`}
+                            >
+                              <Edit className="w-4 h-4 mr-2" /> {t("leads.actions.edit")}
+                            </button>
 
-                        {userRole === "Admin" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTrashClick(lead);
-                            }}
-                            className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
-                          </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isActiveDisabled) return;
+                                openAddNoteModal(lead);
+                              }}
+                              disabled={isActiveDisabled}
+                              className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isActiveDisabled ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-gray-100"}`}
+                            >
+                              <MessageSquarePlus className="w-4 h-4 mr-2" /> Add Follow-up Note
+                            </button>
+
+                            {lead.status !== "Converted" && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openConvertModal(lead); }}
+                                disabled={isDisabled}
+                                className={`flex items-center w-full px-3 py-2 text-sm whitespace-nowrap ${isDisabled ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:bg-gray-100"}`}
+                              >
+                                <Handshake className="w-4 h-4 mr-2" /> {t("leads.actions.convert")}
+                              </button>
+                            )}
+
+                            {userRole === "Admin" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTrashClick(lead);
+                                }}
+                                className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
+                              </button>
+                            )}
+                          </div>,
+                          document.body
                         )}
-                      </div>,
-                      document.body
-                    )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={13} className="px-4 py-12 text-center text-gray-500 text-sm">
+                    {t("leads.table.noLeads")}
                   </td>
                 </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={12} className="px-4 py-12 text-center text-gray-500 text-sm">
-                  {t("leads.table.noLeads")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+          </div>
 
         <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <span>Rows per page:</span>
             <select
               value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
               className="border-none bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
             >
               <option value={5}>5</option>
@@ -1795,30 +1887,30 @@ const updateFilter = (key, value, setter) => {
             </select>
           </div>
 
-          <span>
-            {t("leads.pagination.showing")} {firstItem}–{lastItem} {t("leads.pagination.of")} {totalLeads}
-          </span>
+            <span>
+              {t("leads.pagination.showing")} {firstItem}–{lastItem} {t("leads.pagination.of")} {totalLeads}
+            </span>
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              aria-label="Previous page"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              aria-label="Next page"
-            >
-              <ChevronRight size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                aria-label="Next page"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Rejection reason tooltip — portalled so it's never clipped by the table's scroll container */}
@@ -1908,51 +2000,18 @@ const updateFilter = (key, value, setter) => {
       </Dialog>
 
       {/* Reject Modal */}
-      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Ban className="w-5 h-5" />
-              Reject Lead
-            </DialogTitle>
-          </DialogHeader>
-
-          <p className="mb-3 text-gray-700">
-            Rejecting <span className="font-semibold">{leadToReject?.name}</span>. It will be marked
-            Rejected and stay disabled in the list for everyone. Please give a reason.
-          </p>
-
-          <textarea
-            rows={4}
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Reason for rejecting this lead..."
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none mb-4"
-          />
-
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => {
-                setShowRejectModal(false);
-                setLeadToReject(null);
-                setRejectReason("");
-              }}
-              className="px-4 py-2 rounded-lg border hover:bg-gray-100 text-gray-700"
-            >
-              {t("leads.deleteModal.cancel")}
-            </button>
-
-            <button
-              onClick={handleRejectSubmit}
-              disabled={rejecting || !rejectReason.trim()}
-              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2 disabled:opacity-60"
-            >
-              <Ban className="w-4 h-4" />
-              {rejecting ? "Rejecting..." : "Reject Lead"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <LeadLossModal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setLeadToReject(null);
+          setRejectReason("");
+        }}
+        onSubmit={handleRejectSubmit}
+        leadName={leadToReject?.name}
+        isDowngrade={leadToReject?.isDowngrade}
+        isSubmitting={rejecting}
+      />
 
       {/* Convert Modal */}
       <Dialog open={convertModalOpen} onOpenChange={setConvertModalOpen}>
@@ -2145,9 +2204,8 @@ const updateFilter = (key, value, setter) => {
 
           <div className="max-h-[60vh] overflow-y-auto space-y-3 mt-2">
             {!historyLead?.followUpNotes?.length ? (
-              <p className={`text-sm text-center py-8 ${
-                historyLead && isFollowUpMissed(historyLead) ? "text-red-500 font-medium" : "text-gray-500"
-              }`}>
+              <p className={`text-sm text-center py-8 ${historyLead && isFollowUpMissed(historyLead) ? "text-red-500 font-medium" : "text-gray-500"
+                }`}>
                 {historyLead && isFollowUpMissed(historyLead)
                   ? "No follow-up notes logged — this follow-up was missed."
                   : "No follow-up notes yet."}
@@ -2187,7 +2245,7 @@ const updateFilter = (key, value, setter) => {
         </DialogContent>
       </Dialog>
       {/* Linked Work Modal */}
-      <LinkedWorkModal 
+      <LinkedWorkModal
         isOpen={linkedWorkModalOpen}
         onClose={() => {
           setLinkedWorkModalOpen(false);
