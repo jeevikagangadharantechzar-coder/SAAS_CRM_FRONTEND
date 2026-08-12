@@ -271,7 +271,7 @@ export default function RejectedLeads() {
               <option value="Referral">Referral</option>
               <option value="Social Media">Social Media</option>
               <option value="Email">Email</option>
-              <option value="Cold Call">Cold Call</option>
+              <option value="Phone">Phone</option>
               <option value="Other">Other</option>
             </select>
           </div>

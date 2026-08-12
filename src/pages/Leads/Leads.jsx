@@ -1358,7 +1358,7 @@ const updateFilter = (key, value, setter) => {
                 <option value="Referral">{t("leads.source.referral")}</option>
                 <option value="Social Media">{t("leads.source.socialMedia")}</option>
                 <option value="Email">{t("leads.source.email")}</option>
-                <option value="Cold Call">{t("leads.source.coldCall")}</option>
+                <option value="Phone">{t("leads.source.phone")}</option>
                 <option value="Other">{t("leads.source.other")}</option>
               </select>
             </div>

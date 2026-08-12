@@ -5,7 +5,7 @@ import { api } from "../../services/api";
 
 const SOURCES = [
   "WhatsApp", "Facebook", "Instagram", "LinkedIn",
-  "Website", "Referral", "Cold Call", "Other",
+  "Website", "Referral", "Phone", "Other",
 ];
 
 const STATUSES = ["Hot", "Warm", "Cold", "Junk"];
