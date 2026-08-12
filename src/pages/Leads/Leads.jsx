@@ -1190,7 +1190,7 @@ const updateFilter = (key, value, setter) => {
             <Eye className="w-4 h-4" />
           </button>
 
-          {userRole === "Admin" && (
+          {/* {userRole === "Admin" && (
             <>
               <button
                 onClick={() => navigate(`/${tenantSlug}/leads/rejected`)}
@@ -1201,7 +1201,7 @@ const updateFilter = (key, value, setter) => {
               </button>
 
             </>
-          )}
+          )} */}
 
           {(userRole === "Admin" || userRole === "Sales") && (
             <button

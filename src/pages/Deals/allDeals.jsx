@@ -327,9 +327,26 @@ function AllDealsComponent() {
       setDropdownCoords(null);
     } else {
       const rect = event.currentTarget.getBoundingClientRect();
+      const dropdownWidth = 160; // w-40 is 160px
+      const dropdownHeight = 100; // estimated height
+      
+      // Align the dropdown to the right edge of the button to prevent overflow on small screens
+      let calculatedLeft = rect.right + window.scrollX - dropdownWidth;
+      
+      // If it would overflow the left edge (very small screens), align to the left edge of the button
+      if (calculatedLeft < 0) {
+        calculatedLeft = Math.max(0, rect.left + window.scrollX);
+      }
+      
+      // Open upwards if it overflows the bottom
+      let calculatedTop = rect.bottom + window.scrollY + 4;
+      if (rect.bottom + dropdownHeight > window.innerHeight) {
+        calculatedTop = rect.top + window.scrollY - dropdownHeight - 4;
+      }
+
       setDropdownCoords({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: calculatedTop,
+        left: calculatedLeft,
       });
       setOpenDropdownId(id);
     }
