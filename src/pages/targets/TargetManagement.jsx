@@ -2096,6 +2096,10 @@ export default function TargetManagement() {
   const [reassignNoteModal, setReassignNoteModal] = useState({ open: false, note: null });
   const [reassigningNote, setReassigningNote] = useState(false);
   
+  const [replyNoteModal, setReplyNoteModal] = useState({ open: false, note: null });
+  const [replyNoteText, setReplyNoteText] = useState("");
+  const [replyingNote, setReplyingNote] = useState(false);
+  
   const [adminActivity, setAdminActivity] = useState(null); // { leadsConvertedByAdmin, dealsWonByAdmin, counts }
   const [loadingAdminActivity, setLoadingAdminActivity] = useState(false);
   const [selectedTargetDetails, setSelectedTargetDetails] = useState(null);
@@ -2227,6 +2231,23 @@ export default function TargetManagement() {
       toast.error(e.response?.data?.message || "Failed to reassign target/item");
     } finally {
       setReassigningNote(false);
+    }
+  };
+
+  const handleReplyReasonNote = async () => {
+    if (!replyNoteText.trim()) return;
+    setReplyingNote(true);
+    try {
+      const note = replyNoteModal.note;
+      await axios.post(`${baseUrl}/targets/${note.targetId}/reason-notes/${note.noteIdx}/reply`, { reply: replyNoteText }, { headers });
+      toast.success("Reply sent");
+      setReasonNotes((prev) => prev.map((n) => (n.targetId === note.targetId && n.noteIdx === note.noteIdx ? { ...n, status: "resolved", adminReply: replyNoteText } : n)));
+      setReplyNoteModal({ open: false, note: null });
+      setReplyNoteText("");
+    } catch {
+      toast.error("Failed to send reply");
+    } finally {
+      setReplyingNote(false);
     }
   };
 
@@ -2436,7 +2457,11 @@ export default function TargetManagement() {
     });
   };
 
-  const filtered = periodFilter === "all" ? targets : targets.filter(t => t.period === periodFilter);
+  const filtered = periodFilter === "all" 
+    ? targets 
+    : periodFilter === "pending_approvals"
+      ? targets.filter(t => t.holdRequested || t.rejectionRequested)
+      : targets.filter(t => t.period === periodFilter);
 
   return (
     <div className="p-6 min-h-screen bg-gray-50">
@@ -2498,12 +2523,19 @@ export default function TargetManagement() {
       {/* Filter + Tabs + Card/Table toggle — all always visible */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         {/* Period filter — always visible, affects targets view */}
-        {[{ key: "all", label: "All" }, { key: "weekly", label: "Weekly" }, { key: "monthly", label: "Monthly" }].map(f => (
+        {[{ key: "all", label: "All" }, { key: "pending_approvals", label: "Pending Approvals" }, { key: "weekly", label: "Weekly" }, { key: "monthly", label: "Monthly" }].map(f => {
+          const count = f.key === "pending_approvals" ? targets.filter(t => t.holdRequested || t.rejectionRequested).length : 0;
+          return (
           <button key={f.key} onClick={() => { setPeriodFilter(f.key); setMainView("targets"); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${periodFilter === f.key && mainView === "targets" ? "bg-[#008ecc] text-white shadow-sm" : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"}`}>
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${periodFilter === f.key && mainView === "targets" ? "bg-[#008ecc] text-white shadow-sm" : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"}`}>
             {f.label}
+            {count > 0 && (
+              <span className="ml-1 bg-purple-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+                {count}
+              </span>
+            )}
           </button>
-        ))}
+        )})}
 
         {/* Notifications & Reminders tab */}
         <button onClick={() => setMainView(mainView === "notifications" ? "targets" : "notifications")}
@@ -2694,14 +2726,23 @@ export default function TargetManagement() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isPending && (
                             <>
-                              <button onClick={() => setReassignNoteModal({ open: true, note: n })}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
-                                <Check size={12} /> Accept
-                              </button>
-                              <button onClick={() => setRejectNoteModal({ open: true, note: n })}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600">
-                                <X size={12} /> Reject
-                              </button>
+                              {(n.itemType === "lead" || n.itemType === "deal") ? (
+                                <button onClick={() => setReplyNoteModal({ open: true, note: n })}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-semibold hover:bg-blue-600">
+                                  <MessageSquare size={12} /> Reply
+                                </button>
+                              ) : (
+                                <>
+                                  <button onClick={() => setReassignNoteModal({ open: true, note: n })}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
+                                    <Check size={12} /> Accept
+                                  </button>
+                                  <button onClick={() => setRejectNoteModal({ open: true, note: n })}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600">
+                                    <X size={12} /> Reject
+                                  </button>
+                                </>
+                              )}
                             </>
                           )}
                           <button onClick={() => setNoteDeleteConfirm({ targetId: n.targetId, noteIdx: n.noteIdx, isBulk: false, count: 1 })}
@@ -3038,6 +3079,41 @@ export default function TargetManagement() {
         onClose={() => setApproveHoldTarget(null)}
         onConfirm={submitApproveHold}
       />
+      {/* ── Reply Reason Note Modal ── */}
+      {replyNoteModal.open && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Reply to Reported Issue</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Your reply will be sent to the salesperson and the issue will be marked as resolved, allowing them to report another issue if needed.
+            </p>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4"
+              rows={4}
+              placeholder="Type your reply here..."
+              value={replyNoteText}
+              onChange={(e) => setReplyNoteText(e.target.value)}
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setReplyNoteModal({ open: false, note: null }); setReplyNoteText(""); }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReplyReasonNote}
+                disabled={replyingNote || !replyNoteText.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {replyingNote ? "Sending..." : "Send Reply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Reject Reason Note Modal ── */}
       {rejectNoteModal.open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">

@@ -13,7 +13,7 @@ import {
   FileText, Briefcase, Bell, ArrowRightLeft, Check, ChevronDown, ChevronUp, History,
   Users, Building2, Phone, Mail, LayoutGrid, List, Trophy, Award, XCircle, 
   TrendingUp, Flag, Activity, Target, AlertCircle, Info, CheckCheck, Search,
-  ClipboardList
+  ClipboardList, MessageSquare
 } from "lucide-react";
 
 import TaskPipelineView from "./TaskPipelineView";
@@ -1192,7 +1192,8 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
               <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
               <select
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
+                disabled={!!editTask}
+                className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc] ${editTask ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 value={form.assignedTo}
                 onChange={(e) => {
                   const newAssignee = e.target.value;
@@ -1675,6 +1676,10 @@ export default function TaskManagement() {
   const [reassignNoteModal, setReassignNoteModal] = useState({ open: false, note: null });
   const [reassigningNote, setReassigningNote] = useState(false);
 
+  const [replyNoteModal, setReplyNoteModal] = useState({ open: false, note: null });
+  const [replyNoteText, setReplyNoteText] = useState("");
+  const [replyingNote, setReplyingNote] = useState(false);
+
   const token = localStorage.getItem("token");
   const tenantSlug = localStorage.getItem("tenantSlug");
   const baseUrl = `${SI_URI}/${tenantSlug}/api`;
@@ -1917,6 +1922,23 @@ export default function TaskManagement() {
     }
   };
 
+  const handleReplyReasonNote = async () => {
+    if (!replyNoteText.trim()) return;
+    setReplyingNote(true);
+    try {
+      const note = replyNoteModal.note;
+      await axios.post(`${baseUrl}/tasks/${note.taskId}/reason-notes/${note.noteIdx}/reply`, { reply: replyNoteText }, { headers });
+      toast.success("Reply sent");
+      setReasonNotes((prev) => prev.map((n) => (n.taskId === note.taskId && n.noteIdx === note.noteIdx ? { ...n, status: "resolved", adminReply: replyNoteText } : n)));
+      setReplyNoteModal({ open: false, note: null });
+      setReplyNoteText("");
+    } catch {
+      toast.error("Failed to send reply");
+    } finally {
+      setReplyingNote(false);
+    }
+  };
+
   const handleRejectReasonNote = async () => {
     if (!rejectNoteReason.trim()) return;
     setRejectingNote(true);
@@ -2021,9 +2043,12 @@ export default function TaskManagement() {
     }
   };
 
-  const FILTERS = ["All"];
-  const filtered = filter === "All" ? tasks : tasks.filter((t) => t.status === filter);
-
+  const FILTERS = ["All", "Pending Approvals"];
+  const filtered = filter === "All" 
+    ? tasks 
+    : filter === "Pending Approvals" 
+      ? tasks.filter((t) => t.holdRequested || t.rejectionRequested) 
+      : tasks.filter((t) => t.status === filter);
   return (
     <div className="p-6 min-h-screen bg-gray-50">
       <ToastContainer position="top-right" autoClose={3000} />
@@ -2089,7 +2114,9 @@ export default function TaskManagement() {
 
       {/* Filter tabs */}
       <div className="flex flex-wrap items-center gap-2 mb-5">
-        {FILTERS.map((f) => (
+        {FILTERS.map((f) => {
+          const count = f === "Pending Approvals" ? tasks.filter(t => t.holdRequested || t.rejectionRequested).length : 0;
+          return (
           <button
             key={f}
             onClick={() => { setFilter(f); setMainView("tasks"); }}
@@ -2100,8 +2127,13 @@ export default function TaskManagement() {
             }`}
           >
             {f}
+            {count > 0 && (
+              <span className="ml-1 bg-purple-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+                {count}
+              </span>
+            )}
           </button>
-        ))}
+        )})}
 
         {/* Notifications & Reminders tab */}
         <button
@@ -2335,14 +2367,23 @@ export default function TaskManagement() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isPending && (
                             <>
-                              <button onClick={() => setReassignNoteModal({ open: true, note: n })}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
-                                <Check size={12} /> Accept
-                              </button>
-                              <button onClick={() => setRejectNoteModal({ open: true, note: n })}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600">
-                                <X size={12} /> Reject
-                              </button>
+                              {(n.itemType === "lead" || n.itemType === "deal") ? (
+                                <button onClick={() => setReplyNoteModal({ open: true, note: n })}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-semibold hover:bg-blue-600">
+                                  <MessageSquare size={12} /> Reply
+                                </button>
+                              ) : (
+                                <>
+                                  <button onClick={() => setReassignNoteModal({ open: true, note: n })}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600">
+                                    <Check size={12} /> Accept
+                                  </button>
+                                  <button onClick={() => setRejectNoteModal({ open: true, note: n })}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600">
+                                    <X size={12} /> Reject
+                                  </button>
+                                </>
+                              )}
                             </>
                           )}
                           <button onClick={() => setNoteDeleteConfirm({ taskId: n.taskId, noteIdx: n.noteIdx, isBulk: false, count: 1 })}
@@ -2355,7 +2396,7 @@ export default function TaskManagement() {
                       <div className="mx-4 mb-3 bg-white rounded-xl border border-gray-100 px-3 py-2.5 space-y-2">
                         <p className="text-xs text-gray-800 font-medium leading-relaxed border-l-2 border-rose-300 pl-2.5">"{n.note}"</p>
 
-                        {(leadName || dealName) && (
+                        {(leadName || dealName) && n.itemType !== "task" && (
                           <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 border-t border-gray-100">
                             <span className="text-xs font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
                               {dealName ? <Briefcase size={10} /> : <FileText size={10} />}
@@ -2557,6 +2598,41 @@ export default function TaskManagement() {
         onConfirm={submitApproveHold}
       />
       <WorkflowExplanationModal open={showWorkflowExplanation} onClose={() => setShowWorkflowExplanation(false)} />
+
+      {/* ── Reply Reason Note Modal ── */}
+      {replyNoteModal.open && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Reply to Reported Issue</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Your reply will be sent to the salesperson and the issue will be marked as resolved, allowing them to report another issue if needed.
+            </p>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-4"
+              rows={4}
+              placeholder="Type your reply here..."
+              value={replyNoteText}
+              onChange={(e) => setReplyNoteText(e.target.value)}
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setReplyNoteModal({ open: false, note: null }); setReplyNoteText(""); }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReplyReasonNote}
+                disabled={replyingNote || !replyNoteText.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {replyingNote ? "Sending..." : "Send Reply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Reject Reason Note Modal ── */}
       {rejectNoteModal.open && (

@@ -174,7 +174,7 @@ function NotesSection({ target, baseUrl, headers, onNoteAdded }) {
 }
 
 /* ── Report Checkbox — self-contained per lead/deal ─────────────────────── */
-function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, baseUrl, headers, isReported = false }) {
+function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, baseUrl, headers, isReported = false, adminReply = null }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
@@ -208,7 +208,7 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
   // Already reported — show disabled badge (either from server data or just submitted)
   if (isReported || localReported) {
     return (
-      <div className="mt-2 flex items-center gap-2 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+      <div className="mt-2 flex items-center gap-2 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg w-fit">
         <div className="w-4 h-4 rounded border-2 border-amber-400 bg-amber-400 flex items-center justify-center shrink-0">
           <Check size={10} className="text-white" strokeWidth={3} />
         </div>
@@ -218,9 +218,15 @@ function ReportBox({ targetId, itemType, itemId, itemName, itemDetails = {}, bas
   }
 
   return (
-    <div className="mt-2" onClick={e => e.stopPropagation()}>
+    <div className="mt-2 flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+      {adminReply && (
+        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg w-full">
+          <p className="text-xs font-bold text-blue-700 mb-1">Admin Reply:</p>
+          <p className="text-xs text-blue-800 leading-relaxed break-words">{adminReply}</p>
+        </div>
+      )}
       {/* Checkbox toggle */}
-      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none group">
+      <label className="inline-flex items-center gap-1.5 cursor-pointer select-none group w-fit">
         <div
           role="checkbox"
           aria-checked={open}
@@ -802,11 +808,20 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                           </div>
                         </button>
                         <div className="px-2.5 pb-2.5">
-                          <ReportBox
-                            targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName || d.dealTitle}
-                            itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage, statusColor: STAGE_COLOR[d.stage], dateNote: d.createdAt ? `since ${fmt(d.createdAt)}` : null }}
-                            baseUrl={baseUrl} headers={headers}
-                            isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(d._id) && n.status === "pending")} />
+                          {(() => {
+                            const latestNote = [...(t.reasonNotes || [])].reverse().find(n => String(n.itemId) === String(d._id));
+                            const hasPendingIssue = latestNote?.status === "pending";
+                            const adminReply = latestNote?.status === "resolved" ? latestNote.adminReply : null;
+                            return (
+                              <ReportBox
+                                targetId={t._id} itemType="deal" itemId={d._id} itemName={d.dealName || d.dealTitle}
+                                itemDetails={{ companyName: d.companyName, value: d.value, currency: d.currency, phoneNumber: d.phoneNumber, email: d.email, statusLabel: d.stage, statusColor: STAGE_COLOR[d.stage], dateNote: d.createdAt ? `since ${fmt(d.createdAt)}` : null }}
+                                baseUrl={baseUrl} headers={headers}
+                                isReported={hasPendingIssue}
+                                adminReply={adminReply}
+                              />
+                            );
+                          })()}
                         </div>
                         {isOpen && (
                           <div className="px-2.5 pb-2.5 border-t border-gray-100 pt-2 space-y-1.5">
@@ -874,11 +889,20 @@ function MyTargetCard({ target: t, baseUrl, headers, onRefresh, hasUnread, autoE
                         </button>
                         {l.status !== "Converted" && (
                           <div className="px-2.5 pb-2.5">
-                            <ReportBox
-                              targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
-                              itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
-                              baseUrl={baseUrl} headers={headers}
-                              isReported={(t.reasonNotes || []).some(n => String(n.itemId) === String(l._id) && n.status === "pending")} />
+                            {(() => {
+                              const latestNote = [...(t.reasonNotes || [])].reverse().find(n => String(n.itemId) === String(l._id));
+                              const hasPendingIssue = latestNote?.status === "pending";
+                              const adminReply = latestNote?.status === "resolved" ? latestNote.adminReply : null;
+                              return (
+                                <ReportBox
+                                  targetId={t._id} itemType="lead" itemId={l._id} itemName={l.leadName}
+                                  itemDetails={{ companyName: l.companyName, phoneNumber: l.phoneNumber, email: l.email, statusLabel: l.status, statusColor: LEAD_STATUS_COLOR[l.status], dateNote: l.createdAt ? `since ${fmt(l.createdAt)}` : null }}
+                                  baseUrl={baseUrl} headers={headers}
+                                  isReported={hasPendingIssue}
+                                  adminReply={adminReply}
+                                />
+                              );
+                            })()}
                           </div>
                         )}
                         {isOpen && (
