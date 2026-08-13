@@ -210,7 +210,7 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
   if (!isOpen) return null;
 
   const lastInbound = [...messages].reverse().find((m) => m.direction === "inbound");
-  const over24h = isOver24h(lastInbound?.createdAt);
+  const over24h = lastInbound ? isOver24h(lastInbound.createdAt) : false;
 
   return (
     <div
