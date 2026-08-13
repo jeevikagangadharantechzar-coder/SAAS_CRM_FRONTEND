@@ -1029,7 +1029,11 @@ export default function CreateDeal() {
 
   const renderCommittedCustomFields = (cardTitle) =>
     customFields
-      .filter((f) => f.cardTitle === cardTitle)
+      .filter((f) =>
+        cardTitle === "Deal Information"
+          ? !["Location", "Follow-up", "Management"].includes(f.cardTitle)
+          : f.cardTitle === cardTitle
+      )
       .map((f) => (
         <div key={f.id} className={f.type === "textarea" ? "md:col-span-3" : ""}>
           <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
