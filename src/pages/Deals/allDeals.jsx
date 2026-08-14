@@ -1297,7 +1297,7 @@ function AllDealsComponent() {
 
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
-              <th className="px-6 py-3 text-left">Value ({userCurrency})</th>
+              {/* <th className="px-6 py-3 text-left">Value ({userCurrency})</th> */}
               {userRole === "Admin" && (
                 <th className="px-6 py-3 text-left">Assigned To</th>
               )}
@@ -1448,11 +1448,11 @@ function AllDealsComponent() {
                     <td className="px-6 py-4">
                       {formatCurrencyValue(deal.value)}
                     </td>
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">
                       {deal.preferredCurrency === userCurrency && deal.preferredCurrencyValue != null
                         ? `${userCurrencySymbol} ${Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}`
                         : "-"}
-                    </td>
+                    </td> */}
                     {userRole === "Admin" && (
                       <td className="px-6 py-4">
                         {deal.assignedTo
