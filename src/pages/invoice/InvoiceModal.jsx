@@ -33,6 +33,29 @@ const sanitizePriceInput = (raw) => {
   return decPart !== undefined ? `${boundedInt}.${decPart.slice(0, 2)}` : boundedInt;
 };
 
+// Strips minus signs (and any other non-numeric junk) so a discount can
+// never go negative and flip into a surcharge; percentage is capped at 100
+// and a fixed amount is capped at the price, since a discount can't exceed
+// the full price either way.
+const sanitizeDiscountInput = (raw, discountType, price) => {
+  if (raw === "") return "";
+  let cleaned = raw.replace(/[^\d.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot !== -1) {
+    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  }
+  if (discountType === "percentage" && Number(cleaned) > 100) {
+    cleaned = "100";
+  }
+  if (discountType === "fixed") {
+    const maxPrice = Number(price) || 0;
+    if (maxPrice > 0 && Number(cleaned) > maxPrice) {
+      cleaned = String(maxPrice);
+    }
+  }
+  return cleaned;
+};
+
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const { isOpen, closeModal } = useModal();
@@ -250,6 +273,33 @@ setSalesUsers(response.data.users);
       return;
     }
 
+    if (name === "discountValue") {
+      const isNegative = value.trim().startsWith("-");
+      const numericValue = Number(value);
+      const isValidNumber = !isNegative && value !== "" && !Number.isNaN(numericValue);
+      const exceedsPrice =
+        isValidNumber &&
+        invoiceData.discountType === "fixed" &&
+        numericValue > (Number(invoiceData.price) || 0);
+      const exceedsPercent =
+        isValidNumber && invoiceData.discountType === "percentage" && numericValue > 100;
+      setValidationErrors((prev) => ({
+        ...prev,
+        discountValue: isNegative
+          ? "Negative value is not allowed."
+          : exceedsPrice
+          ? "Discount cannot exceed the total price."
+          : exceedsPercent
+          ? "Discount cannot exceed 100%."
+          : undefined,
+      }));
+      setInvoiceData((prev) => ({
+        ...prev,
+        discountValue: sanitizeDiscountInput(value, prev.discountType, prev.price),
+      }));
+      return;
+    }
+
     setInvoiceData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "deal") {
@@ -425,13 +475,17 @@ setSalesUsers(response.data.users);
   const calculateTotalBreakdown = () => {
     const price = Number(invoiceData.price) || 0;
 
-    // Discount — applied first, on the original price
+    // Discount — applied first, on the original price. Clamped to
+    // [0, price] so a stray negative or oversized value (e.g. from
+    // existing data saved before this validation existed) can't turn
+    // the discount into a surcharge or push the total below zero.
     let discountAmount = 0;
     if (invoiceData.discountType && invoiceData.discountType !== "none") {
       const discountVal = Number(invoiceData.discountValue) || 0;
       if (invoiceData.discountType === "fixed") discountAmount = discountVal;
       else if (invoiceData.discountType === "percentage")
         discountAmount = (price * discountVal) / 100;
+      discountAmount = Math.min(Math.max(discountAmount, 0), price);
     }
     const priceAfterDiscount = price - discountAmount;
 
@@ -1167,8 +1221,17 @@ setSalesUsers(response.data.users);
                     step="0.01"
                     value={invoiceData.discountValue}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                      validationErrors.discountValue
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                   />
+                  {validationErrors.discountValue && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {validationErrors.discountValue}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
