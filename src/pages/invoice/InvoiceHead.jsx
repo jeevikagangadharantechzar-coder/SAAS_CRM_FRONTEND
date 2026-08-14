@@ -542,17 +542,14 @@ const InvoiceHead = () => {
     const [displayValue, setDisplayValue] = useState(null);
 
     useEffect(() => {
-      // Paid/Partially Paid invoice with frozen value stored in DB — never recalculate
-      if (
-        ["paid", "partially_paid"].includes(invoice.status) &&
-        invoice.preferredCurrencyValue &&
-        invoice.preferredCurrency === userCurrency
-      ) {
-        setDisplayValue(invoice.preferredCurrencyValue);
+      // Frozen at save time (creation or last edit) — never recalculate
+      // against a live rate, which fluctuates on every page load
+      if (invoice.totalPreferredCurrencyValue != null && invoice.preferredCurrency === userCurrency) {
+        setDisplayValue(invoice.totalPreferredCurrencyValue);
         return;
       }
 
-      // Unpaid — use live rate
+      // Legacy invoice saved before totals were frozen — fall back to live rate
       const fetchLiveRate = async () => {
         const amount = Number(invoice.total) || 0;
         if (invoice.currency === userCurrency) {
@@ -569,7 +566,7 @@ const InvoiceHead = () => {
         }
       };
       fetchLiveRate();
-    }, [invoice.currency, invoice.total, invoice.status, invoice.preferredCurrencyValue]);
+    }, [invoice.currency, invoice.total, invoice.totalPreferredCurrencyValue, invoice.preferredCurrency]);
 
     if (displayValue !== null) {
       const colorClass =
@@ -586,6 +583,122 @@ const InvoiceHead = () => {
     }
 
     return <span className="text-gray-400 text-xs">Loading...</span>;
+  };
+
+  // Per-row balance due converted to preferred currency
+  const BalancePreferredCurrencyCell = ({ invoice }) => {
+    const [displayValue, setDisplayValue] = useState(null);
+    const { balance } = getPaymentBreakdown(invoice);
+
+    useEffect(() => {
+      if (invoice.currency === userCurrency) {
+        setDisplayValue(balance);
+        return;
+      }
+
+      // Frozen total minus frozen paid — both fixed at save time, so this
+      // never drifts on repeat views the way a fresh live-rate lookup would.
+      if (invoice.totalPreferredCurrencyValue != null && invoice.preferredCurrency === userCurrency) {
+        const paidPreferred = ["paid", "partially_paid"].includes(invoice.status)
+          ? Number(invoice.preferredCurrencyValue) || 0
+          : 0;
+        setDisplayValue(Math.max(invoice.totalPreferredCurrencyValue - paidPreferred, 0));
+        return;
+      }
+
+      // Legacy invoice saved before totals were frozen — preferredCurrencyValue
+      // still freezes the conversion of amountPaid (not the total), so derive
+      // the rate from amountPaid and apply it to the balance.
+      const amountPaid = Number(invoice.amountPaid) || 0;
+      if (
+        ["paid", "partially_paid"].includes(invoice.status) &&
+        invoice.preferredCurrencyValue &&
+        invoice.preferredCurrency === userCurrency &&
+        amountPaid > 0
+      ) {
+        const frozenRate = invoice.preferredCurrencyValue / amountPaid;
+        setDisplayValue(balance * frozenRate);
+        return;
+      }
+
+      let cancelled = false;
+      const fetchLiveRate = async () => {
+        try {
+          const res = await axios.get(`https://open.er-api.com/v6/latest/${invoice.currency}`);
+          const rate = res.data?.rates?.[userCurrency] || 1;
+          if (!cancelled) setDisplayValue(balance * rate);
+        } catch (err) {
+          console.error("Error fetching rate:", err);
+          if (!cancelled) setDisplayValue(balance);
+        }
+      };
+      fetchLiveRate();
+      return () => {
+        cancelled = true;
+      };
+    }, [invoice.currency, invoice.status, invoice.preferredCurrencyValue, invoice.preferredCurrency, invoice.totalPreferredCurrencyValue, invoice.total, invoice.amountPaid, balance]);
+
+    if (displayValue === null) {
+      return <span className="text-gray-400 text-xs">Loading...</span>;
+    }
+
+    return (
+      <span className="text-red-600 font-medium">
+        {currencySymbol}{" "}
+        {displayValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </span>
+    );
+  };
+
+  // Per-row amount paid converted to preferred currency
+  const PaidPreferredCurrencyCell = ({ invoice }) => {
+    const [displayValue, setDisplayValue] = useState(null);
+    const { paid } = getPaymentBreakdown(invoice);
+
+    useEffect(() => {
+      if (paid === 0) {
+        setDisplayValue(0);
+        return;
+      }
+
+      if (invoice.currency === userCurrency) {
+        setDisplayValue(paid);
+        return;
+      }
+
+      // Frozen at save time — never recalculate against a live rate
+      if (invoice.preferredCurrencyValue != null && invoice.preferredCurrency === userCurrency) {
+        setDisplayValue(invoice.preferredCurrencyValue);
+        return;
+      }
+
+      let cancelled = false;
+      const fetchLiveRate = async () => {
+        try {
+          const res = await axios.get(`https://open.er-api.com/v6/latest/${invoice.currency}`);
+          const rate = res.data?.rates?.[userCurrency] || 1;
+          if (!cancelled) setDisplayValue(paid * rate);
+        } catch (err) {
+          console.error("Error fetching rate:", err);
+          if (!cancelled) setDisplayValue(paid);
+        }
+      };
+      fetchLiveRate();
+      return () => {
+        cancelled = true;
+      };
+    }, [invoice.currency, invoice.preferredCurrencyValue, invoice.preferredCurrency, paid]);
+
+    if (displayValue === null) {
+      return <span className="text-gray-400 text-xs">Loading...</span>;
+    }
+
+    return (
+      <span className="text-green-600 font-medium">
+        {currencySymbol}{" "}
+        {displayValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </span>
+    );
   };
 
   // ─── Preferred currency totals computed from statsInvoices ──────────────────
@@ -918,6 +1031,8 @@ const InvoiceHead = () => {
                   <th className="px-6 py-3">Paid</th>
                   <th className="px-6 py-3">Balance Due</th>
                   <th className="px-6 py-3">{userCurrency} Value</th>
+                  <th className="px-6 py-3">Paid {userCurrency}</th>
+                  <th className="px-6 py-3">Balance {userCurrency} Due</th>
                   <th className="px-6 py-3">Assigned To</th>
                   <th className="px-6 py-3">Due Date</th>
                   <th className="px-6 py-3 text-center">Action</th>
@@ -973,6 +1088,12 @@ const InvoiceHead = () => {
                     </td>
                     <td className="px-6 py-4">
                       <PreferredCurrencyCell invoice={invoice} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <PaidPreferredCurrencyCell invoice={invoice} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <BalancePreferredCurrencyCell invoice={invoice} />
                     </td>
                     <td className="px-6 py-4">
                       {invoice.assignTo

@@ -582,40 +582,46 @@ setSalesUsers(response.data.users);
       customFields: customFields.filter((f) => f.label.trim()),
     };
 
-    // Paid and Partially Paid both track the CUMULATIVE amount actually collected so far
-    // (previous + this payment), and freeze the preferred-currency conversion against
-    // that real amount — not the total. Skipped once already saved as Paid, since status
-    // and payment are locked and there's nothing new to collect.
-    if (isPaidFamily && editingInvoice?.status !== "paid") {
+    // Freeze the preferred-currency conversion at save time — for the invoice
+    // total always, and (when paid/partially_paid) for the CUMULATIVE amount
+    // actually collected so far (previous + this payment) — so the UI never
+    // has to re-fetch a live rate, which fluctuates, just to render a number
+    // that already happened. Skipped once already saved as Paid, since total
+    // and payment are locked and there's nothing left to (re)freeze.
+    if (editingInvoice?.status !== "paid") {
       const total = Number(breakdown.total);
-      const payment = Number(paymentReceivedNow) || 0;
-      const maxAllowed = Math.max(total - previousAmountPaid, 0);
+      let newAmountPaid = null;
 
-      if (payment > maxAllowed) {
-        toast.error(`Payment exceeds invoice total. Maximum you can enter now: ${maxAllowed.toFixed(2)}`);
-        return;
+      if (isPaidFamily) {
+        const payment = Number(paymentReceivedNow) || 0;
+        const maxAllowed = Math.max(total - previousAmountPaid, 0);
+
+        if (payment > maxAllowed) {
+          toast.error(`Payment exceeds invoice total. Maximum you can enter now: ${maxAllowed.toFixed(2)}`);
+          return;
+        }
+
+        newAmountPaid = previousAmountPaid + payment;
+        invoiceToSave.paymentReceivedNow = payment;
       }
-
-      const newAmountPaid = previousAmountPaid + payment;
-      invoiceToSave.paymentReceivedNow = payment;
 
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
       const userCurrency = storedUser?.currency || "USD";
       try {
-        let preferredValue;
-        if (invoiceData.currency === userCurrency) {
-          preferredValue = newAmountPaid;
-        } else {
+        let rate = 1;
+        if (invoiceData.currency !== userCurrency) {
           const rateRes = await axios.get(
             `https://open.er-api.com/v6/latest/${invoiceData.currency}`
           );
-          const rate = rateRes.data?.rates?.[userCurrency];
-          preferredValue = rate ? parseFloat((newAmountPaid * rate).toFixed(2)) : null;
+          rate = rateRes.data?.rates?.[userCurrency] || 1;
         }
         invoiceToSave.preferredCurrency = userCurrency;
-        invoiceToSave.preferredCurrencyValue = preferredValue;
+        invoiceToSave.totalPreferredCurrencyValue = parseFloat((total * rate).toFixed(2));
+        if (newAmountPaid !== null) {
+          invoiceToSave.preferredCurrencyValue = parseFloat((newAmountPaid * rate).toFixed(2));
+        }
       } catch {
-        // proceed without frozen rate — backend will leave it null
+        // proceed without frozen rate(s) — backend will leave them null/unset
       }
     }
 
