@@ -1136,7 +1136,9 @@ const InvoiceHead = () => {
                                   window.scrollY -
                                   (dropdownRef.current?.offsetHeight || 150),
                               left: dropdownButton
-                                ? dropdownButton.rect.left + window.scrollX
+                                ? dropdownButton.rect.right +
+                                  window.scrollX -
+                                  (dropdownRef.current?.offsetWidth || 128)
                                 : 0,
                               minWidth: "8rem",
                             }}
