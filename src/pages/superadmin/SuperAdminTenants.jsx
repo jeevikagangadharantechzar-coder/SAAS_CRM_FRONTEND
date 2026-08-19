@@ -160,13 +160,6 @@ const SuperAdminTenants = () => {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={fetchTenants}
-            className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 transition-all cursor-pointer shadow-sm"
-            title="Refresh database"
-          >
-            <RefreshCw size={18} />
-          </button>
-          <button
             onClick={() => navigate("/superadmin/tenants/create")}
             className="flex items-center space-x-2 px-4 py-2 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md cursor-pointer text-sm"
             style={{ backgroundColor: "#008ecc" }}
@@ -213,8 +206,8 @@ const SuperAdminTenants = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
-              {loading ? (
+            <tbody className={`divide-y divide-slate-100 text-slate-700 text-sm ${loading && tenants.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+              {loading && tenants.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2">

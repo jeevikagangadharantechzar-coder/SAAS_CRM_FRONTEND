@@ -43,6 +43,7 @@ const TenantDetail = () => {
   const [logPage, setLogPage] = useState(1);
   const [logPages, setLogPages] = useState(1);
   const [logTotal, setLogTotal] = useState(0);
+  const [logSearchInput, setLogSearchInput] = useState("");
   const [logSearch, setLogSearch] = useState("");
   const [logModule, setLogModule] = useState("");
   const [logMethod, setLogMethod] = useState("");
@@ -72,7 +73,7 @@ const TenantDetail = () => {
     fetchTenantDetails();
   }, [id]);
 
-  const fetchActivityLogs = useCallback(async () => {
+  const fetchActivityLogs = async () => {
     setLogsLoading(true);
     setLogsError(null);
     try {
@@ -95,15 +96,24 @@ const TenantDetail = () => {
     } catch (err) {
       console.error("Failed to fetch tenant activity logs:", err);
       setLogsError("Failed to fetch activity logs for this tenant.");
-      setLogs([]);
     } finally {
       setLogsLoading(false);
     }
-  }, [id, logPage, logSearch, logModule, logMethod, logStatus, logStartDate, logEndDate]);
+  };
 
   useEffect(() => {
     fetchActivityLogs();
-  }, [fetchActivityLogs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, logPage, logSearch, logModule, logMethod, logStatus, logStartDate, logEndDate]);
+
+  // Debounce search input
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setLogPage(1);
+      setLogSearch(logSearchInput);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [logSearchInput]);
 
   const updateLogFilter = (setter) => (e) => {
     setter(e.target.value);
@@ -399,13 +409,6 @@ const TenantDetail = () => {
               <Download size={16} />
               {exporting ? "Exporting..." : "Activity Download"}
             </button>
-            <button
-              onClick={fetchActivityLogs}
-              className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 transition-all cursor-pointer shadow-sm"
-              title="Refresh"
-            >
-              <RefreshCw size={16} className={logsLoading ? "animate-spin" : ""} />
-            </button>
           </div>
         </div>
 
@@ -422,8 +425,8 @@ const TenantDetail = () => {
             <input
               type="text"
               placeholder="Search user, action, endpoint..."
-              value={logSearch}
-              onChange={updateLogFilter(setLogSearch)}
+              value={logSearchInput}
+              onChange={(e) => setLogSearchInput(e.target.value)}
               className="w-full border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner"
             />
           </div>
@@ -464,6 +467,7 @@ const TenantDetail = () => {
 
           <input
             type="date"
+            onKeyDown={(e) => e.preventDefault()}
             value={logStartDate}
             onChange={updateLogFilter(setLogStartDate)}
             className="border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
@@ -471,6 +475,7 @@ const TenantDetail = () => {
           <span className="text-slate-400 text-sm">to</span>
           <input
             type="date"
+            onKeyDown={(e) => e.preventDefault()}
             value={logEndDate}
             onChange={updateLogFilter(setLogEndDate)}
             className="border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
@@ -495,8 +500,8 @@ const TenantDetail = () => {
                 <th className="px-6 py-4">IP / Device</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
-              {logsLoading ? (
+            <tbody className={`divide-y divide-slate-100 text-slate-700 text-sm ${logsLoading && logs.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+              {logsLoading && logs.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2">

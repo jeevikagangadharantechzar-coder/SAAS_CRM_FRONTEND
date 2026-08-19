@@ -233,6 +233,7 @@ const SupportTickets = () => {
           <Calendar size={14} className="text-slate-400" />
           <input
             type="date"
+            onKeyDown={(e) => e.preventDefault()}
             value={dateFrom}
             onChange={(e) => {
               setDateFrom(e.target.value);
@@ -243,6 +244,7 @@ const SupportTickets = () => {
           <span className="text-slate-300">–</span>
           <input
             type="date"
+            onKeyDown={(e) => e.preventDefault()}
             value={dateTo}
             onChange={(e) => {
               setDateTo(e.target.value);
