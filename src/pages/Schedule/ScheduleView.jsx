@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
@@ -106,10 +106,21 @@ const ScheduleView = () => {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [isSavingNote, setIsSavingNote] = useState(false);
 
-  // "N Lead Follow-ups" style summary block, opened when a time slot has too
-  // many same-type events crammed together to render individually.
+  // "N Lead Follow-ups" style summary block, opened either for a time slot
+  // with too many same-type events crammed together, or for react-big-
+  // calendar's own "+N more" link (which we take over entirely — see
+  // handleShowMore below — since its built-in popup has no way to stay
+  // on-screen regardless of where on the page it's triggered from).
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [groupModalItems, setGroupModalItems] = useState([]);
+  // null = centered (same-minute event group click). Set = anchored near
+  // the "+N more" link that was clicked, flipping above/below depending on
+  // which direction has room — see computeAnchorPosition.
+  const [groupModalAnchor, setGroupModalAnchor] = useState(null);
+  // Captured via onClickCapture on the calendar wrapper, since react-big-
+  // calendar's onShowMore callback only hands us the events/date, not the
+  // clicked link's position.
+  const showMoreAnchorRef = useRef(null);
 
   const authHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
@@ -343,6 +354,7 @@ const ScheduleView = () => {
 
   const handleSelectEvent = (event) => {
     if (event.isGroup) {
+      setGroupModalAnchor(null);
       setGroupModalItems(event.items);
       setGroupModalOpen(true);
       return;
@@ -355,6 +367,52 @@ const ScheduleView = () => {
     navigateToEvent(item);
   };
 
+  // Captures the clicked "+N more" link's on-screen position, in the
+  // capture phase so it runs before react-big-calendar's own click handling
+  // (which is what triggers onShowMore below) — by the time onShowMore
+  // fires, this ref already has the right rect.
+  const handleCalendarClickCapture = (e) => {
+    const target = e.target.closest?.(".rbc-show-more");
+    if (target) showMoreAnchorRef.current = target.getBoundingClientRect();
+  };
+
+  const POPUP_WIDTH = 360;
+  const POPUP_GAP = 8;
+  // Prefers opening below the clicked link (reads naturally, closest to
+  // where the click happened) but flips above whenever there isn't enough
+  // room below — e.g. the calendar is scrolled down and the link sits near
+  // the bottom of the viewport — so the list is never cut off either way.
+  const computeAnchorPosition = (rect) => {
+    const viewportH = window.innerHeight;
+    const viewportW = window.innerWidth;
+    const spaceBelow = viewportH - rect.bottom;
+    const spaceAbove = rect.top;
+    const openAbove = spaceBelow < 280 && spaceAbove > spaceBelow;
+    // Must match the rendered width (w-[min(360px,92vw)] below) — on a
+    // narrow/mobile screen the popup is actually 92vw, not the full 360px,
+    // so clamping against the fixed constant pushed it off the left edge.
+    const popupWidth = Math.min(POPUP_WIDTH, viewportW * 0.92);
+    const left = Math.min(Math.max(rect.left, POPUP_GAP), viewportW - popupWidth - POPUP_GAP);
+    return openAbove
+      ? { left, bottom: viewportH - rect.top + POPUP_GAP, openAbove: true }
+      : { left, top: rect.bottom + POPUP_GAP, openAbove: false };
+  };
+
+  // Takes over react-big-calendar's "+N more" click entirely: popup={false}
+  // below stops its own built-in overlay from ever mounting, and
+  // doShowMoreDrillDown={false} stops its other default behavior for this
+  // case (switching the whole calendar to Day view) — react-big-calendar
+  // does one or the other unless both are turned off, so onShowMore alone
+  // isn't enough. This lets the popup be positioned near the click with
+  // viewport-aware flipping, reusing the same group-items modal used for
+  // same-minute clusters.
+  const handleShowMore = (events) => {
+    const rect = showMoreAnchorRef.current;
+    setGroupModalAnchor(rect ? computeAnchorPosition(rect) : null);
+    setGroupModalItems(events);
+    setGroupModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       <ToastContainer position="top-right" autoClose={3000} />
@@ -364,7 +422,15 @@ const ScheduleView = () => {
           layout math. WeekDayEvent renders the correct time itself, so the
           built-in label (redundant and, for point events, misleading) is
           hidden here rather than in month view, which doesn't use it. */}
-      <style>{`.rbc-time-view .rbc-event-label { display: none; }`}</style>
+      <style>{`
+        .rbc-time-view .rbc-event-label { display: none; }
+        /* Month grid needs real per-day width to stay readable — below that,
+           columns collide and text overlaps. A horizontal scroll wrapper
+           (below) lets narrow/mobile screens scroll sideways instead. */
+        @media (max-width: 700px) {
+          .rbc-calendar { min-width: 700px; }
+        }
+      `}</style>
       <div className="max-w-[1600px] mx-auto">
         <div className="flex items-center gap-3 mb-6">
        
@@ -421,31 +487,41 @@ const ScheduleView = () => {
           <p className="text-xs text-slate-400 mb-3 flex items-center gap-1.5">
             <StickyNote size={13} /> Click any empty day to pin a note there
           </p>
-          <Calendar
-            selectable
-            localizer={localizer}
-            events={calendarEvents}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: 700 }}
-            view={view}
-            date={currentDate}
-            views={["month", "week", "day", "agenda"]}
-            popup
-            dayLayoutAlgorithm="no-overlap"
-            components={{ week: { event: WeekDayEvent }, day: { event: WeekDayEvent }, agenda: { time: AgendaTime } }}
-            onView={(v) => setView(v)}
-            onNavigate={handleNavigate}
-            eventPropGetter={eventStyleGetter}
-            onSelectEvent={handleSelectEvent}
-            onSelectSlot={(slotInfo) => openAddNote(slotInfo.start)}
-          />
+          {/* Below ~700px the 7-day grid has no room to stay readable — this
+              scrolls the calendar itself horizontally instead of letting
+              columns collide, while the page body stays put. */}
+          {/* onClickCapture runs before react-big-calendar's own click
+              handling, so by the time onShowMore fires below, the "+N more"
+              link's position has already been captured. */}
+          <div className="overflow-x-auto" onClickCapture={handleCalendarClickCapture}>
+            <Calendar
+              selectable
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: 700 }}
+              view={view}
+              date={currentDate}
+              views={["month", "week", "day", "agenda"]}
+              popup={false}
+              doShowMoreDrillDown={false}
+              onShowMore={handleShowMore}
+              dayLayoutAlgorithm="no-overlap"
+              components={{ week: { event: WeekDayEvent }, day: { event: WeekDayEvent }, agenda: { time: AgendaTime } }}
+              onView={(v) => setView(v)}
+              onNavigate={handleNavigate}
+              eventPropGetter={eventStyleGetter}
+              onSelectEvent={handleSelectEvent}
+              onSelectSlot={(slotInfo) => openAddNote(slotInfo.start)}
+            />
+          </div>
         </div>
       </div>
 
       {/* Add/Edit sticky note modal */}
       {noteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeNoteModal}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={closeNoteModal}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-slate-700 flex items-center gap-2">
@@ -489,11 +565,28 @@ const ScheduleView = () => {
         </div>
       )}
 
-      {/* Grouped events list — opened instead of squeezing many same-time,
-          same-type events into unreadable slivers on the day/week grid. */}
+      {/* Grouped events list — opened for react-big-calendar's "+N more"
+          link (anchored near the click, flipping above/below to stay
+          on-screen — see computeAnchorPosition) as well as same-minute
+          event clusters (groupModalAnchor null, so this falls back to
+          centered). */}
       {groupModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setGroupModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`fixed inset-0 z-[60] bg-black/40 ${groupModalAnchor ? "" : "flex items-center justify-center p-4"}`}
+          onClick={() => setGroupModalOpen(false)}
+        >
+          <div
+            className={`bg-white rounded-xl shadow-xl max-h-[70vh] flex flex-col ${groupModalAnchor ? "fixed w-[min(360px,92vw)] p-4" : "w-full max-w-md p-6"}`}
+            style={groupModalAnchor
+              ? {
+                  left: groupModalAnchor.left,
+                  ...(groupModalAnchor.openAbove
+                    ? { bottom: groupModalAnchor.bottom }
+                    : { top: groupModalAnchor.top }),
+                }
+              : undefined}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-slate-700 flex items-center gap-2">
                 <Layers size={18} className="text-slate-500" />
