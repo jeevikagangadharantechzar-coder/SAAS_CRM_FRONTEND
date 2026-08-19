@@ -98,7 +98,11 @@ export default function TrashPage() {
       setTotalItems(total || 0);
       setTotalPages(data.totalPages || 1);
     } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to fetch trashed ${itemType}`);
+      // Only surface the backend's message for expected client errors (validation, etc).
+      // Server errors (500) can leak raw driver/exception text, so show a friendly message instead.
+      const status = err.response?.status;
+      const backendMessage = status && status < 500 ? err.response?.data?.message : null;
+      toast.error(backendMessage || `Failed to fetch trashed ${itemType}. Please try again.`);
     } finally {
       setLoading(false);
     }

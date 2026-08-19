@@ -264,7 +264,7 @@ export default function TermsContent() {
           <div className="p-4 bg-gray-50 rounded-lg">
             <p><strong>TechZarInfo Software Solutions PVT LTD</strong></p>
             <p>No.3D, M.S Tower, 4th Floor, Convent Rd, Cantonment, Tiruchirappalli – 620001, Tamil Nadu, India</p>
-            <p className="mt-2">General/support inquiries: <a href="mailto:support@techzarinfo.com" className="text-blue-600 hover:underline">support@techzarinfo.com</a></p>
+            <p className="mt-2">General/support inquiries: <a href="mailto:sales@techzarinfo.com" className="text-blue-600 hover:underline">sales@techzarinfo.com</a></p>
             <p>Sales inquiries: <a href="mailto:sales@techzarinfo.com" className="text-blue-600 hover:underline">sales@techzarinfo.com</a></p>
           </div>
         </section>

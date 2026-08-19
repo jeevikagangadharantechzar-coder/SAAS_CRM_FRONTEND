@@ -233,7 +233,7 @@ const CLVDashboard = () => {
         ...(dashboardData.allClientsList || [])
       ];
       
-      const uniqueClients = Array.from(new Map(allClients.map(c => [c.companyName, c])).values());
+      const uniqueClients = Array.from(new Map(allClients.map(c => [c.companyId || c.companyName, c])).values());
       
       uniqueClients.forEach((client) => {
         csvContent += `${client.companyName},${client.classification || "N/A"},${client.clv || client.dealValue || 0},${client.supportTickets || 0},${client.clientHealthScore || 50},${client.daysSinceFollowUp || 0},${client.delivered ? 'Yes' : 'No'},${client.progress || 'N/A'}\n`;
@@ -648,39 +648,7 @@ const CLVDashboard = () => {
         
         {/* Action Buttons - Mobile Optimized */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Classification Filter */}
-          <div className="relative">
-            <button
-              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm flex items-center gap-1 hover:bg-gray-50"
-            >
-              <Filter size={14} />
-              <span className="hidden sm:inline">
-                {classifications.find(c => c.value === selectedClassification)?.label || "Filter"}
-              </span>
-            </button>
-            
-            {showFilterDropdown && (
-              <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                {classifications.map((cls) => (
-                  <button
-                    key={cls.value}
-                    onClick={() => {
-                      setSelectedClassification(cls.value);
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs sm:text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                      selectedClassification === cls.value ? 'bg-blue-50 text-blue-600' : ''
-                    }`}
-                  >
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${cls.color}`}>
-                      {cls.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+
 
           {/* Refresh Button */}
           <button

@@ -16,17 +16,11 @@ export default function PrivacyPolicyContent() {
         <p className="text-sm text-gray-600">TZI-CRM — a product of TechZarInfo Software Solutions PVT LTD</p>
         <p className="text-sm text-gray-500 mt-2">Effective date: 6 August 2026 | Last updated: 12 August 2026</p>
 
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs leading-relaxed">
-          <strong>⚠ Not legal advice.</strong> This document was drafted by combining a technical audit of the
-          TZI-CRM codebase with standard SaaS privacy-policy practice. It is a strong working draft, not a
-          substitute for review by a lawyer familiar with India's Digital Personal Data Protection Act, 2023
-          (DPDP Act) and with Meta's and Google's platform data policies. Bracketed items like this must be
-          confirmed or filled in by TZI-CRM before publishing.
-        </div>
+    
       </div>
 
       {/* Table of contents */}
-      <nav className="mb-8 p-4 bg-gray-50 rounded-lg text-sm">
+      {/* <nav className="mb-8 p-4 bg-gray-50 rounded-lg text-sm">
         <p className="font-semibold text-slate-900 mb-2">Contents</p>
         <ol className="list-decimal list-inside space-y-1 text-blue-700">
           <li><a href="#pp-s1" className="hover:underline">Who This Policy Covers, and Our Role</a></li>
@@ -47,7 +41,7 @@ export default function PrivacyPolicyContent() {
           <li><a href="#pp-s16" className="hover:underline">Changes to This Policy</a></li>
           <li><a href="#pp-s17" className="hover:underline">Contact Us and Grievance Officer</a></li>
         </ol>
-      </nav>
+      </nav> */}
 
       <div className="space-y-8 text-gray-700 text-sm leading-relaxed">
 
@@ -352,7 +346,7 @@ export default function PrivacyPolicyContent() {
             Instagram, Facebook, or Gmail integrations, by:
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2 mb-3">
-            <li>Emailing <a href="mailto:support@techzarinfo.com" className="text-blue-600 hover:underline">support@techzarinfo.com</a> with the subject line "Data Deletion Request"; or</li>
+            <li>Emailing <a href="mailto:sales@techzarinfo.com" className="text-blue-600 hover:underline">sales@techzarinfo.com</a> with the subject line "Data Deletion Request"; or</li>
             <li>If you are a Tenant Admin, using the relevant deletion controls in your account settings (where available).</li>
           </ul>
           <p className="mb-3">
@@ -422,13 +416,13 @@ export default function PrivacyPolicyContent() {
           <div className="p-4 bg-gray-50 rounded-lg">
             <p><strong>Techzar Infosystems*</strong></p>
             <p>No.3D, M.S Tower, 4th Floor, Convent Rd, Cantonment, Tiruchirappalli – 620001, Tamil Nadu, India</p>
-            <p className="mt-2">General/support inquiries: <a href="mailto:support@techzarinfo.com" className="text-blue-600 hover:underline">support@techzarinfo.com</a></p>
+            <p className="mt-2">General/support inquiries: <a href="mailto:sales@techzarinfo.com" className="text-blue-600 hover:underline">sales@techzarinfo.com</a></p>
             <p>Sales inquiries: <a href="mailto:sales@techzarinfo.com" className="text-blue-600 hover:underline">sales@techzarinfo.com</a></p>
             <p className="mt-2">
               Grievance Officer (DPDP Act, 2023): [Name / designation to be appointed and published —
               required once TZI-CRM's data volume triggers this obligation, or as a best practice
               regardless], reachable at{" "}
-              <a href="mailto:support@techzarinfo.com" className="text-blue-600 hover:underline">support@techzarinfo.com</a>.
+              <a href="mailto:sales@techzarinfo.com" className="text-blue-600 hover:underline">sales@techzarinfo.com</a>.
             </p>
           </div>
         </section>
