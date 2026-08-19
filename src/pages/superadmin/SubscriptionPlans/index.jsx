@@ -72,13 +72,6 @@ const SubscriptionPlans = () => {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => refetch()}
-            className="p-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 transition-all cursor-pointer shadow-sm"
-            title="Refresh plans list"
-          >
-            <RefreshCw size={18} />
-          </button>
-          <button
             onClick={handleCreateRedirect}
             className="flex items-center space-x-2 px-4 py-2.5 bg-[#008ecc] text-white rounded-xl font-semibold hover:bg-[#007bb0] transition-all shadow-md cursor-pointer text-sm"
           >

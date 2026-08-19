@@ -26,46 +26,26 @@ const SuperAdminDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch stats, tenants list, and upgrade requests in parallel
-      const [statsRes, tenantsRes, upgradesRes] = await Promise.all([
-        superApi.get("/dashboard/stats"),
-        superApi.get("/tenants"),
-        superApi.get("/tenants/upgrade-requests"),
-      ]);
+      // Fetch all stats in a single unified call
+      const res = await superApi.get("/dashboard/all-stats");
+      const data = res.data?.data || res.data || {};
 
       // Parse stats
-      if (statsRes.data && statsRes.data.success) {
-        const data = statsRes.data.data || statsRes.data;
-        setStats({
-          tenantsCount: data.totalTenants ?? data.tenantsCount ?? 0,
-          activeTenantsCount: data.activeTenants ?? data.activeTenantsCount ?? 0,
-          totalUsers: data.totalUsers ?? 0,
-          totalRevenue: data.totalRevenue ?? 0,
-        });
-      } else if (statsRes.data) {
-        setStats({
-          tenantsCount: statsRes.data.totalTenants || 0,
-          activeTenantsCount: statsRes.data.activeTenants || 0,
-          totalUsers: statsRes.data.totalUsers || 0,
-          totalRevenue: statsRes.data.totalRevenue || 0,
-        });
-      }
+      const statsData = data.stats || data;
+      setStats({
+        tenantsCount: statsData.totalTenants ?? statsData.tenantsCount ?? 0,
+        activeTenantsCount: statsData.activeTenants ?? statsData.activeTenantsCount ?? 0,
+        totalUsers: statsData.totalUsers ?? 0,
+        totalRevenue: statsData.totalRevenue ?? 0,
+      });
 
       // Parse tenants for chart data
-      if (tenantsRes.data && Array.isArray(tenantsRes.data.tenants)) {
-        setTenants(tenantsRes.data.tenants);
-      } else if (tenantsRes.data && Array.isArray(tenantsRes.data.data)) {
-        setTenants(tenantsRes.data.data);
-      } else if (tenantsRes.data && Array.isArray(tenantsRes.data)) {
-        setTenants(tenantsRes.data);
-      } else {
-        setTenants([]);
-      }
+      const tenantsData = data.tenants || [];
+      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
 
       // Parse upgrades
-      if (upgradesRes.data?.success) {
-        setUpgradeRequests(upgradesRes.data.requests || []);
-      }
+      const upgradesData = data.upgradeRequests || data.requests || [];
+      setUpgradeRequests(Array.isArray(upgradesData) ? upgradesData : []);
     } catch (err) {
       console.error("Failed to fetch superadmin stats:", err);
       setError("Failed to load platform metrics. Please check your backend connection.");
@@ -157,14 +137,6 @@ const SuperAdminDashboard = () => {
           <h2 className="text-slate-900">System Overview</h2>
           <p className="text-base text-slate-600">Real-time status of your multi-tenant CRM deployment.</p>
         </div>
-        <button
-          onClick={fetchStats}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 border border-slate-200 rounded-xl bg-white text-slate-700 font-medium hover:border-[#008ecc]/40 hover:text-[#008ecc] transition-all cursor-pointer shadow-sm text-sm active:scale-95 disabled:opacity-50"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          <span>Refresh</span>
-        </button>
       </div>
 
       {error && (

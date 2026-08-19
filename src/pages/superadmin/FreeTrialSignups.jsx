@@ -82,7 +82,7 @@ const FreeTrialSignups = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchSignups = useCallback(async () => {
+  const fetchSignups = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -100,15 +100,15 @@ const FreeTrialSignups = () => {
     } catch (err) {
       console.error("Failed to fetch free trial signups:", err);
       setError("Failed to fetch free trial signups. Please check your connection and try again.");
-      setSignups([]);
     } finally {
       setLoading(false);
     }
-  }, [page, search, period, startDate, endDate]);
+  };
 
   useEffect(() => {
     fetchSignups();
-  }, [fetchSignups]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search, period, startDate, endDate]);
 
   // Debounce search input
   useEffect(() => {
@@ -168,16 +168,6 @@ const FreeTrialSignups = () => {
             Free Trial Signups
           </h2>
           <p className="text-base text-slate-600">All data submitted through the landing page free trial form.</p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={fetchSignups}
-            className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 transition-all cursor-pointer shadow-sm"
-            title="Refresh"
-          >
-            <RefreshCw size={18} />
-          </button>
         </div>
       </div>
 
@@ -259,8 +249,8 @@ const FreeTrialSignups = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
-              {loading ? (
+            <tbody className={`divide-y divide-slate-100 text-slate-700 text-sm ${loading && signups.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+              {loading && signups.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2">
