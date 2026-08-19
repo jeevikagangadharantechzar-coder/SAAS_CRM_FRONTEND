@@ -601,7 +601,7 @@ const Login = () => {
             )}
             <p className="text-gray-600 mb-6">{expiredNotice.message}</p>
             <div className="flex flex-col gap-3">
-              {expiredNotice.trialExpired && tenantSlug && (
+              {tenantSlug && (
                 <button
                   type="button"
                   onClick={() => {
