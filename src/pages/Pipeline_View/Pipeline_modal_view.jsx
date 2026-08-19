@@ -1892,8 +1892,10 @@ function Pipeline_modal_view() {
           responseType: "blob",
         });
 
-        const contentType =
-          res.headers["content-type"] || "application/octet-stream";
+        const ext = file.path?.split(".").pop()?.toLowerCase() || file.name?.split(".").pop()?.toLowerCase();
+        let contentType = res.headers["content-type"] || "application/octet-stream";
+        if (ext === "svg") contentType = "image/svg+xml";
+
         const blobUrl = window.URL.createObjectURL(
           new Blob([res.data], { type: contentType }),
         );

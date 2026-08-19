@@ -414,11 +414,23 @@ const DealsDocument = () => {
                       <span className="text-gray-400">No attachment</span>
                     )}
                   </td>
+                  <td className="px-6 py-4">
+                    {deal.images?.length > 0 ? (
+                      <button
+                        onClick={() => setImagesDeal(deal)}
+                        className="text-emerald-600 hover:text-emerald-800 hover:underline font-medium"
+                      >
+                        Image
+                      </button>
+                    ) : (
+                      <span className="text-gray-400">No image</span>
+                    )}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                   No deals found
                 </td>
               </tr>
