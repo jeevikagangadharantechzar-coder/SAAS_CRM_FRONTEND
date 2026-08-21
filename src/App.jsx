@@ -29,6 +29,7 @@ import UpgradeRequests from "./pages/superadmin/UpgradeRequests";
 import SupportTickets from "./pages/superadmin/SupportTickets";
 import TenantDetail from "./pages/superadmin/TenantDetail";
 import FreeTrialSignups from "./pages/superadmin/FreeTrialSignups";
+import FreeTrialAnalysis from "./pages/superadmin/conversion_analysis/FreeTrialAnalysis";
 
 // Providers
 import { NotificationProvider } from "./context/NotificationContext";
@@ -222,6 +223,7 @@ function App() {
                       <Route path="tenants/:id" element={<TenantDetail />} />
                       <Route path="tenants/create" element={<CreateTenant />} />
                       <Route path="free-trials" element={<FreeTrialSignups />} />
+                      <Route path="analysis" element={<FreeTrialAnalysis />} />
                       <Route path="upgrade-requests" element={<UpgradeRequests />} />
                       <Route path="support-tickets" element={<SupportTickets />} />
                       <Route path="subscription-plans" element={<SubscriptionPlans />} />

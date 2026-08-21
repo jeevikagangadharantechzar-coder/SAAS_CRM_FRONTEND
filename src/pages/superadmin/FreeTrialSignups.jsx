@@ -82,6 +82,23 @@ const FreeTrialSignups = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [tenantsList, setTenantsList] = useState([]);
+
+  const fetchTenantsList = async () => {
+    try {
+      const res = await superApi.get("/tenants");
+      if (res.data && Array.isArray(res.data.tenants)) {
+        setTenantsList(res.data.tenants);
+      } else if (res.data && Array.isArray(res.data.data)) {
+        setTenantsList(res.data.data);
+      } else if (res.data && Array.isArray(res.data)) {
+        setTenantsList(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch tenants list for mapping:", err);
+    }
+  };
+
   const fetchSignups = async () => {
     setLoading(true);
     setError(null);
@@ -107,6 +124,7 @@ const FreeTrialSignups = () => {
 
   useEffect(() => {
     fetchSignups();
+    fetchTenantsList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, period, startDate, endDate]);
 
@@ -197,11 +215,10 @@ const FreeTrialSignups = () => {
               <button
                 key={opt.value}
                 onClick={() => handlePeriodChange(opt.value)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                  period === opt.value
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${period === opt.value
                     ? "bg-[#008ecc] text-white border-[#008ecc] shadow-sm"
                     : "bg-white text-slate-600 border-slate-200 hover:border-[#008ecc]/40 hover:text-[#008ecc]"
-                }`}
+                  }`}
               >
                 {opt.label}
               </button>
@@ -271,7 +288,13 @@ const FreeTrialSignups = () => {
                     <td className="px-6 py-4 text-slate-600">{s.email}</td>
                     <td className="px-6 py-4 text-slate-600">{s.industry || "—"}</td>
                     <td className="px-6 py-4 text-slate-600">{s.country || "—"}</td>
-                    <td className="px-6 py-4 text-slate-600">{s.subscriptionPackage || "—"}</td>
+                    <td className="px-6 py-4 text-slate-600 font-semibold text-[#008ecc]">
+                      {(() => {
+                        const tId = typeof s.tenant === 'object' ? s.tenant?._id : s.tenant;
+                        const fullT = tenantsList.find(t => t._id === tId);
+                        return fullT?.plan_id?.plan_name || s.tenant?.plan_id?.plan_name || s.subscriptionPackage || "—";
+                      })()}
+                    </td>
                     <td className="px-6 py-4 text-slate-500">
                       {s.createdAt ? format(new Date(s.createdAt), "MMM dd, yyyy") : "N/A"}
                     </td>
