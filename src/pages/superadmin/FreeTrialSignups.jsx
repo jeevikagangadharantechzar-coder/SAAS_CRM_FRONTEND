@@ -20,8 +20,6 @@ const PERIOD_OPTIONS = [
   { value: "custom", label: "Custom Range" },
 ];
 
-const LIMIT = 10;
-
 const TrialStatusBadge = ({ tenant }) => {
   if (!tenant) {
     return (
@@ -76,6 +74,7 @@ const FreeTrialSignups = () => {
   const [endDate, setEndDate] = useState("");
 
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -103,7 +102,7 @@ const FreeTrialSignups = () => {
     setLoading(true);
     setError(null);
     try {
-      const params = { page, limit: LIMIT };
+      const params = { page, limit };
       if (search.trim()) params.search = search.trim();
       if (period === "weekly" || period === "monthly") params.period = period;
       if (period === "custom") {
@@ -126,7 +125,7 @@ const FreeTrialSignups = () => {
     fetchSignups();
     fetchTenantsList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, period, startDate, endDate]);
+  }, [page, search, period, startDate, endDate, limit]);
 
   // Debounce search input
   useEffect(() => {
@@ -173,8 +172,8 @@ const FreeTrialSignups = () => {
   };
 
   const { total = 0, totalPages = 1 } = pagination;
-  const rangeStart = total === 0 ? 0 : (page - 1) * LIMIT + 1;
-  const rangeEnd = Math.min(page * LIMIT, total);
+  const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
+  const rangeEnd = Math.min(page * limit, total);
 
   return (
     <div className="space-y-6">
@@ -338,25 +337,40 @@ const FreeTrialSignups = () => {
 
         {/* Pagination */}
         {!loading && total > 0 && (
-          <div className="px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
-            <span className="text-xs text-slate-500">
-              Showing <strong>{rangeStart}</strong>–<strong>{rangeEnd}</strong> of <strong>{total}</strong> signups
-            </span>
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <span className="text-xs text-slate-500 font-bold">
+                Showing <span className="text-slate-700">{rangeStart}</span>–<span className="text-slate-700">{rangeEnd}</span> of <span className="text-slate-700">{total}</span> signups
+              </span>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                <span>Rows per page:</span>
+                <select 
+                  value={limit}
+                  onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-2 border border-slate-200 rounded-lg bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-xs font-semibold text-slate-600 px-2">
+              <span className="text-xs font-bold text-slate-600 px-3 bg-white border border-slate-200 py-1.5 rounded-xl shadow-sm">
                 Page {page} of {totalPages}
               </span>
               <button
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="p-2 border border-slate-200 rounded-lg bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
               >
                 <ChevronRight size={16} />
               </button>
