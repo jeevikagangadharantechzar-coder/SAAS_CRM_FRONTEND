@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowUpCircle, History, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowUpCircle, History, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { superApi } from "../../services/api";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
@@ -12,6 +12,14 @@ const UpgradeRequests = () => {
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
 
   // Rejection states
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -139,6 +147,11 @@ const UpgradeRequests = () => {
     }
   };
 
+  const currentTotal = activeTab === "pending" ? upgradeRequests.length : historyRequests.length;
+  const currentTotalPages = Math.ceil(currentTotal / limit) || 1;
+  const paginatedUpgradeRequests = upgradeRequests.slice((page - 1) * limit, page * limit);
+  const paginatedHistoryRequests = historyRequests.slice((page - 1) * limit, page * limit);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -205,8 +218,8 @@ const UpgradeRequests = () => {
                       <div className="w-6 h-6 border-2 border-[#008ecc] border-t-transparent rounded-full animate-spin mx-auto"></div>
                     </td>
                   </tr>
-                ) : upgradeRequests.length > 0 ? (
-                  upgradeRequests.map((req) => {
+                ) : paginatedUpgradeRequests.length > 0 ? (
+                  paginatedUpgradeRequests.map((req) => {
                     const startDate = new Date(req.createdAt);
                     const endDate = new Date(startDate.getTime() + req.login_days * 24 * 60 * 60 * 1000);
 
@@ -302,6 +315,48 @@ const UpgradeRequests = () => {
               </tbody>
             </table>
           </div>
+          {/* Pagination controls */}
+          {upgradeRequests.length > 0 && (
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <span className="text-xs text-slate-500 font-bold">
+                  Showing <span className="text-slate-700">{(page - 1) * limit + 1}</span>–<span className="text-slate-700">{Math.min(page * limit, upgradeRequests.length)}</span> of <span className="text-slate-700">{upgradeRequests.length}</span> records
+                </span>
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                  <span>Rows per page:</span>
+                  <select 
+                    value={limit}
+                    onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                    className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-xs font-bold text-slate-600 px-3 bg-white border border-slate-200 py-1.5 rounded-xl shadow-sm">
+                  Page {page} of {currentTotalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(currentTotalPages, p + 1))}
+                  disabled={page >= currentTotalPages}
+                  className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* Upgrade History Table */
@@ -332,8 +387,8 @@ const UpgradeRequests = () => {
                       <div className="w-6 h-6 border-2 border-[#008ecc] border-t-transparent rounded-full animate-spin mx-auto"></div>
                     </td>
                   </tr>
-                ) : historyRequests.length > 0 ? (
-                  historyRequests.map((req) => {
+                ) : paginatedHistoryRequests.length > 0 ? (
+                  paginatedHistoryRequests.map((req) => {
                     const requestedDate = new Date(req.createdAt);
                     const processedDate = new Date(req.updatedAt);
 
@@ -395,6 +450,48 @@ const UpgradeRequests = () => {
               </tbody>
             </table>
           </div>
+          {/* Pagination controls */}
+          {historyRequests.length > 0 && (
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <span className="text-xs text-slate-500 font-bold">
+                  Showing <span className="text-slate-700">{(page - 1) * limit + 1}</span>–<span className="text-slate-700">{Math.min(page * limit, historyRequests.length)}</span> of <span className="text-slate-700">{historyRequests.length}</span> records
+                </span>
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                  <span>Rows per page:</span>
+                  <select 
+                    value={limit}
+                    onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                    className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-xs font-bold text-slate-600 px-3 bg-white border border-slate-200 py-1.5 rounded-xl shadow-sm">
+                  Page {page} of {currentTotalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(currentTotalPages, p + 1))}
+                  disabled={page >= currentTotalPages}
+                  className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

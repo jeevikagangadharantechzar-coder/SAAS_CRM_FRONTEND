@@ -17,6 +17,8 @@ import {
   ExternalLink,
   X,
   Edit,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { superApi } from "../../services/api";
 
@@ -28,6 +30,10 @@ const SuperAdminTenants = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   // Delete Confirmation modal
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -101,6 +107,10 @@ const SuperAdminTenants = () => {
     fetchTenants();
   }, []);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
 
 
   const handleToggleActive = async (id, currentStatus) => {
@@ -148,6 +158,9 @@ const SuperAdminTenants = () => {
       t.adminName.toLowerCase().includes(query)
     );
   });
+
+  const totalPages = Math.ceil(filteredTenants.length / limit) || 1;
+  const paginatedTenants = filteredTenants.slice((page - 1) * limit, page * limit);
 
   return (
     <div className="space-y-6">
@@ -216,8 +229,8 @@ const SuperAdminTenants = () => {
                     </div>
                   </td>
                 </tr>
-              ) : filteredTenants.length > 0 ? (
-                filteredTenants.map((t) => (
+              ) : paginatedTenants.length > 0 ? (
+                paginatedTenants.map((t) => (
                   <tr key={t._id} className="hover:bg-slate-50/50 transition-colors">
                     <td
                       className="px-6 py-4 font-bold text-slate-900 cursor-pointer hover:text-[#008ecc] hover:underline"
@@ -296,6 +309,49 @@ const SuperAdminTenants = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination controls */}
+        {filteredTenants.length > 0 && (
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <span className="text-xs text-slate-500 font-bold">
+                Showing <span className="text-slate-700">{(page - 1) * limit + 1}</span>–<span className="text-slate-700">{Math.min(page * limit, filteredTenants.length)}</span> of <span className="text-slate-700">{filteredTenants.length}</span> records
+              </span>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                <span>Rows per page:</span>
+                <select 
+                  value={limit}
+                  onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-xs font-bold text-slate-600 px-3 bg-white border border-slate-200 py-1.5 rounded-xl shadow-sm">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* DANGER: DELETE CONFIRMATION MODAL */}
