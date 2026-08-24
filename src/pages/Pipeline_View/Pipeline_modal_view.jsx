@@ -1105,10 +1105,41 @@ function Pipeline_modal_view() {
   // create/edit/mark-paid behave identically to the actual Invoice page.
   const { openModal: openInvoiceModal } = useModal();
 
+  // Same source/shape as sidebar.jsx's userPermissions — the sidebar already
+  // hides nav items a role isn't granted, but a Sales user could still reach
+  // Meetings/Proposal/Invoice/Email by opening a deal directly unless the
+  // tabs here respect the same permissions. Declared here (rather than
+  // further down near the rest of the component's state) so canSeeTab.meetings
+  // is available in time for the useMeetings() call right below.
+  const userRole = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}").role?.name || ""; }
+    catch { return ""; }
+  })();
+  const userPermissions = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}").role?.permissions || {}; }
+    catch { return {}; }
+  })();
+
+  const isAdmin = userRole === "Admin";
+  const canSeeTab = {
+    tasks_targets: isAdmin || userPermissions.task_management || userPermissions.target_management
+      || userPermissions.assigned_tasks || userPermissions.my_targets,
+    meetings: isAdmin || userPermissions.meetings,
+    // This tab reads from the MassEmail collection filtered to the deal's
+    // contact (getDealEmails in dealDetail.controller.js) — it's part of
+    // Email Campaigns, not the separate Email & Chat inbox feature.
+    email: isAdmin || userPermissions.email_campaigns,
+    proposal: isAdmin || userPermissions.proposal,
+    invoice: isAdmin || userPermissions.invoices,
+  };
+
   // Meeting tab — reuses the real Meetings page's own hook, so create,
   // alarms, and toasts behave identically to the actual Meetings page.
+  // enabled=canSeeTab.meetings skips the hook's own fetch/status-check
+  // effect entirely when the user has no Meetings permission — this call
+  // site only needs the create/cancel functions.
   const { createMeeting, cancelMeeting, googleConfigured, zoomConfigured } =
-    useMeetings();
+    useMeetings(canSeeTab.meetings);
 
   // Use Lost Deal Modal hook — same one CreateDeal.jsx uses, so switching a
   // deal to Closed Lost always captures a reason regardless of which screen
@@ -1152,7 +1183,6 @@ function Pipeline_modal_view() {
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [countries] = useState(getNames());
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
-  const [userRole, setUserRole] = useState("");
   const [salesUsers, setSalesUsers] = useState([]);
 
   // Dynamic custom fields (edit mode)
@@ -1165,14 +1195,6 @@ function Pipeline_modal_view() {
   const getAuthToken = () => {
     return localStorage.getItem("token");
   };
-
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      const user = JSON.parse(userData);
-      setUserRole(user.role?.name || "");
-    }
-  }, []);
 
   // Assign To options — only Admins can reassign a deal, matching CreateDeal.jsx.
   useEffect(() => {
@@ -2810,16 +2832,18 @@ function Pipeline_modal_view() {
           >
             Deal Score
           </button>
-          <button
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "tasks_targets"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveTab("tasks_targets")}
-          >
-            Tasks & Targets
-          </button>
+          {canSeeTab.tasks_targets && (
+            <button
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "tasks_targets"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("tasks_targets")}
+            >
+              Tasks & Targets
+            </button>
+          )}
           <button
             className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
               activeTab === "attachments"
@@ -2876,46 +2900,54 @@ function Pipeline_modal_view() {
           >
             Notes
           </button>
-          <button
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "proposal"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveTab("proposal")}
-          >
-            Proposal
-          </button>
-          <button
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "invoice"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveTab("invoice")}
-          >
-            Invoice
-          </button>
-          <button
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "meeting"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveTab("meeting")}
-          >
-            Meeting
-          </button>
-          <button
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "email"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveTab("email")}
-          >
-            Email
-          </button>
+          {canSeeTab.proposal && (
+            <button
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "proposal"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("proposal")}
+            >
+              Proposal
+            </button>
+          )}
+          {canSeeTab.invoice && (
+            <button
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "invoice"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("invoice")}
+            >
+              Invoice
+            </button>
+          )}
+          {canSeeTab.meetings && (
+            <button
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "meeting"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("meeting")}
+            >
+              Meeting
+            </button>
+          )}
+          {canSeeTab.email && (
+            <button
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "email"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("email")}
+            >
+              Email
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -3263,6 +3295,7 @@ function Pipeline_modal_view() {
                               );
                             }
                             if (actionName === "Send Proposal") {
+                              if (!canSeeTab.proposal) return null;
                               return (
                                 <button
                                   key={idx}
@@ -3275,6 +3308,7 @@ function Pipeline_modal_view() {
                               );
                             }
                             if (actionName === "Send Invoice") {
+                              if (!canSeeTab.invoice) return null;
                               return (
                                 <button
                                   key={idx}
@@ -4711,7 +4745,7 @@ function Pipeline_modal_view() {
             )}
 
             {/* Tasks & Targets Tab */}
-            {activeTab === "tasks_targets" && (
+            {activeTab === "tasks_targets" && canSeeTab.tasks_targets && (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6 animate-fade-in">
                 <LinkedTasksTargetsTab itemType="deal" itemId={dealId} />
               </div>
@@ -5643,7 +5677,7 @@ function Pipeline_modal_view() {
             )}
 
             {/* Proposal Tab */}
-            {activeTab === "proposal" && (
+            {activeTab === "proposal" && canSeeTab.proposal && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
@@ -5768,7 +5802,7 @@ function Pipeline_modal_view() {
             )}
 
             {/* Invoice Tab */}
-            {activeTab === "invoice" && (
+            {activeTab === "invoice" && canSeeTab.invoice && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
@@ -5850,7 +5884,7 @@ function Pipeline_modal_view() {
             )}
 
             {/* Meeting Tab */}
-            {activeTab === "meeting" && (
+            {activeTab === "meeting" && canSeeTab.meetings && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
@@ -5942,7 +5976,7 @@ function Pipeline_modal_view() {
             )}
 
             {/* Email Tab */}
-            {activeTab === "email" && (
+            {activeTab === "email" && canSeeTab.email && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>

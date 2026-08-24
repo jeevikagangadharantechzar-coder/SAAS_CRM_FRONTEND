@@ -376,7 +376,7 @@ const ScheduleView = () => {
     if (target) showMoreAnchorRef.current = target.getBoundingClientRect();
   };
 
-  const POPUP_WIDTH = 360;
+  const POPUP_WIDTH = 300;
   const POPUP_GAP = 8;
   // Prefers opening below the clicked link (reads naturally, closest to
   // where the click happened) but flips above whenever there isn't enough
@@ -388,8 +388,8 @@ const ScheduleView = () => {
     const spaceBelow = viewportH - rect.bottom;
     const spaceAbove = rect.top;
     const openAbove = spaceBelow < 280 && spaceAbove > spaceBelow;
-    // Must match the rendered width (w-[min(360px,92vw)] below) — on a
-    // narrow/mobile screen the popup is actually 92vw, not the full 360px,
+    // Must match the rendered width (w-[min(300px,92vw)] below) — on a
+    // narrow/mobile screen the popup is actually 92vw, not the full 300px,
     // so clamping against the fixed constant pushed it off the left edge.
     const popupWidth = Math.min(POPUP_WIDTH, viewportW * 0.92);
     const left = Math.min(Math.max(rect.left, POPUP_GAP), viewportW - popupWidth - POPUP_GAP);
@@ -576,7 +576,7 @@ const ScheduleView = () => {
           onClick={() => setGroupModalOpen(false)}
         >
           <div
-            className={`bg-white rounded-xl shadow-xl max-h-[70vh] flex flex-col ${groupModalAnchor ? "fixed w-[min(360px,92vw)] p-4" : "w-full max-w-md p-6"}`}
+            className={`bg-white rounded-xl shadow-xl max-h-[60vh] flex flex-col ${groupModalAnchor ? "fixed w-[min(300px,92vw)] p-3" : "w-full max-w-sm p-4"}`}
             style={groupModalAnchor
               ? {
                   left: groupModalAnchor.left,
@@ -587,16 +587,16 @@ const ScheduleView = () => {
               : undefined}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-slate-700 flex items-center gap-2">
-                <Layers size={18} className="text-slate-500" />
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                <Layers size={15} className="text-slate-500" />
                 {groupModalItems.length} items
               </h3>
               <button onClick={() => setGroupModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
-            <div className="space-y-2 overflow-y-auto">
+            <div className="space-y-1.5 overflow-y-auto">
               {groupModalItems.map((item) => {
                 const meta = TYPE_META[item.type] || { color: "#64748b" };
                 return (
@@ -604,7 +604,7 @@ const ScheduleView = () => {
                     key={item.id}
                     onClick={() => handleGroupItemClick(item)}
                     style={{ borderLeft: `4px solid ${meta.color}` }}
-                    className="w-full text-left p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3"
+                    className="w-full text-left px-2.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2"
                   >
                     <span className="text-sm text-slate-800 truncate">{item.title}</span>
                     {item.pending && (

@@ -356,7 +356,7 @@ function App() {
                       <Route path="target-management" element={<TargetManagement />} />
                       <Route path="my-targets" element={<MyTargets />} />
                       {/* MEETINGS */}
-                      <Route element={<PrivateRoute planFeature="meetings" />}>
+                      <Route element={<PrivateRoute permission="meetings" planFeature="meetings" />}>
                         <Route path="meetings" element={<Meetings />} />
                       </Route>
 

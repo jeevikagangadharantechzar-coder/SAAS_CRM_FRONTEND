@@ -45,7 +45,11 @@ const showBrowserNotification = (meeting) => {
   };
 };
 
-export default function useMeetings() {
+// enabled=false skips the fetch/status-check/alarm-scheduling effect below
+// entirely — for callers (Lead/Deal detail pages) that only need the
+// create/cancel mutation functions and have no permission to view meetings
+// at all, there's no point making (and failing) that initial network call.
+export default function useMeetings(enabled = true) {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [googleConfigured, setGoogleConfigured] = useState(false);
@@ -100,20 +104,31 @@ export default function useMeetings() {
       const list = res.data.meetings || [];
       setMeetings(list);
       scheduleAlarms(list);
-    } catch {
-      toast.error("Failed to load meetings");
+    } catch (err) {
+      // This hook is also borrowed by the Lead/Deal detail pages just for
+      // its create/cancel functions — they never render `meetings`/`loading`
+      // from here, so a 403 (the user's role lacks Meetings permission,
+      // already reflected by that tab being hidden there) isn't a real
+      // failure worth surfacing. The standalone Meetings page itself can no
+      // longer even mount without permission (route-level guard), so a 403
+      // reaching here is only ever the borrowed-hook case.
+      if (err.response?.status !== 403) toast.error("Failed to load meetings");
     } finally {
       setLoading(false);
     }
   }, [scheduleAlarms]);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     requestNotificationPermission();
     checkGoogleStatus();
     checkZoomStatus();
     fetchMeetings();
     return () => clearAlarmTimers();
-  }, [fetchMeetings, checkGoogleStatus, checkZoomStatus]);
+  }, [enabled, fetchMeetings, checkGoogleStatus, checkZoomStatus]);
 
   const createMeeting = async (data) => {
     const res = await axios.post(`${API_URL}/meetings`, data, authHeader());

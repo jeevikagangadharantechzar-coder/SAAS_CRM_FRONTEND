@@ -576,6 +576,24 @@ const ViewLead = () => {
     try { return JSON.parse(localStorage.getItem("user") || "{}").role?.name || ""; }
     catch { return ""; }
   })();
+  const isAdmin = userRole === "Admin";
+  // Same source/shape as sidebar.jsx's userPermissions — the sidebar already
+  // hides nav items a role isn't granted, but a Sales user could still reach
+  // Meetings/Proposal/Invoice/Email by opening a lead directly unless the
+  // tabs here respect the same permissions.
+  const userPermissions = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}").role?.permissions || {}; }
+    catch { return {}; }
+  })();
+  const canSeeTab = {
+    tasks_targets: isAdmin || userPermissions.task_management || userPermissions.target_management
+      || userPermissions.assigned_tasks || userPermissions.my_targets,
+    meetings: isAdmin || userPermissions.meetings,
+    // This tab reads from the MassEmail collection filtered to the lead's
+    // contact (getLeadEmails in leads.controller.js) — it's part of Email
+    // Campaigns, not the separate Email & Chat inbox feature.
+    email: isAdmin || userPermissions.email_campaigns,
+  };
   const [lead,        setLead]        = useState(null);
   const [activeTab,   setActiveTab]   = useState("details");
   const [previewFile, setPreviewFile] = useState(null);
@@ -925,7 +943,7 @@ const ViewLead = () => {
 
   // Meetings — same embedded MeetingModal + useMeetings hook the Deal
   // Details page and the real Meetings page both use.
-  const { createMeeting, updateMeeting, cancelMeeting, googleConfigured, zoomConfigured, connectGoogle } = useMeetings();
+  const { createMeeting, updateMeeting, cancelMeeting, googleConfigured, zoomConfigured, connectGoogle } = useMeetings(canSeeTab.meetings);
   // Same planFeature check the real Meetings page uses to decide whether the
   // "Connect Google" nudge is even relevant for this tenant's plan.
   const hasGoogleMeetSync = (() => {
@@ -949,8 +967,8 @@ const ViewLead = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchLeadMeetings();
-  }, [fetchLeadMeetings]);
+    if (canSeeTab.meetings) fetchLeadMeetings();
+  }, [fetchLeadMeetings, canSeeTab.meetings]);
 
   const openCreateMeeting = () => {
     setEditMeeting(null);
@@ -1000,8 +1018,8 @@ const ViewLead = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchLeadEmails();
-  }, [fetchLeadEmails]);
+    if (canSeeTab.email) fetchLeadEmails();
+  }, [fetchLeadEmails, canSeeTab.email]);
 
   useEffect(() => {
     fetchLead();
@@ -1906,7 +1924,9 @@ const ViewLead = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
-          {["details", "tasks_targets", "attachments", "images", "activity", "followups", "notes", "meetings", "email"].map((tab) => (
+          {["details", "tasks_targets", "attachments", "images", "activity", "followups", "notes", "meetings", "email"]
+            .filter((tab) => canSeeTab[tab] === undefined || canSeeTab[tab])
+            .map((tab) => (
             <button
               key={tab}
               className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -2600,7 +2620,7 @@ const ViewLead = () => {
             )}
 
             {/* ── Tasks & Targets ── */}
-            {activeTab === "tasks_targets" && (
+            {activeTab === "tasks_targets" && canSeeTab.tasks_targets && (
               <div className="p-4 sm:p-6 bg-white animate-fade-in max-w-5xl mx-auto">
                 <LinkedTasksTargetsTab itemType="lead" itemId={id} />
               </div>
@@ -2973,7 +2993,7 @@ const ViewLead = () => {
             )}
 
             {/* ── Meetings ── */}
-            {activeTab === "meetings" && (
+            {activeTab === "meetings" && canSeeTab.meetings && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
@@ -3049,7 +3069,7 @@ const ViewLead = () => {
             )}
 
             {/* ── Email ── */}
-            {activeTab === "email" && (
+            {activeTab === "email" && canSeeTab.email && (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
                   <div>
