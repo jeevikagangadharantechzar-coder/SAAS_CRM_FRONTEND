@@ -247,6 +247,7 @@ export default function CreateDeal() {
   const [convertedValue, setConvertedValue] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [countries] = useState(getNames());
   const [previewFile, setPreviewFile] = useState(null);
   const [reassignmentModalOpen, setReassignmentModalOpen] = useState(false);
@@ -701,7 +702,7 @@ export default function CreateDeal() {
     if (Object.values(newErrors).some(Boolean)) {
       toast.error("Please fill in all required fields and check format");
       setIsSubmitting(false);
-      return;
+      return false;
     }
 
     try {
@@ -799,6 +800,14 @@ export default function CreateDeal() {
       }
 
       setTimeout(() => navigate(`/${tenantSlug}/Pipelineview`), 2000);
+      // Deliberately NOT resetting isSubmitting/isSubmittingRef here. The
+      // navigate() above is delayed (setTimeout), so this function returns
+      // long before the redirect actually happens — if the button re-enabled
+      // immediately on success, a click during that pending-redirect window
+      // would create a genuine duplicate deal. Leaving both flags "busy"
+      // until the redirect unmounts this page closes that gap; only the
+      // error path below resets them, so the user can fix and resubmit.
+      return true;
     } catch (err) {
       console.error("Deal operation error:", err);
       if (err.response?.data?.message) {
@@ -806,8 +815,8 @@ export default function CreateDeal() {
       } else {
         toast.error(isEditMode ? "Failed to update deal" : "Failed to create deal");
       }
-    } finally {
       setIsSubmitting(false);
+      return false;
     }
   };
 
@@ -815,123 +824,157 @@ export default function CreateDeal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Phone number validation
-    if (
-      formData.phoneNumber &&
-      !isEffectivelyEmptyPhone(formData.phoneNumber) &&
-      !validatePhoneNumber(formData.phoneNumber)
-    ) {
-      toast.error("Please enter a valid phone number (e.g., +91 1234567890, 1234567890, or +1 234567890)");
-      setErrors((prev) => ({ ...prev, phoneNumber: true }));
-      return;
-    }
+    // Instant re-entry guard, set synchronously before any other work
+    // (including the reassignment-check network call below) — the
+    // isSubmitting *state* alone can't close this gap, since a state
+    // update only takes visual effect after React's next render.
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    // Tracks whether submitDealData actually succeeded — on success we
+    // deliberately leave isSubmittingRef "busy" (see the comment in
+    // submitDealData for why); the finally below only resets it for every
+    // other exit path (validation failure, deferred to a modal, etc.).
+    let succeeded = false;
 
-    // Email validation
-    if (formData.email && !validateEmail(formData.email)) {
-      toast.error("Please enter a valid email address (e.g., name@example.com)");
-      setErrors((prev) => ({ ...prev, email: true }));
-      return;
-    }
-
-    // Alternative phone number validation
-    if (
-      formData.alternativeNumber &&
-      !isEffectivelyEmptyPhone(formData.alternativeNumber) &&
-      !validatePhoneNumber(formData.alternativeNumber)
-    ) {
-      toast.error("Please enter a valid alternative phone number (e.g., +91 1234567890, 1234567890, or +1 234567890)");
-      setErrors((prev) => ({ ...prev, alternativeNumber: true }));
-      return;
-    }
-
-    // Alternative email validation
-    if (formData.alternativeEmail && !validateEmail(formData.alternativeEmail)) {
-      toast.error("Please enter a valid alternative email address (e.g., name@example.com)");
-      setErrors((prev) => ({ ...prev, alternativeEmail: true }));
-      return;
-    }
-
-    const newErrors = {
-      dealName: formData.dealName.trim() === "",
-      dealValue: formData.dealValue.trim() === "",
-      phoneNumber: false,
-      companyName: formData.companyName.trim() === "",
-      email: false,
-      alternativeNumber: false,
-      alternativeEmail: false,
-    };
-
-    setErrors(newErrors);
-    if (Object.values(newErrors).some(Boolean)) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (formData.stage === "Closed Lost" && !formData.lossReason) {
-      const tempDealId =
-        isEditMode && existingDeal ? existingDeal._id : "new-deal";
-      openLostDealModal(
-        {
-          _id: tempDealId,
-          dealName: formData.dealName,
-          lossReason: formData.lossReason,
-          lossNotes: formData.lossNotes,
-        },
-        async (lossData) => {
-          if (lossData && lossData.reason) {
-            const updatedFormData = {
-              ...formData,
-              lossReason: lossData.reason,
-              lossNotes: lossData.notes || "",
-            };
-            setFormData(updatedFormData);
-            await submitDealData(updatedFormData);
-          }
-        }
-      );
-      return;
-    }
-
-    if (isEditMode && existingDeal && formData.assignTo !== existingDeal.assignedTo?._id) {
-      try {
-        const token = localStorage.getItem("token");
-        const oldUserId = existingDeal.assignedTo?._id;
-        if (oldUserId) {
-          const res = await axios.get(
-            `${API_URL}/tasks/reassignment-check/deal/${existingDeal._id}/${oldUserId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          
-          if (res.data.hasActiveTasks || res.data.hasActiveTargets) {
-            setReassignmentCheckData(res.data);
-            setPendingSubmitData(formData);
-            setReassignmentModalOpen(true);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Error checking reassignment:", err);
+    try {
+      // Phone number validation
+      if (
+        formData.phoneNumber &&
+        !isEffectivelyEmptyPhone(formData.phoneNumber) &&
+        !validatePhoneNumber(formData.phoneNumber)
+      ) {
+        toast.error("Please enter a valid phone number (e.g., +91 1234567890, 1234567890, or +1 234567890)");
+        setErrors((prev) => ({ ...prev, phoneNumber: true }));
+        return;
       }
-    }
 
-    await submitDealData(formData);
+      // Email validation
+      if (formData.email && !validateEmail(formData.email)) {
+        toast.error("Please enter a valid email address (e.g., name@example.com)");
+        setErrors((prev) => ({ ...prev, email: true }));
+        return;
+      }
+
+      // Alternative phone number validation
+      if (
+        formData.alternativeNumber &&
+        !isEffectivelyEmptyPhone(formData.alternativeNumber) &&
+        !validatePhoneNumber(formData.alternativeNumber)
+      ) {
+        toast.error("Please enter a valid alternative phone number (e.g., +91 1234567890, 1234567890, or +1 234567890)");
+        setErrors((prev) => ({ ...prev, alternativeNumber: true }));
+        return;
+      }
+
+      // Alternative email validation
+      if (formData.alternativeEmail && !validateEmail(formData.alternativeEmail)) {
+        toast.error("Please enter a valid alternative email address (e.g., name@example.com)");
+        setErrors((prev) => ({ ...prev, alternativeEmail: true }));
+        return;
+      }
+
+      const newErrors = {
+        dealName: formData.dealName.trim() === "",
+        dealValue: formData.dealValue.trim() === "",
+        phoneNumber: false,
+        companyName: formData.companyName.trim() === "",
+        email: false,
+        alternativeNumber: false,
+        alternativeEmail: false,
+      };
+
+      setErrors(newErrors);
+      if (Object.values(newErrors).some(Boolean)) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      if (formData.stage === "Closed Lost" && !formData.lossReason) {
+        const tempDealId =
+          isEditMode && existingDeal ? existingDeal._id : "new-deal";
+        // openLostDealModal returns immediately (it just opens the modal) —
+        // the actual submission happens later, from the user confirming in
+        // that modal, which is its own separate click needing its own guard.
+        openLostDealModal(
+          {
+            _id: tempDealId,
+            dealName: formData.dealName,
+            lossReason: formData.lossReason,
+            lossNotes: formData.lossNotes,
+          },
+          async (lossData) => {
+            if (!lossData?.reason) return;
+            if (isSubmittingRef.current) return;
+            isSubmittingRef.current = true;
+            let modalSucceeded = false;
+            try {
+              const updatedFormData = {
+                ...formData,
+                lossReason: lossData.reason,
+                lossNotes: lossData.notes || "",
+              };
+              setFormData(updatedFormData);
+              modalSucceeded = await submitDealData(updatedFormData);
+            } finally {
+              if (!modalSucceeded) isSubmittingRef.current = false;
+            }
+          }
+        );
+        return;
+      }
+
+      if (isEditMode && existingDeal && formData.assignTo !== existingDeal.assignedTo?._id) {
+        try {
+          const token = localStorage.getItem("token");
+          const oldUserId = existingDeal.assignedTo?._id;
+          if (oldUserId) {
+            const res = await axios.get(
+              `${API_URL}/tasks/reassignment-check/deal/${existingDeal._id}/${oldUserId}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (res.data.hasActiveTasks || res.data.hasActiveTargets) {
+              setReassignmentCheckData(res.data);
+              setPendingSubmitData(formData);
+              setReassignmentModalOpen(true);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error checking reassignment:", err);
+        }
+      }
+
+      succeeded = await submitDealData(formData);
+    } finally {
+      if (!succeeded) isSubmittingRef.current = false;
+    }
   };
 
   const handleReassignmentConfirm = async (payload) => {
-    setReassignmentModalOpen(false);
-    if (pendingSubmitData) {
-      const dataToSubmit = {
-        ...pendingSubmitData,
-        taskAction: payload.taskAction,
-        newTaskName: payload.newTaskName || null,
-        extendedTaskDueDate: payload.extendedTaskDueDate ? payload.extendedTaskDueDate.toISOString() : null,
-        extendedTaskDescription: payload.extendedTaskDescription || null,
-        targetAction: payload.targetAction,
-        extendedTargetEndDate: payload.extendedTargetEndDate ? payload.extendedTargetEndDate.toISOString() : null,
-        extendedTargetDescription: payload.extendedTargetDescription || null,
-      };
-      await submitDealData(dataToSubmit);
-      setPendingSubmitData(null);
+    // Independent entry point from handleSubmit (triggered by the modal's
+    // own confirm button), so it needs the same instant re-entry guard.
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    let succeeded = false;
+    try {
+      setReassignmentModalOpen(false);
+      if (pendingSubmitData) {
+        const dataToSubmit = {
+          ...pendingSubmitData,
+          taskAction: payload.taskAction,
+          newTaskName: payload.newTaskName || null,
+          extendedTaskDueDate: payload.extendedTaskDueDate ? payload.extendedTaskDueDate.toISOString() : null,
+          extendedTaskDescription: payload.extendedTaskDescription || null,
+          targetAction: payload.targetAction,
+          extendedTargetEndDate: payload.extendedTargetEndDate ? payload.extendedTargetEndDate.toISOString() : null,
+          extendedTargetDescription: payload.extendedTargetDescription || null,
+        };
+        succeeded = await submitDealData(dataToSubmit);
+        setPendingSubmitData(null);
+      }
+    } finally {
+      if (!succeeded) isSubmittingRef.current = false;
     }
   };
 

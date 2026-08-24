@@ -62,6 +62,7 @@ export default function CreateLeads() {
   const [userRole, setUserRole] = useState("");
   const [userId, setUserId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [fieldErrors, setFieldErrors] = useState({});
   // Live "already exists" hints — { exists: true, leadName } | { exists: false } | undefined
   const [duplicateHints, setDuplicateHints] = useState({});
@@ -716,34 +717,51 @@ export default function CreateLeads() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    setFieldErrors({});
+    // Instant re-entry guard, set synchronously before any other work
+    // (including field validation and the reassignment-check network call
+    // below) — the isSubmitting *state* alone can't close this gap, since a
+    // state update only takes visual effect after React's next render.
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    // Tracks whether submitLeadData actually succeeded — on success we
+    // deliberately leave isSubmittingRef "busy" (see the comment in
+    // submitLeadData for why); the finally below only resets it for every
+    // other exit path (validation failure, deferred to the reassignment
+    // modal, etc.).
+    let succeeded = false;
 
-    if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
-      return;
-    }
+    try {
+      setFieldErrors({});
 
-    if (leadId && originalAssignTo && formData.assignTo !== originalAssignTo) {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          `${API_URL}/tasks/reassignment-check/lead/${leadId}/${originalAssignTo}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        if (res.data.hasActiveTasks || res.data.hasActiveTargets) {
-          setReassignmentCheckData(res.data);
-          setPendingSubmitData(formData);
-          setReassignmentModalOpen(true);
-          return;
-        }
-      } catch (err) {
-        console.error("Error checking reassignment:", err);
+      if (!validateForm()) {
+        toast.error("Please fix the errors in the form");
+        return;
       }
-    }
 
-    setIsSubmitting(true);
-    await submitLeadData(formData);
+      if (leadId && originalAssignTo && formData.assignTo !== originalAssignTo) {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await axios.get(
+            `${API_URL}/tasks/reassignment-check/lead/${leadId}/${originalAssignTo}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          if (res.data.hasActiveTasks || res.data.hasActiveTargets) {
+            setReassignmentCheckData(res.data);
+            setPendingSubmitData(formData);
+            setReassignmentModalOpen(true);
+            return;
+          }
+        } catch (err) {
+          console.error("Error checking reassignment:", err);
+        }
+      }
+
+      setIsSubmitting(true);
+      succeeded = await submitLeadData(formData);
+    } finally {
+      if (!succeeded) isSubmittingRef.current = false;
+    }
   };
 
   const submitLeadData = async (dataToSubmit) => {
@@ -823,6 +841,14 @@ export default function CreateLeads() {
       }
 
       setTimeout(() => navigate(`/${tenantSlug}/leads`), 1200);
+      // Deliberately NOT resetting isSubmitting/isSubmittingRef here. The
+      // navigate() above is delayed (setTimeout), so this function returns
+      // long before the redirect actually happens — if the button re-enabled
+      // immediately on success, a click during that pending-redirect window
+      // would create a genuine duplicate lead. Leaving both flags "busy"
+      // until the redirect unmounts this page closes that gap; only the
+      // error path below resets them, so the user can fix and resubmit.
+      return true;
     } catch (err) {
       console.error("Error submitting form:", err);
 
@@ -872,27 +898,36 @@ export default function CreateLeads() {
       } else {
         toast.error("An unexpected error occurred");
       }
-    } finally {
       setIsSubmitting(false);
+      return false;
     }
   };
 
   const handleReassignmentConfirm = async (payload) => {
-    setReassignmentModalOpen(false);
-    if (pendingSubmitData) {
-      setIsSubmitting(true);
-      const dataToSubmit = {
-        ...pendingSubmitData,
-        taskAction: payload.taskAction,
-        newTaskName: payload.newTaskName || null,
-        extendedTaskDueDate: payload.extendedTaskDueDate ? payload.extendedTaskDueDate.toISOString() : null,
-        extendedTaskDescription: payload.extendedTaskDescription || null,
-        targetAction: payload.targetAction,
-        extendedTargetEndDate: payload.extendedTargetEndDate ? payload.extendedTargetEndDate.toISOString() : null,
-        extendedTargetDescription: payload.extendedTargetDescription || null,
-      };
-      await submitLeadData(dataToSubmit);
-      setPendingSubmitData(null);
+    // Independent entry point from handleSubmit (triggered by the modal's
+    // own confirm button), so it needs the same instant re-entry guard.
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    let succeeded = false;
+    try {
+      setReassignmentModalOpen(false);
+      if (pendingSubmitData) {
+        setIsSubmitting(true);
+        const dataToSubmit = {
+          ...pendingSubmitData,
+          taskAction: payload.taskAction,
+          newTaskName: payload.newTaskName || null,
+          extendedTaskDueDate: payload.extendedTaskDueDate ? payload.extendedTaskDueDate.toISOString() : null,
+          extendedTaskDescription: payload.extendedTaskDescription || null,
+          targetAction: payload.targetAction,
+          extendedTargetEndDate: payload.extendedTargetEndDate ? payload.extendedTargetEndDate.toISOString() : null,
+          extendedTargetDescription: payload.extendedTargetDescription || null,
+        };
+        succeeded = await submitLeadData(dataToSubmit);
+        setPendingSubmitData(null);
+      }
+    } finally {
+      if (!succeeded) isSubmittingRef.current = false;
     }
   };
 
