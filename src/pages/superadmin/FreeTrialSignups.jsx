@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback ,} from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
   Rocket,
@@ -63,6 +64,8 @@ const TrialStatusBadge = ({ tenant }) => {
 };
 
 const FreeTrialSignups = () => {
+  const navigate = useNavigate();
+
   const [signups, setSignups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,6 +99,10 @@ const FreeTrialSignups = () => {
     } catch (err) {
       console.error("Failed to fetch tenants list for mapping:", err);
     }
+  };
+
+  const handleRowClick = (id) => {
+    navigate(`/superadmin/free-trials/${id}`);
   };
 
   const fetchSignups = async () => {
@@ -277,8 +284,18 @@ const FreeTrialSignups = () => {
                 </tr>
               ) : signups.length > 0 ? (
                 signups.map((s) => (
-                  <tr key={s._id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-900">{s.name}</td>
+                  <tr 
+                    key={s._id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-bold">
+                      <span
+                        onClick={() => handleRowClick(s._id)}
+                        className="cursor-pointer text-[#008ecc] hover:underline transition-all"
+                      >
+                        {s.name}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <span className="font-mono text-xs text-[#008ecc] bg-[#f2fbff] rounded px-2.5 py-1 border border-blue-100 font-semibold">
                         {s.businessName}
@@ -291,7 +308,7 @@ const FreeTrialSignups = () => {
                       {(() => {
                         const tId = typeof s.tenant === 'object' ? s.tenant?._id : s.tenant;
                         const fullT = tenantsList.find(t => t._id === tId);
-                        return fullT?.plan_id?.plan_name || s.tenant?.plan_id?.plan_name || s.subscriptionPackage || "—";
+                        return fullT?.plan_id?.plan_name || s.tenant?.plan_id?.plan_name || s.interestedPackage || "—";
                       })()}
                     </td>
                     <td className="px-6 py-4 text-slate-500">
