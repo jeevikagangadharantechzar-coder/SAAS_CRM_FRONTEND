@@ -5,17 +5,23 @@ import { superApi } from "../../services/api";
 import { useGetAllPlans } from "../../hooks/useSubscriptionPlans";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 const CreateTenant = () => {
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [adminName, setAdminName] = useState("");
+ const [adminFirstName, setAdminFirstName] = useState("");
+ const [adminLastName, setAdminLastName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [phonenumber, setPhonenumber] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState("in");
+  const [address,setAddress] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [selectedBillingCycle, setSelectedBillingCycle] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -55,7 +61,9 @@ const CreateTenant = () => {
 
   const handleCreateTenant = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !slug.trim() || !adminName.trim() || !adminEmail.trim()) {
+    const adminName = `${adminFirstName} ${adminLastName}`.trim();
+
+    if (!name.trim() || !slug.trim() || !adminName || !adminEmail.trim()) {
       setError("All fields are required.");
       return;
     }
@@ -108,6 +116,8 @@ const CreateTenant = () => {
         planId: selectedPlanId,
         billing_cycle: effectiveCycle,
         currency,
+        phonenumber,
+        address,
       });
 
       const newTenant = res.data?.tenant || res.data?.data || res.data;
@@ -115,11 +125,12 @@ const CreateTenant = () => {
       // Clear fields & navigate
       setName("");
       setSlug("");
-      setAdminName("");
+      setAdminFirstName("");
+      setAdminLastName("");
       setAdminEmail("");
       setSelectedPlanId("");
       setSelectedBillingCycle("");
-      setCurrency("USD");
+      setCurrency("INR");
       navigate("/superadmin/tenants");
     } catch (err) {
       console.error("Failed to create tenant:", err);
@@ -190,6 +201,8 @@ const CreateTenant = () => {
                   />
                 </div>
 
+              
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                     Tenant Slug
@@ -207,6 +220,35 @@ const CreateTenant = () => {
                   </p>
                 </div>
               </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Phone Number </label>
+                
+                  <PhoneInput
+                    country={phoneCountryCode}
+                    value={phonenumber}
+                    onChange={(phone, countryData) => {
+                      setPhonenumber(phone);
+                      setPhoneCountryCode(countryData?.countryCode || "in");
+                    }}
+                    inputClass="!w-full !border-none !bg-transparent !text-sm !h-full focus:!outline-none !pl-[48px]"
+                    buttonClass="!border-none !bg-transparent !pl-2"
+                    containerClass="w-full border border-slate-300 rounded-xl flex items-center bg-white shadow-inner focus-within:ring-2 focus-within:ring-[#008ecc] focus-within:border-transparent transition-all h-[46px] relative"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Address
+                  </label>
+                  <input
+                  type = "text"
+                  placeholder="e.g. 123, Anna Salai, Chennai, Tamil Nadu 600002"
+                  value={address}
+                    onChange={(e)=> setAddress(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"/>
+                  
+                </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -247,20 +289,39 @@ const CreateTenant = () => {
               </div>
 
               <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Administrator Name
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Tony Stark"
-                      value={adminName}
-                      onChange={(e) => setAdminName(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      First Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Tony"
+                        value={adminFirstName}
+                        onChange={(e) => setAdminFirstName(e.target.value)}
+                        className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      Last Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Stark"
+                        value={adminLastName}
+                        onChange={(e) => setAdminLastName(e.target.value)}
+                        className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
+                      />
+                    </div>
                   </div>
                 </div>
 

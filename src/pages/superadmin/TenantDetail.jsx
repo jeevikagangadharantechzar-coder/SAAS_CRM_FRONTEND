@@ -252,10 +252,18 @@ const TenantDetail = () => {
                   {tenant.isActive ? "Live" : "Inactive"}
                 </span>
               </div>
+
+              <div className="space-y-1">
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Phone Number</span>
+                <span className="text-slate-800 font-semibold">{tenant.phonenumber ? `+${tenant.phonenumber}` : "—"}</span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Address</span>
+                <span className="text-slate-800 font-semibold">{tenant.address || "—"}</span>
+              </div>
             </div>
           </div>
-
-          {/* Database active statistics */}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center space-x-2 text-slate-800">
               <UserCheck className="text-[#008ecc]" size={20} />

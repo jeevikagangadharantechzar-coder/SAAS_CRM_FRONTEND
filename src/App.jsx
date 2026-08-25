@@ -102,6 +102,7 @@ import LiveLocations from "./pages/security/LiveLocations";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import FreeTrialSignupDetail from "./pages/superadmin/FreeetrialSignupDetail";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -220,7 +221,7 @@ function App() {
                       <Route index element={<Navigate to="dashboard" replace />} />
                       <Route path="dashboard" element={<SuperAdminDashboard />} />
                       <Route path="tenants" element={<SuperAdminTenants />} />
-                      <Route path="tenants/:id" element={<TenantDetail />} />
+                     <Route path="tenants/:id" element={<TenantDetail />} />
                       <Route path="tenants/create" element={<CreateTenant />} />
                       <Route path="free-trials" element={<FreeTrialSignups />} />
                       <Route path="analysis" element={<FreeTrialAnalysis />} />
@@ -232,6 +233,7 @@ function App() {
                       <Route path="subscription-plans/:id" element={<PlanDetail />} />
                       <Route path="settings" element={<SuperAdminSettings />} />
                       <Route path="profile" element={<SuperAdminProfile />} />
+                      <Route path="free-trials/:id" element={<FreeTrialSignupDetail />} />
                     </Route>
                   </Route>
 
