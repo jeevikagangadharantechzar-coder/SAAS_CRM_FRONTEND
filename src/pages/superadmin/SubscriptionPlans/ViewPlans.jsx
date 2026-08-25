@@ -21,37 +21,37 @@ const TIER_LABELS = { monthly: "Monthly", half_yearly: "Half Year", yearly: "Yea
 const CYCLE_LABELS = { monthly: "Monthly", half_yearly: "Half Year", yearly: "Yearly", one_time: "One-time" };
 
 const FEATURE_LABELS = {
-  dashboard:           "Dashboard",
-  leads:               "Leads",
-  create_lead:         "Create Lead",
-  deals_all:           "All Deals",
-  create_deal:         "Create Deal",
-  deals_pipeline:      "Pipeline",
-  invoices:            "Invoices",
-  proposal:            "Proposal",
-  documents:           "Document Center",
-  activities:          "Activities",
-  activities_list:     "Activity List",
-  users_roles:         "User Roles",
-  admin_access:        "Admin Access",
-  email_chat:          "Email Chat",
-  email_campaigns:     "Email Campaigns",
-  reports:             "Reports",
-  analytics:           "Team Analytics",
-  won_analysis:        "Won Analysis",
-  loss_analysis:       "Loss Analysis",
-  deal_analysis:       "Deal Analysis",
-  settings:            "Settings",
-  streak_leaderboard:  "Leaderboard",
-  assigned_tasks:      "Assigned Tasks",
-  task_management:     "Task Management",
-  target_management:   "Target Management",
-  meetings:            "Meetings",
-  google_meet_sync:    "Google Meet",
-  zoom_meetings:       "Zoom Meetings",
-  schedule_view:       "Calendar",
-  messages:            "Messages",
-  chatbot:             "Chatbot",
+  dashboard: "Dashboard",
+  leads: "Leads",
+  create_lead: "Create Lead",
+  deals_all: "All Deals",
+  create_deal: "Create Deal",
+  deals_pipeline: "Pipeline",
+  invoices: "Invoices",
+  proposal: "Proposal",
+  documents: "Document Center",
+  activities: "Activities",
+  activities_list: "Activity List",
+  users_roles: "User Roles",
+  admin_access: "Admin Access",
+  email_chat: "Email Chat",
+  email_campaigns: "Email Campaigns",
+  reports: "Reports",
+  analytics: "Team Analytics",
+  won_analysis: "Won Analysis",
+  loss_analysis: "Loss Analysis",
+  deal_analysis: "Deal Analysis",
+  settings: "Settings",
+  streak_leaderboard: "Leaderboard",
+  assigned_tasks: "Assigned Tasks",
+  task_management: "Task Management",
+  target_management: "Target Management",
+  meetings: "Meetings",
+  google_meet_sync: "Google Meet",
+  zoom_meetings: "Zoom Meetings",
+  schedule_view: "Calendar",
+  messages: "Messages",
+  chatbot: "Chatbot",
   integration_facebook: "Facebook",
   integration_instagram: "Instagram",
   integration_whatsapp: "WhatsApp Integration",
@@ -106,11 +106,10 @@ function FeatureGrid({ features, showAll }) {
         return (
           <div
             key={key}
-            className={`flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg ${
-              on
+            className={`flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg ${on
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                 : "bg-slate-50 text-slate-400 border border-slate-100"
-            }`}
+              }`}
           >
             {on ? (
               <Check size={11} className="text-emerald-500 flex-shrink-0" />
@@ -130,18 +129,17 @@ function FeatureGrid({ features, showAll }) {
 function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const isCurrent = plan._id === (currentPlanId?._id || currentPlanId);
-  const hasTiers  = plan.tiers?.length > 0;
+  const hasTiers = plan.tiers?.length > 0;
   const enabledFeatures = getEnabledFeatures(plan.features);
 
   return (
     <div
-      className={`relative flex flex-col bg-white rounded-3xl border transition-all duration-300 p-6 ${
-        plan.is_recommended
+      className={`relative flex flex-col bg-white rounded-3xl border transition-all duration-300 p-6 ${plan.is_recommended
           ? "border-[#008ecc] ring-2 ring-[#008ecc]/10 shadow-2xl"
           : isCurrent
-          ? "border-emerald-400 ring-2 ring-emerald-100 shadow-lg"
-          : "border-slate-200 shadow-lg hover:shadow-xl hover:-translate-y-1"
-      }`}
+            ? "border-emerald-400 ring-2 ring-emerald-100 shadow-lg"
+            : "border-slate-200 shadow-lg hover:shadow-xl hover:-translate-y-1"
+        }`}
     >
       {plan.is_recommended && (
         <span className="absolute -top-3 right-8 bg-[#008ecc] text-white px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest shadow">
@@ -158,13 +156,12 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-slate-700">{plan.plan_name}</h3>
-          <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${
-            plan.plan_type === "free"
+          <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${plan.plan_type === "free"
               ? "bg-slate-100 text-slate-500"
               : plan.plan_type === "enterprise"
-              ? "bg-purple-100 text-purple-700"
-              : "bg-blue-100 text-blue-700"
-          }`}>
+                ? "bg-purple-100 text-purple-700"
+                : "bg-blue-100 text-blue-700"
+            }`}>
             {plan.plan_type}
           </span>
         </div>
@@ -233,13 +230,12 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
       <div className="mt-auto pt-4 border-t border-slate-100">
         <button
           onClick={() => navigate(`/${tenantSlug}/upgrade?planId=${plan._id}`)}
-          className={`w-full py-2.5 rounded-2xl font-bold text-sm transition-all cursor-pointer shadow-sm hover:shadow-md ${
-            isCurrent
+          className={`w-full py-2.5 rounded-2xl font-bold text-sm transition-all cursor-pointer shadow-sm hover:shadow-md ${isCurrent
               ? "bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-100"
               : plan.is_recommended
-              ? "bg-[#008ecc] text-white hover:bg-[#007bb0]"
-              : "bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:bg-slate-100"
-          }`}
+                ? "bg-[#008ecc] text-white hover:bg-[#007bb0]"
+                : "bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:bg-slate-100"
+            }`}
         >
           {isCurrent ? "Renew / Change Period" : "Select & Upgrade"}
         </button>
@@ -252,10 +248,10 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
 
 const ViewPlans = () => {
   const { tenantSlug } = useParams();
-  const navigate       = useNavigate();
-  const [plans, setPlans]             = useState([]);
+  const navigate = useNavigate();
+  const [plans, setPlans] = useState([]);
   const [currentTenant, setCurrentTenant] = useState(null);
-  const [loading, setLoading]         = useState(true);
+  const [loading, setLoading] = useState(true);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
@@ -292,14 +288,14 @@ const ViewPlans = () => {
   }
 
   // ── Derived values ───────────────────────────────────────────────────────
-  const currentPlan  = currentTenant?.plan_id;
+  const currentPlan = currentTenant?.plan_id;
   const currentCycle = currentTenant?.plan_billing_cycle;
-  const currentTier  = currentPlan?.tiers?.find((t) => t.billing_cycle === currentCycle);
-  const graceDays    = currentTier?.grace_days ?? 0;
+  const currentTier = currentPlan?.tiers?.find((t) => t.billing_cycle === currentCycle);
+  const graceDays = currentTier?.grace_days ?? 0;
 
-  const endDate       = currentTenant?.plan_end_date;
-  const daysLeft      = daysUntil(endDate);
-  const isGrace       = currentTenant?.plan_status === "grace";
+  const endDate = currentTenant?.plan_end_date;
+  const daysLeft = daysUntil(endDate);
+  const isGrace = currentTenant?.plan_status === "grace";
 
   const graceEndDate = endDate && graceDays > 0
     ? new Date(new Date(endDate).getTime() + graceDays * 86_400_000)
@@ -316,21 +312,21 @@ const ViewPlans = () => {
   let expiryBanner = null;
   if (isGrace) {
     expiryBanner = {
-      bg:   "bg-orange-50 border-orange-300",
+      bg: "bg-orange-50 border-orange-300",
       icon: <AlertCircle size={18} className="text-orange-600 flex-shrink-0" />,
       text: `You are in your grace period. Service ends in ${graceDaysLeft} day${graceDaysLeft !== 1 ? "s" : ""} — please renew to avoid interruption.`,
       color: "text-orange-800",
     };
   } else if (daysLeft === 1) {
     expiryBanner = {
-      bg:   "bg-red-50 border-red-300",
+      bg: "bg-red-50 border-red-300",
       icon: <AlertTriangle size={18} className="text-red-600 flex-shrink-0" />,
       text: "Your plan expires TOMORROW! Renew immediately to avoid service interruption.",
       color: "text-red-800",
     };
   } else if (daysLeft !== null && daysLeft <= 7 && daysLeft > 1) {
     expiryBanner = {
-      bg:   "bg-amber-50 border-amber-300",
+      bg: "bg-amber-50 border-amber-300",
       icon: <Clock size={18} className="text-amber-600 flex-shrink-0" />,
       text: `Your plan expires in ${daysLeft} days (${formatDate(endDate)}). Consider renewing soon.`,
       color: "text-amber-800",
@@ -372,13 +368,12 @@ const ViewPlans = () => {
                 </h2>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${
-                  currentTenant.plan_status === "active"  ? "bg-emerald-400 text-white" :
-                  currentTenant.plan_status === "grace"   ? "bg-orange-400 text-white" :
-                  currentTenant.plan_status === "trial"   ? "bg-blue-200 text-blue-900" :
-                  currentTenant.plan_status === "expired" ? "bg-red-400 text-white" :
-                  "bg-slate-200 text-slate-700"
-                }`}>
+                <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${currentTenant.plan_status === "active" ? "bg-emerald-400 text-white" :
+                    currentTenant.plan_status === "grace" ? "bg-orange-400 text-white" :
+                      currentTenant.plan_status === "trial" ? "bg-blue-200 text-blue-900" :
+                        currentTenant.plan_status === "expired" ? "bg-red-400 text-white" :
+                          "bg-slate-200 text-slate-700"
+                  }`}>
                   {currentTenant.plan_status}
                 </span>
                 {currentCycle && (
@@ -419,21 +414,19 @@ const ViewPlans = () => {
                   </div>
                 </div>
 
-                <div className={`border rounded-2xl p-4 space-y-1 ${
-                  daysLeft === 1  ? "bg-red-50 border-red-200" :
-                  daysLeft !== null && daysLeft <= 7 ? "bg-amber-50 border-amber-200" :
-                  isGrace ? "bg-orange-50 border-orange-200" :
-                  "bg-slate-50 border-slate-100"
-                }`}>
+                <div className={`border rounded-2xl p-4 space-y-1 ${daysLeft === 1 ? "bg-red-50 border-red-200" :
+                    daysLeft !== null && daysLeft <= 7 ? "bg-amber-50 border-amber-200" :
+                      isGrace ? "bg-orange-50 border-orange-200" :
+                        "bg-slate-50 border-slate-100"
+                  }`}>
                   <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
                     <Calendar size={11} /> End Date
                   </div>
-                  <div className={`text-sm font-bold ${
-                    daysLeft === 1  ? "text-red-700" :
-                    daysLeft !== null && daysLeft <= 7 ? "text-amber-700" :
-                    isGrace ? "text-orange-700" :
-                    "text-slate-800"
-                  }`}>
+                  <div className={`text-sm font-bold ${daysLeft === 1 ? "text-red-700" :
+                      daysLeft !== null && daysLeft <= 7 ? "text-amber-700" :
+                        isGrace ? "text-orange-700" :
+                          "text-slate-800"
+                    }`}>
                     {formatDate(endDate)}
                     {daysLeft !== null && !isGrace && daysLeft >= 0 && (
                       <span className="block text-xs font-semibold mt-0.5 opacity-70">
@@ -462,11 +455,10 @@ const ViewPlans = () => {
               {/* Plan type badge */}
               {currentPlan && (
                 <div className="flex items-center gap-3">
-                  <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${
-                    currentPlan.plan_type === "free"       ? "bg-slate-100 text-slate-600" :
-                    currentPlan.plan_type === "enterprise" ? "bg-purple-100 text-purple-700" :
-                    "bg-blue-100 text-blue-700"
-                  }`}>
+                  <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${currentPlan.plan_type === "free" ? "bg-slate-100 text-slate-600" :
+                      currentPlan.plan_type === "enterprise" ? "bg-purple-100 text-purple-700" :
+                        "bg-blue-100 text-blue-700"
+                    }`}>
                     {currentPlan.plan_type} plan
                   </span>
                   {graceDays > 0 && (
