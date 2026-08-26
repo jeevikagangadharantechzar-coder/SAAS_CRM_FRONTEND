@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowUpCircle, History, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpCircle, History, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { superApi } from "../../services/api";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
@@ -13,12 +13,18 @@ const UpgradeRequests = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
 
+  // Upgrade History delete — single + bulk, actually removes the record
+  // from the database (not just a UI-side hide).
+  const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
+  const [deletingHistory, setDeletingHistory] = useState(false);
+
   // Pagination State
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
   useEffect(() => {
     setPage(1);
+    setSelectedHistoryIds([]);
   }, [activeTab]);
 
   // Rejection states
@@ -58,6 +64,55 @@ const UpgradeRequests = () => {
       toast.error("Unable to load upgrade history.");
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const handleSelectHistoryItem = (id) => {
+    setSelectedHistoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleSelectAllHistory = (e) => {
+    setSelectedHistoryIds(e.target.checked ? paginatedHistoryRequests.map((r) => r._id) : []);
+  };
+
+  const handleDeleteHistoryItem = async (id) => {
+    if (!window.confirm("Permanently delete this upgrade history record?")) return;
+    setDeletingHistory(true);
+    try {
+      const res = await superApi.delete(`/tenants/upgrade-history/${id}`);
+      if (res.data?.success) {
+        toast.success("Upgrade history record deleted");
+        setSelectedHistoryIds((prev) => prev.filter((x) => x !== id));
+        fetchUpgradeHistory();
+      } else {
+        toast.error(res.data?.error || "Failed to delete upgrade history record.");
+      }
+    } catch (err) {
+      console.error("Failed to delete upgrade history record:", err);
+      toast.error(err.response?.data?.error || "Failed to delete upgrade history record.");
+    } finally {
+      setDeletingHistory(false);
+    }
+  };
+
+  const handleBulkDeleteHistory = async () => {
+    if (!selectedHistoryIds.length) return;
+    if (!window.confirm(`Permanently delete ${selectedHistoryIds.length} selected record(s)?`)) return;
+    setDeletingHistory(true);
+    try {
+      const res = await superApi.post("/tenants/upgrade-history/bulk-delete", { ids: selectedHistoryIds });
+      if (res.data?.success) {
+        toast.success(`${res.data.deletedCount ?? selectedHistoryIds.length} record(s) deleted`);
+        setSelectedHistoryIds([]);
+        fetchUpgradeHistory();
+      } else {
+        toast.error(res.data?.error || "Failed to delete selected records.");
+      }
+    } catch (err) {
+      console.error("Failed to bulk delete upgrade history:", err);
+      toast.error(err.response?.data?.error || "Failed to delete selected records.");
+    } finally {
+      setDeletingHistory(false);
     }
   };
 
@@ -361,15 +416,35 @@ const UpgradeRequests = () => {
       ) : (
         /* Upgrade History Table */
         <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center space-x-2">
-            <History className="text-[#008ecc]" size={20} />
-            <h3 className="text-slate-700">Processed Upgrade History</h3>
+          <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <History className="text-[#008ecc]" size={20} />
+              <h3 className="text-slate-700">Processed Upgrade History</h3>
+            </div>
+            {selectedHistoryIds.length > 0 && (
+              <button
+                onClick={handleBulkDeleteHistory}
+                disabled={deletingHistory}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-60 cursor-pointer"
+              >
+                <Trash2 size={14} />
+                Delete Selected ({selectedHistoryIds.length})
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/70 text-slate-500 uppercase text-xs font-bold border-b border-slate-200">
+                  <th className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      checked={paginatedHistoryRequests.length > 0 && selectedHistoryIds.length === paginatedHistoryRequests.length}
+                      onChange={handleSelectAllHistory}
+                    />
+                  </th>
                   <th className="px-6 py-4">Tenant Info</th>
                   <th className="px-6 py-4">Upgraded Plan</th>
                   <th className="px-6 py-4">Seats</th>
@@ -394,6 +469,14 @@ const UpgradeRequests = () => {
 
                     return (
                       <tr key={req._id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300"
+                            checked={selectedHistoryIds.includes(req._id)}
+                            onChange={() => handleSelectHistoryItem(req._id)}
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-900">{req.tenant_id?.name || "N/A"}</span>
@@ -424,25 +507,35 @@ const UpgradeRequests = () => {
                           {req.final_price === 0 ? "Free / Custom" : `$${req.final_price.toFixed(2)}`}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border gap-1 uppercase ${
-                            req.status === "approved"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : "bg-red-50 text-red-700 border-red-200"
-                          }`}>
-                            {req.status === "approved" ? (
-                              <CheckCircle2 size={12} className="text-green-500" />
-                            ) : (
-                              <XCircle size={12} className="text-red-500" />
-                            )}
-                            {req.status}
-                          </span>
+                          <div className="flex items-center justify-end gap-3">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border gap-1 uppercase ${
+                              req.status === "approved"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-700 border-red-200"
+                            }`}>
+                              {req.status === "approved" ? (
+                                <CheckCircle2 size={12} className="text-green-500" />
+                              ) : (
+                                <XCircle size={12} className="text-red-500" />
+                              )}
+                              {req.status}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteHistoryItem(req._id)}
+                              disabled={deletingHistory}
+                              title="Delete record"
+                              className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 cursor-pointer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400 font-semibold">
+                    <td colSpan={9} className="px-6 py-12 text-center text-slate-400 font-semibold">
                       No upgrade request history available.
                     </td>
                   </tr>

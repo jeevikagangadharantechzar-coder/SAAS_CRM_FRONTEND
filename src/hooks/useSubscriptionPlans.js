@@ -41,7 +41,7 @@ export const useCreatePlan = () => {
       toast.success(data?.message || "Plan created successfully");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || error.message || "Failed to create plan");
+      toast.error(error.response?.data?.error || error.response?.data?.message || error.message || "Failed to create plan");
     },
   });
 };
@@ -56,7 +56,7 @@ export const useUpdatePlan = () => {
       toast.success(data?.message || "Plan updated successfully");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || error.message || "Failed to update plan");
+      toast.error(error.response?.data?.error || error.response?.data?.message || error.message || "Failed to update plan");
     },
   });
 };
@@ -70,7 +70,7 @@ export const useDeletePlan = () => {
       toast.success(data?.message || "Plan deleted successfully");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || error.message || "Failed to delete plan");
+      toast.error(error.response?.data?.error || error.response?.data?.message || error.message || "Failed to delete plan");
     },
   });
 };
