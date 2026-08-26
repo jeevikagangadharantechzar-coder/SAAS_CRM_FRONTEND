@@ -222,8 +222,8 @@ const FreeTrialSignups = () => {
                 key={opt.value}
                 onClick={() => handlePeriodChange(opt.value)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${period === opt.value
-                    ? "bg-[#008ecc] text-white border-[#008ecc] shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-[#008ecc]/40 hover:text-[#008ecc]"
+                  ? "bg-[#008ecc] text-white border-[#008ecc] shadow-sm"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-[#008ecc]/40 hover:text-[#008ecc]"
                   }`}
               >
                 {opt.label}
@@ -361,7 +361,7 @@ const FreeTrialSignups = () => {
               </span>
               <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
                 <span>Rows per page:</span>
-                <select 
+                <select
                   value={limit}
                   onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
                   className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
