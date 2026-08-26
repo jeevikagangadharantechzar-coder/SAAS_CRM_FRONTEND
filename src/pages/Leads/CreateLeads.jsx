@@ -197,6 +197,19 @@ export default function CreateLeads() {
     setIsCustomIndustry(!!isCustom);
     setExistingAttachments(contactFormData.attachments || []);
     setExistingImages(contactFormData.images || []);
+    // Fields the tenant's own website form sent that don't map to a known
+    // lead column (every tenant's form has different fields) — carried over
+    // from the contact form submission so nothing typed by the visitor is lost.
+    setCustomFields(
+      (contactFormData.customFields || []).map((f) => ({
+        id: nextCustomFieldId(),
+        cardTitle: "Website Form",
+        name: f.name || "",
+        type: "text",
+        options: [],
+        value: f.value || "",
+      }))
+    );
   }, [contactFormData, leadId]);
 
   //  Fetch lead if editing
