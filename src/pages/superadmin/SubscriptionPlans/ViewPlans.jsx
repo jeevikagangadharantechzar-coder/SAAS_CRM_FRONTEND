@@ -179,7 +179,11 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
           <div className="space-y-1.5">
             {plan.tiers.map((tier) => (
               <div key={tier.billing_cycle} className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 font-medium">{TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}</span>
+                <span className="text-slate-500 font-medium">
+                  {tier.billing_cycle === "monthly" && tier.duration_months > 1
+                    ? `Custom (${tier.duration_months} Months)`
+                    : TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}
+                </span>
                 <span className="font-bold text-slate-900">
                   {plan.currency || "USD"} {tier.price.toLocaleString()}
                   <span className="text-slate-400 font-normal text-xs ml-1">/ {tier.duration_months}mo</span>

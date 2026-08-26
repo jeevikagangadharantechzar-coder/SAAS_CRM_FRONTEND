@@ -129,7 +129,9 @@ export const PlanCard = ({ plan, onView, onEdit, onDelete }) => {
               {tiers.map((tier) => (
                 <div key={tier.billing_cycle} className="flex items-center justify-between">
                   <span className="text-xs text-slate-500 font-medium">
-                    {TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}
+                    {tier.billing_cycle === "monthly" && tier.duration_months > 1 
+                      ? `Custom (${tier.duration_months} Months)` 
+                      : TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}
                   </span>
                   <span className="text-sm font-black text-slate-800">
                     {symbol}{parseFloat(tier.price || 0).toFixed(2)}

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNotifications } from "../context/NotificationContext";
 import { disconnectSocket } from "../utils/socket";
 import { getNotificationBadge, getNotificationAccentClass } from "../utils/taskNotifications";
-import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2 } from "lucide-react";
+import { ShieldCheck, Maximize, Minimize, X as XIcon, CheckCheck, Trash2, Clock, AlertTriangle } from "lucide-react";
 
 import { Settings, Plug } from "lucide-react";
 
@@ -62,6 +62,9 @@ const Navbar = ({ toggleSidebar }) => {
   const API_SI = import.meta.env.VITE_SI_URI;
   const API_URL = import.meta.env.VITE_API_URL;
 
+  const [tenantInfo, setTenantInfo] = useState(null);
+  const [isBannerDismissedToday, setIsBannerDismissedToday] = useState(false);
+
 
   // Sales team number (international format)
   const salesTeamNumber = "919952885799"; // replace with your number
@@ -78,7 +81,7 @@ const Navbar = ({ toggleSidebar }) => {
     }
   }, []);
 
-  
+
   //  Build profile image URL with cache-busting
   const getProfileImageUrl = (image) => {
     if (!image) return null;
@@ -102,12 +105,29 @@ const Navbar = ({ toggleSidebar }) => {
       try {
         const stored = JSON.parse(localStorage.getItem("user") || "{}");
         if (stored?._id) setUser(stored);
-      } catch {}
+      } catch { }
+    }
+  };
+
+  const fetchTenantInfo = async () => {
+    try {
+      const tenantSlug = localStorage.getItem("tenantSlug");
+      if (!tenantSlug) return;
+      const res = await axios.get(`${API_SI}/superadmin/api/tenants/public/by-slug/${tenantSlug}`);
+      setTenantInfo(res.data.tenant);
+    } catch (err) {
+      console.error("Failed to fetch tenant info:", err);
     }
   };
 
   useEffect(() => {
     fetchUser();
+    fetchTenantInfo();
+
+    const dismissedDate = localStorage.getItem("planWarningDismissedDate");
+    if (dismissedDate === new Date().toDateString()) {
+      setIsBannerDismissedToday(true);
+    }
   }, []);
 
   //  Listen for profile update events (fired after EditUserModal saves)
@@ -121,34 +141,34 @@ const Navbar = ({ toggleSidebar }) => {
   }, []);
 
 
-/* ── Logout Function ─────────────────────── */
-const handleLogout = async () => {
-  const token = localStorage.getItem("token");
-  const tenantSlug = localStorage.getItem("tenantSlug");
+  /* ── Logout Function ─────────────────────── */
+  const handleLogout = async () => {
+    const token = localStorage.getItem("token");
+    const tenantSlug = localStorage.getItem("tenantSlug");
 
-  try {
-    await axios.post(
-      `${API_URL}/users/logout`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-  } catch (err) {
-    console.error("Logout error:", err);
-  } finally {
-    //  Clear only session-specific keys, keeping tab tracking intact
-    localStorage.removeItem("token");
-    localStorage.removeItem("tenantSlug");
-    localStorage.removeItem("user");
-    localStorage.removeItem("lastActivity");
+    try {
+      await axios.post(
+        `${API_URL}/users/logout`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      //  Clear only session-specific keys, keeping tab tracking intact
+      localStorage.removeItem("token");
+      localStorage.removeItem("tenantSlug");
+      localStorage.removeItem("user");
+      localStorage.removeItem("lastActivity");
 
-    //  Redirect to tenant-specific login page
-    if (tenantSlug) {
-      window.location.href = `/${tenantSlug}/login`;
-    } else {
-      window.location.href = "/";
+      //  Redirect to tenant-specific login page
+      if (tenantSlug) {
+        window.location.href = `/${tenantSlug}/login`;
+      } else {
+        window.location.href = "/";
+      }
     }
-  }
-};
+  };
 
   // Outside click detection
   useEffect(() => {
@@ -218,7 +238,7 @@ const handleLogout = async () => {
     if (n._id && !n._id.toString().includes("-")) {
       axios.patch(getNotifApiUrl(`read/${n._id}`), {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }).catch(() => {});
+      }).catch(() => { });
     }
     const tenantSlug = localStorage.getItem("tenantSlug");
     const withTenant = (path) => (tenantSlug ? `/${tenantSlug}/${path}` : `/${path}`);
@@ -237,7 +257,7 @@ const handleLogout = async () => {
     if (n._id && !n._id.toString().includes("-")) {
       axios.delete(getNotifApiUrl(n._id), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -250,7 +270,7 @@ const handleLogout = async () => {
         unreadIds.map((id) =>
           axios.patch(getNotifApiUrl(`read/${id}`), {}, {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }).catch(() => {})
+          }).catch(() => { })
         )
       );
     }
@@ -264,7 +284,7 @@ const handleLogout = async () => {
       axios.delete(getNotifApiUrl("bulk"), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         data: { ids },
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -281,7 +301,7 @@ const handleLogout = async () => {
     }
   };
 
-  
+
   //  Derive display name and avatar URL
   const displayName =
     user?.name ||
@@ -293,24 +313,77 @@ const handleLogout = async () => {
     ? getProfileImageUrl(user.profileImage)
     : null;
 
+  // Expiry Banner Logic
+  let expiryBanner = null;
+  if (isAdmin && tenantInfo && !isBannerDismissedToday) {
+    if (tenantInfo.plan_status === "active" || tenantInfo.plan_status === "grace") {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const end = new Date(tenantInfo.plan_end_date);
+      end.setHours(0, 0, 0, 0);
+      const daysLeft = Math.round((end - now) / 86400000);
+      const formatDate = (date) => new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+
+      if (daysLeft <= 1) {
+        // Covers "expires tomorrow" (1), "expires today" (0), and already
+        // past plan_end_date but not yet flipped to "expired" by the daily
+        // cron (negative) — all equally urgent, so all get the same banner.
+        expiryBanner = {
+          bg: "bg-red-50 border-red-300",
+          icon: <AlertTriangle size={18} className="text-red-600 flex-shrink-0" />,
+          text: daysLeft === 1
+            ? "Your plan expires TOMORROW! Renew immediately to avoid service interruption."
+            : "Your plan has expired! Renew immediately to avoid service interruption.",
+          color: "text-red-800",
+        };
+      } else if (daysLeft <= 7) {
+        expiryBanner = {
+          bg: "bg-amber-50 border-amber-300",
+          icon: <Clock size={18} className="text-amber-600 flex-shrink-0" />,
+          text: `Your plan expires in ${daysLeft} days (${formatDate(tenantInfo.plan_end_date)}). Consider renewing soon.`,
+          color: "text-amber-800",
+        };
+      }
+    }
+  }
+
+  const handleDismissBanner = () => {
+    localStorage.setItem("planWarningDismissedDate", new Date().toDateString());
+    setIsBannerDismissedToday(true);
+  };
+
   return (
     <>
+      {expiryBanner && (
+        <div className={`w-full flex items-center justify-center gap-3 px-5 py-2.5 border-b z-50 relative ${expiryBanner.bg} ${expiryBanner.color} text-sm font-semibold`}>
+          <div className="flex items-center gap-3">
+            {expiryBanner.icon}
+            <span>{expiryBanner.text}</span>
+          </div>
+          <button
+            onClick={handleDismissBanner}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-black/5 transition-colors"
+          >
+            <XIcon size={16} />
+          </button>
+        </div>
+      )}
       <div className="w-full bg-white dark:bg-gray-900 dark:text-white p-2 sm:p-3 flex justify-between items-center shadow-sm border-b border-gray-200 dark:border-gray-700">
         {/* Sidebar Toggle */}
         <div className="relative group shrink-0">
-        <button
-          onClick={toggleSidebar}
-          className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          <Menu size={24} className="text-gray-600 dark:text-gray-300" />
-        </button>
-         {/*  TOOLTIP */}
-         <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Menu size={24} className="text-gray-600 dark:text-gray-300" />
+          </button>
+          {/*  TOOLTIP */}
+          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 
            opacity-0 group-hover:opacity-100 transition-opacity
            bg-gray-900 text-white text-xs px-3 py-1 rounded-md whitespace-nowrap
           pointer-events-none z-50">
-          Menu
-         </div>
+            Menu
+          </div>
         </div>
 
         {/* Right Section */}
@@ -336,9 +409,8 @@ const handleLogout = async () => {
                       document.documentElement.lang = code;
                       setShowLangDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-blue-50 dark:hover:bg-gray-700 ${
-                      currentLang === code ? "font-semibold text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"
-                    }`}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-blue-50 dark:hover:bg-gray-700 ${currentLang === code ? "font-semibold text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"
+                      }`}
                   >
                     {label}
                   </button>
@@ -349,43 +421,43 @@ const handleLogout = async () => {
 
           {/* Fullscreen Toggle */}
           <div className="relative group hidden sm:block">
-          <button
-            onClick={toggleFullscreen}
-            className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            {isFullscreen ? (
-              <Minimize size={22} className="text-gray-600 dark:text-gray-300" />
-            ) : (
-              <Maximize size={22} className="text-gray-600 dark:text-gray-300" />
-            )}
-          </button>
-          {/*  TOOLTIP */}
-          <div
-            className="absolute top-full mt-2 left-1/2 -translate-x-1/2
-            opacity-0 group-hover:opacity-100 transition-opacity
-            bg-gray-900 text-white text-xs px-3 py-1 rounded-md whitespace-nowrap
-            pointer-events-none z-50"
-          > 
-          {isFullscreen ? "Minimize" : "Maximize"}
-          </div>
-        </div>
-
-         
-          <div className="relative" ref={notificationRef}>
-            <div className="relative group">
-
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative transition-colors"
+              onClick={toggleFullscreen}
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <Bell size={22} className="text-gray-600 dark:text-gray-300" />
-              {notifications.filter((n) => !n.read && !n.isRead).length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  {notifications.filter((n) => !n.read && !n.isRead).length}
-                </span>
+              {isFullscreen ? (
+                <Minimize size={22} className="text-gray-600 dark:text-gray-300" />
+              ) : (
+                <Maximize size={22} className="text-gray-600 dark:text-gray-300" />
               )}
             </button>
             {/*  TOOLTIP */}
+            <div
+              className="absolute top-full mt-2 left-1/2 -translate-x-1/2
+            opacity-0 group-hover:opacity-100 transition-opacity
+            bg-gray-900 text-white text-xs px-3 py-1 rounded-md whitespace-nowrap
+            pointer-events-none z-50"
+            >
+              {isFullscreen ? "Minimize" : "Maximize"}
+            </div>
+          </div>
+
+
+          <div className="relative" ref={notificationRef}>
+            <div className="relative group">
+
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative transition-colors"
+              >
+                <Bell size={22} className="text-gray-600 dark:text-gray-300" />
+                {notifications.filter((n) => !n.read && !n.isRead).length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                    {notifications.filter((n) => !n.read && !n.isRead).length}
+                  </span>
+                )}
+              </button>
+              {/*  TOOLTIP */}
               <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 
                 opacity-0 group-hover:opacity-100 transition-opacity
                 bg-gray-900 text-white text-xs px-3 py-1 rounded-md whitespace-nowrap
@@ -424,57 +496,56 @@ const handleLogout = async () => {
                       const accent = getNotificationAccentClass(n);
                       const badge = getNotificationBadge(n);
                       return (
-                      <div
-                        key={n._id}
-                        onClick={() => handleNotificationClick(n)}
-                        className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-l-4 border-gray-100 dark:border-gray-600 last:border-0 group ${
-                          accent || (!n.read && !n.isRead ? "border-l-transparent bg-blue-50/40 dark:bg-blue-900/20" : "border-l-transparent")
-                        }`}
-                      >
-                        <div className="flex-shrink-0 relative">
-                          {n.profileImage && !notifAvatarErrorIds.has(n._id) ? (
-                            <img
-                              src={getProfileImageUrl(n.profileImage)}
-                              alt="avatar"
-                              className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
-                              onError={() => setNotifAvatarErrorIds((prev) => new Set(prev).add(n._id))}
-                            />
-                          ) : (
-                            <FaUserCircle
-                              size={40}
-                              className="text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-full"
-                            />
-                          )}
-                          {!n.read && !n.isRead && (
-                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
-                          )}
-                        </div>
-                        <div className="ml-3 flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            {badge && (
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border shrink-0 ${badge.className}`}>
-                                {badge.emoji} {badge.label}
-                              </span>
+                        <div
+                          key={n._id}
+                          onClick={() => handleNotificationClick(n)}
+                          className={`flex items-start px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer border-b border-l-4 border-gray-100 dark:border-gray-600 last:border-0 group ${accent || (!n.read && !n.isRead ? "border-l-transparent bg-blue-50/40 dark:bg-blue-900/20" : "border-l-transparent")
+                            }`}
+                        >
+                          <div className="flex-shrink-0 relative">
+                            {n.profileImage && !notifAvatarErrorIds.has(n._id) ? (
+                              <img
+                                src={getProfileImageUrl(n.profileImage)}
+                                alt="avatar"
+                                className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                                onError={() => setNotifAvatarErrorIds((prev) => new Set(prev).add(n._id))}
+                              />
+                            ) : (
+                              <FaUserCircle
+                                size={40}
+                                className="text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-full"
+                              />
+                            )}
+                            {!n.read && !n.isRead && (
+                              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
                             )}
                           </div>
-                          <p className="text-gray-700 dark:text-gray-200 text-sm font-medium">
-                            {n.title || "Notification"}
-                          </p>
-                          <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 line-clamp-2">
-                            {n.text}
-                          </p>
-                          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-                            {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-                          </p>
+                          <div className="ml-3 flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              {badge && (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border shrink-0 ${badge.className}`}>
+                                  {badge.emoji} {badge.label}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-200 text-sm font-medium">
+                              {n.title || "Notification"}
+                            </p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 line-clamp-2">
+                              {n.text}
+                            </p>
+                            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                              {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => handleDeleteNotification(e, n)}
+                            className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-all shrink-0"
+                            title="Delete notification"
+                          >
+                            <XIcon size={13} />
+                          </button>
                         </div>
-                        <button
-                          onClick={(e) => handleDeleteNotification(e, n)}
-                          className="ml-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-all shrink-0"
-                          title="Delete notification"
-                        >
-                          <XIcon size={13} />
-                        </button>
-                      </div>
                       );
                     })
                   ) : (
@@ -501,7 +572,7 @@ const handleLogout = async () => {
           </div>
 
           {/* setting button */}
-          
+
           {isAdmin && (
             <div className="relative group">
               <button
@@ -543,59 +614,58 @@ const handleLogout = async () => {
           {/* User Dropdown */}
           <div className="relative shrink-0" ref={dropdownRef}>
             <div className="relative group">
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center space-x-1.5 sm:space-x-3 bg-white dark:bg-gray-800 rounded-xl px-1.5 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {/* User Avatar */}
-              <div className="relative shrink-0">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="User Avatar"
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = "none";
-                      // Show fallback icon
-                      e.target.nextSibling &&
-                        (e.target.nextSibling.style.display = "block");
-                    }}
-                  />
-                ) : (
-                  <FaUserCircle
-                    size={40}
-                    className="text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600 rounded-full"
-                  />
-                )}
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></span>
-              </div>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center space-x-1.5 sm:space-x-3 bg-white dark:bg-gray-800 rounded-xl px-1.5 py-1.5 sm:px-4 sm:py-2 shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {/* User Avatar */}
+                <div className="relative shrink-0">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="User Avatar"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = "none";
+                        // Show fallback icon
+                        e.target.nextSibling &&
+                          (e.target.nextSibling.style.display = "block");
+                      }}
+                    />
+                  ) : (
+                    <FaUserCircle
+                      size={40}
+                      className="text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600 rounded-full"
+                    />
+                  )}
+                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></span>
+                </div>
 
-              {/* User Info */}
-              <div className="flex-col text-left hidden md:flex">
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  {user?.name || "Guest"}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  {user?.role?.name || "No Role"}
-                </p>
-              </div>
+                {/* User Info */}
+                <div className="flex-col text-left hidden md:flex">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    {user?.name || "Guest"}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    {user?.role?.name || "No Role"}
+                  </p>
+                </div>
 
-              {/* Dropdown Icon */}
-              <ChevronDown
-                size={20}
-                className={`hidden sm:block text-gray-500 dark:text-gray-400 transition-transform duration-200 shrink-0 ${
-                  showDropdown ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            {/*  TOOLTIP */}
-            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 
+                {/* Dropdown Icon */}
+                <ChevronDown
+                  size={20}
+                  className={`hidden sm:block text-gray-500 dark:text-gray-400 transition-transform duration-200 shrink-0 ${showDropdown ? "rotate-180" : ""
+                    }`}
+                />
+              </button>
+              {/*  TOOLTIP */}
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 
              opacity-0 group-hover:opacity-100 transition-opacity
              bg-gray-900 text-white text-xs px-3 py-1 rounded-md whitespace-nowrap
              pointer-events-none z-50">
-             Profile
-            </div>
+                Profile
+              </div>
             </div>
 
             {showDropdown && (
@@ -622,11 +692,10 @@ const handleLogout = async () => {
                         key={key}
                         type="button"
                         onClick={() => setFontSize(key)}
-                        className={`flex-1 py-1.5 rounded-lg border font-medium transition-colors ${sizeClass} ${
-                          fontSize === key
+                        className={`flex-1 py-1.5 rounded-lg border font-medium transition-colors ${sizeClass} ${fontSize === key
                             ? "border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500"
                             : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
+                          }`}
                       >
                         AA
                       </button>

@@ -481,11 +481,40 @@ export const PlanForm = ({
                           {/* Label + duration */}
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm font-bold ${tier.enabled ? "text-slate-800" : "text-slate-400"}`}>
-                              {tier.label}
+                              {tier.billing_cycle === "monthly" && tier.duration_months > 1 
+                                ? "Custom Months" 
+                                : tier.label}
                             </p>
-                            <p className="text-xs text-slate-400 font-medium">
-                              {tier.duration_months} {tier.duration_months === 1 ? "month" : "months"} validity
-                            </p>
+                            {tier.billing_cycle === "monthly" && tier.enabled ? (
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <div className="flex items-center border border-slate-300 rounded overflow-hidden">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateTier(tier.billing_cycle, "duration_months", Math.max(1, tier.duration_months - 1))}
+                                    className="bg-slate-50 hover:bg-slate-100 px-2 py-0.5 text-slate-500 font-bold border-r border-slate-300"
+                                  >
+                                    -
+                                  </button>
+                                  <div className="px-3 py-0.5 text-xs font-semibold bg-white text-center min-w-[30px]">
+                                    {tier.duration_months}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateTier(tier.billing_cycle, "duration_months", Math.min(5, tier.duration_months + 1))}
+                                    className="bg-slate-50 hover:bg-slate-100 px-2 py-0.5 text-slate-500 font-bold border-l border-slate-300"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <span className="text-xs text-slate-400 font-medium">
+                                  {tier.duration_months === 1 ? "month" : "months"} validity
+                                </span>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                                {tier.duration_months} {tier.duration_months === 1 ? "month" : "months"} validity
+                              </p>
+                            )}
                           </div>
 
                           {/* Price input */}

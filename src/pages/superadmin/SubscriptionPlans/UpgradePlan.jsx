@@ -93,7 +93,7 @@ const UpgradePlan = () => {
       const currentTier  = activePlan?.tiers?.find((t) => t.billing_cycle === currentCycle);
       const activePrice  = currentTier?.price ?? activePlan?.price_monthly ?? 0;
 
-      const totalDays     = currentCycle === "yearly" ? 365 : currentCycle === "half_yearly" ? 180 : 30;
+      const totalDays     = currentCycle === "yearly" ? 365 : currentCycle === "half_yearly" ? 180 : (currentTier?.duration_months || 1) * 30;
       const remainingMs   = new Date(currentTenant.plan_end_date) - new Date();
       const remainingDays = Math.max(0, Math.ceil(remainingMs / 86_400_000));
       const discount      = Number(((activePrice / totalDays) * remainingDays).toFixed(2));
@@ -257,6 +257,9 @@ const UpgradePlan = () => {
                   <div className="flex flex-wrap gap-3">
                     {selectedPlan.tiers.map((tier) => {
                       const isCurrentCycle = selectedPlanId === currentPlanId && tier.billing_cycle === currentCycle;
+                      const tierLabel = tier.billing_cycle === "monthly" && tier.duration_months > 1 
+                        ? `Custom (${tier.duration_months} Months)` 
+                        : TIER_LABELS[tier.billing_cycle] || tier.billing_cycle;
                       return (
                         <button
                           key={tier.billing_cycle}
@@ -268,7 +271,7 @@ const UpgradePlan = () => {
                               : "bg-white border-slate-200 text-slate-600 hover:border-[#008ecc] hover:text-[#008ecc]"
                           }`}
                         >
-                          {TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}
+                          {tierLabel}
                           <span className="block text-xs font-normal opacity-80 mt-0.5">
                             {selectedPlan.currency || "USD"} {tier.price.toLocaleString()}
                           </span>
