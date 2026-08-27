@@ -209,7 +209,7 @@ const TenantDetail = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Core parameters */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -217,7 +217,7 @@ const TenantDetail = () => {
               <Building2 className="text-[#008ecc]" size={20} />
               <h3 className="">Workspace Configuration</h3>
             </div>
-            
+
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
               <div className="space-y-1">
                 <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Organization Name</span>
@@ -246,9 +246,8 @@ const TenantDetail = () => {
 
               <div className="space-y-1">
                 <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Active Status</span>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
-                  tenant.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"
-                }`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${tenant.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"
+                  }`}>
                   {tenant.isActive ? "Live" : "Inactive"}
                 </span>
               </div>
@@ -269,13 +268,13 @@ const TenantDetail = () => {
               <UserCheck className="text-[#008ecc]" size={20} />
               <h3 className="">Active Statistics</h3>
             </div>
-            
+
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
               <div className="space-y-1">
                 <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Current Seats Used</span>
                 <span className="text-2xl font-bold text-slate-800">{tenant.activeUsersCount} Users</span>
               </div>
-              
+
               <div className="space-y-1">
                 <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Seat Limits</span>
                 <span className="text-2xl font-bold text-slate-800">
@@ -319,9 +318,8 @@ const TenantDetail = () => {
                           {h.final_price === 0 ? "Free / Custom" : `$${h.final_price.toFixed(2)}`}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${
-                            h.type === "mid_cycle" ? "bg-cyan-50 text-cyan-700 border-cyan-200" : "bg-purple-50 text-purple-700 border-purple-200"
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${h.type === "mid_cycle" ? "bg-cyan-50 text-cyan-700 border-cyan-200" : "bg-purple-50 text-purple-700 border-purple-200"
+                            }`}>
                             {h.type === "mid_cycle" ? "Mid-Cycle" : "Expired / Limit"}
                           </span>
                         </td>
@@ -356,7 +354,13 @@ const TenantDetail = () => {
 
               <div className="flex justify-between py-2 border-b border-slate-100">
                 <span className="text-slate-400">Previous Plan</span>
-                <span className="font-bold text-slate-700 uppercase">{previousPlan?.plan_name || "None (First Plan)"}</span>
+                <span className="font-bold text-slate-700 uppercase">
+                  {history.length > 1
+                    ? (previousPlan?.plan_name || "Unknown Plan")
+                    : history.length === 1
+                      ? "Trial / Free (Initial)"
+                      : "None (First Plan)"}
+                </span>
               </div>
 
               <div className="flex justify-between py-2 border-b border-slate-100">
@@ -385,14 +389,13 @@ const TenantDetail = () => {
 
               <div className="flex justify-between py-2 border-b border-slate-100">
                 <span className="text-slate-400">Status</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${
-                  tenant.plan_status === "active" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
-                }`}>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${tenant.plan_status === "active" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
+                  }`}>
                   {tenant.plan_status}
                 </span>
               </div>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
