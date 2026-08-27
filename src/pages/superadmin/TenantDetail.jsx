@@ -336,13 +336,13 @@ const TenantDetail = () => {
                       {tenant?.createdAt ? format(new Date(tenant.createdAt), "MMM dd, yyyy HH:mm") : "Initial"}
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900 uppercase">
-                      {history.length === 0 ? (tenant?.plan_id?.plan_name || "Trial / Free") : "Trial / Free (Initial)"}
+                      {tenant?.initial_plan_name || "Trial / Free"}
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-700">
-                      Default Seats
+                      {tenant?.initial_max_users ? `${tenant.initial_max_users} Seats` : "Default Seats"}
                     </td>
                     <td className="px-6 py-4 font-extrabold text-[#008ecc]">
-                      Free / Custom
+                      {tenant?.initial_price ? `$${tenant.initial_price.toFixed(2)}` : "Free / Custom"}
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase bg-slate-100 text-slate-600 border-slate-200">
@@ -376,7 +376,7 @@ const TenantDetail = () => {
                   {history.length > 1
                     ? (previousPlan?.plan_name || "Unknown Plan")
                     : history.length === 1
-                      ? "Trial / Free (Initial)"
+                      ? (tenant?.initial_plan_name || "Trial / Free (Initial)")
                       : "None (First Plan)"}
                 </span>
               </div>
