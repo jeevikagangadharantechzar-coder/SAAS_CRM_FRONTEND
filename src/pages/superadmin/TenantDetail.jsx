@@ -302,36 +302,49 @@ const TenantDetail = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {history.length > 0 ? (
-                    history.map((h) => (
-                      <tr key={h._id} className="hover:bg-slate-50/50 transition">
-                        <td className="px-6 py-4 font-medium whitespace-nowrap">
-                          {format(new Date(h.updatedAt), "MMM dd, yyyy HH:mm")}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-900 uppercase">
-                          {h.plan_id?.plan_name || "Unknown Tier"}
-                        </td>
-                        <td className="px-6 py-4 font-semibold text-slate-700">
-                          {h.wanted_users} Seats
-                        </td>
-                        <td className="px-6 py-4 font-extrabold text-[#008ecc]">
-                          {h.final_price === 0 ? "Free / Custom" : `$${h.final_price.toFixed(2)}`}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${h.type === "mid_cycle" ? "bg-cyan-50 text-cyan-700 border-cyan-200" : "bg-purple-50 text-purple-700 border-purple-200"
-                            }`}>
-                            {h.type === "mid_cycle" ? "Mid-Cycle" : "Expired / Limit"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center text-slate-400 font-medium">
-                        No previous plan activations found.
+                  {history.map((h) => (
+                    <tr key={h._id} className="hover:bg-slate-50/50 transition">
+                      <td className="px-6 py-4 font-medium whitespace-nowrap">
+                        {format(new Date(h.updatedAt), "MMM dd, yyyy HH:mm")}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-slate-900 uppercase">
+                        {h.plan_id?.plan_name || "Unknown Tier"}
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-slate-700">
+                        {h.wanted_users} Seats
+                      </td>
+                      <td className="px-6 py-4 font-extrabold text-[#008ecc]">
+                        {h.final_price === 0 ? "Free / Custom" : `$${h.final_price.toFixed(2)}`}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase ${h.type === "mid_cycle" ? "bg-cyan-50 text-cyan-700 border-cyan-200" : "bg-purple-50 text-purple-700 border-purple-200"
+                          }`}>
+                          {h.type === "mid_cycle" ? "Mid-Cycle" : "Expired / Limit"}
+                        </span>
                       </td>
                     </tr>
-                  )}
+                  ))}
+                  
+                  {/* Always show the Initial Plan at the bottom of the history */}
+                  <tr key="initial-plan" className="hover:bg-slate-50/50 transition bg-slate-50/30">
+                    <td className="px-6 py-4 font-medium whitespace-nowrap">
+                      {tenant?.createdAt ? format(new Date(tenant.createdAt), "MMM dd, yyyy HH:mm") : "Initial"}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-slate-900 uppercase">
+                      {history.length === 0 ? (tenant?.plan_id?.plan_name || "Trial / Free") : "Trial / Free (Initial)"}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-slate-700">
+                      Default Seats
+                    </td>
+                    <td className="px-6 py-4 font-extrabold text-[#008ecc]">
+                      Free / Custom
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border uppercase bg-slate-100 text-slate-600 border-slate-200">
+                        Initial Setup
+                      </span>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
