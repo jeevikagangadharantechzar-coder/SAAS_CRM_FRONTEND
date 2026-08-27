@@ -152,6 +152,22 @@ const Login = () => {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (tenantSlug) {
+      axios
+        .get(`${SI_URI}/superadmin/api/tenants/public/by-slug/${tenantSlug}`)
+        .catch((err) => {
+          if (err.response?.status === 403) {
+            setMessage(err.response?.data?.message || "Your account has been suspended contact administrator");
+            setIsError(true);
+          } else if (err.response?.status === 404) {
+            setMessage(err.response?.data?.error || "Workspace not found");
+            setIsError(true);
+          }
+        });
+    }
+  }, [tenantSlug]);
+
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
