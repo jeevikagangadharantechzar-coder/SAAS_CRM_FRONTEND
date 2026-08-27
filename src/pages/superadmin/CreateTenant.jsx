@@ -19,6 +19,8 @@ const CreateTenant = () => {
   const [phonenumber, setPhonenumber] = useState("");
   const [phoneCountryCode, setPhoneCountryCode] = useState("in");
   const [address,setAddress] = useState("");
+  const [source, setSource] = useState("");
+  const [sourceOther, setSourceOther] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [selectedBillingCycle, setSelectedBillingCycle] = useState("");
   const [currency, setCurrency] = useState("INR");
@@ -40,6 +42,17 @@ const CreateTenant = () => {
     { code: "SGD", symbol: "S$", label: "🇸🇬 SGD - Singapore Dollar" },
     { code: "ZAR", symbol: "R", label: "🇿🇦 ZAR - South African Rand" },
     { code: "SAR", symbol: "﷼", label: "🇸🇦 SAR - Saudi Riyal" },
+  ];
+
+  const sourceOptions = [
+    "Website",
+    "Referral",
+    "Social Media",
+    "Google Search",
+    "Advertisement",
+    "Cold Call / Outreach",
+    "Event / Conference",
+    "Others",
   ];
 
   // Fetch active plans to display in the dropdown
@@ -107,6 +120,8 @@ const CreateTenant = () => {
         ? (hasTiers ? selectedBillingCycle : selectedPlan?.billing_cycle) || "monthly"
         : "";
 
+      const effectiveSource = source === "Others" ? sourceOther.trim() : source;
+
       // Provision new tenant — backend handles plan assignment, dates, and plan email
       const res = await superApi.post("/tenants/create", {
         name,
@@ -118,6 +133,7 @@ const CreateTenant = () => {
         currency,
         phonenumber,
         address,
+        source: effectiveSource,
       });
 
       const newTenant = res.data?.tenant || res.data?.data || res.data;
@@ -131,6 +147,8 @@ const CreateTenant = () => {
       setSelectedPlanId("");
       setSelectedBillingCycle("");
       setCurrency("INR");
+      setSource("");
+      setSourceOther("");
       navigate("/superadmin/tenants");
     } catch (err) {
       console.error("Failed to create tenant:", err);
@@ -247,7 +265,35 @@ const CreateTenant = () => {
                   value={address}
                     onChange={(e)=> setAddress(e.target.value)}
                     className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"/>
-                  
+
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Source
+                  </label>
+                  <select
+                    value={source}
+                    onChange={(e) => {
+                      setSource(e.target.value);
+                      if (e.target.value !== "Others") setSourceOther("");
+                    }}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                  >
+                    <option value="">Select a source</option>
+                    {sourceOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  {source === "Others" && (
+                    <input
+                      type="text"
+                      placeholder="Please specify the source"
+                      value={sourceOther}
+                      onChange={(e) => setSourceOther(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner mt-2"
+                    />
+                  )}
                 </div>
 
               <div>

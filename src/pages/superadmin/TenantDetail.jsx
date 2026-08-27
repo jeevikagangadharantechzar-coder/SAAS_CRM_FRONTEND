@@ -261,6 +261,11 @@ const TenantDetail = () => {
                 <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Address</span>
                 <span className="text-slate-800 font-semibold">{tenant.address || "—"}</span>
               </div>
+
+              <div className="space-y-1">
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Source</span>
+                <span className="text-slate-800 font-semibold">{tenant.source || "—"}</span>
+              </div>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
