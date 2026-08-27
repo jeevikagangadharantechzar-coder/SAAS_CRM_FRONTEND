@@ -330,13 +330,23 @@ const FreeTrialSignups = () => {
                             <ExternalLink size={15} />
                           </a>
                         )}
-                        <button
-                          onClick={() => setDeleteTarget(s)}
-                          className="p-1.5 border border-red-100 rounded-lg hover:bg-red-50 text-red-500 transition-all cursor-pointer"
-                          title="Delete Signup Record"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {(() => {
+                          const isConverted = s.tenant && s.tenant.isActive && s.tenant.plan_status !== "trial";
+                          return (
+                            <button
+                              onClick={() => setDeleteTarget(s)}
+                              disabled={isConverted}
+                              className={`p-1.5 border rounded-lg transition-all flex items-center justify-center ${
+                                isConverted
+                                  ? "border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed"
+                                  : "border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 cursor-pointer"
+                              }`}
+                              title={isConverted ? "Cannot delete a Converted trial" : "Delete Signup Record"}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>
