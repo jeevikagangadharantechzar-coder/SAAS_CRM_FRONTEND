@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { initSuperAdminSocket, disconnectSuperAdminSocket } from "../../utils/superAdminSocket";
 import {
@@ -16,6 +16,7 @@ import {
   Rocket,
   LifeBuoy,
   BarChart3,
+  UserCog,
 } from "lucide-react";
 import { clearSuperAdminCredentials } from "../../store/authSlice";
 
@@ -29,6 +30,7 @@ const IconCircle = ({ children, isActive }) => (
 );
 
 const SuperAdminLayout = () => {
+  const permissions = useSelector((state) => state.auth.superAdmin?.role?.permissions) || {};
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pendingUpgrades, setPendingUpgrades] = useState(0);
   const [platformLogo, setPlatformLogo] = useState("");
@@ -99,16 +101,17 @@ const SuperAdminLayout = () => {
   };
 
   const navItems = [
-    { to: "/superadmin/dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
-    { to: "/superadmin/tenants", icon: <Building2 size={20} />, label: "Tenants" },
-    { to: "/superadmin/free-trials", icon: <Rocket size={20} />, label: "Free Trial Signups" },
-    { to: "/superadmin/analysis", icon: <BarChart3 size={20} />, label: "Conversion Analysis" },
-    { to: "/superadmin/upgrade-requests", icon: <ShieldAlert size={20} />, label: "Upgrade Requests" },
-    { to: "/superadmin/support-tickets", icon: <LifeBuoy size={20} />, label: "Support Tickets" },
-    { to: "/superadmin/subscription-plans", icon: <CreditCard size={20} />, label: "Subscription plans" },
-    { to: "/superadmin/settings", icon: <Settings size={20} />, label: "Settings" },
-    { to: "/superadmin/profile", icon: <User size={20} />, label: "Profile" },
-  ];
+    { to: "/superadmin/dashboard", icon: <LayoutDashboard size={20} />, label: "Dashboard", permission: "dashboard" },
+    { to: "/superadmin/tenants", icon: <Building2 size={20} />, label: "Tenants", permission: "tenants" },
+    { to: "/superadmin/free-trials", icon: <Rocket size={20} />, label: "Free Trial Signups", permission: "free_trials" },
+    { to: "/superadmin/analysis", icon: <BarChart3 size={20} />, label: "Conversion Analysis", permission: "analysis" },
+    { to: "/superadmin/upgrade-requests", icon: <ShieldAlert size={20} />, label: "Upgrade Requests", permission: "upgrade_requests" },
+    { to: "/superadmin/support-tickets", icon: <LifeBuoy size={20} />, label: "Support Tickets", permission: "support_tickets" },
+    { to: "/superadmin/subscription-plans", icon: <CreditCard size={20} />, label: "Subscription plans", permission: "subscription_plans" },
+    { to: "/superadmin/settings", icon: <Settings size={20} />, label: "Settings", permission: "settings" },
+    { to: "/superadmin/admin-users", icon: <UserCog size={20} />, label: "Users & Roles", permission: "admin_users" },
+    { to: "/superadmin/profile", icon: <User size={20} />, label: "Profile" }, // self-service, always visible
+  ].filter((item) => !item.permission || permissions[item.permission]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">

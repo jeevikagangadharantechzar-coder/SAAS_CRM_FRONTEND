@@ -1,48 +1,80 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { User, KeyRound, CheckCircle2, ShieldAlert } from "lucide-react";
+import { superApi } from "../../services/api";
+import { updateSuperAdminProfile } from "../../store/authSlice";
+import { toast } from "react-toastify";
+import { User, KeyRound } from "lucide-react";
 
 const SuperAdminProfile = () => {
-  const [name, setName] = useState("Platform Administrator");
-  const [email, setEmail] = useState("admin@platform.com");
+  const dispatch = useDispatch();
+  const storedProfile = useSelector((state) => state.auth.superAdmin);
+
+  const [name, setName] = useState(storedProfile?.name || "");
+  const [email, setEmail] = useState(storedProfile?.email || "");
+  const [roleName, setRoleName] = useState(storedProfile?.role?.name || "—");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   const [profileSaving, setProfileSaving] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [msgType, setMsgType] = useState("success");
 
-  const handleUpdateProfile = (e) => {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await superApi.get("/profile");
+        const admin = res.data?.admin;
+        if (admin) {
+          setName(admin.name);
+          setEmail(admin.email);
+          setRoleName(admin.role?.name || "—");
+          dispatch(updateSuperAdminProfile(admin));
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.error || "Failed to load profile.");
+      }
+    };
+    fetchProfile();
+  }, [dispatch]);
+
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setProfileSaving(true);
-    setTimeout(() => {
+    try {
+      const res = await superApi.put("/profile", { name, email });
+      toast.success(res.data?.message || "Profile updated successfully.");
+      if (res.data?.admin) dispatch(updateSuperAdminProfile(res.data.admin));
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update profile.");
+    } finally {
       setProfileSaving(false);
-      setMsg("Profile details updated successfully.");
-      setMsgType("success");
-      setTimeout(() => setMsg(""), 3000);
-    }, 800);
+    }
   };
 
-  const handleUpdatePassword = (e) => {
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setMsg("New passwords do not match.");
-      setMsgType("error");
+      toast.error("New passwords do not match.");
       return;
     }
-    
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters.");
+      return;
+    }
+
     setPwSaving(true);
-    setTimeout(() => {
-      setPwSaving(false);
-      setMsg("Administrative security credentials updated.");
-      setMsgType("success");
+    try {
+      const res = await superApi.put("/profile/password", { currentPassword, newPassword });
+      toast.success(res.data?.message || "Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => setMsg(""), 3000);
-    }, 1000);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update password.");
+    } finally {
+      setPwSaving(false);
+    }
   };
 
   return (
@@ -52,41 +84,28 @@ const SuperAdminProfile = () => {
         <p className="text-base text-slate-600">Manage administrative credentials and security options.</p>
       </div>
 
-      {msg && (
-        <div
-          className={`p-4 border rounded-xl text-sm font-semibold flex items-center space-x-2 ${
-            msgType === "success"
-              ? "bg-green-50 border-green-200 text-green-800"
-              : "bg-red-50 border-red-200 text-red-800"
-          }`}
-        >
-          {msgType === "success" ? <CheckCircle2 size={18} /> : <ShieldAlert size={18} />}
-          <span>{msg}</span>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Info Left Column */}
         <div className="md:col-span-1 space-y-6">
           <Card className="border-0 shadow-md bg-white">
             <CardContent className="p-6 flex flex-col items-center text-center">
               <div className="w-24 h-24 rounded-full bg-[#f2fbff] text-[#008ecc] flex items-center justify-center font-black text-3xl shadow-lg border-2 border-[#008ecc]/20 mb-4">
-                SA
+                {name ? name.charAt(0).toUpperCase() : "SA"}
               </div>
-              <h3 className="text-slate-700">{name}</h3>
-              <p className="text-base text-slate-600 uppercase tracking-widest mt-1">Platform Owner</p>
-              
+              <h3 className="text-slate-700">{name || "—"}</h3>
+              <p className="text-base text-slate-600 uppercase tracking-widest mt-1">Super Admin</p>
+
               <div className="w-full border-t border-slate-100 my-4" />
-              
+
               <div className="text-left w-full space-y-3">
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
-                  <span className="text-sm font-medium text-slate-700">{email}</span>
+                  <span className="text-sm font-medium text-slate-700">{email || "—"}</span>
                 </div>
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Access Role</span>
-                  <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                    Full Access SuperAdmin
+                  <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">
+                    {roleName}
                   </span>
                 </div>
               </div>
@@ -103,13 +122,13 @@ const SuperAdminProfile = () => {
                 <User size={18} className="text-[#008ecc]" />
                 <span>Account Information</span>
               </CardTitle>
-              <CardDescription>Update global administrative profile credentials.</CardDescription>
+              <CardDescription>Update your name and email address.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    SuperAdmin Full Name
+                    Full Name
                   </label>
                   <input
                     type="text"
@@ -121,7 +140,7 @@ const SuperAdminProfile = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Administrator Email Address
+                    Email Address
                   </label>
                   <input
                     type="email"
@@ -149,9 +168,9 @@ const SuperAdminProfile = () => {
             <CardHeader>
               <CardTitle className="text-lg font-bold flex items-center space-x-2 text-slate-800">
                 <KeyRound size={18} className="text-[#008ecc]" />
-                <span>Change Administrator Password</span>
+                <span>Change Password</span>
               </CardTitle>
-              <CardDescription>Modify account passwords for secure access.</CardDescription>
+              <CardDescription>Update your own login password.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdatePassword} className="space-y-4">
@@ -202,7 +221,7 @@ const SuperAdminProfile = () => {
                     disabled={pwSaving}
                     className="px-5 py-2.5 bg-[#008ecc] hover:bg-[#007bb0] text-white rounded-xl font-bold cursor-pointer text-sm shadow disabled:opacity-50"
                   >
-                    {pwSaving ? "Updating Security..." : "Reset Password"}
+                    {pwSaving ? "Updating..." : "Update Password"}
                   </button>
                 </div>
               </form>

@@ -48,7 +48,7 @@ const SuperAdminLogin = () => {
       });
 
       if (response.data && response.data.token) {
-        dispatch(setSuperAdminCredentials({ token: response.data.token }));
+        dispatch(setSuperAdminCredentials({ token: response.data.token, admin: response.data.admin }));
         setMessage("Login successful! Redirecting...");
         setIsError(false);
         setTimeout(() => {
