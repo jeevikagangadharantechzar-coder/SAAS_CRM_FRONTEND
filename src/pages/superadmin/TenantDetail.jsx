@@ -244,6 +244,11 @@ const TenantDetail = () => {
                 <span className="text-slate-800 font-semibold">{tenant.adminEmail}</span>
               </div>
 
+               <div className="space-y-1">
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Currency</span>
+                <span className="text-slate-800 font-semibold">{tenant.currency}</span>
+              </div>
+
               <div className="space-y-1">
                 <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Active Status</span>
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${tenant.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"
