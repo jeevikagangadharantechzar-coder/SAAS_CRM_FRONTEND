@@ -18,7 +18,9 @@ import {
   Upload,
   Loader2,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
+import MfaSetupModal from "../../components/MfaSetupModal";
 
 
 const API_BASE = import.meta.env.VITE_SI_URI || "http://localhost:5000";
@@ -231,6 +233,11 @@ const SuperAdminSettings = () => {
   const [upgradeAlertEnabled, setUpgradeAlertEnabled] = useState(DEFAULTS.upgradeAlertEnabled);
   const [upgradeAlertEmail, setUpgradeAlertEmail] = useState(DEFAULTS.upgradeAlertEmail);
 
+  // MFA
+  const [isMfaModalOpen, setIsMfaModalOpen] = useState(false);
+  const [mfaActionMsg, setMfaActionMsg] = useState("");
+  const [isMfaEnabled, setIsMfaEnabled] = useState(false);
+
   // ── Per-section reset handlers ──
   const resetBranding = () => {
     setPlatformName(DEFAULTS.platformName);
@@ -290,6 +297,10 @@ const SuperAdminSettings = () => {
         const { data } = await axios.get(SETTINGS_URL, {
           headers: authHeaders(),
         });
+        const { data: meData } = await axios.get(`${API_BASE}/superadmin/api/auth/me`, {
+          headers: authHeaders(),
+        });
+        setIsMfaEnabled(meData.isMfaEnabled || false);
         setPlatformName(data.platformName || DEFAULTS.platformName);
         setSupportEmail(data.supportEmail || DEFAULTS.supportEmail);
         setSmtpHost(data.smtpHost || DEFAULTS.smtpHost);
@@ -657,14 +668,12 @@ const SuperAdminSettings = () => {
                   <button
                     type="button"
                     onClick={() => setSmtpSecure(!smtpSecure)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
-                      smtpSecure ? "bg-[#008ecc]" : "bg-slate-200"
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${smtpSecure ? "bg-[#008ecc]" : "bg-slate-200"
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        smtpSecure ? "translate-x-6" : "translate-x-1"
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${smtpSecure ? "translate-x-6" : "translate-x-1"
+                        }`}
                     />
                   </button>
                   <span className="text-sm font-semibold text-slate-700">
@@ -696,22 +705,20 @@ const SuperAdminSettings = () => {
                 <button
                   type="button"
                   onClick={() => setEmailTab("welcome")}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    emailTab === "welcome"
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${emailTab === "welcome"
                       ? "bg-white text-[#008ecc] shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
-                  }`}
+                    }`}
                 >
                   Welcome Email
                 </button>
                 <button
                   type="button"
                   onClick={() => setEmailTab("plan")}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    emailTab === "plan"
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${emailTab === "plan"
                       ? "bg-white text-[#008ecc] shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
-                  }`}
+                    }`}
                 >
                   Plan Email
                 </button>
@@ -807,14 +814,12 @@ const SuperAdminSettings = () => {
                 <button
                   type="button"
                   onClick={() => setUpgradeAlertEnabled(!upgradeAlertEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
-                    upgradeAlertEnabled ? "bg-[#008ecc]" : "bg-slate-200"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${upgradeAlertEnabled ? "bg-[#008ecc]" : "bg-slate-200"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      upgradeAlertEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${upgradeAlertEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -836,6 +841,70 @@ const SuperAdminSettings = () => {
             </CardContent>
           </Card>
 
+          {/* ── Security / MFA ── */}
+          <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl overflow-hidden bg-white">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${isMfaEnabled ? 'bg-green-100' : 'bg-indigo-100'}`}>
+                    <ShieldCheck size={20} className={isMfaEnabled ? 'text-green-600' : 'text-indigo-600'} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-800">
+                      Multi-Factor Authentication
+                    </CardTitle>
+                    <CardDescription className="text-sm text-slate-500 mt-1">
+                      Protect your superadmin account with an authenticator app.
+                    </CardDescription>
+                  </div>
+                </div>
+                {isMfaEnabled ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    Enabled
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 px-3 py-1 bg-slate-50 text-slate-500 text-xs font-bold rounded-full border border-slate-200">
+                    Disabled
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {mfaActionMsg && (
+                <p className="text-sm font-semibold text-green-600 mb-4">{mfaActionMsg}</p>
+              )}
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setIsMfaModalOpen(true)}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold cursor-pointer text-sm shadow-sm transition"
+                >
+                  Set Up MFA
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await axios.post(`${API_BASE}/superadmin/api/mfa/disable`, {}, {
+                        headers: authHeaders()
+                      });
+                      setMfaActionMsg("MFA has been disabled.");
+                      setIsMfaEnabled(false);
+                      toast.success("MFA has been disabled.");
+                      setTimeout(() => setMfaActionMsg(""), 3000);
+                    } catch (error) {
+                      toast.error("Failed to disable MFA.");
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-semibold cursor-pointer text-sm transition"
+                >
+                  Disable MFA
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* ── Save ── */}
           <div className="flex justify-end pt-2">
             <button
@@ -854,10 +923,23 @@ const SuperAdminSettings = () => {
         </form>
       </div>
 
+      <MfaSetupModal
+        isOpen={isMfaModalOpen}
+        onClose={() => setIsMfaModalOpen(false)}
+        mfaEndpoint={`${API_BASE}/superadmin/api/mfa`}
+        onComplete={() => {
+          setIsMfaModalOpen(false);
+          setIsMfaEnabled(true);
+          setMfaActionMsg("MFA successfully enabled.");
+          toast.success("MFA successfully enabled.");
+          setTimeout(() => setMfaActionMsg(""), 3000);
+        }}
+      />
+
       {/* Toast Container */}
-      <ToastContainer 
-        position="top-right" 
-        autoClose={3000} 
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick

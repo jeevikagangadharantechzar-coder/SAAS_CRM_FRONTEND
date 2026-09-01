@@ -3,7 +3,8 @@ import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText } from "react-feather";
+import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText, Shield } from "react-feather";
+import MfaSetupModal from "../../components/MfaSetupModal";
 import { INDIAN_STATES } from "../../constants/indianStates";
 
 const authHeader = () => ({
@@ -22,6 +23,15 @@ export default function Settings() {
       return user?.planFeatures?.zoom_meetings !== false;
     } catch {
       return true;
+    }
+  })();
+
+  const isSalesPerson = (() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user?.role?.name?.toLowerCase() === "sales";
+    } catch {
+      return false;
     }
   })();
 
@@ -59,11 +69,26 @@ export default function Settings() {
   const [zoomForm, setZoomForm] = useState({ clientId: "", clientSecret: "", accountId: "", hostUserId: "" });
   const [zoomSaving, setZoomSaving] = useState(false);
 
+  // MFA state
+  const [isMfaModalOpen, setIsMfaModalOpen] = useState(false);
+  const [mfaActionMsg, setMfaActionMsg] = useState("");
+  const [isMfaEnabled, setIsMfaEnabled] = useState(false);
+
   // Fetch current settings
   useEffect(() => {
     fetchSettings();
     fetchZoomStatus();
+    fetchUserProfile();
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/users/me`, authHeader());
+      setIsMfaEnabled(data.isMfaEnabled || false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   /* ── Zoom Integration Functions ─────────────────────── */
   const fetchZoomStatus = async () => {
@@ -1082,8 +1107,73 @@ export default function Settings() {
           </div>
           )}
 
+          {/* MFA Settings Card */}
+          {!isSalesPerson && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-8 flex flex-col items-center text-center transition-all hover:shadow-md mt-6 relative">
+              {isMfaEnabled ? (
+                <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  Enabled
+                </div>
+              ) : (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-3 py-1 bg-slate-50 text-slate-500 text-xs font-bold rounded-full border border-slate-200">
+                  Disabled
+                </div>
+              )}
+              
+              <div className={`p-3 sm:p-4 rounded-full mb-3 sm:mb-5 ${isMfaEnabled ? 'bg-green-50' : 'bg-indigo-50'}`}>
+                <Shield className={`${isMfaEnabled ? 'text-green-500' : 'text-indigo-500'} w-6 h-6 sm:w-8 sm:h-8`} />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 sm:mb-2">Two-Factor Authentication</h3>
+              <p className="text-xs sm:text-sm text-gray-500 max-w-sm mb-4 sm:mb-6">
+                Protect your account with an extra layer of security using an authenticator app.
+              </p>
+              {mfaActionMsg && (
+                <p className={`text-sm mb-4 font-medium ${mfaActionMsg.includes('disabled') ? 'text-slate-600' : 'text-green-600'}`}>{mfaActionMsg}</p>
+              )}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => setIsMfaModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+                >
+                  Set Up MFA
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem("token");
+                      const tenantSlug = localStorage.getItem("tenantSlug") || "";
+                      await axios.post(`${API_URL}/users/mfa/disable`, {}, {
+                        headers: { Authorization: `Bearer ${token}`, "x-tenant-slug": tenantSlug }
+                      });
+                      setMfaActionMsg("MFA disabled successfully");
+                      setIsMfaEnabled(false);
+                      toast.success("MFA disabled successfully");
+                      setTimeout(() => setMfaActionMsg(""), 3000);
+                    } catch (err) {
+                      toast.error("Failed to disable MFA");
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition"
+                >
+                  Disable MFA
+                </button>
+              </div>
+              <MfaSetupModal
+                isOpen={isMfaModalOpen}
+                onClose={() => setIsMfaModalOpen(false)}
+                mfaEndpoint={`${API_URL}/mfa`}
+                onComplete={() => {
+                  setIsMfaModalOpen(false);
+                  setIsMfaEnabled(true);
+                  setMfaActionMsg("MFA successfully enabled");
+                  toast.success("MFA successfully enabled");
+                  setTimeout(() => setMfaActionMsg(""), 3000);
+                }}
+              />
+            </div>
+          )}
         </div>
-
         {/* Bottom spacing */}
         <div className="h-8 sm:h-12"></div>
       </div>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { superApi } from "../../services/api";
 import { updateSuperAdminProfile } from "../../store/authSlice";
 import { toast } from "react-toastify";
-import { User, KeyRound } from "lucide-react";
+import { User, KeyRound, CheckCircle2, ShieldAlert, ShieldCheck } from "lucide-react";
 
 const SuperAdminProfile = () => {
   const dispatch = useDispatch();
@@ -38,6 +38,7 @@ const SuperAdminProfile = () => {
     fetchProfile();
   }, [dispatch]);
 
+  const BASE_URL = import.meta.env.VITE_SI_URI || "http://localhost:5000";
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setProfileSaving(true);
@@ -227,6 +228,7 @@ const SuperAdminProfile = () => {
               </form>
             </CardContent>
           </Card>
+
         </div>
       </div>
     </div>
