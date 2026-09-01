@@ -29,6 +29,7 @@ import UpgradeRequests from "./pages/superadmin/UpgradeRequests";
 import SupportTickets from "./pages/superadmin/SupportTickets";
 import TenantDetail from "./pages/superadmin/TenantDetail";
 import FreeTrialSignups from "./pages/superadmin/FreeTrialSignups";
+import SuperAdminUserRoles from "./pages/superadmin/SuperAdminUserRoles";
 import FreeTrialAnalysis from "./pages/superadmin/conversion_analysis/FreeTrialAnalysis";
 
 // Providers
@@ -219,21 +220,50 @@ function App() {
                   <Route path="/superadmin" element={<SuperAdminRoute />}>
                     <Route element={<SuperAdminLayout />}>
                       <Route index element={<Navigate to="dashboard" replace />} />
-                      <Route path="dashboard" element={<SuperAdminDashboard />} />
-                      <Route path="tenants" element={<SuperAdminTenants />} />
-                     <Route path="tenants/:id" element={<TenantDetail />} />
-                      <Route path="tenants/create" element={<CreateTenant />} />
-                      <Route path="free-trials" element={<FreeTrialSignups />} />
-                      <Route path="analysis" element={<FreeTrialAnalysis />} />
-                      <Route path="upgrade-requests" element={<UpgradeRequests />} />
-                      <Route path="support-tickets" element={<SupportTickets />} />
-                      <Route path="subscription-plans" element={<SubscriptionPlans />} />
-                      <Route path="subscription-plans/create" element={<CreatePlan />} />
-                      <Route path="subscription-plans/:id/edit" element={<EditPlan />} />
-                      <Route path="subscription-plans/:id" element={<PlanDetail />} />
-                      <Route path="settings" element={<SuperAdminSettings />} />
+
+                      <Route element={<SuperAdminRoute permission="dashboard" />}>
+                        <Route path="dashboard" element={<SuperAdminDashboard />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="tenants" />}>
+                        <Route path="tenants" element={<SuperAdminTenants />} />
+                        <Route path="tenants/:id" element={<TenantDetail />} />
+                        <Route path="tenants/create" element={<CreateTenant />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="free_trials" />}>
+                        <Route path="free-trials" element={<FreeTrialSignups />} />
+                        <Route path="free-trials/:id" element={<FreeTrialSignupDetail />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="analysis" />}>
+                        <Route path="analysis" element={<FreeTrialAnalysis />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="upgrade_requests" />}>
+                        <Route path="upgrade-requests" element={<UpgradeRequests />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="support_tickets" />}>
+                        <Route path="support-tickets" element={<SupportTickets />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="subscription_plans" />}>
+                        <Route path="subscription-plans" element={<SubscriptionPlans />} />
+                        <Route path="subscription-plans/create" element={<CreatePlan />} />
+                        <Route path="subscription-plans/:id/edit" element={<EditPlan />} />
+                        <Route path="subscription-plans/:id" element={<PlanDetail />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="settings" />}>
+                        <Route path="settings" element={<SuperAdminSettings />} />
+                      </Route>
+
+                      <Route element={<SuperAdminRoute permission="admin_users" />}>
+                        <Route path="admin-users" element={<SuperAdminUserRoles />} />
+                      </Route>
+
                       <Route path="profile" element={<SuperAdminProfile />} />
-                      <Route path="free-trials/:id" element={<FreeTrialSignupDetail />} />
                     </Route>
                   </Route>
 
