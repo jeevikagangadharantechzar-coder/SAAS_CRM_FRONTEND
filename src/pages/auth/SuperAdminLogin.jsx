@@ -15,6 +15,9 @@ const SuperAdminLogin = () => {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [platformLogo, setPlatformLogo] = useState("");
+  const [isMfaRequired, setIsMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [tempToken, setTempToken] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -47,6 +50,13 @@ const SuperAdminLogin = () => {
         password,
       });
 
+      if (response.data && response.data.mfaRequired) {
+        setIsMfaRequired(true);
+        setTempToken(response.data.tempToken);
+        setIsLoading(false);
+        return;
+      }
+
       if (response.data && response.data.token) {
         dispatch(setSuperAdminCredentials({ token: response.data.token }));
         setMessage("Login successful! Redirecting...");
@@ -62,6 +72,40 @@ const SuperAdminLogin = () => {
       console.error("SuperAdmin Login Error:", error);
       setMessage(
         error.response?.data?.message || error.response?.data?.error || "Login failed"
+      );
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMfaVerify = async (e) => {
+    e.preventDefault();
+    setIsError(false);
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${BASE_URL}/superadmin/api/auth/login/verify-mfa`, {
+        tempToken,
+        mfaCode,
+      });
+
+      if (response.data && response.data.token) {
+        dispatch(setSuperAdminCredentials({ token: response.data.token }));
+        setMessage("Login successful! Redirecting...");
+        setIsError(false);
+        setTimeout(() => {
+          navigate("/superadmin/dashboard");
+        }, 1500);
+      } else {
+        setMessage(response.data.message || response.data.error || "Failed to verify MFA");
+        setIsError(true);
+      }
+    } catch (error) {
+      console.error("SuperAdmin MFA Verify Error:", error);
+      setMessage(
+        error.response?.data?.message || error.response?.data?.error || "Invalid MFA Code"
       );
       setIsError(true);
     } finally {
@@ -119,81 +163,117 @@ const SuperAdminLogin = () => {
             </div>
           )}
 
-          {/* Login Form */}
-          <form className="space-y-6" onSubmit={handleLogin}>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Admin Email</label>
-              <input
-                type="email"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="admin@platform.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Password</label>
-              <div className="relative">
+          {isMfaRequired ? (
+            <form onSubmit={handleMfaVerify} className="space-y-4 md:space-y-6">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-900">
+                  MFA Code
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Enter 6-digit code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
                   required
                 />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
               </div>
-            </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer shadow-lg"
+                style={{ backgroundColor: "#008ECC" }}
+              >
+                {isLoading ? "Verifying..." : "Verify Code"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMfaRequired(false);
+                  setMfaCode("");
+                  setTempToken("");
+                }}
+                className="w-full mt-2 text-blue-600 text-sm hover:underline"
+              >
+                Back to login
+              </button>
+            </form>
+          ) : (
+            <form className="space-y-6" onSubmit={handleLogin}>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Admin Email</label>
+                <input
+                  type="email"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="admin@platform.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer shadow-lg"
-              style={{ backgroundColor: "#008ECC" }}
-            >
-              {isLoading ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Authenticating...
-                </>
-              ) : (
-                "Access Dashboard"
-              )}
-            </button>
-          </form>
+                    {showPassword ? (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Login Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer shadow-lg"
+                style={{ backgroundColor: "#008ECC" }}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Authenticating...
+                  </>
+                ) : (
+                  "Access Dashboard"
+                )}
+              </button>
+            </form>
+          )}
 
           {/* Footer */}
           <p className="mt-8 text-gray-500 text-sm text-center">© 2025 TZI. All rights reserved.</p>

@@ -79,7 +79,9 @@ const Login = () => {
   const [deviceRequestId, setDeviceRequestId] = useState(null);
   const [pendingAgreement, setPendingAgreement] = useState(null); // "privacy" | "terms" | null
   const [agreementCtx, setAgreementCtx] = useState(null); // { token, resolvedSlug, successMessage, needsTerms }
-
+  const [isMfaRequired, setIsMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [tempToken, setTempToken] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -263,6 +265,42 @@ const Login = () => {
     finishLogin(agreementCtx.token, agreementCtx.resolvedSlug, agreementCtx.user, agreementCtx.successMessage);
   };
 
+  const handleMfaVerify = async (e) => {
+    e.preventDefault();
+    setIsError(false);
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      const res = await axios.post(`${API_URL}/users/login/verify-mfa`, {
+        tempToken,
+        mfaCode,
+      });
+
+      const { token, message: successMessage } = res.data;
+
+      if (token) {
+        await completeLoginWithToken(token, successMessage);
+        if (res.data.isDbRefreshed) {
+          localStorage.setItem("db_refreshed_toast", "true");
+        }
+      } else {
+        setMessage("Token missing in authentication response");
+        setIsError(true);
+      }
+    } catch (error) {
+      setIsError(true);
+      setMessage(error.response?.data?.message || "Invalid MFA Code");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAgreementAccept = async (type) => {
+    setPendingAgreement(null);
+    finishLogin(agreementCtx.token, agreementCtx.resolvedSlug, agreementCtx.user, agreementCtx.successMessage);
+  };
+
   const completeLoginWithToken = async (token, successMessage) => {
     const cleanAxios = axios.create();
 
@@ -329,33 +367,33 @@ const Login = () => {
     setPendingAgreement(null);
 
     try {
-      // 1. Post to login using a clean axios instance to bypass interceptors
-      const cleanAxios = axios.create();
-      const loginUrl = tenantSlug
-        ? `${SI_URI}/${tenantSlug}/api/users/login`
-        : `${API_URL}/users/login`;
-
-      const response = await cleanAxios.post(loginUrl, {
+      const res = await axios.post(`${API_URL}/users/login`, {
         email,
         password,
+        tenantSlug,
         deviceType: "web",
         deviceId: getWebDeviceId(),
         deviceLabel: getWebDeviceLabel(),
       });
 
-      if (response.data.requiresApproval) {
-        // A device slot of this type is already in use elsewhere — wait for
-        // an Admin to approve this device (see the polling effect below).
-        setMessage(response.data.message || "Waiting for admin approval to log in on this device...");
-        setIsError(false);
-        setDeviceRequestId(response.data.requestId);
+      if (res.data.mfaRequired) {
+        setIsMfaRequired(true);
+        setTempToken(res.data.tempToken);
         setIsLoading(false);
         return;
       }
 
-      if (response.data.token) {
-        await completeLoginWithToken(response.data.token, response.data.message);
-        if (response.data.isDbRefreshed) {
+      if (res.status === 202 && res.data.requiresApproval) {
+        setMessage(res.data.message || "Waiting for admin approval to log in on this device...");
+        setIsError(false);
+        setDeviceRequestId(res.data.requestId);
+        setIsLoading(false);
+        return;
+      }
+
+      if (res.data.token) {
+        await completeLoginWithToken(res.data.token, res.data.message);
+        if (res.data.isDbRefreshed) {
           localStorage.setItem("db_refreshed_toast", "true");
         }
       } else {
@@ -365,8 +403,6 @@ const Login = () => {
     } catch (error) {
       console.error("Login Error:", error);
       if (error.response?.data?.planExpired) {
-        // Reuse the same polished popup shown after a mid-session expiry
-        // redirect, so a fresh blocked login attempt looks identical.
         setExpiredNotice({
           message: error.response.data.message,
           trialExpired: !!error.response.data.trialExpired,
@@ -475,100 +511,129 @@ const Login = () => {
                   Upgrade Plan Now
                 </button>
               )}
-
-
             </div>
           )}
 
-          {/* Login Form */}
-          <form className="space-y-6" onSubmit={handleLogin}>
-            {/* Show tenant slug input if not locked in route */}
-            
-
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Email Address</label>
-              <input
-                type="email"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Password</label>
-              <div className="relative">
+          {isMfaRequired ? (
+            <form onSubmit={handleMfaVerify} className="space-y-4 md:space-y-6">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-900">
+                  MFA Code
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Enter 6-digit code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
                   required
                 />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
               </div>
-            </div>
-
-            {/* Forgot Password Link only */}
-            <div className="flex justify-end text-sm">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer"
+                style={{ backgroundColor: "#008ECC" }}
+              >
+                {isLoading ? "Verifying..." : "Verify Code"}
+              </button>
               <button
                 type="button"
-                onClick={() => setIsForgotOpen(true)}
-                className="text-blue-600 hover:text-blue-800 font-medium transition cursor-pointer"
+                onClick={() => {
+                  setIsMfaRequired(false);
+                  setMfaCode("");
+                  setTempToken("");
+                }}
+                className="w-full mt-2 text-blue-600 text-sm hover:underline"
               >
-                Forgot your password?
+                Back to login
               </button>
-            </div>
+            </form>
+          ) : (
+            <form className="space-y-6" onSubmit={handleLogin}>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Email Address</label>
+                <input
+                  type="email"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={isLoading || !!deviceRequestId}
-              className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer"
-              style={{ backgroundColor: "#008ECC" }}
-            >
-              {isLoading ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Signing in...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </button>
-          </form>
+                    {showPassword ? (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end text-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(true)}
+                  className="text-blue-600 hover:text-blue-800 font-medium transition cursor-pointer"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || !!deviceRequestId}
+                className="w-full text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center cursor-pointer"
+                style={{ backgroundColor: "#008ECC" }}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </form>
+          )}
 
           {/* Footer */}
           {platformName && (

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { User, KeyRound, CheckCircle2, ShieldAlert } from "lucide-react";
+import { User, KeyRound, CheckCircle2, ShieldAlert, ShieldCheck } from "lucide-react";
 
 const SuperAdminProfile = () => {
   const [name, setName] = useState("Platform Administrator");
@@ -13,6 +13,8 @@ const SuperAdminProfile = () => {
   const [pwSaving, setPwSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState("success");
+
+  const BASE_URL = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 
   const handleUpdateProfile = (e) => {
     e.preventDefault();
@@ -208,6 +210,7 @@ const SuperAdminProfile = () => {
               </form>
             </CardContent>
           </Card>
+
         </div>
       </div>
     </div>
