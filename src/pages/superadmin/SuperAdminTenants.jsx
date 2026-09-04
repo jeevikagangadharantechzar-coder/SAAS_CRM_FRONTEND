@@ -44,6 +44,7 @@ const SuperAdminTenants = () => {
   const [editingTenant, setEditingTenant] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", adminName: "", adminEmail: "" });
   const [isEditing, setIsEditing] = useState(false);
+  const [toggleTarget,setToggleTarget] = useState(null);
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -283,9 +284,10 @@ const SuperAdminTenants = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-3">
                         {/* Toggle active button */}
-                        <button
-                          onClick={() => handleToggleActive(t._id, t.isActive)}
-                          className="text-slate-500 hover:text-[#008ecc] transition-colors cursor-pointer"
+                          <button
+    onClick={() => setToggleTarget(t)}
+    className="text-slate-500 hover:text-[#008ecc] transition-colors cursor-pointer"
+
                           title={t.isActive ? "Deactivate Tenant" : "Activate Tenant"}
                         >
                           {t.isActive ? (
@@ -514,6 +516,41 @@ const SuperAdminTenants = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      
+
+      {/* Toggle Status Confirmation Modal */}
+      {toggleTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              {toggleTarget.isActive ? "Deactivate" : "Activate"} Tenant?
+            </h3>
+            <p className="text-slate-600 mb-6 text-sm">
+              Are you sure you want to {toggleTarget.isActive ? "deactivate" : "activate"} the account for <strong>{toggleTarget.name}</strong>? 
+              {toggleTarget.isActive && " They will immediately lose access to the CRM."}
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setToggleTarget(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleToggleActive(toggleTarget._id, toggleTarget.isActive);
+                  setToggleTarget(null);
+                }}
+                className={`px-4 py-2 font-bold rounded-lg text-white transition-colors cursor-pointer ${
+                  toggleTarget.isActive ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                Yes, {toggleTarget.isActive ? "Deactivate" : "Activate"}
+              </button>
+            </div>
           </div>
         </div>
       )}
