@@ -14,7 +14,8 @@ const SuperAdminDashboard = () => {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     tenantsCount: 0,
-    activeTenantsCount: 0,
+    paidTenants: 0,
+    trialTenants: 0,
     totalUsers: 0,
     totalRevenue: 0,
   });
@@ -33,8 +34,9 @@ const SuperAdminDashboard = () => {
       // Parse stats
       const statsData = data.stats || data;
       setStats({
-        tenantsCount: statsData.totalTenants ?? statsData.tenantsCount ?? 0,
-        activeTenantsCount: statsData.activeTenants ?? statsData.activeTenantsCount ?? 0,
+        tenantsCount: statsData.totalTenants ?? 0,
+        paidTenants: statsData.paidTenants ?? 0,
+        trialTenants: statsData.trialTenants ?? 0,
         totalUsers: statsData.totalUsers ?? 0,
         totalRevenue: statsData.totalRevenue ?? 0,
       });
@@ -81,18 +83,18 @@ const SuperAdminDashboard = () => {
 
   const cardData = [
     {
-      title: "Total Tenants",
-      value: stats.tenantsCount,
-      description: "Registered businesses",
-      icon: <Building2 className="text-[#008ecc]" size={24} />,
-      bg: "bg-[#f2fbff] border border-blue-100",
-    },
-    {
-      title: "Active Tenants",
-      value: stats.activeTenantsCount,
-      description: `${Math.max(0, stats.tenantsCount - stats.activeTenantsCount)} inactive`,
+      title: "Total Paid Users",
+      value: stats.paidTenants,
+      description: "Active, expired, and grace",
       icon: <CheckCircle className="text-green-500" size={24} />,
       bg: "bg-green-50/50 border border-green-100",
+    },
+    {
+      title: "Total Free Trial Users",
+      value: stats.trialTenants,
+      description: "Trial sign-ups",
+      icon: <Building2 className="text-[#008ecc]" size={24} />,
+      bg: "bg-[#f2fbff] border border-blue-100",
     },
     {
       title: "Platform Users",
@@ -113,20 +115,22 @@ const SuperAdminDashboard = () => {
   // Build registration trend chart dynamically from actual tenant createdAt dates
   const currentYear = new Date().getFullYear();
   const registrationTrend = MONTHS.map((month, idx) => {
-    const count = tenants.filter((t) => {
+    const monthTenants = tenants.filter((t) => {
       if (!t.createdAt) return false;
       const d = new Date(t.createdAt);
       return d.getFullYear() === currentYear && d.getMonth() === idx;
-    }).length;
-    return { month, tenants: count };
+    });
+    const paid = monthTenants.filter(t => t.plan_status !== "trial").length;
+    const trial = monthTenants.filter(t => t.plan_status === "trial").length;
+    return { month, paid, trial };
   });
 
-  // Build distribution pie from actual active/inactive counts
-  const activeCount = tenants.filter((t) => t.isActive === true).length;
-  const inactiveCount = tenants.filter((t) => t.isActive === false).length;
+  // Build distribution pie from paid vs trial counts
+  const paidCount = tenants.filter((t) => t.plan_status !== "trial").length;
+  const trialCount = tenants.filter((t) => t.plan_status === "trial").length;
   const distributionData = [
-    { name: "Active", value: activeCount },
-    { name: "Inactive", value: inactiveCount },
+    { name: "Paid Tenants", value: paidCount },
+    { name: "Free Trials", value: trialCount },
   ].filter((d) => d.value > 0);
 
   return (
@@ -195,8 +199,9 @@ const SuperAdminDashboard = () => {
                   <BarChart data={registrationTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <XAxis dataKey="month" stroke="#94A3B8" tickLine={false} axisLine={false} fontSize={12} />
                     <YAxis stroke="#94A3B8" tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
-                    <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid #E2E8F0" }} />
-                    <Bar dataKey="tenants" name="Tenants Registered" fill="#008ecc" radius={[6, 6, 0, 0]} barSize={32} />
+                    <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid #E2E8F0" }} cursor={{fill: 'transparent'}} />
+                    <Bar dataKey="paid" name="Paid Registered" fill="#10B981" radius={[4, 4, 0, 0]} barSize={16} />
+                    <Bar dataKey="trial" name="Trial Registered" fill="#008ecc" radius={[4, 4, 0, 0]} barSize={16} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -208,7 +213,7 @@ const SuperAdminDashboard = () => {
         <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold text-slate-800">Tenant Distribution</CardTitle>
-            <CardDescription>Active vs inactive status (from database).</CardDescription>
+            <CardDescription>Paid subscriptions vs free trials.</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col items-center">
             {loading ? (
@@ -247,12 +252,12 @@ const SuperAdminDashboard = () => {
 
                 <div className="flex gap-6 mt-4 text-sm font-semibold">
                   <div className="flex items-center space-x-2">
-                    <span className="w-3.5 h-3.5 rounded-full bg-[#008ecc]" />
-                    <span className="text-slate-600">Active ({activeCount})</span>
+                    <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLORS[0] }} />
+                    <span className="text-slate-600">Paid ({paidCount})</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="w-3.5 h-3.5 rounded-full bg-[#10B981]" />
-                    <span className="text-slate-600">Inactive ({inactiveCount})</span>
+                    <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLORS[1] }} />
+                    <span className="text-slate-600">Trials ({trialCount})</span>
                   </div>
                 </div>
               </>
