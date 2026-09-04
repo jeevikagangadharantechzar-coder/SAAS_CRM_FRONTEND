@@ -170,6 +170,20 @@ const Navbar = ({ toggleSidebar }) => {
     }
   };
 
+  const handleDismissPlanUpdate = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API_URL}/users/dismiss-plan-update`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(prev => ({ ...prev, planUpdateMessage: "" }));
+      toast.success("Plan update announcement dismissed");
+    } catch (err) {
+      console.error("Failed to dismiss plan update", err);
+      toast.error("Failed to dismiss update message");
+    }
+  };
+
   // Outside click detection
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -764,6 +778,33 @@ const Navbar = ({ toggleSidebar }) => {
                 className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
               >
                 Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plan Update Modal */}
+      {user?.role?.name?.toLowerCase() === "admin" && user?.planUpdateMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full relative">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 mb-4">
+              <svg className="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-2">
+              Plan Upgrade Notice
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 text-center mb-6 whitespace-pre-line">
+              {user.planUpdateMessage}
+            </p>
+            <div className="flex justify-center">
+              <button
+                onClick={handleDismissPlanUpdate}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors w-full"
+              >
+                Got it, thanks!
               </button>
             </div>
           </div>

@@ -282,12 +282,12 @@ const UpgradeRequests = () => {
                       <tr key={req._id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-slate-900">{req.tenant_id?.name || "N/A"}</span>
-                            <span className="text-xs text-slate-500 font-mono">Slug: {req.tenant_id?.slug}</span>
+                            <span className="font-bold text-slate-900">{req.tenant_id?.name || req.tenant_name || "N/A"}</span>
+                            <span className="text-xs text-slate-500 font-mono">Slug: {req.tenant_id?.slug || req.tenant_slug || "N/A"}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-bold text-slate-900 uppercase">{req.plan_id?.plan_name || "N/A"}</div>
+                          <div className="font-bold text-slate-900 uppercase">{req.plan_id?.plan_name || req.plan_name || "N/A"}</div>
                           {req.billing_cycle && (
                             <div className="text-xs text-[#008ecc] font-semibold mt-0.5">
                               {{ monthly: "Monthly", half_yearly: "Half Year", yearly: "Yearly" }[req.billing_cycle] || req.billing_cycle}
@@ -479,8 +479,8 @@ const UpgradeRequests = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-slate-900">{req.tenant_id?.name || "N/A"}</span>
-                            <span className="text-xs text-slate-500 font-mono">Slug: {req.tenant_id?.slug}</span>
+                            <span className="font-bold text-slate-900">{req.tenant_id?.name || req.tenant_name || "N/A"}</span>
+                            <span className="text-xs text-slate-500 font-mono">Slug: {req.tenant_id?.slug || req.tenant_slug || "N/A"}</span>
                             {req.status === "rejected" && req.rejection_reason && (
                               <span className="text-xs text-red-600 bg-red-50 border border-red-100 rounded px-2 py-0.5 mt-1.5 w-fit font-semibold max-w-xs break-words">
                                 Reason: {req.rejection_reason}
@@ -489,7 +489,7 @@ const UpgradeRequests = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-900 uppercase">
-                          {req.plan_id?.plan_name || "N/A"}
+                          {req.plan_id?.plan_name || req.plan_name || "N/A"}
                         </td>
                         <td className="px-6 py-4 font-semibold text-slate-800">
                           {req.wanted_users} Seats
