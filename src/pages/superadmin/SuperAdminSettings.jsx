@@ -18,7 +18,9 @@ import {
   Upload,
   Loader2,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
+import MfaSetupModal from "../../components/MfaSetupModal";
 
 
 const API_BASE = import.meta.env.VITE_SI_URI || "http://localhost:5000";
@@ -174,6 +176,128 @@ const DEFAULTS = {
   </table>
 </body>
 </html>`,
+  upgradeApprovalSubject: "Your CRM Workspace Plan Has Been Upgraded — New Credentials",
+  upgradeApprovalBody: `<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6fb; padding: 20px;">
+  <div style="background-color: #ffffff; padding: 30px; border-radius: 12px; max-width: 550px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <h2 style="color: #008ecc; text-align: center;">Workspace Upgrade Activated</h2>
+    <p>Dear <strong>{{adminName}}</strong>,</p>
+    <p>Your tenant workspace has been successfully upgraded to the <strong>{{planName}}</strong> plan.</p>
+    <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px; color: #333;">New Plan Specifications:</h4>
+    <ul>
+      <li><strong>User Seats:</strong> {{wantedUsers}} Max Active Users</li>
+      <li><strong>Validity Days:</strong> {{loginDays}} Days</li>
+    </ul>
+    <div style="background-color: #f0f7ff; border: 1px solid #d0e5ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <h5 style="margin: 0 0 10px 0; color: #008ecc;">Plan Upgraded Successfully</h5>
+      <p style="margin: 0; font-size: 13px; color: #555;">
+        Your plan has been upgraded. All your existing data has been preserved. Here are your new administrator credentials:
+      </p>
+      <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 15px;">
+        <strong>Password:</strong> <span style="background: #fff; padding: 2px 8px; border: 1px dashed #008ecc; font-weight: bold; color: #008ecc;">{{password}}</span>
+      </p>
+    </div>
+    <div style="text-align: center; margin-top: 25px;">
+      <a href="{{loginUrl}}" style="background-color: #008ecc; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Login to Workspace</a>
+    </div>
+    <p style="font-size: 11px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; text-align: center;">
+      © {{year}} {{platformName}}. All rights reserved.
+    </p>
+  </div>
+</body>
+</html>`,
+  upgradeRejectedSubject: "CRM Workspace Upgrade Request Declined",
+  upgradeRejectedBody: `<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6fb; padding: 20px;">
+  <div style="background-color: #ffffff; padding: 30px; border-radius: 12px; max-width: 550px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <h2 style="color: #d93025; text-align: center;">Upgrade Request Declined</h2>
+    <p>Dear <strong>{{adminName}}</strong>,</p>
+    <p>Your request to upgrade your workspace to the <strong>{{planName}}</strong> plan has been declined.</p>
+    
+    <div style="background-color: #fce8e6; border: 1px solid #fad2cf; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <h5 style="margin: 0 0 10px 0; color: #c5221f;">Reason for Rejection:</h5>
+      <p style="margin: 0; font-size: 14px; color: #202124; line-height: 1.5; white-space: pre-wrap;">{{reason}}</p>
+    </div>
+
+    <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px; color: #333;">Requested Specifications:</h4>
+    <ul>
+      <li><strong>User Seats:</strong> {{wantedUsers}} Max Active Users</li>
+      <li><strong>Validity Days:</strong> {{loginDays}} Days</li>
+    </ul>
+
+    <p style="font-size: 13px; color: #555; line-height: 1.5;">
+      If you have any questions or would like to submit another request with adjusted parameters, please log in to your portal or contact support.
+    </p>
+    
+    <p style="font-size: 11px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; text-align: center;">
+      © {{year}} {{platformName}}. All rights reserved.
+    </p>
+  </div>
+</body>
+</html>`,
+  expiryReminderSubject: "{{urgencySubject}}",
+  expiryReminderBody: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f4f6fb;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:{{headerBg}};padding:36px 40px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">{{urgencyLabel}}</h1>
+            <p style="margin:8px 0 0;color:{{headerSubColor}};font-size:14px;">Your subscription on {{platformName}} is expiring</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px;">
+            <p style="margin:0 0 20px;color:#333;font-size:16px;">Hi <strong>{{adminName}}</strong>,</p>
+            <p style="margin:0 0 28px;color:#555;font-size:15px;line-height:1.6;">{{bodyMessage}}</p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:{{boxBg}};border:1px solid {{boxBorder}};border-radius:8px;margin-bottom:32px;">
+              <tr><td style="padding:24px 28px;">
+                <p style="margin:0 0 16px;font-size:13px;font-weight:600;color:{{accentColor}};text-transform:uppercase;letter-spacing:0.8px;">Plan Details</p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;width:130px;">Plan Name</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:600;">{{planName}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">Expiry Date</td>
+                    <td style="padding:7px 0;color:#111;font-size:14px;font-weight:700;">{{endDate}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#666;font-size:14px;">Days Left</td>
+                    <td style="padding:7px 0;"><span style="background:{{badgeBg}};color:{{badgeColor}};font-size:13px;font-weight:700;padding:3px 12px;border-radius:20px;">{{daysRemaining}} day(s)</span></td>
+                  </tr>
+                </table>
+              </td></tr>
+            </table>
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center" style="padding-bottom:28px;">
+                <a href="{{loginUrl}}" target="_blank" style="display:inline-block;background:{{accentColor}};color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 44px;border-radius:8px;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">Renew / Upgrade Now →</a>
+              </td></tr>
+            </table>
+
+            <p style="margin:0;color:#888;font-size:13px;line-height:1.6;border-top:1px solid #eee;padding-top:20px;">
+              To avoid any service interruption, please renew or upgrade your plan before the expiry date.<br/>
+              Contact your platform administrator if you need assistance.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafc;padding:20px 40px;text-align:center;border-top:1px solid #eee;">
+            <p style="margin:0;color:#aaa;font-size:12px;">© {{year}} {{platformName}}. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
   upgradeAlertEnabled: true,
   upgradeAlertEmail: "",
 };
@@ -227,9 +351,23 @@ const SuperAdminSettings = () => {
   const [planSubject, setPlanSubject] = useState(DEFAULTS.planSubject);
   const [planBody, setPlanBody] = useState(DEFAULTS.planBody);
 
+  const [upgradeApprovalSubject, setUpgradeApprovalSubject] = useState(DEFAULTS.upgradeApprovalSubject);
+  const [upgradeApprovalBody, setUpgradeApprovalBody] = useState(DEFAULTS.upgradeApprovalBody);
+
+  const [upgradeRejectedSubject, setUpgradeRejectedSubject] = useState(DEFAULTS.upgradeRejectedSubject);
+  const [upgradeRejectedBody, setUpgradeRejectedBody] = useState(DEFAULTS.upgradeRejectedBody);
+
+  const [expiryReminderSubject, setExpiryReminderSubject] = useState(DEFAULTS.expiryReminderSubject);
+  const [expiryReminderBody, setExpiryReminderBody] = useState(DEFAULTS.expiryReminderBody);
+
   // Upgrade alert
   const [upgradeAlertEnabled, setUpgradeAlertEnabled] = useState(DEFAULTS.upgradeAlertEnabled);
   const [upgradeAlertEmail, setUpgradeAlertEmail] = useState(DEFAULTS.upgradeAlertEmail);
+
+  // MFA
+  const [isMfaModalOpen, setIsMfaModalOpen] = useState(false);
+  const [mfaActionMsg, setMfaActionMsg] = useState("");
+  const [isMfaEnabled, setIsMfaEnabled] = useState(false);
 
   // ── Per-section reset handlers ──
   const resetBranding = () => {
@@ -262,6 +400,24 @@ const SuperAdminSettings = () => {
     toast.info("Plan email reset to default — click Save to apply");
   };
 
+  const resetUpgradeApprovalEmail = () => {
+    setUpgradeApprovalSubject(DEFAULTS.upgradeApprovalSubject);
+    setUpgradeApprovalBody(DEFAULTS.upgradeApprovalBody);
+    toast.info("Upgrade Approval email reset to default — click Save to apply");
+  };
+
+  const resetUpgradeRejectedEmail = () => {
+    setUpgradeRejectedSubject(DEFAULTS.upgradeRejectedSubject);
+    setUpgradeRejectedBody(DEFAULTS.upgradeRejectedBody);
+    toast.info("Upgrade Rejected email reset to default — click Save to apply");
+  };
+
+  const resetExpiryReminderEmail = () => {
+    setExpiryReminderSubject(DEFAULTS.expiryReminderSubject);
+    setExpiryReminderBody(DEFAULTS.expiryReminderBody);
+    toast.info("Expiry Reminder email reset to default — click Save to apply");
+  };
+
   const resetUpgradeAlerts = () => {
     setUpgradeAlertEnabled(DEFAULTS.upgradeAlertEnabled);
     setUpgradeAlertEmail(DEFAULTS.upgradeAlertEmail);
@@ -290,6 +446,10 @@ const SuperAdminSettings = () => {
         const { data } = await axios.get(SETTINGS_URL, {
           headers: authHeaders(),
         });
+        const { data: meData } = await axios.get(`${API_BASE}/superadmin/api/auth/me`, {
+          headers: authHeaders(),
+        });
+        setIsMfaEnabled(meData.isMfaEnabled || false);
         setPlatformName(data.platformName || DEFAULTS.platformName);
         setSupportEmail(data.supportEmail || DEFAULTS.supportEmail);
         setSmtpHost(data.smtpHost || DEFAULTS.smtpHost);
@@ -302,6 +462,12 @@ const SuperAdminSettings = () => {
         setWelcomeBody(data.welcomeBody || DEFAULTS.welcomeBody);
         setPlanSubject(data.planSubject || DEFAULTS.planSubject);
         setPlanBody(data.planBody?.trim() ? data.planBody : DEFAULTS.planBody);
+        setUpgradeApprovalSubject(data.upgradeApprovalSubject || DEFAULTS.upgradeApprovalSubject);
+        setUpgradeApprovalBody(data.upgradeApprovalBody?.trim() ? data.upgradeApprovalBody : DEFAULTS.upgradeApprovalBody);
+        setUpgradeRejectedSubject(data.upgradeRejectedSubject || DEFAULTS.upgradeRejectedSubject);
+        setUpgradeRejectedBody(data.upgradeRejectedBody?.trim() ? data.upgradeRejectedBody : DEFAULTS.upgradeRejectedBody);
+        setExpiryReminderSubject(data.expiryReminderSubject || DEFAULTS.expiryReminderSubject);
+        setExpiryReminderBody(data.expiryReminderBody?.trim() ? data.expiryReminderBody : DEFAULTS.expiryReminderBody);
         setUpgradeAlertEnabled(data.upgradeAlertEnabled ?? DEFAULTS.upgradeAlertEnabled);
         setUpgradeAlertEmail(data.upgradeAlertEmail || DEFAULTS.upgradeAlertEmail);
         if (data.platformLogo) {
@@ -337,6 +503,12 @@ const SuperAdminSettings = () => {
         welcomeBody,
         planSubject,
         planBody,
+        upgradeApprovalSubject,
+        upgradeApprovalBody,
+        upgradeRejectedSubject,
+        upgradeRejectedBody,
+        expiryReminderSubject,
+        expiryReminderBody,
         upgradeAlertEnabled,
         upgradeAlertEmail,
       };
@@ -657,14 +829,12 @@ const SuperAdminSettings = () => {
                   <button
                     type="button"
                     onClick={() => setSmtpSecure(!smtpSecure)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
-                      smtpSecure ? "bg-[#008ecc]" : "bg-slate-200"
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${smtpSecure ? "bg-[#008ecc]" : "bg-slate-200"
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        smtpSecure ? "translate-x-6" : "translate-x-1"
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${smtpSecure ? "translate-x-6" : "translate-x-1"
+                        }`}
                     />
                   </button>
                   <span className="text-sm font-semibold text-slate-700">
@@ -688,33 +858,34 @@ const SuperAdminSettings = () => {
                     Customise the emails sent to tenant admins when their workspace is created.
                   </CardDescription>
                 </div>
-                <ResetButton onClick={emailTab === "welcome" ? resetWelcomeEmail : resetPlanEmail} />
+                <ResetButton onClick={
+                  emailTab === "welcome" ? resetWelcomeEmail : 
+                  emailTab === "plan" ? resetPlanEmail :
+                  emailTab === "upgradeApproval" ? resetUpgradeApprovalEmail :
+                  emailTab === "upgradeRejected" ? resetUpgradeRejectedEmail :
+                  resetExpiryReminderEmail
+                } />
               </div>
 
               {/* Tab toggle */}
-              <div className="flex mt-4 bg-slate-100 rounded-xl p-1 w-fit gap-1">
-                <button
-                  type="button"
-                  onClick={() => setEmailTab("welcome")}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    emailTab === "welcome"
-                      ? "bg-white text-[#008ecc] shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  Welcome Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEmailTab("plan")}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    emailTab === "plan"
-                      ? "bg-white text-[#008ecc] shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  Plan Email
-                </button>
+              <div className="flex mt-4 bg-slate-100 rounded-xl p-1 w-full gap-1 overflow-x-auto">
+                {['welcome', 'plan', 'upgradeApproval', 'upgradeRejected', 'expiryReminder'].map(tab => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setEmailTab(tab)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${emailTab === tab
+                        ? "bg-white text-[#008ecc] shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                      }`}
+                  >
+                    {tab === 'welcome' && "Welcome Email"}
+                    {tab === 'plan' && "Plan Summary"}
+                    {tab === 'upgradeApproval' && "Upgrade Approval"}
+                    {tab === 'upgradeRejected' && "Upgrade Rejected"}
+                    {tab === 'expiryReminder' && "Expiry Reminder"}
+                  </button>
+                ))}
               </div>
             </CardHeader>
 
@@ -746,12 +917,12 @@ const SuperAdminSettings = () => {
                     />
                   </div>
                 </>
-              ) : (
+              ) : emailTab === "plan" ? (
                 <>
                   <p className="text-xs text-slate-400">
                     Variables:{" "}
                     <code className="bg-slate-100 px-1 rounded">
-                      {"{{adminName}} {{planName}} {{planType}} {{priceLabel}} {{maxUsers}} {{loginUrl}} {{platformName}}"}
+                      {"{{adminName}} {{planName}} {{planType}} {{priceLabel}} {{maxUsers}} {{startDate}} {{endDate}} {{loginUrl}} {{platformName}}"}
                     </code>
                   </p>
                   <div>
@@ -770,6 +941,91 @@ const SuperAdminSettings = () => {
                       onChange={(e) => setPlanBody(e.target.value)}
                       rows={10}
                       placeholder="Leave blank to use the built-in default plan email template"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                    />
+                  </div>
+                </>
+              ) : emailTab === "upgradeApproval" ? (
+                <>
+                  <p className="text-xs text-slate-400">
+                    Variables:{" "}
+                    <code className="bg-slate-100 px-1 rounded">
+                      {"{{adminName}} {{planName}} {{wantedUsers}} {{loginDays}} {{password}} {{loginUrl}} {{platformName}}"}
+                    </code>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <input
+                      type="text"
+                      value={upgradeApprovalSubject}
+                      onChange={(e) => setUpgradeApprovalSubject(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <textarea
+                      value={upgradeApprovalBody}
+                      onChange={(e) => setUpgradeApprovalBody(e.target.value)}
+                      rows={10}
+                      placeholder="Leave blank to use the built-in default upgrade approval template"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                    />
+                  </div>
+                </>
+              ) : emailTab === "upgradeRejected" ? (
+                <>
+                  <p className="text-xs text-slate-400">
+                    Variables:{" "}
+                    <code className="bg-slate-100 px-1 rounded">
+                      {"{{adminName}} {{planName}} {{wantedUsers}} {{loginDays}} {{reason}} {{platformName}}"}
+                    </code>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <input
+                      type="text"
+                      value={upgradeRejectedSubject}
+                      onChange={(e) => setUpgradeRejectedSubject(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <textarea
+                      value={upgradeRejectedBody}
+                      onChange={(e) => setUpgradeRejectedBody(e.target.value)}
+                      rows={10}
+                      placeholder="Leave blank to use the built-in default upgrade rejected template"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-400">
+                    Variables:{" "}
+                    <code className="bg-slate-100 px-1 rounded">
+                      {"{{adminName}} {{planName}} {{endDate}} {{daysRemaining}} {{loginUrl}} {{platformName}}"}
+                    </code>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <input
+                      type="text"
+                      value={expiryReminderSubject}
+                      onChange={(e) => setExpiryReminderSubject(e.target.value)}
+                      placeholder="Use {{urgencySubject}} for default dynamic subject"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <textarea
+                      value={expiryReminderBody}
+                      onChange={(e) => setExpiryReminderBody(e.target.value)}
+                      rows={10}
+                      placeholder="Leave blank to use the built-in default expiry reminder template"
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
                     />
                   </div>
@@ -807,14 +1063,12 @@ const SuperAdminSettings = () => {
                 <button
                   type="button"
                   onClick={() => setUpgradeAlertEnabled(!upgradeAlertEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
-                    upgradeAlertEnabled ? "bg-[#008ecc]" : "bg-slate-200"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${upgradeAlertEnabled ? "bg-[#008ecc]" : "bg-slate-200"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      upgradeAlertEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${upgradeAlertEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -836,6 +1090,70 @@ const SuperAdminSettings = () => {
             </CardContent>
           </Card>
 
+          {/* ── Security / MFA ── */}
+          <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl overflow-hidden bg-white">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${isMfaEnabled ? 'bg-green-100' : 'bg-indigo-100'}`}>
+                    <ShieldCheck size={20} className={isMfaEnabled ? 'text-green-600' : 'text-indigo-600'} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-800">
+                      Multi-Factor Authentication
+                    </CardTitle>
+                    <CardDescription className="text-sm text-slate-500 mt-1">
+                      Protect your superadmin account with an authenticator app.
+                    </CardDescription>
+                  </div>
+                </div>
+                {isMfaEnabled ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    Enabled
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 px-3 py-1 bg-slate-50 text-slate-500 text-xs font-bold rounded-full border border-slate-200">
+                    Disabled
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {mfaActionMsg && (
+                <p className="text-sm font-semibold text-green-600 mb-4">{mfaActionMsg}</p>
+              )}
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setIsMfaModalOpen(true)}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold cursor-pointer text-sm shadow-sm transition"
+                >
+                  Set Up MFA
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await axios.post(`${API_BASE}/superadmin/api/mfa/disable`, {}, {
+                        headers: authHeaders()
+                      });
+                      setMfaActionMsg("MFA has been disabled.");
+                      setIsMfaEnabled(false);
+                      toast.success("MFA has been disabled.");
+                      setTimeout(() => setMfaActionMsg(""), 3000);
+                    } catch (error) {
+                      toast.error("Failed to disable MFA.");
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-semibold cursor-pointer text-sm transition"
+                >
+                  Disable MFA
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* ── Save ── */}
           <div className="flex justify-end pt-2">
             <button
@@ -854,10 +1172,23 @@ const SuperAdminSettings = () => {
         </form>
       </div>
 
+      <MfaSetupModal
+        isOpen={isMfaModalOpen}
+        onClose={() => setIsMfaModalOpen(false)}
+        mfaEndpoint={`${API_BASE}/superadmin/api/mfa`}
+        onComplete={() => {
+          setIsMfaModalOpen(false);
+          setIsMfaEnabled(true);
+          setMfaActionMsg("MFA successfully enabled.");
+          toast.success("MFA successfully enabled.");
+          setTimeout(() => setMfaActionMsg(""), 3000);
+        }}
+      />
+
       {/* Toast Container */}
-      <ToastContainer 
-        position="top-right" 
-        autoClose={3000} 
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick

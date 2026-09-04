@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { LifeBuoy, Paperclip, Send, X, ChevronDown } from "lucide-react";
+import { LifeBuoy, Paperclip, Send, X, ChevronDown, Calendar } from "lucide-react";
 import { toast } from "react-toastify";
 import { api } from "../../services/api";
 import { useSocket } from "../../context/SocketContext";
@@ -38,6 +38,14 @@ const TicketCard = ({ ticket, onSendMessage }) => {
             <PriorityBadge priority={ticket.priority} />
           </div>
           <h3 className="text-slate-700 mt-1.5">{ticket.subject}</h3>
+          
+          {ticket.expectedResolutionDate && (
+            <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-md w-fit border border-amber-100">
+              <Calendar size={12} className="text-amber-600" />
+              Expected Resolution: {formatDate(ticket.expectedResolutionDate)}
+            </div>
+          )}
+
           {ticket.attachmentName && (
             <a
               href={`${SI_URI}/${ticket.attachmentPath}`}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import DatePicker from "react-datepicker";
+import { useSelector } from "react-redux";
 import { FaCalendarAlt, FaEye, FaTrash } from "react-icons/fa";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -99,6 +100,8 @@ const tourSteps = [
 
 const ProposalHeadContent = () => {
   const API_URL = import.meta.env.VITE_API_URL;
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user?.role === "Admin" || user?.role?.name === "Admin";
 
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -443,18 +446,20 @@ const ProposalHeadContent = () => {
               <option value="success">Success</option>
             </select>
 
-            <select
-              value={filterAssignee}
-              onChange={(e) => updateFilter("assignedTo", e.target.value, setFilterAssignee)}
-              className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm h-10"
-            >
-              <option value="">All Assignees</option>
-              {usersList.map((user) => (
-                <option key={user._id || user.id} value={user._id || user.id}>
-                  {user.firstName} {user.lastName}
-                </option>
-              ))}
-            </select>
+            {isAdmin && (
+              <select
+                value={filterAssignee}
+                onChange={(e) => updateFilter("assignedTo", e.target.value, setFilterAssignee)}
+                className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white block text-sm h-10"
+              >
+                <option value="">All Assignees</option>
+                {usersList.map((u) => (
+                  <option key={u._id || u.id} value={u._id || u.id}>
+                    {u.firstName} {u.lastName}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <div className="flex items-center gap-2 w-full h-10">
               <div className="flex-1">

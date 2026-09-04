@@ -47,9 +47,8 @@ const formatDate = (iso) =>
 
 const StatusPill = ({ status }) => (
   <span
-    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase ${
-      STATUS_STYLES[status] || STATUS_STYLES.Pending
-    }`}
+    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase ${STATUS_STYLES[status] || STATUS_STYLES.Pending
+      }`}
   >
     {status}
   </span>
@@ -57,13 +56,25 @@ const StatusPill = ({ status }) => (
 
 const PriorityPill = ({ priority }) => (
   <span
-    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase ${
-      PRIORITY_STYLES[priority] || PRIORITY_STYLES.Medium
-    }`}
+    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase ${PRIORITY_STYLES[priority] || PRIORITY_STYLES.Medium
+      }`}
   >
     {priority}
   </span>
 );
+
+const getTicketUrgency = (ticket) => {
+  if (ticket.status === "Closed" || !ticket.expectedResolutionDate) return null;
+  const resolutionDate = new Date(ticket.expectedResolutionDate);
+  const now = new Date();
+  resolutionDate.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  if (now > resolutionDate) return 'overdue';
+  if (now.getTime() === resolutionDate.getTime()) return 'due_today';
+
+  return null;
+};
 
 const SupportTickets = () => {
   const [tickets, setTickets] = useState([]);
@@ -74,6 +85,7 @@ const SupportTickets = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
+  const [urgencyFilter, setUrgencyFilter] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
@@ -83,7 +95,7 @@ const SupportTickets = () => {
     setLoading(true);
     try {
       const { data } = await supportTicketApi.get(BASE, {
-        params: { search, status: statusFilter, priority: priorityFilter, dateFrom, dateTo, page, limit: PAGE_SIZE },
+        params: { search, status: statusFilter, priority: priorityFilter, urgency: urgencyFilter, dateFrom, dateTo, page, limit: PAGE_SIZE },
       });
       setTickets(data.data || []);
       setTotal(data.pagination?.total || 0);
@@ -98,9 +110,9 @@ const SupportTickets = () => {
   useEffect(() => {
     fetchTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, priorityFilter, dateFrom, dateTo, page]);
+  }, [search, statusFilter, priorityFilter, urgencyFilter, dateFrom, dateTo, page]);
 
-  const hasFilters = search || statusFilter !== "All" || priorityFilter !== "All" || dateFrom || dateTo;
+  const hasFilters = search || statusFilter !== "All" || priorityFilter !== "All" || urgencyFilter !== "All" || dateFrom || dateTo;
 
   // New tickets / tenant follow-up messages push here live, so an already-open
   // queue or modal updates without the platform owner needing to refresh.
@@ -133,6 +145,7 @@ const SupportTickets = () => {
     setSearch("");
     setStatusFilter("All");
     setPriorityFilter("All");
+    setUrgencyFilter("All");
     setDateFrom("");
     setDateTo("");
     setPage(1);
@@ -158,6 +171,16 @@ const SupportTickets = () => {
       updateTicketInList(data.data);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to update priority.");
+    }
+  };
+
+  const updateResolutionDate = async (id, expectedResolutionDate) => {
+    try {
+      const { data } = await supportTicketApi.patch(`${BASE}/${id}/resolution-date`, { expectedResolutionDate });
+      updateTicketInList(data.data);
+      toast.success("Expected resolution date updated.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update resolution date.");
     }
   };
 
@@ -229,6 +252,19 @@ const SupportTickets = () => {
           ))}
         </select>
 
+        <select
+          value={urgencyFilter}
+          onChange={(e) => {
+            setUrgencyFilter(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+        >
+          <option value="All">Due dates</option>
+          <option value="Due Today">Due Today</option>
+          <option value="Overdue">Overdue</option>
+        </select>
+
         <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5">
           <Calendar size={14} className="text-slate-400" />
           <input
@@ -293,46 +329,73 @@ const SupportTickets = () => {
                   </td>
                 </tr>
               ) : tickets.length > 0 ? (
-                tickets.map((t) => (
-                  <tr key={t._id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs text-slate-400 whitespace-nowrap">
-                      {t._id.slice(-6).toUpperCase()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900">{t.submittedByName}</span>
-                        <span className="text-xs text-slate-500">{t.submittedByEmail}</span>
-                        {t.tenant_id?.name && (
-                          <span className="text-xs text-slate-400">Workspace: {t.tenant_id.name}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 max-w-xs">
-                      <p className="truncate">{t.subject}</p>
-                      {t.attachmentName && (
-                        <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
-                          <Paperclip size={11} />
-                          {t.attachmentName}
+                tickets.map((t) => {
+                  const urgency = getTicketUrgency(t);
+                  const rowClass = urgency === 'overdue'
+                    ? "bg-red-50/40 hover:bg-red-50/70"
+                    : urgency === 'due_today'
+                      ? "bg-amber-50/40 hover:bg-amber-50/70"
+                      : "hover:bg-slate-50/50";
+
+                  return (
+                    <tr key={t._id} className={`${rowClass} transition-colors`}>
+                      <td className="px-6 py-4 font-mono text-xs text-slate-400 whitespace-nowrap">
+                        {t._id.slice(-6).toUpperCase()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{t.submittedByName}</span>
+                          <span className="text-xs text-slate-500">{t.submittedByEmail}</span>
+                          {t.tenant_id?.name && (
+                            <span className="text-xs text-slate-400">Workspace: {t.tenant_id.name}</span>
+                          )}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap">{formatDate(t.createdAt)}</td>
-                    <td className="px-6 py-4">
-                      <PriorityPill priority={t.priority} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusPill status={t.status} />
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => setActiveTicket(t)}
-                        className="px-3 py-1.5 bg-[#008ecc] text-white rounded-lg font-bold text-xs hover:bg-[#007bb0] transition cursor-pointer shadow-sm whitespace-nowrap"
-                      >
-                        View / Reply
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4 max-w-xs">
+                        <p className="truncate">{t.subject}</p>
+                        {t.attachmentName && (
+                          <a
+                            href={`${SI_URI}/${t.attachmentPath?.replace(/\\/g, '/')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-[#008ecc] hover:underline mt-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Paperclip size={11} />
+                            {t.attachmentName}
+                          </a>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 whitespace-nowrap">{formatDate(t.createdAt)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col items-start gap-1">
+                          <PriorityPill priority={t.priority} />
+                          {urgency === 'overdue' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider border border-red-200">
+                              Overdue
+                            </span>
+                          )}
+                          {urgency === 'due_today' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider border border-amber-200">
+                              Due Today
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusPill status={t.status} />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => setActiveTicket(t)}
+                          className="px-3 py-1.5 bg-[#008ecc] text-white rounded-lg font-bold text-xs hover:bg-[#007bb0] transition cursor-pointer shadow-sm whitespace-nowrap"
+                        >
+                          View / Reply
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400 font-semibold">
@@ -379,6 +442,7 @@ const SupportTickets = () => {
           onClose={() => setActiveTicket(null)}
           onStatusChange={updateStatus}
           onPriorityChange={updatePriority}
+          onResolutionDateChange={updateResolutionDate}
           onSendMessage={sendMessage}
         />
       )}
@@ -386,7 +450,7 @@ const SupportTickets = () => {
   );
 };
 
-const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onSendMessage }) => {
+const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onResolutionDateChange, onSendMessage }) => {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -400,7 +464,7 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onSend
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
             <h3 className="text-slate-700">{ticket.subject}</h3>
@@ -416,8 +480,31 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onSend
             <div>
               <p className="text-sm font-bold text-slate-900">{ticket.submittedByName}</p>
               <p className="text-xs text-slate-500">{ticket.submittedByEmail}</p>
+              {ticket.attachmentName && (
+                <a
+                  href={`${SI_URI}/${ticket.attachmentPath?.replace(/\\/g, '/')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-lg bg-blue-50 text-[#008ecc] hover:bg-blue-100 transition-colors text-xs font-bold border border-blue-100"
+                >
+                  <Paperclip size={13} />
+                  {ticket.attachmentName}
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Expected Resolution Date */}
+              <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1.5 bg-white shadow-sm">
+                <Calendar size={13} className="text-slate-400" />
+                <input
+                  type="date"
+                  value={ticket.expectedResolutionDate ? ticket.expectedResolutionDate.split('T')[0] : ""}
+                  onChange={(e) => onResolutionDateChange(ticket._id, e.target.value)}
+                  className="text-xs font-bold text-slate-600 focus:outline-none cursor-pointer bg-transparent"
+                  title="Expected Resolution Date"
+                />
+              </div>
+
               <select
                 value={ticket.priority}
                 onChange={(e) => onPriorityChange(ticket._id, e.target.value)}
