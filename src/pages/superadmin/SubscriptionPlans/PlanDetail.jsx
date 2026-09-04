@@ -291,7 +291,7 @@ const PlanDetail = () => {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-100">
-                      <th className="px-4 py-2">Organization</th>
+                      <th className="px-4 py-2">Business</th>
                       <th className="px-4 py-2">Administrator</th>
                       <th className="px-4 py-2">Subscription End</th>
                       <th className="px-4 py-2 text-center">Status</th>

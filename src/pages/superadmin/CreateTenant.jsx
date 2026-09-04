@@ -82,7 +82,7 @@ const CreateTenant = () => {
     }
 
     if (name.trim().length < 3) {
-      setError("Organization Name must be at least 3 characters long.");
+      setError("Business Name must be at least 3 characters long.");
       return;
     }
 
@@ -207,7 +207,7 @@ const CreateTenant = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Organization Name
+                    Business Name
                   </label>
                   <input
                     type="text"

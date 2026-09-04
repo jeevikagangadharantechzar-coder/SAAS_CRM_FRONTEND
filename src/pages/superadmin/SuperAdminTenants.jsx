@@ -167,7 +167,7 @@ const SuperAdminTenants = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-slate-900">Tenant Organizations</h2>
+          <h2 className="text-slate-900">Tenant Businesses</h2>
           <p className="text-base text-slate-600">Provision, inspect, and configure multi-tenant databases.</p>
         </div>
 
@@ -213,16 +213,17 @@ const SuperAdminTenants = () => {
                 <th className="px-6 py-4">Company Name</th>
                 <th className="px-6 py-4">Slug</th>
                 <th className="px-6 py-4">Current Plan</th>
+                <th className="px-6 py-4 text-center">Plan Status</th>
                 <th className="px-6 py-4">Administrator</th>
                 <th className="px-6 py-4">Created Date</th>
-                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Account Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y divide-slate-100 text-slate-700 text-sm ${loading && tenants.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
               {loading && tenants.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <RefreshCw className="animate-spin text-[#008ecc]" size={32} />
                       <span className="font-medium">Querying platform databases...</span>
@@ -243,6 +244,21 @@ const SuperAdminTenants = () => {
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-800">
                       {t.plan_id?.plan_name || "Trial / Custom"}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                          t.plan_status === "active"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : t.plan_status === "trial"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : t.plan_status === "expired"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-gray-50 text-gray-500 border-gray-200"
+                        }`}
+                      >
+                        {t.plan_status ? t.plan_status.charAt(0).toUpperCase() + t.plan_status.slice(1) : "Unknown"}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -301,7 +317,7 @@ const SuperAdminTenants = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                     No tenants found matching your query.
                   </td>
                 </tr>
