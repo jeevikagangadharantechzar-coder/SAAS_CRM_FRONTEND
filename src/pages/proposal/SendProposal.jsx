@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -28,8 +28,11 @@ const SendProposal = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [deals, setDeals] = useState([]);
-  const [selectedDealId, setSelectedDealId] = useState("");
+  const [selectedDealId, setSelectedDealId] = useState(presetDealId || "");
   const [attachments, setAttachments] = useState([]);
+
+  // Synchronous ref to prevent double clicks before React state updates
+  const isSubmittingRef = useRef(false);
 
   // Remove file from attachments
   const removeFile = (index) => {
@@ -128,6 +131,13 @@ const SendProposal = () => {
 
 /* ── Handle Submit Function ─────────────────────── */
  const handleSubmit = async (submitType = "sent") => {
+  if (isSubmittingRef.current) return;
+  isSubmittingRef.current = true;
+  
+  if (loading || savingDraft) {
+    isSubmittingRef.current = false;
+    return;
+  }
   const isDraftMode = submitType === "draft";
   
   if (isDraftMode) {
@@ -230,7 +240,8 @@ const SendProposal = () => {
     } else {
       toast.error(error.message || "An error occurred");
     }
-  } finally {
+    
+    isSubmittingRef.current = false;
     if (isDraftMode) {
       setSavingDraft(false);
     } else {

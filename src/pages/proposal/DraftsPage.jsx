@@ -41,9 +41,9 @@ const DraftsPage = () => {
     setIsUpdating((prev) => ({ ...prev, [id]: true }));
     try {
       const token = localStorage.getItem("token"); // Get token
-      await axios.put(
-        `${API_URL}/proposal/updatestatus/${id}`,
-        { status: "sent" },
+      await axios.post(
+        `${API_URL}/proposal/send-draft/${id}`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } } // Add token
       );
       
@@ -51,7 +51,7 @@ const DraftsPage = () => {
       toast.success("Draft sent successfully!");
     } catch (err) {
       console.error("Send error:", err);
-      toast.error("Failed to send draft.");
+      toast.error(err.response?.data?.error || "Failed to send draft.");
     }
     setIsUpdating((prev) => ({ ...prev, [id]: false }));
   };
