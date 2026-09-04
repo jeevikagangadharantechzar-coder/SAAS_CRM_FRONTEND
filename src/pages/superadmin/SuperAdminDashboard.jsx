@@ -42,7 +42,7 @@ const SuperAdminDashboard = () => {
       // Parse tenants for chart data
       const tenantsData = data.tenants || [];
       setTenants(Array.isArray(tenantsData) ? tenantsData : []);
-
+      
       // Parse upgrades
       const upgradesData = data.upgradeRequests || data.requests || [];
       setUpgradeRequests(Array.isArray(upgradesData) ? upgradesData : []);
@@ -83,7 +83,7 @@ const SuperAdminDashboard = () => {
     {
       title: "Total Tenants",
       value: stats.tenantsCount,
-      description: "Registered organizations",
+      description: "Registered businesses",
       icon: <Building2 className="text-[#008ecc]" size={24} />,
       bg: "bg-[#f2fbff] border border-blue-100",
     },

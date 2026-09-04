@@ -220,7 +220,7 @@ const TenantDetail = () => {
 
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
               <div className="space-y-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Organization Name</span>
+                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Business Name</span>
                 <span className="text-slate-800 font-bold text-base">{tenant.name}</span>
               </div>
 
