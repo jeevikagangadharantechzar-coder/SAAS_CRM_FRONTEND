@@ -160,7 +160,7 @@ const Login = () => {
         .get(`${SI_URI}/superadmin/api/tenants/public/by-slug/${tenantSlug}`)
         .catch((err) => {
           if (err.response?.status === 403) {
-            setMessage(err.response?.data?.message || "Your account has been suspended contact administrator");
+            setMessage(err.response?.data?.message || "Your account has been suspended contact Superadmin");
             setIsError(true);
           } else if (err.response?.status === 404) {
             setMessage(err.response?.data?.error || "Workspace not found");
