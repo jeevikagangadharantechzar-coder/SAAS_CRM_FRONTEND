@@ -20,9 +20,10 @@ const LoadingSkeleton = () => (
 
 const FreeTrialAnalysis = () => {
   const [data, setData] = useState({
-    summary: { total: 0, converted: 0, rejected: 0, pending: 0 },
-    details: { converted: [], rejected: [], pending: [] },
+    summary: { total: 0, converted: 0, expired: 0, pending: 0 },
+    details: { converted: [], expired: [], pending: [] },
   });
+  const [originFilter, setOriginFilter] = useState("all"); // 'all', 'free_trial', 'direct'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -62,13 +63,17 @@ const FreeTrialAnalysis = () => {
 
   const allRecords = useMemo(() => {
     const converted = (data.details?.converted || []).map(item => ({ ...item, _status: 'converted' }));
-    const rejected = (data.details?.rejected || []).map(item => ({ ...item, _status: 'rejected' }));
+    const expired = (data.details?.expired || []).map(item => ({ ...item, _status: 'expired' }));
     const pending = (data.details?.pending || []).map(item => ({ ...item, _status: 'pending' }));
-    return [...converted, ...rejected, ...pending].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return [...converted, ...expired, ...pending].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }, [data.details]);
 
   const baseRecords = useMemo(() => {
-    let records = allRecords;
+    let records = [...allRecords];
+    
+    if (originFilter !== "all") {
+      records = records.filter(item => item.origin === originFilter);
+    }
 
     if (search.trim()) {
       const lowerSearch = search.toLowerCase();
@@ -93,7 +98,7 @@ const FreeTrialAnalysis = () => {
     }
 
     return records;
-  }, [allRecords, search, dateMode, singleDate, startDate, endDate]);
+  }, [allRecords, activeTab, search, dateMode, singleDate, startDate, endDate, originFilter]);
 
   const filteredRecords = useMemo(() => {
     if (activeTab === "all") return baseRecords;
@@ -102,14 +107,14 @@ const FreeTrialAnalysis = () => {
 
   useEffect(() => { 
     setPage(1); 
-  }, [activeTab, search, dateMode, singleDate, startDate, endDate]);
+  }, [activeTab, search, dateMode, singleDate, startDate, endDate, originFilter]);
 
   const dynamicSummary = useMemo(() => {
-    const summary = { total: baseRecords.length, converted: 0, pending: 0, rejected: 0 };
+    const summary = { total: baseRecords.length, converted: 0, pending: 0, expired: 0 };
     baseRecords.forEach(r => {
       if (r._status === "converted") summary.converted++;
       else if (r._status === "pending") summary.pending++;
-      else if (r._status === "rejected") summary.rejected++;
+      else if (r._status === "expired") summary.expired++;
     });
     return summary;
   }, [baseRecords]);
@@ -118,7 +123,7 @@ const FreeTrialAnalysis = () => {
     return [
       { name: "Converted", value: dynamicSummary.converted, color: "#10b981" },
       { name: "Ongoing", value: dynamicSummary.pending, color: "#f59e0b" },
-      { name: "Rejected", value: dynamicSummary.rejected, color: "#ef4444" },
+      { name: "Expired", value: dynamicSummary.expired, color: "#ef4444" },
     ].filter(d => d.value > 0);
   }, [dynamicSummary]);
 
@@ -153,15 +158,15 @@ const FreeTrialAnalysis = () => {
     { id: "all", label: "All Signups" },
     { id: "converted", label: "Converted" },
     { id: "pending", label: "Ongoing" },
-    { id: "rejected", label: "Rejected" },
+    { id: "expired", label: "Expired" },
   ];
 
   const getStatusBadge = (status) => {
     switch(status) {
       case 'converted':
         return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><CheckCircle2 size={12} className="mr-1.5" strokeWidth={3} /> Converted</span>;
-      case 'rejected':
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200"><XCircle size={12} className="mr-1.5" strokeWidth={3} /> Rejected</span>;
+      case 'expired':
+        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200"><XCircle size={12} className="mr-1.5" strokeWidth={3} /> Expired</span>;
       case 'pending':
         return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200"><Clock size={12} className="mr-1.5" strokeWidth={3} /> Ongoing</span>;
       default:
@@ -197,20 +202,38 @@ const FreeTrialAnalysis = () => {
         <LoadingSkeleton />
       ) : (
         <div className="space-y-8 animate-in fade-in duration-500">
-          <FilterToolbar 
-            dateMode={dateMode} setDateMode={setDateMode}
-            singleDate={singleDate} setSingleDate={setSingleDate}
-            startDate={startDate} setStartDate={setStartDate}
-            endDate={endDate} setEndDate={setEndDate}
-          />
+          <div className="flex flex-col lg:flex-row items-center gap-4 mb-6 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="flex-1 relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="text" 
+                placeholder="Search by name, email, business or slug..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+              />
+            </div>
 
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+              <div className="w-full sm:w-auto">
+                <FilterToolbar 
+                  dateMode={dateMode} setDateMode={setDateMode}
+                  singleDate={singleDate} setSingleDate={setSingleDate}
+                  startDate={startDate} setStartDate={setStartDate}
+                  endDate={endDate} setEndDate={setEndDate}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard 
               title="Total Signups" 
               value={dynamicSummary.total} 
               icon={Users} 
-              colorClass="text-indigo-600"
-              bgGradient="bg-gradient-to-br from-indigo-50 to-blue-50/50"
+              colorClass="text-blue-500"
+              bgGradient="bg-gradient-to-br from-blue-50 to-indigo-50/50"
               isActive={activeTab === "all"}
               onClick={() => setActiveTab("all")}
             />
@@ -235,14 +258,14 @@ const FreeTrialAnalysis = () => {
               onClick={() => setActiveTab("pending")}
             />
             <MetricCard 
-              title="Rejected / Expired" 
-              value={dynamicSummary.rejected} 
-              percentage={calcPercentage(dynamicSummary.rejected, dynamicSummary.total)}
+              title="Expired" 
+              value={dynamicSummary.expired} 
+              percentage={calcPercentage(dynamicSummary.expired, dynamicSummary.total)}
               icon={XCircle} 
               colorClass="text-rose-500"
               bgGradient="bg-gradient-to-br from-rose-50 to-red-50/50"
-              isActive={activeTab === "rejected"}
-              onClick={() => setActiveTab("rejected")}
+              isActive={activeTab === "expired"}
+              onClick={() => setActiveTab("expired")}
             />
           </div>
 
@@ -285,6 +308,7 @@ const FreeTrialAnalysis = () => {
                     <th className="px-8 py-5">User Details</th>
                     <th className="px-8 py-5">Business</th>
                     <th className="px-8 py-5">Signup Date</th>
+                    <th className="px-8 py-5">Origin</th>
                     <th className="px-8 py-5 text-center">Status</th>
                   </tr>
                 </thead>
@@ -308,6 +332,13 @@ const FreeTrialAnalysis = () => {
                         <td className="px-8 py-5 text-slate-600 text-sm font-semibold">
                           {r.createdAt ? format(new Date(r.createdAt), "MMM dd, yyyy") : "—"}
                         </td>
+                        <td className="px-8 py-5">
+                          {r.origin === "free_trial" ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Free Trial</span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">Direct Subs</span>
+                          )}
+                        </td>
                         <td className="px-8 py-5 text-center">
                           {getStatusBadge(r._status)}
                         </td>
@@ -315,7 +346,7 @@ const FreeTrialAnalysis = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-8 py-24 text-center">
+                      <td colSpan={5} className="px-8 py-24 text-center">
                         <div className="flex flex-col items-center justify-center text-slate-400">
                           <div className="p-4 bg-slate-50 rounded-full mb-4">
                             <Filter size={32} className="text-slate-300" />
