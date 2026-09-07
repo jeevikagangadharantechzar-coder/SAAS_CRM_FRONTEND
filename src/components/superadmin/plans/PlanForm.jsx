@@ -194,9 +194,9 @@ const FEATURE_GROUPS = [
 const TOTAL_FEATURE_COUNT = Object.keys(DEFAULT_FEATURES).length;
 
 const DEFAULT_TIERS = [
-  { billing_cycle: "monthly",     label: "Monthly",   price: "", grace_days: "", duration_months: 1,  enabled: false },
-  { billing_cycle: "half_yearly", label: "Half Year", price: "", grace_days: "", duration_months: 6,  enabled: false },
-  { billing_cycle: "yearly",      label: "Yearly",    price: "", grace_days: "", duration_months: 12, enabled: false },
+  { billing_cycle: "monthly",     label: "Monthly",   price: "", duration_months: 1,  enabled: false },
+  { billing_cycle: "half_yearly", label: "Half Year", price: "", duration_months: 6,  enabled: false },
+  { billing_cycle: "yearly",      label: "Yearly",    price: "", duration_months: 12, enabled: false },
 ];
 
 function buildInitialTiers(savedTiers) {
@@ -208,7 +208,6 @@ function buildInitialTiers(savedTiers) {
       ? {
           ...d,
           price:          String(map[d.billing_cycle].price ?? ""),
-          grace_days:     String(map[d.billing_cycle].grace_days ?? ""),
           duration_months: map[d.billing_cycle].duration_months ?? d.duration_months,
           enabled: true,
         }
@@ -298,10 +297,9 @@ export const PlanForm = ({
   const handleFormSubmit = (data) => {
     const enabledTiers = tiers
       .filter((t) => t.enabled)
-      .map(({ enabled, label, price, grace_days, ...rest }) => ({
+      .map(({ enabled, label, price, ...rest }) => ({
         ...rest,
-        price:      Math.max(0, parseFloat(price)  || 0),
-        grace_days: Math.max(0, parseInt(grace_days) || 0),
+        price: parseFloat(price) || 0,
       }));
 
     const monthlyTier = enabledTiers.find((t) => t.billing_cycle === "monthly");
@@ -546,31 +544,6 @@ export const PlanForm = ({
                           </div>
                         </div>
 
-                        {/* Row 2: grace days (visible when enabled) */}
-                        {tier.enabled && (
-                          <div className="flex items-center justify-between px-4 pb-3 pt-0 gap-4">
-                            <div className="flex-1">
-                              <p className="text-xs text-slate-500 font-semibold">Grace Days</p>
-                              <p className="text-xs text-slate-400">Extra days after plan expires before access is cut off</p>
-                            </div>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              placeholder="0"
-                              value={tier.grace_days}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (/^\d*$/.test(val)) {
-                                  updateTier(tier.billing_cycle, "grace_days", val);
-                                }
-                              }}
-                              onBlur={(e) => {
-                                if (e.target.value === "") updateTier(tier.billing_cycle, "grace_days", "0");
-                              }}
-                              className="w-20 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all text-right font-mono bg-white"
-                            />
-                          </div>
-                        )}
                       </div>
                     );
                   })}
