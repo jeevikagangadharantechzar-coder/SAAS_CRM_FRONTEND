@@ -40,6 +40,22 @@ const TrialStatusBadge = ({ tenant }) => {
     );
   }
 
+  if (tenant.plan_status === "expired") {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+        Expired
+      </span>
+    );
+  }
+
+  if (tenant.plan_status === "grace") {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-orange-50 text-orange-700 border-orange-200">
+        Grace Period
+      </span>
+    );
+  }
+
   if (tenant.plan_status === "trial" && isExpired) {
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-amber-50 text-amber-700 border-amber-200">
@@ -331,7 +347,7 @@ const FreeTrialSignups = () => {
                           </a>
                         )}
                         {(() => {
-                          const isConverted = s.tenant && s.tenant.isActive && s.tenant.plan_status !== "trial";
+                          const isConverted = s.tenant && s.tenant.isActive && !["trial", "grace", "expired"].includes(s.tenant.plan_status);
                           return (
                             <button
                               onClick={() => setDeleteTarget(s)}

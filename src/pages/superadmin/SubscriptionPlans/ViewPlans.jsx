@@ -295,7 +295,7 @@ const ViewPlans = () => {
   const currentPlan = currentTenant?.plan_id;
   const currentCycle = currentTenant?.plan_billing_cycle;
   const currentTier = currentPlan?.tiers?.find((t) => t.billing_cycle === currentCycle);
-  const graceDays = currentTier?.grace_days ?? 0;
+  const graceDays = !currentCycle ? 14 : 30;
 
   const endDate = currentTenant?.plan_end_date;
   const daysLeft = daysUntil(endDate);
