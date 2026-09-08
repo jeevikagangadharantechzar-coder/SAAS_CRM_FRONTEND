@@ -100,6 +100,31 @@ export const exportRowsToExcel = async (rows, columns, filename, sheetName = "Sh
 };
 
 /**
+ * Downloads `rows` (array of flat objects) as a CSV file.
+ * Uses the same column definitions as the Excel export.
+ */
+export const exportRowsToCSV = (rows, columns, filename) => {
+  const importable = columns.filter((c) => !c.exportOnly);
+  const headers = importable.map((c) => c.label);
+  
+  const data = rows.map((row) => {
+    return importable.map((col) => {
+      const raw = row[col.key];
+      if (col.type === "date" && raw) {
+        const parsed = new Date(raw);
+        return isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString();
+      }
+      return raw ?? "";
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, filename);
+};
+
+/**
  * Downloads a blank template containing only the header row (import-eligible
  * columns only — export-only columns like "Created At" are left out since
  * they don't make sense to fill in) so a re-uploaded template round-trips.

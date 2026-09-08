@@ -8,6 +8,7 @@ import { initSocket } from "../../utils/socket";
 import ForgotPassword from "../password/ForgotPassword";
 import PrivacyPolicyModal from "../../components/legal/PrivacyPolicyModal";
 import TermsModal from "../../components/legal/TermsModal";
+import ExpireModal from "./ExpireModal";
 
 // Stable per-browser device id, persisted so re-logging in on the same
 // browser is always recognized as "the same device" and never needs
@@ -662,50 +663,12 @@ const Login = () => {
       />
 
       {/* Trial / Plan Expired Popup */}
-      {expiredNotice && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-5">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4" />
-                <path d="M12 16h.01" />
-              </svg>
-            </div>
-            <h3 className="text-slate-700 mb-2">
-              {expiredNotice.trialExpired ? "Your Free Trial Has Ended" : "Subscription Expired"}
-            </h3>
-            {expiredNotice.expiryDate && (
-              <span className="inline-block px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-semibold mb-3">
-                {expiredNotice.trialExpired ? "Trial ended on" : "Expired on"} {expiredNotice.expiryDate}
-              </span>
-            )}
-            <p className="text-gray-600 mb-6">{expiredNotice.message}</p>
-            <div className="flex flex-col gap-3">
-              {tenantSlug && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpiredNotice(null);
-                    navigate(`/${tenantSlug}/upgrade`);
-                  }}
-                  className="w-full text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
-                  style={{ backgroundColor: "#008ECC" }}
-                >
-                  Upgrade Plan Now
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setExpiredNotice(null)}
-                className="w-full py-3 rounded-lg font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 transition"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ExpireModal 
+        expiredNotice={expiredNotice}
+        setExpiredNotice={setExpiredNotice}
+        tenantSlug={tenantSlug}
+        navigate={navigate}
+      />
     </div>
   );
 };
