@@ -738,7 +738,11 @@ function AllDealsComponent() {
   }, [deals, customRangeDeals, customRangeIds, dateFilterDeals, dateFilterIds]);
 
   const filteredDeals = baseDeals
-    .filter((d) => d.dealName?.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((d) => {
+      const term = searchTerm.toLowerCase();
+      return (d.dealName?.toLowerCase() || "").includes(term) ||
+             (d.country?.toLowerCase() || "").includes(term);
+    })
     .filter((d) => (clientTypeFilter ? d.clientType === clientTypeFilter : true))
     .filter((d) => (filters.stage ? d.stage === filters.stage : true))
     .filter((d) => (filters.assignedTo ? d.assignedTo?._id === filters.assignedTo : true))

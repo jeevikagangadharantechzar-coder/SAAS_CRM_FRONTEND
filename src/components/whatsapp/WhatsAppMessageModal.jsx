@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   X, Send, RefreshCw, AlertCircle, Paperclip,
-  Image, FileText, Mic,
+  Image, FileText, Mic, BookOpen, ChevronLeft
 } from "lucide-react";
 import { api } from "../../services/api";
 
@@ -81,6 +81,13 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
   const [filePreview, setFilePreview]       = useState(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
 
+  // Template state
+  const [templates, setTemplates]                 = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate]   = useState(null);
+  const [templateVariables, setTemplateVariables] = useState({});
+  const [fetchingTemplates, setFetchingTemplates] = useState(false);
+
   const messagesEndRef = useRef(null);
   const fileInputRef   = useRef(null);
   const fileTypeRef    = useRef("document");
@@ -156,6 +163,71 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
     setSelectedFile(null);
     setFilePreview(null);
     if (filePreview) URL.revokeObjectURL(filePreview);
+  };
+
+  // ── Templates ──────────────────────────────────────────────────────────────
+
+  const openTemplateModal = () => {
+    setShowTemplateModal(true);
+    if (templates.length === 0) fetchTemplates();
+  };
+
+  const fetchTemplates = async () => {
+    if (!integration) return;
+    try {
+      setFetchingTemplates(true);
+      const res = await api.get("/whatsapp/templates", { params: { integrationId: integration._id } });
+      const approved = (res.data.templates || []).filter(t => t.status === "APPROVED");
+      setTemplates(approved);
+    } catch (err) {
+      console.error("Fetch templates error:", err);
+      toast.error("Failed to fetch templates.");
+    } finally {
+      setFetchingTemplates(false);
+    }
+  };
+
+  const handleSendTemplate = async () => {
+    if (!selectedTemplate || sending) return;
+    setSending(true);
+
+    const bodyComponent = selectedTemplate.components?.find(c => c.type === "BODY");
+    const numVars = bodyComponent?.text?.match(/\{\{\d+\}\}/g)?.length || 0;
+    
+    let components = [];
+    if (numVars > 0) {
+      const parameters = [];
+      for (let i = 1; i <= numVars; i++) {
+        parameters.push({
+          type: "text",
+          text: templateVariables[i] || ""
+        });
+      }
+      components.push({
+        type: "body",
+        parameters
+      });
+    }
+
+    try {
+      const { data } = await api.post("/whatsapp/send-template", {
+        integrationId: integration._id,
+        to: phoneNumber,
+        templateName: selectedTemplate.name,
+        languageCode: selectedTemplate.language,
+        components
+      });
+      
+      setMessages((prev) => [...prev, data.message]);
+      setShowTemplateModal(false);
+      setSelectedTemplate(null);
+      setTemplateVariables({});
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to send template";
+      toast.error(msg);
+    } finally {
+      setSending(false);
+    }
   };
 
   // ── Send ─────────────────────────────────────────────────────────────────────
@@ -316,6 +388,93 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Template Overlay */}
+            {showTemplateModal && (
+              <div className="absolute inset-0 bg-white z-20 flex flex-col mt-[73px]">
+                <div className="p-3 border-b border-gray-100 flex items-center gap-3 bg-gray-50 shrink-0">
+                  <button onClick={() => { setShowTemplateModal(false); setSelectedTemplate(null); }}
+                          className="p-1.5 rounded-full hover:bg-gray-200 transition">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <h3 className="font-semibold text-gray-800">Message Templates</h3>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                  {fetchingTemplates ? (
+                    <div className="flex justify-center py-8 text-gray-400">
+                      <RefreshCw className="animate-spin" size={24} />
+                    </div>
+                  ) : !selectedTemplate ? (
+                    <div className="space-y-3">
+                      {templates.length === 0 ? (
+                        <p className="text-center text-gray-500 text-sm mt-4">No approved templates found in Meta.</p>
+                      ) : (
+                        templates.map((tpl) => (
+                          <div key={tpl.name}
+                               onClick={() => { setSelectedTemplate(tpl); setTemplateVariables({}); }}
+                               className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm cursor-pointer hover:border-green-400 transition group">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-bold text-gray-800 text-sm">{tpl.name}</span>
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase">{tpl.category}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 line-clamp-2">
+                              {tpl.components?.find(c => c.type === "BODY")?.text || "Template"}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                      <h4 className="font-bold text-gray-800 text-sm mb-3">Preview & Send</h4>
+                      <div className="p-3 bg-[#DCF8C6] rounded-xl mb-4 text-sm text-gray-800">
+                        {(() => {
+                          const text = selectedTemplate.components?.find(c => c.type === "BODY")?.text || "";
+                          let previewText = text;
+                          Object.keys(templateVariables).forEach(k => {
+                            previewText = previewText.replace(`{{${k}}}`, templateVariables[k] || `{{${k}}}`);
+                          });
+                          return <span className="whitespace-pre-wrap">{previewText}</span>;
+                        })()}
+                      </div>
+
+                      {/* Variables Form */}
+                      {(() => {
+                        const body = selectedTemplate.components?.find(c => c.type === "BODY")?.text || "";
+                        const numVars = body.match(/\{\{\d+\}\}/g)?.length || 0;
+                        if (numVars > 0) {
+                          return (
+                            <div className="space-y-3 mb-4">
+                              <p className="text-xs font-semibold text-gray-500 uppercase">Variables</p>
+                              {Array.from({ length: numVars }).map((_, i) => (
+                                <div key={i}>
+                                  <label className="text-xs text-gray-600 mb-1 block">Value for {"{{"}{i + 1}{"}}"}</label>
+                                  <input
+                                    type="text"
+                                    className="w-full text-sm p-2 border border-gray-200 rounded-lg outline-none focus:border-green-400"
+                                    placeholder="Enter value..."
+                                    value={templateVariables[i + 1] || ""}
+                                    onChange={(e) => setTemplateVariables(prev => ({ ...prev, [i + 1]: e.target.value }))}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      <button onClick={handleSendTemplate} disabled={sending}
+                              className="w-full py-2.5 bg-[#25D366] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-600 transition disabled:opacity-50">
+                        {sending ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                        Send Template
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* File preview */}
             {selectedFile && (
               <div className="mx-3 mb-1 p-2 bg-gray-100 rounded-xl flex items-center gap-2 shrink-0">
@@ -369,6 +528,17 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
                       </button>
                     </div>
                   )}
+                </div>
+
+                <div className="relative shrink-0 ml-1">
+                  <button
+                    type="button"
+                    onClick={openTemplateModal}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+                    title="Send Template"
+                  >
+                    <BookOpen size={18} />
+                  </button>
                 </div>
 
                 <textarea
