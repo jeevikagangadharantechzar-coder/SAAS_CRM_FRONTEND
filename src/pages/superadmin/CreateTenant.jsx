@@ -173,13 +173,13 @@ const CreateTenant = () => {
       <div className="flex items-center space-x-4">
         <button
           onClick={() => navigate("/superadmin/tenants")}
-          className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/45 hover:text-[#008ecc] text-slate-600 transition-all cursor-pointer shadow-sm"
+          className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 hover:border-[#008ecc]/45 hover:text-[#008ecc] dark:text-[#33b8ff] text-slate-600 dark:text-slate-400 transition-all cursor-pointer shadow-sm"
         >
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h2 className="text-slate-900">Register New Tenant</h2>
-          <p className="text-base text-slate-600">Provision a new isolated database and tenant organization.</p>
+          <h2 className="text-slate-900 dark:text-white">Register New Tenant</h2>
+          <p className="text-base text-slate-600 dark:text-slate-400">Provision a new isolated database and tenant organization.</p>
         </div>
       </div>
 
@@ -197,16 +197,16 @@ const CreateTenant = () => {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Organization setup card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center space-x-2 text-slate-800">
-              <Building2 className="text-[#008ecc]" size={22} />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-2 text-slate-800 dark:text-slate-200">
+              <Building2 className="text-[#008ecc] dark:text-[#33b8ff]" size={22} />
               <h3 className="">Organization & Database Setup</h3>
             </div>
 
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Business Name
                   </label>
                   <input
@@ -215,14 +215,14 @@ const CreateTenant = () => {
                     placeholder="e.g. Stark Industries"
                     value={name}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
                   />
                 </div>
 
               
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Tenant Slug
                   </label>
                   <input
@@ -231,16 +231,16 @@ const CreateTenant = () => {
                     placeholder="e.g. stark-ind"
                     value={slug}
                     onChange={(e) => handleSlugChange(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all font-mono text-xs shadow-inner bg-white text-slate-800 font-semibold"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all font-mono text-xs shadow-inner bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-semibold"
                   />
-                  <p className="text-xs text-slate-400 mt-1.5 font-medium leading-relaxed">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium leading-relaxed">
                     Only lowercase letters, numbers, and hyphens are allowed. Spaces are automatically converted to hyphens.
                   </p>
                 </div>
               </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Phone Number </label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Phone Number </label>
                 
                   <PhoneInput
                     country={phoneCountryCode}
@@ -251,12 +251,12 @@ const CreateTenant = () => {
                     }}
                     inputClass="!w-full !border-none !bg-transparent !text-sm !h-full focus:!outline-none !pl-[48px]"
                     buttonClass="!border-none !bg-transparent !pl-2"
-                    containerClass="w-full border border-slate-300 rounded-xl flex items-center bg-white shadow-inner focus-within:ring-2 focus-within:ring-[#008ecc] focus-within:border-transparent transition-all h-[46px] relative"
+                    containerClass="w-full border border-slate-300 dark:border-slate-700 rounded-xl flex items-center bg-white dark:bg-slate-900 shadow-inner focus-within:ring-2 focus-within:ring-[#008ecc] focus-within:border-transparent transition-all h-[46px] relative"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Address
                   </label>
                   <input
@@ -264,12 +264,12 @@ const CreateTenant = () => {
                   placeholder="e.g. 123, Anna Salai, Chennai, Tamil Nadu 600002"
                   value={address}
                     onChange={(e)=> setAddress(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"/>
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"/>
 
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Source
                   </label>
                   <select
@@ -278,7 +278,7 @@ const CreateTenant = () => {
                       setSource(e.target.value);
                       if (e.target.value !== "Others") setSourceOther("");
                     }}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
                   >
                     <option value="">Select a source</option>
                     {sourceOptions.map((opt) => (
@@ -291,20 +291,20 @@ const CreateTenant = () => {
                       placeholder="Please specify the source"
                       value={sourceOther}
                       onChange={(e) => setSourceOther(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner mt-2"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner mt-2"
                     />
                   )}
                 </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Preferred Currency
                 </label>
                 <select
                   required
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
                 >
                   {currencyOptions.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -312,7 +312,7 @@ const CreateTenant = () => {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium leading-relaxed">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium leading-relaxed">
                   This currency will be used as the default for all deals and leads under this tenant.
                 </p>
               </div>
@@ -320,15 +320,15 @@ const CreateTenant = () => {
           </div>
 
           {/* Admin user card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center space-x-2 text-slate-800">
-              <User className="text-[#008ecc]" size={20} />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-2 text-slate-800 dark:text-slate-200">
+              <User className="text-[#008ecc] dark:text-[#33b8ff]" size={20} />
               <h3 className="">Administrator Credentials</h3>
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="px-4 py-3 bg-[#f2fbff] border border-blue-100 rounded-xl flex items-start space-x-2 text-slate-600">
-                <User className="flex-shrink-0 mt-0.5 text-[#008ecc]" size={16} />
+              <div className="px-4 py-3 bg-[#f2fbff] dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 rounded-xl flex items-start space-x-2 text-slate-600 dark:text-slate-400">
+                <User className="flex-shrink-0 mt-0.5 text-[#008ecc] dark:text-[#33b8ff]" size={16} />
                 <span className="text-xs leading-relaxed">
                   This setup automatically spawns a dedicated database, registers Admin and Sales roles, and provisions the initial Administrator account below.
                 </span>
@@ -337,46 +337,46 @@ const CreateTenant = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                       First Name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
                       <input
                         type="text"
                         required
                         placeholder="e.g. Tony"
                         value={adminFirstName}
                         onChange={(e) => setAdminFirstName(e.target.value)}
-                        className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
+                        className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                       Last Name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
                       <input
                         type="text"
                         required
                         placeholder="e.g. Stark"
                         value={adminLastName}
                         onChange={(e) => setAdminLastName(e.target.value)}
-                        className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
+                        className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all shadow-inner"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Administrator Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
                     <input
                       type="email"
                       required
@@ -389,7 +389,7 @@ const CreateTenant = () => {
                       className={`w-full border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all shadow-inner ${
                         emailError
                           ? "border-red-300 focus:ring-red-400"
-                          : "border-slate-300 focus:ring-[#008ecc]"
+                          : "border-slate-300 dark:border-slate-700 focus:ring-[#008ecc]"
                       }`}
                     />
                   </div>
@@ -398,7 +398,7 @@ const CreateTenant = () => {
                       {emailError}
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-400 mt-1.5 font-medium leading-relaxed">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium leading-relaxed">
                       Must be a valid email address. The generated credentials and workspace login link will be dispatched here.
                     </p>
                   )}
@@ -406,8 +406,8 @@ const CreateTenant = () => {
 
                 {/* Auto-email notice */}
                 <div className="flex items-start space-x-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <MailCheck className="flex-shrink-0 mt-0.5 text-emerald-600" size={16} />
-                  <p className="text-xs text-emerald-800 leading-relaxed">
+                  <MailCheck className="flex-shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" size={16} />
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
                     A secure password will be <strong>auto-generated</strong> and emailed to the administrator along with their login credentials and a direct{" "}
                     <strong>Login to Dashboard</strong> link.
                   </p>
@@ -421,7 +421,7 @@ const CreateTenant = () => {
             <button
               type="button"
               onClick={() => navigate("/superadmin/tenants")}
-              className="flex-1 py-3 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer text-sm bg-white shadow-sm"
+              className="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all cursor-pointer text-sm bg-white dark:bg-slate-900 shadow-sm"
             >
               Cancel
             </button>
@@ -446,14 +446,14 @@ const CreateTenant = () => {
         {/* Right Column (1/3 width) - Subscription Selection & Preview */}
         <div className="space-y-6">
           {/* Step 1 — Plan selection */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4">
             <div>
-              <h3 className="text-slate-700">Subscription Plan</h3>
-              <p className="text-base text-slate-600 mt-1">Assign a pricing plan to this tenant.</p>
+              <h3 className="text-slate-700 dark:text-slate-300">Subscription Plan</h3>
+              <p className="text-base text-slate-600 dark:text-slate-400 mt-1">Assign a pricing plan to this tenant.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Step 1 — Select Plan
               </label>
               <select
@@ -462,7 +462,7 @@ const CreateTenant = () => {
                   setSelectedPlanId(e.target.value);
                   setSelectedBillingCycle("");
                 }}
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
                 disabled={loadingPlans}
               >
                 <option value="">No Plan (Default Trial)</option>
@@ -486,7 +486,7 @@ const CreateTenant = () => {
 
               return (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Step 2 — Billing Period
                   </label>
                   <div className="grid grid-cols-1 gap-2">
@@ -498,11 +498,11 @@ const CreateTenant = () => {
                         className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
                           selectedBillingCycle === tier.billing_cycle
                             ? "bg-[#008ecc] text-white border-[#008ecc] shadow-md"
-                            : "bg-white text-slate-700 border-slate-200 hover:border-[#008ecc]/50 hover:bg-blue-50/30"
+                            : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-[#008ecc]/50 hover:bg-blue-50 dark:bg-blue-900/30/30"
                         }`}
                       >
                         <span>{TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}</span>
-                        <span className={`text-xs font-bold ${selectedBillingCycle === tier.billing_cycle ? "text-white" : "text-slate-500"}`}>
+                        <span className={`text-xs font-bold ${selectedBillingCycle === tier.billing_cycle ? "text-white" : "text-slate-500 dark:text-slate-400"}`}>
                           {sym}{parseFloat(tier.price || 0).toFixed(2)}
                         </span>
                       </button>
@@ -514,10 +514,10 @@ const CreateTenant = () => {
           </div>
 
           {/* Preview panel */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Subscription Preview</span>
-              <span className="bg-[#f2fbff] text-[#008ecc] text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-100 uppercase tracking-wider">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subscription Preview</span>
+              <span className="bg-[#f2fbff] dark:bg-blue-900/30 text-[#008ecc] dark:text-[#33b8ff] text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-800/50 uppercase tracking-wider">
                 {selectedPlanId ? "Selected Plan" : "Default Trial"}
               </span>
             </div>
@@ -532,22 +532,22 @@ const CreateTenant = () => {
                   end.setDate(end.getDate() + 30);
                   return (
                     <div className="space-y-4 text-xs">
-                      <div className="flex justify-between py-2.5 border-b border-slate-100">
-                        <span className="text-slate-400">Plan Type</span>
-                        <span className="font-bold text-slate-800 uppercase">Trial</span>
+                      <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-400 dark:text-slate-500">Plan Type</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 uppercase">Trial</span>
                       </div>
-                      <div className="flex justify-between py-2.5 border-b border-slate-100">
-                        <span className="text-slate-400">Billing Period</span>
-                        <span className="font-bold text-slate-800">Free Trial</span>
+                      <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-400 dark:text-slate-500">Billing Period</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">Free Trial</span>
                       </div>
-                      <div className="flex justify-between py-2.5 border-b border-slate-100">
-                        <span className="text-slate-400">Seat Limit</span>
-                        <span className="font-bold text-slate-800">5 Users</span>
+                      <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-400 dark:text-slate-500">Seat Limit</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">5 Users</span>
                       </div>
                       <div className="py-2">
-                        <span className="text-slate-400 block mb-1">Validity</span>
-                        <span className="font-bold text-slate-800 block">{format(start, "MMM dd, yyyy")}</span>
-                        <span className="text-xs text-slate-400 mt-0.5 block">to {format(end, "MMM dd, yyyy")} (30 days)</span>
+                        <span className="text-slate-400 dark:text-slate-500 block mb-1">Validity</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{format(start, "MMM dd, yyyy")}</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 block">to {format(end, "MMM dd, yyyy")} (30 days)</span>
                       </div>
                     </div>
                   );
@@ -589,13 +589,13 @@ const CreateTenant = () => {
 
                 return (
                   <div className="space-y-3 text-xs">
-                    <div className="flex justify-between py-2.5 border-b border-slate-100">
-                      <span className="text-slate-400">Plan</span>
-                      <span className="font-bold text-slate-800 uppercase">{selectedPlan.plan_name}</span>
+                    <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-400 dark:text-slate-500">Plan</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 uppercase">{selectedPlan.plan_name}</span>
                     </div>
-                    <div className="flex justify-between py-2.5 border-b border-slate-100">
-                      <span className="text-slate-400">Billing</span>
-                      <span className="font-bold text-slate-800">
+                    <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-400 dark:text-slate-500">Billing</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
                         {selectedPlan.plan_type === "free"
                           ? "Free"
                           : activeTier || !hasTiers
@@ -603,30 +603,30 @@ const CreateTenant = () => {
                             : <span className="text-amber-600 italic font-medium">Select billing period</span>}
                       </span>
                     </div>
-                    <div className="flex justify-between py-2.5 border-b border-slate-100">
-                      <span className="text-slate-400">Seat Limit</span>
-                      <span className="font-bold text-slate-800">
+                    <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-400 dark:text-slate-500">Seat Limit</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
                         {selectedPlan.max_users_per_tenant === 0 ? "Unlimited" : `${selectedPlan.max_users_per_tenant} Users`}
                       </span>
                     </div>
-                    <div className="py-2 border-b border-slate-100">
-                      <span className="text-slate-400 block mb-1">Validity</span>
-                      <span className="font-bold text-slate-800 block">{format(start, "MMM dd, yyyy")}</span>
-                      <span className="text-xs text-slate-400 mt-0.5 block">
+                    <div className="py-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-400 dark:text-slate-500 block mb-1">Validity</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{format(start, "MMM dd, yyyy")}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 block">
                         {endDate ? `to ${format(endDate, "MMM dd, yyyy")}` : "Lifetime / Unlimited"}
                       </span>
                     </div>
                     {enabledFeatures.length > 0 && (
                       <div className="pt-1">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-slate-400">Features</span>
-                          <span className="text-xs font-bold text-[#008ecc] bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
+                          <span className="text-slate-400 dark:text-slate-500">Features</span>
+                          <span className="text-xs font-bold text-[#008ecc] dark:text-[#33b8ff] bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-800/50">
                             {enabledFeatures.length} enabled
                           </span>
                         </div>
                         <div className="max-h-40 overflow-y-auto pr-1 space-y-1 rounded-lg">
                           {enabledFeatures.map((k) => (
-                            <div key={k} className="flex items-center gap-1.5 text-xs text-slate-700 py-0.5">
+                            <div key={k} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 py-0.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                               {FEATURE_LABELS[k] || k}
                             </div>

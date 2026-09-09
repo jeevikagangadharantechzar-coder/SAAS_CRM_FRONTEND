@@ -321,14 +321,14 @@ export const PlanForm = ({
       <div className="lg:col-span-2 space-y-6">
         
         {/* SECTION 1 — Plan Identity */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
             <h3 className="">SECTION 1 — Plan Identity</h3>
           </div>
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Plan Name *
                 </label>
                 <input
@@ -350,7 +350,7 @@ export const PlanForm = ({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Plan Code *
                   </label>
                   {isCodeDisabled && (
@@ -375,7 +375,7 @@ export const PlanForm = ({
                     },
                   })}
                   className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all font-mono shadow-inner ${
-                    isCodeDisabled ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" : ""
+                    isCodeDisabled ? "bg-slate-50 dark:bg-slate-800/80 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed" : ""
                   } ${errors.plan_code ? "border-red-300 focus:ring-red-500" : "border-slate-300"}`}
                 />
                 {planCode && !isCodeDisabled && (
@@ -389,12 +389,12 @@ export const PlanForm = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Plan Type *
                 </label>
                 <select
                   {...register("plan_type", { required: "Plan type is required" })}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
                 >
                   <option value="free">Free</option>
                   <option value="paid">Paid</option>
@@ -406,12 +406,12 @@ export const PlanForm = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Status
                 </label>
                 <select
                   {...register("status")}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -421,7 +421,7 @@ export const PlanForm = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Description
               </label>
               <textarea
@@ -435,18 +435,18 @@ export const PlanForm = ({
         </div>
 
         {/* SECTION 2 — Pricing Tiers */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
             <h3 className="">SECTION 2 — Pricing Tiers</h3>
           </div>
           <div className="p-6 space-y-4">
             {planType === "free" ? (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs font-medium">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 text-xs font-medium">
                 Pricing is disabled for Free plans.
               </div>
             ) : (
               <>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Enable the billing periods this plan supports. Each enabled tier will be available when assigning the plan to a tenant.
                 </p>
                 <div className="space-y-3">
@@ -458,7 +458,7 @@ export const PlanForm = ({
                         className={`rounded-xl border transition-all ${
                           tier.enabled
                             ? "border-[#008ecc]/30 bg-blue-50/40 ring-1 ring-[#008ecc]/10"
-                            : "border-slate-200 bg-slate-50/60"
+                            : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80/60"
                         }`}
                       >
                         {/* Row 1: toggle + label + price */}
@@ -472,13 +472,13 @@ export const PlanForm = ({
                               onChange={(e) => updateTier(tier.billing_cycle, "enabled", e.target.checked)}
                             />
                             <span className={`block w-9 h-5 rounded-full transition-colors duration-200 ${tier.enabled ? "bg-[#008ecc]" : "bg-slate-300"}`}>
-                              <span className={`block w-4 h-4 mt-0.5 ml-0.5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${tier.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                              <span className={`block w-4 h-4 mt-0.5 ml-0.5 bg-white dark:bg-slate-900 rounded-full shadow-md transform transition-transform duration-200 ${tier.enabled ? "translate-x-4" : "translate-x-0"}`} />
                             </span>
                           </label>
 
                           {/* Label + duration */}
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold ${tier.enabled ? "text-slate-800" : "text-slate-400"}`}>
+                            <p className={`text-sm font-bold ${tier.enabled ? "text-slate-800 dark:text-slate-200" : "text-slate-400"}`}>
                               {tier.billing_cycle === "monthly" && tier.duration_months > 1 
                                 ? "Custom Months" 
                                 : tier.label}
@@ -489,17 +489,17 @@ export const PlanForm = ({
                                   <button
                                     type="button"
                                     onClick={() => updateTier(tier.billing_cycle, "duration_months", Math.max(1, tier.duration_months - 1))}
-                                    className="bg-slate-50 hover:bg-slate-100 px-2 py-0.5 text-slate-500 font-bold border-r border-slate-300"
+                                    className="bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 px-2 py-0.5 text-slate-500 dark:text-slate-400 font-bold border-r border-slate-300"
                                   >
                                     -
                                   </button>
-                                  <div className="px-3 py-0.5 text-xs font-semibold bg-white text-center min-w-[30px]">
+                                  <div className="px-3 py-0.5 text-xs font-semibold bg-white dark:bg-slate-900 text-center min-w-[30px]">
                                     {tier.duration_months}
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => updateTier(tier.billing_cycle, "duration_months", Math.min(5, tier.duration_months + 1))}
-                                    className="bg-slate-50 hover:bg-slate-100 px-2 py-0.5 text-slate-500 font-bold border-l border-slate-300"
+                                    className="bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 px-2 py-0.5 text-slate-500 dark:text-slate-400 font-bold border-l border-slate-300"
                                   >
                                     +
                                   </button>
@@ -517,7 +517,7 @@ export const PlanForm = ({
 
                           {/* Price input */}
                           <div className="flex items-center gap-1.5">
-                            <span className={`text-sm font-semibold shrink-0 ${tier.enabled ? "text-slate-500" : "text-slate-300"}`}>
+                            <span className={`text-sm font-semibold shrink-0 ${tier.enabled ? "text-slate-500 dark:text-slate-400" : "text-slate-300"}`}>
                               {currSym}
                             </span>
                             <input
@@ -537,8 +537,8 @@ export const PlanForm = ({
                               }}
                               className={`w-28 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all text-right font-mono ${
                                 tier.enabled
-                                  ? "border-slate-300 bg-white"
-                                  : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  ? "border-slate-300 bg-white dark:bg-slate-900"
+                                  : "border-slate-200 dark:border-slate-700 bg-slate-100 text-slate-400 cursor-not-allowed"
                               }`}
                             />
                           </div>
@@ -552,13 +552,13 @@ export const PlanForm = ({
             )}
 
             {/* Currency */}
-            <div className="pt-2 border-t border-slate-100">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Currency
               </label>
               <select
                 {...register("currency")}
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
+                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
               >
                 <option value="USD">USD ($)</option>
                 <option value="INR">INR (₹)</option>
@@ -574,7 +574,7 @@ export const PlanForm = ({
           <button
             type="button"
             onClick={() => navigate("/superadmin/subscription-plans")}
-            className="flex-1 py-3.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer text-sm shadow-sm bg-white"
+            className="flex-1 py-3.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800/80 transition-all cursor-pointer text-sm shadow-sm bg-white dark:bg-slate-900"
           >
             Cancel
           </button>
@@ -600,18 +600,18 @@ export const PlanForm = ({
       <div className="space-y-6">
         
         {/* SECTION 3 — Tenant User Limits */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
             <h3 className="">SECTION 3 — Limits</h3>
           </div>
           <div className="p-6 space-y-6">
             {planType === "enterprise" ? (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-650 text-xs font-medium">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-650 text-xs font-medium">
                 Enterprise plans include unlimited users per tenant, so this field isn't applicable.
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Max Users Per Tenant
                 </label>
                 <input
@@ -644,21 +644,21 @@ export const PlanForm = ({
         </div>
 
         {/* SECTION 4 — Visibility & Settings */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="px-6 py-4 bg-[#008ecc] text-white flex items-center space-x-2">
             <h3 className="">SECTION 4 — Settings</h3>
           </div>
           <div className="p-6 space-y-6">
-            <div className="space-y-4 border-b border-slate-100 pb-4">
+            <div className="space-y-4 border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="flex items-start space-x-3">
                 <input
                   type="checkbox"
                   id="is_visible"
                   {...register("is_visible")}
-                  className="w-4 h-4 text-[#008ecc] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
+                  className="w-4 h-4 text-[#008ecc] dark:text-[#33b8ff] dark:text-[#33b8ff] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
                 />
                 <div>
-                  <label htmlFor="is_visible" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
+                  <label htmlFor="is_visible" className="text-xs font-bold text-slate-800 dark:text-slate-200 block cursor-pointer uppercase tracking-wider">
                     Visible on pricing page
                   </label>
                   <p className="text-xs text-slate-400 mt-0.5">Show this plan on public landing pages.</p>
@@ -670,10 +670,10 @@ export const PlanForm = ({
                   type="checkbox"
                   id="show_on_landing_page"
                   {...register("show_on_landing_page")}
-                  className="w-4 h-4 text-[#008ecc] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
+                  className="w-4 h-4 text-[#008ecc] dark:text-[#33b8ff] dark:text-[#33b8ff] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
                 />
                 <div>
-                  <label htmlFor="show_on_landing_page" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
+                  <label htmlFor="show_on_landing_page" className="text-xs font-bold text-slate-800 dark:text-slate-200 block cursor-pointer uppercase tracking-wider">
                     Visible on Landing Page
                   </label>
                   <p className="text-xs text-slate-400 mt-0.5">Feature this plan on the marketing landing page.</p>
@@ -685,10 +685,10 @@ export const PlanForm = ({
                   type="checkbox"
                   id="is_recommended"
                   {...register("is_recommended")}
-                  className="w-4 h-4 text-[#008ecc] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
+                  className="w-4 h-4 text-[#008ecc] dark:text-[#33b8ff] dark:text-[#33b8ff] border-slate-300 rounded focus:ring-[#008ecc] mt-1 cursor-pointer"
                 />
                 <div>
-                  <label htmlFor="is_recommended" className="text-xs font-bold text-slate-800 block cursor-pointer uppercase tracking-wider">
+                  <label htmlFor="is_recommended" className="text-xs font-bold text-slate-800 dark:text-slate-200 block cursor-pointer uppercase tracking-wider">
                     Mark Recommended
                   </label>
                   <p className="text-xs text-slate-400 mt-0.5">Highlights this plan with a ribbon badge.</p>
@@ -703,7 +703,7 @@ export const PlanForm = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Sort Order
               </label>
               <input
@@ -728,10 +728,10 @@ export const PlanForm = ({
       </div>
 
       {/* SECTION 5 — Feature Access */}
-      <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="lg:col-span-3 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="px-6 py-4 bg-gradient-to-r from-[#008ecc] to-[#0aa3e8] text-white flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/15">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white dark:bg-slate-900/15">
               <Sparkles size={17} />
             </div>
             <div>
@@ -742,7 +742,7 @@ export const PlanForm = ({
             </div>
           </div>
 
-          <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer select-none bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 rounded-full border border-white/20">
+          <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer select-none bg-white dark:bg-slate-900/10 hover:bg-white dark:bg-slate-900/15 transition-colors px-3 py-1.5 rounded-full border border-white/20">
             <span>Select All</span>
             <span className="relative inline-flex items-center">
               <input
@@ -753,12 +753,12 @@ export const PlanForm = ({
               />
               <span
                 className={`block w-9 h-5 rounded-full transition-colors duration-200 ${
-                  allFeaturesSelected ? "bg-white" : "bg-white/30"
+                  allFeaturesSelected ? "bg-white dark:bg-slate-900" : "bg-white dark:bg-slate-900/30"
                 }`}
               >
                 <span
                   className={`block w-4 h-4 mt-0.5 ml-0.5 rounded-full shadow-md transform transition-transform duration-200 ${
-                    allFeaturesSelected ? "translate-x-4 bg-[#008ecc]" : "translate-x-0 bg-white"
+                    allFeaturesSelected ? "translate-x-4 bg-[#008ecc]" : "translate-x-0 bg-white dark:bg-slate-900"
                   }`}
                 />
               </span>
@@ -767,8 +767,8 @@ export const PlanForm = ({
         </div>
 
         <div className="p-4 sm:p-6">
-          <div className="flex items-start gap-2.5 mb-6 text-slate-500 text-xs bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
-            <Sparkles size={14} className="text-[#008ecc] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 mb-6 text-slate-500 dark:text-slate-400 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800 rounded-xl px-4 py-3">
+            <Sparkles size={14} className="text-[#008ecc] dark:text-[#33b8ff] dark:text-[#33b8ff] shrink-0 mt-0.5" />
             <p>
               Choose which modules are available to tenants subscribed to this plan. Unchecked
               features will be hidden for those tenants.
@@ -783,18 +783,18 @@ export const PlanForm = ({
               return (
                 <div
                   key={group.title}
-                  className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5"
+                  className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70 p-4 sm:p-5"
                 >
                   <div className="flex items-center justify-between mb-3.5">
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white shadow-sm border border-slate-200">
-                        <GroupIcon size={14} className="text-[#008ecc]" />
+                      <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <GroupIcon size={14} className="text-[#008ecc] dark:text-[#33b8ff] dark:text-[#33b8ff]" />
                       </div>
-                      <h3 className="text-slate-700">
+                      <h3 className="text-slate-700 dark:text-slate-300">
                         {group.title}
                       </h3>
                     </div>
-                    <span className="text-xs font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200 shrink-0">
+                    <span className="text-xs font-bold text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 shrink-0">
                       {groupSelectedCount}/{group.features.length}
                     </span>
                   </div>
@@ -808,8 +808,8 @@ export const PlanForm = ({
                           key={feature.key}
                           className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-all duration-150 ${
                             checked
-                              ? "bg-white border-[#008ecc]/25 shadow-sm ring-1 ring-[#008ecc]/10"
-                              : "bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300"
+                              ? "bg-white dark:bg-slate-900 border-[#008ecc]/25 shadow-sm ring-1 ring-[#008ecc]/10"
+                              : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:bg-white dark:bg-slate-900 hover:border-slate-300"
                           }`}
                         >
                           <span className="flex items-center gap-2.5 min-w-0">
@@ -822,7 +822,7 @@ export const PlanForm = ({
                             </span>
                             <span
                               className={`text-xs font-medium truncate ${
-                                checked ? "text-slate-800" : "text-slate-500"
+                                checked ? "text-slate-800 dark:text-slate-200" : "text-slate-500 dark:text-slate-400"
                               }`}
                             >
                               {feature.label}
@@ -841,7 +841,7 @@ export const PlanForm = ({
                               }`}
                             >
                               <span
-                                className={`block w-4 h-4 mt-0.5 ml-0.5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
+                                className={`block w-4 h-4 mt-0.5 ml-0.5 bg-white dark:bg-slate-900 rounded-full shadow-md transform transition-transform duration-200 ${
                                   checked ? "translate-x-4" : "translate-x-0"
                                 }`}
                               />

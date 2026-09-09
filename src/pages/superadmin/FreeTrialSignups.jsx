@@ -24,7 +24,7 @@ const PERIOD_OPTIONS = [
 const TrialStatusBadge = ({ tenant }) => {
   if (!tenant) {
     return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-gray-50 text-gray-500 border-gray-200">
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700">
         Unknown
       </span>
     );
@@ -34,7 +34,7 @@ const TrialStatusBadge = ({ tenant }) => {
 
   if (!tenant.isActive) {
     return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-gray-50 text-gray-500 border-gray-200">
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700">
         Inactive
       </span>
     );
@@ -42,7 +42,7 @@ const TrialStatusBadge = ({ tenant }) => {
 
   if (tenant.plan_status === "expired") {
     return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800">
         Expired
       </span>
     );
@@ -66,14 +66,14 @@ const TrialStatusBadge = ({ tenant }) => {
 
   if (tenant.plan_status === "trial") {
     return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-blue-50 dark:bg-blue-900/30 text-blue-700 border-blue-200">
         On Trial
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-green-50 text-green-700 border-green-200">
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
       Converted
     </span>
   );
@@ -203,32 +203,32 @@ const FreeTrialSignups = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-slate-900 flex items-center gap-2">
-            <Rocket size={22} className="text-[#008ecc]" />
+          <h2 className="text-slate-900 dark:text-white flex items-center gap-2">
+            <Rocket size={22} className="text-[#008ecc] dark:text-[#33b8ff]" />
             Free Trial Signups
           </h2>
-          <p className="text-base text-slate-600">All data submitted through the landing page free trial form.</p>
+          <p className="text-base text-slate-600 dark:text-slate-400">All data submitted through the landing page free trial form.</p>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm">
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-xl text-sm">
           <span>{error}</span>
         </div>
       )}
 
       {/* Control panel and Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Filters Toolbar */}
-        <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="relative w-full lg:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
             <input
               type="text"
               placeholder="Search by name, email, or business name..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner"
+              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner"
             />
           </div>
 
@@ -239,7 +239,7 @@ const FreeTrialSignups = () => {
                 onClick={() => handlePeriodChange(opt.value)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${period === opt.value
                   ? "bg-[#008ecc] text-white border-[#008ecc] shadow-sm"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-[#008ecc]/40 hover:text-[#008ecc]"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-[#008ecc]/40 hover:text-[#008ecc] dark:text-[#33b8ff]"
                   }`}
               >
                 {opt.label}
@@ -256,9 +256,9 @@ const FreeTrialSignups = () => {
                   setStartDate(e.target.value);
                   setPage(1);
                 }}
-                className="border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white"
+                className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
               />
-              <span className="text-slate-400 text-sm">to</span>
+              <span className="text-slate-400 dark:text-slate-500 text-sm">to</span>
               <input
                 type="date"
                 value={endDate}
@@ -266,7 +266,7 @@ const FreeTrialSignups = () => {
                   setEndDate(e.target.value);
                   setPage(1);
                 }}
-                className="border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white"
+                className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
               />
             </div>
           )}
@@ -276,7 +276,7 @@ const FreeTrialSignups = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-100/50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
+              <tr className="bg-slate-100/50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase text-xs font-bold border-b border-slate-200 dark:border-slate-700">
                 <th className="px-6 py-4">Name</th>
                 <th className="px-6 py-4">Business Name</th>
                 <th className="px-6 py-4">Email</th>
@@ -288,12 +288,12 @@ const FreeTrialSignups = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className={`divide-y divide-slate-100 text-slate-700 text-sm ${loading && signups.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+            <tbody className={`divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 text-sm ${loading && signups.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
               {loading && signups.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
-                      <RefreshCw className="animate-spin text-[#008ecc]" size={32} />
+                      <RefreshCw className="animate-spin text-[#008ecc] dark:text-[#33b8ff]" size={32} />
                       <span className="font-medium">Loading free trial signups...</span>
                     </div>
                   </td>
@@ -302,32 +302,32 @@ const FreeTrialSignups = () => {
                 signups.map((s) => (
                   <tr 
                     key={s._id}
-                    className="hover:bg-slate-50/50 transition-colors"
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-bold">
                       <span
                         onClick={() => handleRowClick(s._id)}
-                        className="cursor-pointer text-[#008ecc] hover:underline transition-all"
+                        className="cursor-pointer text-[#008ecc] dark:text-[#33b8ff] hover:underline transition-all"
                       >
                         {s.name}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-mono text-xs text-[#008ecc] bg-[#f2fbff] rounded px-2.5 py-1 border border-blue-100 font-semibold">
+                      <span className="font-mono text-xs text-[#008ecc] dark:text-[#33b8ff] bg-[#f2fbff] dark:bg-blue-900/30 rounded px-2.5 py-1 border border-blue-100 dark:border-blue-800/50 font-semibold">
                         {s.businessName}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{s.email}</td>
-                    <td className="px-6 py-4 text-slate-600">{s.industry || "—"}</td>
-                    <td className="px-6 py-4 text-slate-600">{s.country || "—"}</td>
-                    <td className="px-6 py-4 text-slate-600 font-semibold text-[#008ecc]">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{s.email}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{s.industry || "—"}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{s.country || "—"}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-semibold text-[#008ecc] dark:text-[#33b8ff]">
                       {(() => {
                         const tId = typeof s.tenant === 'object' ? s.tenant?._id : s.tenant;
                         const fullT = tenantsList.find(t => t._id === tId);
                         return fullT?.plan_id?.plan_name || s.tenant?.plan_id?.plan_name || s.interestedPackage || "—";
                       })()}
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
                       {s.createdAt ? format(new Date(s.createdAt), "MMM dd, yyyy") : "N/A"}
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -340,7 +340,7 @@ const FreeTrialSignups = () => {
                             href={`/${s.tenant.slug}/login`}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-1.5 border border-slate-200 rounded-lg hover:border-[#008ecc]/40 hover:text-[#008ecc] transition-all cursor-pointer flex items-center justify-center"
+                            className="p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-[#008ecc]/40 hover:text-[#008ecc] dark:text-[#33b8ff] transition-all cursor-pointer flex items-center justify-center"
                             title="Open tenant login"
                           >
                             <ExternalLink size={15} />
@@ -354,7 +354,7 @@ const FreeTrialSignups = () => {
                               disabled={isConverted}
                               className={`p-1.5 border rounded-lg transition-all flex items-center justify-center ${
                                 isConverted
-                                  ? "border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed"
+                                  ? "border-slate-100 dark:border-slate-800 text-slate-300 bg-slate-50 dark:bg-slate-800/80 cursor-not-allowed"
                                   : "border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 cursor-pointer"
                               }`}
                               title={isConverted ? "Cannot delete a Converted trial" : "Delete Signup Record"}
@@ -369,7 +369,7 @@ const FreeTrialSignups = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                     No free trial signups found matching your filters.
                   </td>
                 </tr>
@@ -380,17 +380,17 @@ const FreeTrialSignups = () => {
 
         {/* Pagination */}
         {!loading && total > 0 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <span className="text-xs text-slate-500 font-bold">
-                Showing <span className="text-slate-700">{rangeStart}</span>–<span className="text-slate-700">{rangeEnd}</span> of <span className="text-slate-700">{total}</span> signups
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                Showing <span className="text-slate-700 dark:text-slate-300">{rangeStart}</span>–<span className="text-slate-700 dark:text-slate-300">{rangeEnd}</span> of <span className="text-slate-700 dark:text-slate-300">{total}</span> signups
               </span>
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
                 <span>Rows per page:</span>
                 <select
                   value={limit}
                   onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
@@ -403,17 +403,17 @@ const FreeTrialSignups = () => {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 hover:border-[#008ecc]/40 hover:text-[#008ecc] dark:text-[#33b8ff] text-slate-600 dark:text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-xs font-bold text-slate-600 px-3 bg-white border border-slate-200 py-1.5 rounded-xl shadow-sm">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 py-1.5 rounded-xl shadow-sm">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 hover:border-[#008ecc]/40 hover:text-[#008ecc] dark:text-[#33b8ff] text-slate-600 dark:text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
               >
                 <ChevronRight size={16} />
               </button>
@@ -425,7 +425,7 @@ const FreeTrialSignups = () => {
       {/* DELETE CONFIRMATION MODAL */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-red-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-red-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-5 bg-red-600 text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={22} />
@@ -447,14 +447,14 @@ const FreeTrialSignups = () => {
                 <AlertTriangle size={24} className="flex-shrink-0 mt-0.5" />
                 <div>
                   <h3 className="">This only removes the signup log entry</h3>
-                  <p className="text-base text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-base text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                     This deletes the free trial signup record for <strong>{deleteTarget.businessName}</strong> ({deleteTarget.email}) from this list. It does <strong>not</strong> delete the tenant's workspace or database — manage that from the Tenants page.
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Type <span className="font-bold text-red-600">"delete"</span> below to confirm:
                 </label>
                 <input
@@ -462,7 +462,7 @@ const FreeTrialSignups = () => {
                   placeholder="delete"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-mono text-center"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-mono text-center"
                 />
               </div>
 
@@ -473,7 +473,7 @@ const FreeTrialSignups = () => {
                     setDeleteConfirmText("");
                   }}
                   disabled={isDeleting}
-                  className="flex-1 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer text-sm disabled:opacity-50"
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>

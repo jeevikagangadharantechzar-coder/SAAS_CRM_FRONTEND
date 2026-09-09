@@ -66,11 +66,11 @@ const PlanDetail = () => {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="h-6 bg-slate-200 rounded w-1/4 animate-pulse" />
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-pulse space-y-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 animate-pulse space-y-6">
           <div className="h-8 bg-slate-200 rounded w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-            <div className="h-24 bg-slate-100 rounded" />
-            <div className="h-24 bg-slate-100 rounded" />
+            <div className="h-24 bg-slate-100 dark:bg-slate-800/50 rounded" />
+            <div className="h-24 bg-slate-100 dark:bg-slate-800/50 rounded" />
           </div>
         </div>
       </div>
@@ -123,22 +123,22 @@ const PlanDetail = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Breadcrumbs */}
-      <nav className="flex items-center space-x-2 text-xs font-semibold text-slate-400">
+      <nav className="flex items-center space-x-2 text-xs font-semibold text-slate-400 dark:text-slate-500">
         <span
-          className="hover:text-slate-700 transition-colors cursor-pointer"
+          className="hover:text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
           onClick={() => navigate("/superadmin/dashboard")}
         >
           Superadmin
         </span>
         <span>&gt;</span>
         <span
-          className="hover:text-slate-700 transition-colors cursor-pointer"
+          className="hover:text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
           onClick={() => navigate("/superadmin/subscription-plans")}
         >
           Subscription plans
         </span>
         <span>&gt;</span>
-        <span className="text-slate-600">Plan details</span>
+        <span className="text-slate-600 dark:text-slate-400">Plan details</span>
       </nav>
 
       {/* Header */}
@@ -146,20 +146,20 @@ const PlanDetail = () => {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate("/superadmin/subscription-plans")}
-            className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 transition-all cursor-pointer shadow-sm"
+            className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-600 dark:text-slate-400 transition-all cursor-pointer shadow-sm"
           >
             <ArrowLeft size={18} />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-slate-900">{plan_name}</h2>
+              <h2 className="text-slate-900 dark:text-white">{plan_name}</h2>
               {is_recommended && (
                 <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-200 uppercase tracking-wider">
                   Recommended
                 </span>
               )}
             </div>
-            <p className="text-slate-400 font-mono text-xs mt-0.5">{plan_code}</p>
+            <p className="text-slate-400 dark:text-slate-500 font-mono text-xs mt-0.5">{plan_code}</p>
           </div>
         </div>
 
@@ -178,31 +178,31 @@ const PlanDetail = () => {
         {/* Main Details Panel */}
         <div className="md:col-span-2 space-y-6">
           {/* Identity & Description */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <Layers size={16} className="text-slate-500" />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+            <h3 className="text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Layers size={16} className="text-slate-500 dark:text-slate-400" />
               <span>Identity & Description</span>
             </h3>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Plan Name</span>
-                <span className="font-bold text-slate-800">{plan_name}</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Plan Name</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{plan_name}</span>
               </div>
               <div>
-                <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Plan Code</span>
-                <span className="font-mono text-xs font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 inline-block">
+                <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Plan Code</span>
+                <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/80 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-800 inline-block">
                   {plan_code}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Plan Type</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Plan Type</span>
                 <div className="mt-1">
                   <PlanBadge type="plan_type" value={plan_type} />
                 </div>
               </div>
               <div>
-                <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Status</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Status</span>
                 <div className="mt-1">
                   <PlanBadge type="status" value={status} />
                 </div>
@@ -210,78 +210,78 @@ const PlanDetail = () => {
             </div>
 
             <div className="pt-2">
-              <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Description</span>
-              <p className="text-slate-600 text-sm mt-1 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
+              <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Description</span>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-800 italic">
                 {description || "No description provided."}
               </p>
             </div>
           </div>
 
           {/* Pricing & Billing */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <DollarSign size={16} className="text-slate-500" />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+            <h3 className="text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <DollarSign size={16} className="text-slate-500 dark:text-slate-400" />
               <span>Pricing & Billing</span>
             </h3>
 
             {plan_type.toLowerCase() === "free" ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 font-bold text-sm">
+              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 dark:text-emerald-300 font-bold text-sm">
                 This is a Free pricing tier. Tenants can subscribe without billing charges.
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-6 text-sm">
                 <div>
-                  <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Monthly Price</span>
-                  <span className="text-xl font-black text-slate-800">
+                  <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Monthly Price</span>
+                  <span className="text-xl font-black text-slate-800 dark:text-slate-200">
                     {symbol}
                     {formattedMonthly}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Yearly Price</span>
-                  <span className="text-xl font-black text-slate-800">
+                  <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Yearly Price</span>
+                  <span className="text-xl font-black text-slate-800 dark:text-slate-200">
                     {symbol}
                     {formattedYearly}
                   </span>
                   {price_monthly > 0 && price_yearly > 0 && (
-                    <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold ml-2">
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold ml-2">
                       Save {Math.round((1 - price_yearly / (price_monthly * 12)) * 100)}%
                     </span>
                   )}
                 </div>
                 <div>
-                  <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Currency</span>
-                  <span className="font-bold text-slate-800">{currency}</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Currency</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{currency}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Billing Cycle</span>
-                  <span className="font-bold text-slate-800">{billing_cycle}</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Billing Cycle</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{billing_cycle}</span>
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-6 pt-2 text-sm border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-6 pt-2 text-sm border-t border-slate-100 dark:border-slate-800">
               <div>
-                <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Trial Days</span>
-                <span className="font-bold text-slate-800">
+                <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Trial Days</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">
                   {trial_days === 0 ? "No trial" : `${trial_days} days`}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider">Sort Order</span>
-                <span className="font-bold text-slate-800">{sort_order}</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs block font-semibold uppercase tracking-wider">Sort Order</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{sort_order}</span>
               </div>
             </div>
           </div>
 
           {/* Usage Stats - Tenants list */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+            <h3 className="text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Briefcase size={16} className="text-slate-500" />
+                <Briefcase size={16} className="text-slate-500 dark:text-slate-400" />
                 <span>Tenant Subscribers</span>
               </div>
-              <span className="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200">
+              <span className="bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
                 {totalTenantsCount} active
               </span>
             </h3>
@@ -290,25 +290,25 @@ const PlanDetail = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-100">
+                    <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase font-semibold border-b border-slate-100 dark:border-slate-800">
                       <th className="px-4 py-2">Business</th>
                       <th className="px-4 py-2">Administrator</th>
                       <th className="px-4 py-2">Subscription End</th>
                       <th className="px-4 py-2 text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50 text-slate-700">
+                  <tbody className="divide-y divide-slate-50 text-slate-700 dark:text-slate-300">
                     {tenantsList.map((tenant) => (
-                      <tr key={tenant._id} className="hover:bg-slate-50/50">
+                      <tr key={tenant._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td className="px-4 py-2">
-                          <div className="font-bold text-slate-900">{tenant.name}</div>
-                          <div className="text-xs text-slate-400 font-mono">{tenant.slug}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{tenant.name}</div>
+                          <div className="text-xs text-slate-400 dark:text-slate-500 font-mono">{tenant.slug}</div>
                         </td>
                         <td className="px-4 py-2">
                           <div>{tenant.adminName}</div>
-                          <div className="text-xs text-slate-400">{tenant.adminEmail}</div>
+                          <div className="text-xs text-slate-400 dark:text-slate-500">{tenant.adminEmail}</div>
                         </td>
-                        <td className="px-4 py-2 text-slate-500">
+                        <td className="px-4 py-2 text-slate-500 dark:text-slate-400">
                           {tenant.plan_end_date
                             ? format(new Date(tenant.plan_end_date), "MMM dd, yyyy")
                             : "Unlimited"}
@@ -317,8 +317,8 @@ const PlanDetail = () => {
                           <span
                             className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold border ${
                               tenant.plan_status === "active"
-                                ? "bg-green-50 text-green-700 border-green-200"
-                                : "bg-red-50 text-red-700 border-red-200"
+                                ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                                : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
                             }`}
                           >
                             {tenant.plan_status}
@@ -330,7 +330,7 @@ const PlanDetail = () => {
                 </table>
               </div>
             ) : (
-              <p className="text-slate-400 text-xs italic py-2">
+              <p className="text-slate-400 dark:text-slate-500 text-xs italic py-2">
                 No tenants are currently subscribed to this pricing tier.
               </p>
             )}
@@ -358,9 +358,9 @@ const PlanDetail = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4 text-xs text-slate-600">
-            <h3 className="text-slate-700 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <Calendar size={16} className="text-slate-500" />
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4 text-xs text-slate-600 dark:text-slate-400">
+            <h3 className="text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Calendar size={16} className="text-slate-500 dark:text-slate-400" />
               <span>Visibility Settings</span>
             </h3>
 
@@ -373,7 +373,7 @@ const PlanDetail = () => {
                       <CheckCircle size={14} className="mr-1" /> Yes
                     </span>
                   ) : (
-                    <span className="text-slate-400 flex items-center">
+                    <span className="text-slate-400 dark:text-slate-500 flex items-center">
                       <XCircle size={14} className="mr-1" /> Hidden
                     </span>
                   )}
@@ -388,7 +388,7 @@ const PlanDetail = () => {
                       <CheckCircle size={14} className="mr-1" /> Yes
                     </span>
                   ) : (
-                    <span className="text-slate-400">No</span>
+                    <span className="text-slate-400 dark:text-slate-500">No</span>
                   )}
                 </span>
               </div>

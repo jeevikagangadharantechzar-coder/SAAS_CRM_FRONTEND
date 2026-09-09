@@ -31,14 +31,14 @@ const STATUS_OPTIONS = ["All", "Pending", "In Progress", "Closed"];
 const PRIORITY_OPTIONS = ["All", "Low", "Medium", "High", "Urgent"];
 const STATUS_STYLES = {
   Pending: "bg-amber-50 text-amber-700 border-amber-100",
-  "In Progress": "bg-blue-50 text-blue-700 border-blue-100",
-  Closed: "bg-green-50 text-green-700 border-green-200",
+  "In Progress": "bg-blue-50 dark:bg-blue-900/30 text-blue-700 border-blue-100 dark:border-blue-800/50",
+  Closed: "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
 };
 const PRIORITY_STYLES = {
-  Low: "bg-slate-50 text-slate-600 border-slate-200",
-  Medium: "bg-blue-50 text-blue-700 border-blue-100",
+  Low: "bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700",
+  Medium: "bg-blue-50 dark:bg-blue-900/30 text-blue-700 border-blue-100 dark:border-blue-800/50",
   High: "bg-amber-50 text-amber-700 border-amber-100",
-  Urgent: "bg-red-50 text-red-700 border-red-200",
+  Urgent: "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",
 };
 const PAGE_SIZE = 6;
 
@@ -200,17 +200,17 @@ const SupportTickets = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-slate-900">Support Tickets</h2>
-          <p className="text-base text-slate-600">
+          <h2 className="text-slate-900 dark:text-white">Support Tickets</h2>
+          <p className="text-base text-slate-600 dark:text-slate-400">
             Tickets raised by tenant admins across all workspaces. {total} found.
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             value={search}
             onChange={(e) => {
@@ -218,7 +218,7 @@ const SupportTickets = () => {
               setPage(1);
             }}
             placeholder="Search by tenant admin, email or subject"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-sm text-slate-700 focus:outline-none focus:border-[#008ecc] focus:bg-white transition-colors"
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-4 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#008ecc] focus:bg-white dark:bg-slate-900 transition-colors"
           />
         </div>
 
@@ -228,7 +228,7 @@ const SupportTickets = () => {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
@@ -243,7 +243,7 @@ const SupportTickets = () => {
             setPriorityFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
         >
           {PRIORITY_OPTIONS.map((p) => (
             <option key={p} value={p}>
@@ -258,15 +258,15 @@ const SupportTickets = () => {
             setUrgencyFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
         >
           <option value="All">Due dates</option>
           <option value="Due Today">Due Today</option>
           <option value="Overdue">Overdue</option>
         </select>
 
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5">
-          <Calendar size={14} className="text-slate-400" />
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5">
+          <Calendar size={14} className="text-slate-400 dark:text-slate-500" />
           <input
             type="date"
             onKeyDown={(e) => e.preventDefault()}
@@ -275,7 +275,7 @@ const SupportTickets = () => {
               setDateFrom(e.target.value);
               setPage(1);
             }}
-            className="text-sm text-slate-600 bg-transparent focus:outline-none cursor-pointer"
+            className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
           />
           <span className="text-slate-300">–</span>
           <input
@@ -286,14 +286,14 @@ const SupportTickets = () => {
               setDateTo(e.target.value);
               setPage(1);
             }}
-            className="text-sm text-slate-600 bg-transparent focus:outline-none cursor-pointer"
+            className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
           />
         </div>
 
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="text-sm text-slate-400 hover:text-red-500 flex items-center gap-1 cursor-pointer"
+            className="text-sm text-slate-400 dark:text-slate-500 hover:text-red-500 flex items-center gap-1 cursor-pointer"
           >
             <X size={14} />
             Clear
@@ -302,16 +302,16 @@ const SupportTickets = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center space-x-2">
-          <LifeBuoy className="text-[#008ecc]" size={20} />
-          <h3 className="text-slate-700">Ticket Queue</h3>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-2">
+          <LifeBuoy className="text-[#008ecc] dark:text-[#33b8ff]" size={20} />
+          <h3 className="text-slate-700 dark:text-slate-300">Ticket Queue</h3>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/70 text-slate-500 uppercase text-xs font-bold border-b border-slate-200">
+              <tr className="bg-slate-50/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase text-xs font-bold border-b border-slate-200 dark:border-slate-700">
                 <th className="px-6 py-4">Ticket</th>
                 <th className="px-6 py-4">Tenant Admin</th>
                 <th className="px-6 py-4">Subject</th>
@@ -321,10 +321,10 @@ const SupportTickets = () => {
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400 dark:text-slate-500">
                     <div className="w-6 h-6 border-2 border-[#008ecc] border-t-transparent rounded-full animate-spin mx-auto"></div>
                   </td>
                 </tr>
@@ -335,19 +335,19 @@ const SupportTickets = () => {
                     ? "bg-red-50/40 hover:bg-red-50/70"
                     : urgency === 'due_today'
                       ? "bg-amber-50/40 hover:bg-amber-50/70"
-                      : "hover:bg-slate-50/50";
+                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50";
 
                   return (
                     <tr key={t._id} className={`${rowClass} transition-colors`}>
-                      <td className="px-6 py-4 font-mono text-xs text-slate-400 whitespace-nowrap">
+                      <td className="px-6 py-4 font-mono text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                         {t._id.slice(-6).toUpperCase()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{t.submittedByName}</span>
-                          <span className="text-xs text-slate-500">{t.submittedByEmail}</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{t.submittedByName}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{t.submittedByEmail}</span>
                           {t.tenant_id?.name && (
-                            <span className="text-xs text-slate-400">Workspace: {t.tenant_id.name}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500">Workspace: {t.tenant_id.name}</span>
                           )}
                         </div>
                       </td>
@@ -358,7 +358,7 @@ const SupportTickets = () => {
                             href={`${SI_URI}/${t.attachmentPath?.replace(/\\/g, '/')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-[#008ecc] hover:underline mt-0.5"
+                            className="inline-flex items-center gap-1 text-xs text-[#008ecc] dark:text-[#33b8ff] hover:underline mt-0.5"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Paperclip size={11} />
@@ -366,7 +366,7 @@ const SupportTickets = () => {
                           </a>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-slate-500 whitespace-nowrap">{formatDate(t.createdAt)}</td>
+                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDate(t.createdAt)}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col items-start gap-1">
                           <PriorityPill priority={t.priority} />
@@ -398,7 +398,7 @@ const SupportTickets = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 font-semibold">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-semibold">
                     No tickets match these filters.
                   </td>
                 </tr>
@@ -409,25 +409,25 @@ const SupportTickets = () => {
 
         {/* Pagination */}
         {total > 0 && (
-          <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-100">
-            <p className="text-xs text-slate-400">
+          <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
             </p>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 disabled:opacity-40 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed"
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="text-xs text-slate-500 px-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
                 {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 disabled:opacity-40 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed"
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer disabled:cursor-not-allowed"
               >
                 <ChevronRight size={14} />
               </button>
@@ -464,13 +464,13 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onReso
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-slate-700">{ticket.subject}</h3>
-            <p className="text-base text-slate-600 font-mono mt-1">{ticket._id.slice(-6).toUpperCase()}</p>
+            <h3 className="text-slate-700 dark:text-slate-300">{ticket.subject}</h3>
+            <p className="text-base text-slate-600 dark:text-slate-400 font-mono mt-1">{ticket._id.slice(-6).toUpperCase()}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <button onClick={onClose} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-400 cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -478,14 +478,14 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onReso
         <div className="px-6 py-5 space-y-4 overflow-y-auto">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-bold text-slate-900">{ticket.submittedByName}</p>
-              <p className="text-xs text-slate-500">{ticket.submittedByEmail}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">{ticket.submittedByName}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{ticket.submittedByEmail}</p>
               {ticket.attachmentName && (
                 <a
                   href={`${SI_URI}/${ticket.attachmentPath?.replace(/\\/g, '/')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-lg bg-blue-50 text-[#008ecc] hover:bg-blue-100 transition-colors text-xs font-bold border border-blue-100"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-[#008ecc] dark:text-[#33b8ff] hover:bg-blue-100 transition-colors text-xs font-bold border border-blue-100 dark:border-blue-800/50"
                 >
                   <Paperclip size={13} />
                   {ticket.attachmentName}
@@ -494,13 +494,13 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onReso
             </div>
             <div className="flex items-center gap-2">
               {/* Expected Resolution Date */}
-              <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1.5 bg-white shadow-sm">
-                <Calendar size={13} className="text-slate-400" />
+              <div className="flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-900 shadow-sm">
+                <Calendar size={13} className="text-slate-400 dark:text-slate-500" />
                 <input
                   type="date"
                   value={ticket.expectedResolutionDate ? ticket.expectedResolutionDate.split('T')[0] : ""}
                   onChange={(e) => onResolutionDateChange(ticket._id, e.target.value)}
-                  className="text-xs font-bold text-slate-600 focus:outline-none cursor-pointer bg-transparent"
+                  className="text-xs font-bold text-slate-600 dark:text-slate-400 focus:outline-none cursor-pointer bg-transparent"
                   title="Expected Resolution Date"
                 />
               </div>
@@ -508,7 +508,7 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onReso
               <select
                 value={ticket.priority}
                 onChange={(e) => onPriorityChange(ticket._id, e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
               >
                 {PRIORITY_OPTIONS.filter((p) => p !== "All").map((p) => (
                   <option key={p} value={p}>
@@ -519,7 +519,7 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onReso
               <select
                 value={ticket.status}
                 onChange={(e) => onStatusChange(ticket._id, e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
               >
                 {STATUS_OPTIONS.filter((s) => s !== "All").map((s) => (
                   <option key={s} value={s}>
@@ -530,18 +530,18 @@ const TicketModal = ({ ticket, onClose, onStatusChange, onPriorityChange, onReso
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-4">
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
             <Timeline entries={ticket.timeline} viewerSender="platform" />
           </div>
         </div>
 
-        <div className="flex items-end gap-2 px-6 py-4 border-t border-slate-100 shrink-0">
+        <div className="flex items-end gap-2 px-6 py-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
           <textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             rows={1}
             placeholder="Type a response for the tenant admin..."
-            className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#008ecc] focus:bg-white transition-colors resize-none text-slate-800"
+            className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-[#008ecc] focus:bg-white dark:bg-slate-900 transition-colors resize-none text-slate-800 dark:text-slate-200"
           />
           <button
             onClick={handleSend}

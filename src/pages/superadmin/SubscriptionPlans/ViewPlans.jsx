@@ -107,8 +107,8 @@ function FeatureGrid({ features, showAll }) {
           <div
             key={key}
             className={`flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg ${on
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                : "bg-slate-50 text-slate-400 border border-slate-100"
+                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50"
+                : "bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-800"
               }`}
           >
             {on ? (
@@ -134,11 +134,11 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
 
   return (
     <div
-      className={`relative flex flex-col bg-white rounded-3xl border transition-all duration-300 p-6 ${plan.is_recommended
+      className={`relative flex flex-col bg-white dark:bg-slate-900 rounded-3xl border transition-all duration-300 p-6 ${plan.is_recommended
           ? "border-[#008ecc] ring-2 ring-[#008ecc]/10 shadow-2xl"
           : isCurrent
             ? "border-emerald-400 ring-2 ring-emerald-100 shadow-lg"
-            : "border-slate-200 shadow-lg hover:shadow-xl hover:-translate-y-1"
+            : "border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:-translate-y-1"
         }`}
     >
       {plan.is_recommended && (
@@ -155,9 +155,9 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-slate-700">{plan.plan_name}</h3>
+          <h3 className="text-slate-700 dark:text-slate-300">{plan.plan_name}</h3>
           <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${plan.plan_type === "free"
-              ? "bg-slate-100 text-slate-500"
+              ? "bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400"
               : plan.plan_type === "enterprise"
                 ? "bg-purple-100 text-purple-700"
                 : "bg-blue-100 text-blue-700"
@@ -166,39 +166,39 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
           </span>
         </div>
         {plan.description && (
-          <p className="text-xs text-slate-400 mt-1">{plan.description}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{plan.description}</p>
         )}
       </div>
 
       {/* Pricing */}
-      <div className="mb-4 border-b border-slate-100 pb-4">
+      <div className="mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
         {hasTiers ? (
           <div className="space-y-1.5">
             {plan.tiers.map((tier) => (
               <div key={tier.billing_cycle} className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 font-medium">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">
                   {tier.billing_cycle === "monthly" && tier.duration_months > 1
                     ? `Custom (${tier.duration_months} Months)`
                     : TIER_LABELS[tier.billing_cycle] || tier.billing_cycle}
                 </span>
-                <span className="font-bold text-slate-900">
+                <span className="font-bold text-slate-900 dark:text-white">
                   {plan.currency || "USD"} {tier.price.toLocaleString()}
-                  <span className="text-slate-400 font-normal text-xs ml-1">/ {tier.duration_months}mo</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-normal text-xs ml-1">/ {tier.duration_months}mo</span>
                 </span>
               </div>
             ))}
           </div>
         ) : (
           <div>
-            <span className="text-4xl font-black text-slate-900">{plan.currency || "USD"} {plan.price_monthly}</span>
-            <span className="text-slate-400 text-sm ml-1">/ mo</span>
+            <span className="text-4xl font-black text-slate-900 dark:text-white">{plan.currency || "USD"} {plan.price_monthly}</span>
+            <span className="text-slate-400 dark:text-slate-500 text-sm ml-1">/ mo</span>
           </div>
         )}
       </div>
 
       {/* User Limit */}
-      <div className="flex items-center gap-2 mb-4 text-sm text-slate-700">
-        <Users size={14} className="text-[#008ecc]" />
+      <div className="flex items-center gap-2 mb-4 text-sm text-slate-700 dark:text-slate-300">
+        <Users size={14} className="text-[#008ecc] dark:text-[#33b8ff]" />
         <span className="font-semibold">
           {plan.max_users_per_tenant === 0 ? "Unlimited" : plan.max_users_per_tenant} User Seats
         </span>
@@ -209,7 +209,7 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
         <button
           type="button"
           onClick={() => setFeaturesOpen((o) => !o)}
-          className="flex items-center gap-1.5 text-xs font-bold text-[#008ecc] hover:underline cursor-pointer mb-2"
+          className="flex items-center gap-1.5 text-xs font-bold text-[#008ecc] dark:text-[#33b8ff] hover:underline cursor-pointer mb-2"
         >
           <span>{featuresOpen ? "Hide Features" : `View ${enabledFeatures.length} Features`}</span>
         </button>
@@ -217,12 +217,12 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
         {!featuresOpen && (
           <div className="flex flex-wrap gap-1.5">
             {enabledFeatures.slice(0, 6).map((k) => (
-              <span key={k} className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-medium">
+              <span key={k} className="text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 px-2 py-0.5 rounded-full font-medium">
                 {FEATURE_LABELS[k] || k}
               </span>
             ))}
             {enabledFeatures.length > 6 && (
-              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium">
                 +{enabledFeatures.length - 6} more
               </span>
             )}
@@ -231,14 +231,14 @@ function AvailablePlanCard({ plan, currentPlanId, tenantSlug, navigate }) {
       </div>
 
       {/* CTA */}
-      <div className="mt-auto pt-4 border-t border-slate-100">
+      <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">
         <button
           onClick={() => navigate(`/${tenantSlug}/upgrade?planId=${plan._id}`)}
           className={`w-full py-2.5 rounded-2xl font-bold text-sm transition-all cursor-pointer shadow-sm hover:shadow-md ${isCurrent
               ? "bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-100"
               : plan.is_recommended
                 ? "bg-[#008ecc] text-white hover:bg-[#007bb0]"
-                : "bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 hover:bg-slate-100"
+                : "bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-slate-350 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
             }`}
         >
           {isCurrent ? "Renew / Change Period" : "Select & Upgrade"}
@@ -282,10 +282,10 @@ const ViewPlans = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-800/80 flex items-center justify-center">
         <div className="text-center space-y-2">
           <div className="w-10 h-10 border-4 border-[#008ecc] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-500 text-sm font-semibold">Loading plan details...</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold">Loading plan details...</p>
         </div>
       </div>
     );
@@ -345,11 +345,11 @@ const ViewPlans = () => {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate(`/${tenantSlug}/dashboard`)}
-            className="p-2.5 bg-white border border-slate-200 hover:border-slate-350 text-slate-700 rounded-full shadow-sm hover:shadow transition cursor-pointer"
+            className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-350 text-slate-700 dark:text-slate-300 rounded-full shadow-sm hover:shadow transition cursor-pointer"
           >
             <ArrowLeft size={18} />
           </button>
-          <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Back to Dashboard</span>
+          <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Back to Dashboard</span>
         </div>
 
         {/* Expiry warning banner */}
@@ -362,7 +362,7 @@ const ViewPlans = () => {
 
         {/* ── SECTION 1: Current Plan ─────────────────────────────────────────── */}
         {currentTenant && (
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-lg overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-lg overflow-hidden">
             {/* Header bar */}
             <div className="bg-gradient-to-r from-[#008ecc] to-[#0068a0] px-6 py-5 flex items-center justify-between">
               <div>
@@ -376,12 +376,12 @@ const ViewPlans = () => {
                     currentTenant.plan_status === "grace" ? "bg-orange-400 text-white" :
                       currentTenant.plan_status === "trial" ? "bg-blue-200 text-blue-900" :
                         currentTenant.plan_status === "expired" ? "bg-red-400 text-white" :
-                          "bg-slate-200 text-slate-700"
+                          "bg-slate-200 text-slate-700 dark:text-slate-300"
                   }`}>
                   {currentTenant.plan_status}
                 </span>
                 {currentCycle && (
-                  <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-white dark:bg-slate-900/20 text-white px-2 py-0.5 rounded-full font-medium">
                     {CYCLE_LABELS[currentCycle] || currentCycle}
                   </span>
                 )}
@@ -391,29 +391,29 @@ const ViewPlans = () => {
             <div className="p-6 md:p-8 space-y-8">
               {/* Key metrics row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
                     <CreditCard size={11} /> Price
                   </div>
-                  <div className="text-lg font-black text-slate-900">
+                  <div className="text-lg font-black text-slate-900 dark:text-white">
                     {currentCurrency} {currentPrice.toLocaleString()}
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
                     <Users size={11} /> User Seats
                   </div>
-                  <div className="text-lg font-black text-slate-900">
+                  <div className="text-lg font-black text-slate-900 dark:text-white">
                     {currentPlan?.max_users_per_tenant === 0 ? "Unlimited" : `${currentPlan?.max_users_per_tenant ?? "—"}`}
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
                     <Calendar size={11} /> Start Date
                   </div>
-                  <div className="text-sm font-bold text-slate-800">
+                  <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
                     {formatDate(currentTenant.plan_start_date)}
                   </div>
                 </div>
@@ -421,15 +421,15 @@ const ViewPlans = () => {
                 <div className={`border rounded-2xl p-4 space-y-1 ${daysLeft === 1 ? "bg-red-50 border-red-200" :
                     daysLeft !== null && daysLeft <= 7 ? "bg-amber-50 border-amber-200" :
                       isGrace ? "bg-orange-50 border-orange-200" :
-                        "bg-slate-50 border-slate-100"
+                        "bg-slate-50 dark:bg-slate-800/80 border-slate-100 dark:border-slate-800"
                   }`}>
-                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
                     <Calendar size={11} /> End Date
                   </div>
                   <div className={`text-sm font-bold ${daysLeft === 1 ? "text-red-700" :
                       daysLeft !== null && daysLeft <= 7 ? "text-amber-700" :
                         isGrace ? "text-orange-700" :
-                          "text-slate-800"
+                          "text-slate-800 dark:text-slate-200"
                     }`}>
                     {formatDate(endDate)}
                     {daysLeft !== null && !isGrace && daysLeft >= 0 && (
@@ -459,7 +459,7 @@ const ViewPlans = () => {
               {/* Plan type badge */}
               {currentPlan && (
                 <div className="flex items-center gap-3">
-                  <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${currentPlan.plan_type === "free" ? "bg-slate-100 text-slate-600" :
+                  <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${currentPlan.plan_type === "free" ? "bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400" :
                       currentPlan.plan_type === "enterprise" ? "bg-purple-100 text-purple-700" :
                         "bg-blue-100 text-blue-700"
                     }`}>
@@ -477,13 +477,13 @@ const ViewPlans = () => {
               {currentPlan?.features && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-slate-700">
+                    <h3 className="text-slate-700 dark:text-slate-300">
                       Features ({enabledFeatures.length} enabled)
                     </h3>
                     <button
                       type="button"
                       onClick={() => setShowAllFeatures((s) => !s)}
-                      className="text-xs font-bold text-[#008ecc] hover:underline cursor-pointer"
+                      className="text-xs font-bold text-[#008ecc] dark:text-[#33b8ff] hover:underline cursor-pointer"
                     >
                       {showAllFeatures ? "Show Less" : `Show All ${Object.keys(FEATURE_LABELS).length}`}
                     </button>
@@ -498,14 +498,14 @@ const ViewPlans = () => {
         {/* ── SECTION 2: Available Plans ─────────────────────────────────────── */}
         <div className="space-y-6">
           <div className="text-center space-y-3 pt-2">
-            <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-1.5 text-xs font-bold text-[#008ecc] uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 rounded-full px-4 py-1.5 text-xs font-bold text-[#008ecc] dark:text-[#33b8ff] uppercase tracking-wider">
               <ShieldCheck size={14} />
               <span>All Available Plans</span>
             </div>
-            <h2 className="text-slate-900">
+            <h2 className="text-slate-900 dark:text-white">
               Upgrade or Switch Your Plan
             </h2>
-            <p className="text-base text-slate-600 max-w-xl mx-auto">
+            <p className="text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
               Choose from our available subscription tiers to unlock more features and user seats.
             </p>
           </div>

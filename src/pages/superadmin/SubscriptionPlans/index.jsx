@@ -63,11 +63,11 @@ const SubscriptionPlans = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-slate-900 flex items-center space-x-2">
-            <CreditCard className="text-[#008ecc]" size={24} />
+          <h2 className="text-slate-900 dark:text-white flex items-center space-x-2">
+            <CreditCard className="text-[#008ecc] dark:text-[#33b8ff]" size={24} />
             <span>Subscription plans</span>
           </h2>
-          <p className="text-base text-slate-600">Manage SaaS pricing tiers</p>
+          <p className="text-base text-slate-600 dark:text-slate-400">Manage SaaS pricing tiers</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -82,16 +82,16 @@ const SubscriptionPlans = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col md:flex-row items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 flex flex-col md:flex-row items-center gap-4">
         {/* Search Input */}
         <div className="relative w-full md:flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
           <input
             type="text"
             placeholder="Search by plan name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner"
           />
         </div>
 
@@ -100,7 +100,7 @@ const SubscriptionPlans = () => {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -114,7 +114,7 @@ const SubscriptionPlans = () => {
           <select
             value={planType}
             onChange={(e) => setPlanType(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white"
+            className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
           >
             <option value="">All Plan Types</option>
             <option value="free">Free</option>
@@ -161,13 +161,13 @@ const SubscriptionPlans = () => {
             </div>
           ) : (
             /* Empty State */
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 py-16 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-5">
-              <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
-                <CreditCard className="text-slate-400" size={28} />
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 py-16 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-5">
+              <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-800/80 flex items-center justify-center border border-slate-100 dark:border-slate-800 shadow-inner">
+                <CreditCard className="text-slate-400 dark:text-slate-500" size={28} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-slate-700">No subscription plans found</h3>
-                <p className="text-base text-slate-600">
+                <h3 className="text-slate-700 dark:text-slate-300">No subscription plans found</h3>
+                <p className="text-base text-slate-600 dark:text-slate-400">
                   Create your first plan to start provisioning SaaS tiers for your tenants.
                 </p>
               </div>

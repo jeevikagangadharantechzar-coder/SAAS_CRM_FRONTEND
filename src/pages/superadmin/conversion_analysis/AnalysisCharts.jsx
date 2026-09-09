@@ -5,10 +5,10 @@ import { BarChart3 } from "lucide-react";
 const AnalysisCharts = ({ trendData, pieData }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+      <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="mb-6">
-          <h3 className="text-lg font-bold text-slate-800">Signup Trends</h3>
-          <p className="text-sm text-slate-500">Based on your current filters.</p>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Signup Trends</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Based on your current filters.</p>
         </div>
         <div className="h-[300px] w-full overflow-x-auto overflow-y-hidden rounded-xl">
           {trendData.length > 0 ? (
@@ -35,7 +35,7 @@ const AnalysisCharts = ({ trendData, pieData }) => {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
               <BarChart3 size={40} className="mb-2 opacity-50" />
               <p>No trend data available.</p>
             </div>
@@ -43,10 +43,10 @@ const AnalysisCharts = ({ trendData, pieData }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col">
         <div className="mb-2">
-          <h3 className="text-lg font-bold text-slate-800">Distribution</h3>
-          <p className="text-sm text-slate-500">Breakdown by status.</p>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Distribution</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Breakdown by status.</p>
         </div>
         <div className="flex-1 min-h-[250px] w-full relative">
           {pieData.length > 0 ? (
@@ -74,12 +74,12 @@ const AnalysisCharts = ({ trendData, pieData }) => {
                   verticalAlign="bottom" 
                   height={36} 
                   iconType="circle"
-                  formatter={(value) => <span className="text-slate-700 font-medium ml-1">{value}</span>}
+                  formatter={(value) => <span className="text-slate-700 dark:text-slate-300 font-medium ml-1">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 absolute inset-0">
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 absolute inset-0">
               <PieChart size={40} className="mb-2 opacity-50" />
               <p>No distribution data.</p>
             </div>

@@ -134,10 +134,10 @@ const UpgradePlan = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-800/80 flex items-center justify-center">
         <div className="text-center space-y-2">
           <div className="w-10 h-10 border-4 border-[#008ecc] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-500 text-sm font-semibold">Retrieving workspace parameters...</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold">Retrieving workspace parameters...</p>
         </div>
       </div>
     );
@@ -151,53 +151,53 @@ const UpgradePlan = () => {
       <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-6 border-b border-slate-200">
+        <div className="flex items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate(`/${tenantSlug}/plans`)}
-              className="p-2.5 bg-white border border-slate-200 hover:border-slate-350 text-slate-700 rounded-full shadow-sm hover:shadow transition cursor-pointer flex items-center justify-center"
+              className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-350 text-slate-700 dark:text-slate-300 rounded-full shadow-sm hover:shadow transition cursor-pointer flex items-center justify-center"
             >
               <ArrowLeft size={18} />
             </button>
             <div>
               <h1 className="text-gray-900">Plan Upgrade / Renewal</h1>
-              <p className="text-base text-slate-600 mt-1 uppercase tracking-wider">Workspace: {tenantSlug}</p>
+              <p className="text-base text-slate-600 dark:text-slate-400 mt-1 uppercase tracking-wider">Workspace: {tenantSlug}</p>
             </div>
           </div>
-          <ShieldCheck size={36} className="text-[#008ecc]" />
+          <ShieldCheck size={36} className="text-[#008ecc] dark:text-[#33b8ff]" />
         </div>
 
         {/* Current Plan Summary */}
         {currentTenant && (
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-lg p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-lg p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center bg-blue-50 border border-blue-100 rounded-full px-3 py-1 text-xs font-bold text-[#008ecc] uppercase tracking-wider">
+              <div className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 rounded-full px-3 py-1 text-xs font-bold text-[#008ecc] dark:text-[#33b8ff] uppercase tracking-wider">
                 Current Subscription
               </div>
-              <h2 className="text-slate-900">
+              <h2 className="text-slate-900 dark:text-white">
                 {currentTenant.plan_id?.plan_name || "Trial / Free"}
                 {currentCycle && (
-                  <span className="ml-2 text-sm font-medium text-slate-400">
+                  <span className="ml-2 text-sm font-medium text-slate-400 dark:text-slate-500">
                     ({TIER_LABELS[currentCycle] || currentCycle})
                   </span>
                 )}
               </h2>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 bg-slate-50 border border-slate-200/60 rounded-2xl p-5 text-sm">
+            <div className="grid grid-cols-3 gap-6 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-5 text-sm">
               <div className="space-y-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Seats</span>
-                <span className="font-bold text-slate-800 text-base">
+                <span className="text-slate-400 dark:text-slate-500 text-xs font-semibold uppercase tracking-wider block">Seats</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-base">
                   {currentTenant.plan_id?.max_users_per_tenant === 0 ? "Unlimited" : `${currentTenant.plan_id?.max_users_per_tenant || 5}`}
                 </span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Status</span>
-                <span className="font-bold text-emerald-600 uppercase text-base">{currentTenant.plan_status}</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs font-semibold uppercase tracking-wider block">Status</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase text-base">{currentTenant.plan_status}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider block">Expires</span>
-                <span className="font-bold text-slate-800 text-base">
+                <span className="text-slate-400 dark:text-slate-500 text-xs font-semibold uppercase tracking-wider block">Expires</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-base">
                   {currentTenant.plan_end_date
                     ? new Date(currentTenant.plan_end_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : "Lifetime"}
@@ -208,7 +208,7 @@ const UpgradePlan = () => {
         )}
 
         {/* Request Form */}
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-xl overflow-hidden">
           <div className="bg-[#008ecc] text-white px-6 py-4 flex items-center justify-between">
             <div>
               <h3 className="">Request Proposal Details</h3>
@@ -227,11 +227,11 @@ const UpgradePlan = () => {
 
               {/* Plan Selector */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Target Plan</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Target Plan</label>
                 <select
                   value={selectedPlanId}
                   onChange={(e) => handlePlanChange(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#008ecc] outline-none bg-white text-slate-800"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#008ecc] outline-none bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
                 >
                   <option value="">-- Choose a Plan --</option>
                   {plans.map((p) => {
@@ -247,11 +247,11 @@ const UpgradePlan = () => {
 
               {/* Billing Cycle — only when plan has tiers */}
               {selectedPlan && hasTiers && (
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
                     Billing Period
                     {selectedPlanId === currentPlanId && (
-                      <span className="ml-2 text-[#008ecc] normal-case font-medium">— you can switch periods</span>
+                      <span className="ml-2 text-[#008ecc] dark:text-[#33b8ff] normal-case font-medium">— you can switch periods</span>
                     )}
                   </label>
                   <div className="flex flex-wrap gap-3">
@@ -268,7 +268,7 @@ const UpgradePlan = () => {
                           className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition cursor-pointer text-left ${
                             selectedBillingCycle === tier.billing_cycle
                               ? "bg-[#008ecc] border-[#008ecc] text-white shadow-sm"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-[#008ecc] hover:text-[#008ecc]"
+                              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-[#008ecc] hover:text-[#008ecc] dark:text-[#33b8ff]"
                           }`}
                         >
                           {tierLabel}
@@ -286,8 +286,8 @@ const UpgradePlan = () => {
               )}
 
               {/* Upgrade Type */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Upgrade Condition</label>
+              <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Upgrade Condition</label>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { value: "mid_cycle",   label: "Mid-Cycle Upgrade" },
@@ -299,15 +299,15 @@ const UpgradePlan = () => {
                       onClick={() => setType(value)}
                       className={`py-2.5 px-4 rounded-xl border text-xs font-bold transition cursor-pointer ${
                         type === value
-                          ? "bg-white border-[#008ecc] text-[#008ecc] shadow-sm"
-                          : "bg-slate-100/50 border-slate-200 text-slate-500 hover:bg-white"
+                          ? "bg-white dark:bg-slate-900 border-[#008ecc] text-[#008ecc] dark:text-[#33b8ff] shadow-sm"
+                          : "bg-slate-100/50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-white dark:bg-slate-900"
                       }`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-slate-400 mt-2 font-medium">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">
                   {type === "mid_cycle"
                     ? "✓ Remaining value from current plan will be credited."
                     : "✓ Direct upgrade, no proration applied."}
@@ -316,9 +316,9 @@ const UpgradePlan = () => {
 
               {/* Plan Specs */}
               {selectedPlan && (
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Max User Seats</label>
-                  <div className="text-lg font-extrabold text-slate-900">
+                <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Max User Seats</label>
+                  <div className="text-lg font-extrabold text-slate-900 dark:text-white">
                     {wantedUsers === 0 ? "Unlimited" : `${wantedUsers} Users`}
                   </div>
                 </div>
@@ -326,13 +326,13 @@ const UpgradePlan = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Reason / Description</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Reason / Description</label>
                 <textarea
                   rows="3"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief description of your upgrade or renewal request..."
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-[#008ecc] outline-none resize-none text-slate-800"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-[#008ecc] outline-none resize-none text-slate-800 dark:text-slate-200"
                   required
                 />
               </div>
@@ -349,20 +349,20 @@ const UpgradePlan = () => {
 
             {/* Pricing Preview */}
             <div className="md:col-span-2 space-y-6">
-              <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-4">
-                <h3 className="text-slate-700">Cost Preview</h3>
-                <div className="space-y-3 text-xs text-slate-700">
-                  <div className="flex justify-between py-2 border-b border-slate-200/60">
-                    <span className="text-slate-500">Plan Base Rate</span>
-                    <span className="font-semibold text-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-4">
+                <h3 className="text-slate-700 dark:text-slate-300">Cost Preview</h3>
+                <div className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
+                  <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700/60">
+                    <span className="text-slate-500 dark:text-slate-400">Plan Base Rate</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
                       {selectedPlan?.currency || "USD"} {basePrice.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-slate-200/60 text-emerald-600">
+                  <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700/60 text-emerald-600 dark:text-emerald-400">
                     <span>Prorated Credit</span>
                     <span>− {selectedPlan?.currency || "USD"} {proratedDiscount.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between py-3 font-bold text-sm text-slate-900">
+                  <div className="flex justify-between py-3 font-bold text-sm text-slate-900 dark:text-white">
                     <span>Total Cost</span>
                     <span>
                       {finalPrice === 0

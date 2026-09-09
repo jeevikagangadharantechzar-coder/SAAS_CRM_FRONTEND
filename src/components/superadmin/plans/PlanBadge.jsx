@@ -3,7 +3,7 @@ import React from "react";
 export const PlanBadge = ({ type, value }) => {
   if (type === "plan_type") {
     const typeLower = (value || "").toLowerCase();
-    let classes = "bg-slate-100 text-slate-700 border-slate-200";
+    let classes = "bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
     if (typeLower === "free") {
       classes = "bg-emerald-50 text-emerald-700 border-emerald-200";
     } else if (typeLower === "paid") {
@@ -24,13 +24,13 @@ export const PlanBadge = ({ type, value }) => {
   if (type === "status") {
     const statusLower = (value || "").toLowerCase();
     let dotClass = "bg-gray-400 animate-pulse";
-    let textClass = "text-slate-600 bg-slate-50 border-slate-200";
+    let textClass = "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700";
     if (statusLower === "active") {
       dotClass = "bg-emerald-500 animate-pulse";
       textClass = "text-emerald-700 bg-emerald-50/50 border-emerald-200";
     } else if (statusLower === "inactive") {
       dotClass = "bg-slate-400";
-      textClass = "text-slate-500 bg-slate-50 border-slate-200";
+      textClass = "text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700";
     } else if (statusLower === "archived") {
       dotClass = "bg-rose-500";
       textClass = "text-rose-700 bg-rose-50 border-rose-200";

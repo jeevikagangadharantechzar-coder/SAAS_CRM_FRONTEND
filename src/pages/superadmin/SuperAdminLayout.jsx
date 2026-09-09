@@ -17,13 +17,19 @@ import {
   LifeBuoy,
   BarChart3,
   UserCog,
+  Sun,
+  Moon
 } from "lucide-react";
 import { clearSuperAdminCredentials } from "../../store/authSlice";
 
 const IconCircle = ({ children, isActive }) => (
-  <div className="w-10 h-10 flex items-center justify-center rounded-full shadow-sm bg-white border border-slate-100">
+  <div className={`w-10 h-10 flex items-center justify-center rounded-full shadow-sm border transition-colors ${
+    isActive 
+      ? "bg-white dark:bg-slate-800 border-blue-100 dark:border-blue-900/30" 
+      : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+  }`}>
     {React.cloneElement(children, {
-      color: isActive ? "#008ecc" : "#1f1f1f",
+      color: isActive ? "#008ecc" : "currentColor",
       size: 18,
     })}
   </div>
@@ -36,8 +42,26 @@ const SuperAdminLayout = () => {
   const [platformLogo, setPlatformLogo] = useState("");
   const [superAdminTitle, setSuperAdminTitle] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // Theme state
+  const [theme, setTheme] = useState(() => localStorage.getItem("superAdminTheme") || "light");
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Apply theme
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("superAdminTheme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === "light" ? "dark" : "light");
+  };
 
   useEffect(() => {
     // Initial count from API
@@ -114,15 +138,15 @@ const SuperAdminLayout = () => {
   ].filter((item) => !item.permission || permissions[item.permission]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-200">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white text-slate-800 border-r border-slate-200 transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Sidebar Header */}
-        <div className="flex flex-col items-center justify-center px-6 py-6 border-b border-slate-100 relative">
+        <div className="flex flex-col items-center justify-center px-6 py-6 border-b border-slate-100 dark:border-slate-800 relative">
           <Link to="/superadmin/dashboard" className="cursor-pointer block text-center">
             <img
               src={platformLogo || "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
@@ -132,11 +156,11 @@ const SuperAdminLayout = () => {
                 e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png";
               }}
             />
-            <span className="text-sm font-bold tracking-wider text-[#008ecc] mt-2 block">SuperAdmin Portal</span>
+            <span className="text-sm font-bold tracking-wider text-[#008ecc] dark:text-[#33b8ff] mt-2 block">SuperAdmin Portal</span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+            className="lg:hidden absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             <X size={20} />
           </button>
@@ -151,8 +175,8 @@ const SuperAdminLayout = () => {
               className={({ isActive }) =>
                 `flex items-center space-x-3 px-4 py-2 rounded-full transition-all duration-200 ${
                   isActive
-                    ? "bg-[#f2fbff] text-[#008ecc] font-semibold"
-                    : "text-slate-600 hover:bg-[#f8f9fb] hover:text-slate-900"
+                    ? "bg-[#f2fbff] dark:bg-[#008ecc]/20 text-[#008ecc] dark:text-[#33b8ff] font-semibold"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fb] dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
                 }`
               }
             >
@@ -172,20 +196,20 @@ const SuperAdminLayout = () => {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-800 shadow-sm border border-slate-300">
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-800 dark:text-slate-200 shadow-sm border border-slate-300 dark:border-slate-600">
                 SA
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800">Platform Owner</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">SuperAdmin</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Platform Owner</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">SuperAdmin</p>
               </div>
             </div>
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="p-2 rounded-lg text-slate-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 dark:hover:text-white transition-colors cursor-pointer"
               title="Logout"
             >
               <Power size={18} />
@@ -197,41 +221,48 @@ const SuperAdminLayout = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 shadow-sm z-10">
+        <header className="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm z-10 transition-colors duration-200">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-slate-100 lg:hidden text-slate-600 transition-colors"
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden text-slate-600 dark:text-slate-400 transition-colors"
             >
               <Menu size={22} />
             </button>
-            <h1 className="text-gray-900">Management Console</h1>
+            <h1 className="text-gray-900 dark:text-white font-semibold">Management Console</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-[#008ecc] border border-blue-100">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+            >
+              {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[#008ecc] dark:text-[#33b8ff] border border-blue-100 dark:border-blue-800">
               Live Server
             </span>
           </div>
         </header>
 
         {/* Dashboard Views Container */}
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
+        <main className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
           <Outlet />
         </main>
       </div>
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-slate-700 mb-2">Log out</h3>
-            <p className="text-base text-slate-600 mb-6">
+        <div className="fixed inset-0 bg-black/50 dark:bg-slate-900/80 flex items-center justify-center z-[100] px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6 border border-transparent dark:border-slate-700">
+            <h3 className="text-slate-700 dark:text-slate-100 mb-2 font-bold text-lg">Log out</h3>
+            <p className="text-base text-slate-600 dark:text-slate-300 mb-6">
               Are you sure you want to logout?
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 text-sm font-medium rounded-lg text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Cancel
               </button>
@@ -240,7 +271,7 @@ const SuperAdminLayout = () => {
                   setShowLogoutConfirm(false);
                   handleLogout();
                 }}
-                className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 dark:hover:bg-red-500 transition-colors"
               >
                 Logout
               </button>
@@ -253,3 +284,4 @@ const SuperAdminLayout = () => {
 };
 
 export default SuperAdminLayout;
+

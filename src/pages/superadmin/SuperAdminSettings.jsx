@@ -307,7 +307,7 @@ const ResetButton = ({ onClick }) => (
   <button
     type="button"
     onClick={onClick}
-    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all"
+    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all"
   >
     <RotateCcw size={13} />
     <span>Reset to Default</span>
@@ -570,7 +570,7 @@ const SuperAdminSettings = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#008ecc]" />
+        <Loader2 size={32} className="animate-spin text-[#008ecc] dark:text-[#33b8ff]" />
       </div>
     );
   }
@@ -579,10 +579,10 @@ const SuperAdminSettings = () => {
     <>
       <div className="space-y-6 max-w-4xl">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 tracking-tight">
             System Settings
           </h2>
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Configure platform branding, email delivery, and alert preferences.
           </p>
         </div>
@@ -590,12 +590,12 @@ const SuperAdminSettings = () => {
         <form onSubmit={handleSave} className="space-y-6">
 
           {/* ── Branding ── */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg font-bold flex items-center space-x-2">
-                    <Globe size={18} className="text-[#008ecc]" />
+                    <Globe size={18} className="text-[#008ecc] dark:text-[#33b8ff]" />
                     <span>Branding</span>
                   </CardTitle>
                   <CardDescription className="mt-1">
@@ -608,45 +608,45 @@ const SuperAdminSettings = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Platform Name
                   </label>
                   <input
                     type="text"
                     value={platformName}
                     onChange={(e) => setPlatformName(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Support Email
                   </label>
                   <input
                     type="email"
                     value={supportEmail}
                     onChange={(e) => setSupportEmail(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Platform Logo
                 </label>
                 <div className="flex items-center gap-4">
                   <img
                     src={logoPreview || "/images/TZI_Logo-04_-_Copy-removebg-preview.png"}
                     alt="Platform logo"
-                    className="h-14 w-auto object-contain border border-slate-200 rounded-lg p-1 bg-slate-50"
+                    className="h-14 w-auto object-contain border border-slate-200 dark:border-slate-700 rounded-lg p-1 bg-slate-50 dark:bg-slate-800/80"
                     onError={(e) => { e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png"; }}
                   />
                   <button
                     type="button"
                     onClick={() => fileRef.current.click()}
                     disabled={logoUploading}
-                    className="flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
+                    className="flex items-center space-x-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all disabled:opacity-50"
                   >
                     {logoUploading ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -663,7 +663,7 @@ const SuperAdminSettings = () => {
                     onChange={handleLogoChange}
                   />
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   Recommended: PNG or SVG, max 5 MB.
                 </p>
               </div>
@@ -671,7 +671,7 @@ const SuperAdminSettings = () => {
           </Card>
 
           {/* ── Super Admin Panel Branding ── */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
@@ -688,7 +688,7 @@ const SuperAdminSettings = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Browser Tab Title
                 </label>
                 <input
@@ -696,15 +696,15 @@ const SuperAdminSettings = () => {
                   value={superAdminTitle}
                   onChange={(e) => setSuperAdminTitle(e.target.value)}
                   placeholder="e.g. Techzar Admin Console"
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   Shown in the browser tab when super admin is logged in. Leave blank to use the default.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Favicon (ICO / PNG / SVG)
                 </label>
                 <div className="flex items-center gap-4">
@@ -712,11 +712,11 @@ const SuperAdminSettings = () => {
                     <img
                       src={faviconPreview}
                       alt="Favicon preview"
-                      className="h-10 w-10 object-contain border border-slate-200 rounded-lg p-1 bg-slate-50"
+                      className="h-10 w-10 object-contain border border-slate-200 dark:border-slate-700 rounded-lg p-1 bg-slate-50 dark:bg-slate-800/80"
                       onError={(e) => { e.target.style.display = "none"; }}
                     />
                   ) : (
-                    <div className="h-10 w-10 flex items-center justify-center border border-dashed border-slate-300 rounded-lg text-slate-300 text-xs">
+                    <div className="h-10 w-10 flex items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-slate-300 text-xs">
                       ICO
                     </div>
                   )}
@@ -724,7 +724,7 @@ const SuperAdminSettings = () => {
                     type="button"
                     onClick={() => faviconRef.current.click()}
                     disabled={faviconUploading}
-                    className="flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
+                    className="flex items-center space-x-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all disabled:opacity-50"
                   >
                     {faviconUploading ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -741,7 +741,7 @@ const SuperAdminSettings = () => {
                     onChange={handleFaviconChange}
                   />
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   Recommended: ICO or 32×32 PNG. Max 2 MB.
                 </p>
               </div>
@@ -749,12 +749,12 @@ const SuperAdminSettings = () => {
           </Card>
 
           {/* ── SMTP ── */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg font-bold flex items-center space-x-2">
-                    <Mail size={18} className="text-[#008ecc]" />
+                    <Mail size={18} className="text-[#008ecc] dark:text-[#33b8ff]" />
                     <span>SMTP / Email Setup</span>
                   </CardTitle>
                   <CardDescription className="mt-1">
@@ -767,7 +767,7 @@ const SuperAdminSettings = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     SMTP Host
                   </label>
                   <input
@@ -775,22 +775,22 @@ const SuperAdminSettings = () => {
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
                     placeholder="smtp.gmail.com"
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     SMTP Port
                   </label>
                   <input
                     type="number"
                     value={smtpPort}
                     onChange={(e) => setSmtpPort(Number(e.target.value))}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     SMTP Username
                   </label>
                   <input
@@ -798,11 +798,11 @@ const SuperAdminSettings = () => {
                     value={smtpUser}
                     onChange={(e) => setSmtpUser(e.target.value)}
                     placeholder="your@email.com"
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     SMTP Password / App Password
                   </label>
                   <input
@@ -810,11 +810,11 @@ const SuperAdminSettings = () => {
                     value={smtpPass}
                     onChange={(e) => setSmtpPass(e.target.value)}
                     placeholder="Leave unchanged if already set"
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     From Name
                   </label>
                   <input
@@ -822,7 +822,7 @@ const SuperAdminSettings = () => {
                     value={smtpFromName}
                     onChange={(e) => setSmtpFromName(e.target.value)}
                     placeholder="TZI Support"
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div className="flex items-center space-x-3 mt-6">
@@ -833,11 +833,11 @@ const SuperAdminSettings = () => {
                       }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${smtpSecure ? "translate-x-6" : "translate-x-1"
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 transition-transform ${smtpSecure ? "translate-x-6" : "translate-x-1"
                         }`}
                     />
                   </button>
-                  <span className="text-sm font-semibold text-slate-700">
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Use SSL/TLS (port 465)
                   </span>
                 </div>
@@ -846,12 +846,12 @@ const SuperAdminSettings = () => {
           </Card>
 
           {/* ── Email Templates (tabbed) ── */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg font-bold flex items-center space-x-2">
-                    <FileText size={18} className="text-[#008ecc]" />
+                    <FileText size={18} className="text-[#008ecc] dark:text-[#33b8ff]" />
                     <span>Email Templates</span>
                   </CardTitle>
                   <CardDescription className="mt-1">
@@ -868,15 +868,15 @@ const SuperAdminSettings = () => {
               </div>
 
               {/* Tab toggle */}
-              <div className="flex mt-4 bg-slate-100 rounded-xl p-1 w-full gap-1 overflow-x-auto">
+              <div className="flex mt-4 bg-slate-100 dark:bg-slate-800/50 rounded-xl p-1 w-full gap-1 overflow-x-auto">
                 {['welcome', 'plan', 'upgradeApproval', 'upgradeRejected', 'expiryReminder'].map(tab => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setEmailTab(tab)}
                     className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${emailTab === tab
-                        ? "bg-white text-[#008ecc] shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        ? "bg-white dark:bg-slate-900 text-[#008ecc] dark:text-[#33b8ff] shadow-sm"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300"
                       }`}
                   >
                     {tab === 'welcome' && "Welcome Email"}
@@ -892,141 +892,141 @@ const SuperAdminSettings = () => {
             <CardContent className="space-y-4">
               {emailTab === "welcome" ? (
                 <>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Variables:{" "}
-                    <code className="bg-slate-100 px-1 rounded">
+                    <code className="bg-slate-100 dark:bg-slate-800/50 px-1 rounded">
                       {"{{adminName}} {{email}} {{password}} {{slug}} {{loginUrl}} {{platformName}}"}
                     </code>
                   </p>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Subject</label>
                     <input
                       type="text"
                       value={welcomeSubject}
                       onChange={(e) => setWelcomeSubject(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Body (HTML supported)</label>
                     <textarea
                       value={welcomeBody}
                       onChange={(e) => setWelcomeBody(e.target.value)}
                       rows={10}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
                     />
                   </div>
                 </>
               ) : emailTab === "plan" ? (
                 <>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Variables:{" "}
-                    <code className="bg-slate-100 px-1 rounded">
+                    <code className="bg-slate-100 dark:bg-slate-800/50 px-1 rounded">
                       {"{{adminName}} {{planName}} {{planType}} {{priceLabel}} {{maxUsers}} {{startDate}} {{endDate}} {{loginUrl}} {{platformName}}"}
                     </code>
                   </p>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Subject</label>
                     <input
                       type="text"
                       value={planSubject}
                       onChange={(e) => setPlanSubject(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Body (HTML supported)</label>
                     <textarea
                       value={planBody}
                       onChange={(e) => setPlanBody(e.target.value)}
                       rows={10}
                       placeholder="Leave blank to use the built-in default plan email template"
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
                     />
                   </div>
                 </>
               ) : emailTab === "upgradeApproval" ? (
                 <>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Variables:{" "}
-                    <code className="bg-slate-100 px-1 rounded">
+                    <code className="bg-slate-100 dark:bg-slate-800/50 px-1 rounded">
                       {"{{adminName}} {{planName}} {{wantedUsers}} {{loginDays}} {{password}} {{loginUrl}} {{platformName}}"}
                     </code>
                   </p>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Subject</label>
                     <input
                       type="text"
                       value={upgradeApprovalSubject}
                       onChange={(e) => setUpgradeApprovalSubject(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Body (HTML supported)</label>
                     <textarea
                       value={upgradeApprovalBody}
                       onChange={(e) => setUpgradeApprovalBody(e.target.value)}
                       rows={10}
                       placeholder="Leave blank to use the built-in default upgrade approval template"
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
                     />
                   </div>
                 </>
               ) : emailTab === "upgradeRejected" ? (
                 <>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Variables:{" "}
-                    <code className="bg-slate-100 px-1 rounded">
+                    <code className="bg-slate-100 dark:bg-slate-800/50 px-1 rounded">
                       {"{{adminName}} {{planName}} {{wantedUsers}} {{loginDays}} {{reason}} {{platformName}}"}
                     </code>
                   </p>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Subject</label>
                     <input
                       type="text"
                       value={upgradeRejectedSubject}
                       onChange={(e) => setUpgradeRejectedSubject(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Body (HTML supported)</label>
                     <textarea
                       value={upgradeRejectedBody}
                       onChange={(e) => setUpgradeRejectedBody(e.target.value)}
                       rows={10}
                       placeholder="Leave blank to use the built-in default upgrade rejected template"
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
                     />
                   </div>
                 </>
               ) : (
                 <>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     Variables:{" "}
-                    <code className="bg-slate-100 px-1 rounded">
+                    <code className="bg-slate-100 dark:bg-slate-800/50 px-1 rounded">
                       {"{{adminName}} {{planName}} {{endDate}} {{daysRemaining}} {{loginUrl}} {{platformName}}"}
                     </code>
                   </p>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Subject</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Subject</label>
                     <input
                       type="text"
                       value={expiryReminderSubject}
                       onChange={(e) => setExpiryReminderSubject(e.target.value)}
                       placeholder="Use {{urgencySubject}} for default dynamic subject"
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Body (HTML supported)</label>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Body (HTML supported)</label>
                     <textarea
                       value={expiryReminderBody}
                       onChange={(e) => setExpiryReminderBody(e.target.value)}
                       rows={10}
                       placeholder="Leave blank to use the built-in default expiry reminder template"
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#008ecc] resize-y"
                     />
                   </div>
                 </>
@@ -1035,12 +1035,12 @@ const SuperAdminSettings = () => {
           </Card>
 
           {/* ── Upgrade Alert ── */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg font-bold flex items-center space-x-2">
-                    <Bell size={18} className="text-[#008ecc]" />
+                    <Bell size={18} className="text-[#008ecc] dark:text-[#33b8ff]" />
                     <span>Upgrade Request Alerts</span>
                   </CardTitle>
                   <CardDescription className="mt-1">
@@ -1053,10 +1053,10 @@ const SuperAdminSettings = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800">
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                     Enable Upgrade Alerts
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Send an email when a tenant requests a plan upgrade.
                   </p>
                 </div>
@@ -1067,7 +1067,7 @@ const SuperAdminSettings = () => {
                     }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${upgradeAlertEnabled ? "translate-x-6" : "translate-x-1"
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-900 transition-transform ${upgradeAlertEnabled ? "translate-x-6" : "translate-x-1"
                       }`}
                   />
                 </button>
@@ -1075,7 +1075,7 @@ const SuperAdminSettings = () => {
 
               {upgradeAlertEnabled && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Alert Recipient Email
                   </label>
                   <input
@@ -1083,7 +1083,7 @@ const SuperAdminSettings = () => {
                     value={upgradeAlertEmail}
                     onChange={(e) => setUpgradeAlertEmail(e.target.value)}
                     placeholder="Leave blank to use Support Email above"
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
               )}
@@ -1091,18 +1091,18 @@ const SuperAdminSettings = () => {
           </Card>
 
           {/* ── Security / MFA ── */}
-          <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl overflow-hidden bg-white">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-5">
+          <Card className="border-0 shadow-xl shadow-slate-200/40 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 pb-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className={`p-2 rounded-lg ${isMfaEnabled ? 'bg-green-100' : 'bg-indigo-100'}`}>
                     <ShieldCheck size={20} className={isMfaEnabled ? 'text-green-600' : 'text-indigo-600'} />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-bold text-slate-800">
+                    <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200">
                       Multi-Factor Authentication
                     </CardTitle>
-                    <CardDescription className="text-sm text-slate-500 mt-1">
+                    <CardDescription className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       Protect your superadmin account with an authenticator app.
                     </CardDescription>
                   </div>
@@ -1113,7 +1113,7 @@ const SuperAdminSettings = () => {
                     Enabled
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 px-3 py-1 bg-slate-50 text-slate-500 text-xs font-bold rounded-full border border-slate-200">
+                  <div className="flex items-center gap-1 px-3 py-1 bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs font-bold rounded-full border border-slate-200 dark:border-slate-700">
                     Disabled
                   </div>
                 )}

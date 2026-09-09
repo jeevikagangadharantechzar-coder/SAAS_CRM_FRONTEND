@@ -12,7 +12,7 @@ const FilterToolbar = ({
         <select 
           value={dateMode} 
           onChange={(e) => setDateMode(e.target.value)}
-          className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+          className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
         >
           <option value="all_time">All Time</option>
           <option value="single_day">Single Day</option>
@@ -25,7 +25,7 @@ const FilterToolbar = ({
             type="date" 
             value={singleDate} 
             onChange={(e) => setSingleDate(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50"
+            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50"
           />
         )}
         {dateMode === "date_range" && (
@@ -34,14 +34,14 @@ const FilterToolbar = ({
               type="date" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50"
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50"
             />
-            <span className="text-slate-400 font-bold hidden sm:inline">to</span>
+            <span className="text-slate-400 dark:text-slate-500 font-bold hidden sm:inline">to</span>
             <input 
               type="date" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50"
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50"
             />
           </div>
         )}

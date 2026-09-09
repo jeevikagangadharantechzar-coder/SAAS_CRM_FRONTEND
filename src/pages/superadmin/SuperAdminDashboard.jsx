@@ -87,28 +87,28 @@ const SuperAdminDashboard = () => {
       value: stats.paidTenants,
       description: "Active, expired, and grace",
       icon: <CheckCircle className="text-green-500" size={24} />,
-      bg: "bg-green-50/50 border border-green-100",
+      bg: "bg-green-50/50 dark:bg-green-900/20 border border-green-100 dark:border-green-800",
     },
     {
       title: "Total Free Trial Users",
       value: stats.trialTenants,
       description: "Trial sign-ups",
       icon: <Building2 className="text-[#008ecc]" size={24} />,
-      bg: "bg-[#f2fbff] border border-blue-100",
+      bg: "bg-[#f2fbff] dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800",
     },
     {
       title: "Platform Users",
       value: stats.totalUsers,
       description: "Total across all tenants",
       icon: <Users className="text-purple-500" size={24} />,
-      bg: "bg-purple-50/50 border border-purple-100",
+      bg: "bg-purple-50/50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800",
     },
     {
       title: "Platform Revenue",
       value: stats.totalRevenue ? `$${Number(stats.totalRevenue).toLocaleString()}` : "$0",
       description: "Aggregated subscriptions",
       icon: <TrendingUp className="text-amber-500" size={24} />,
-      bg: "bg-amber-50/50 border border-amber-100",
+      bg: "bg-amber-50/50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800",
     },
   ];
 
@@ -138,13 +138,13 @@ const SuperAdminDashboard = () => {
       {/* Header Panel */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-slate-900">System Overview</h2>
-          <p className="text-base text-slate-600">Real-time status of your multi-tenant CRM deployment.</p>
+          <h2 className="text-slate-900 dark:text-white">System Overview</h2>
+          <p className="text-base text-slate-600 dark:text-slate-400">Real-time status of your multi-tenant CRM deployment.</p>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm flex items-center space-x-2">
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-xl text-sm flex items-center space-x-2">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
@@ -153,7 +153,7 @@ const SuperAdminDashboard = () => {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cardData.map((card, i) => (
-          <Card key={i} className="border border-slate-100 shadow-sm bg-white overflow-hidden hover:shadow-md transition-all duration-200 rounded-2xl">
+          <Card key={i} className="border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 overflow-hidden hover:shadow-md transition-all duration-200 rounded-2xl">
             <CardContent className="p-6">
               {loading ? (
                 <div className="space-y-3">
@@ -164,9 +164,9 @@ const SuperAdminDashboard = () => {
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{card.title}</p>
-                    <h3 className="text-slate-700 mt-2">{card.value}</h3>
-                    <p className="text-base text-slate-600 mt-1">{card.description}</p>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.title}</p>
+                    <h3 className="text-slate-700 dark:text-slate-200 mt-2">{card.value}</h3>
+                    <p className="text-base text-slate-600 dark:text-slate-400 mt-1">{card.description}</p>
                   </div>
                   <div className={`p-3 rounded-2xl ${card.bg}`}>{card.icon}</div>
                 </div>
@@ -179,16 +179,16 @@ const SuperAdminDashboard = () => {
       {/* Charts Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Registration Trend */}
-        <Card className="lg:col-span-2 border border-slate-100 shadow-sm bg-white rounded-2xl">
+        <Card className="lg:col-span-2 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-slate-800">Tenant Registrations</CardTitle>
-            <CardDescription>Monthly tenant sign-ups for {currentYear} (from database).</CardDescription>
+            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100">Tenant Registrations</CardTitle>
+            <CardDescription className="dark:text-slate-400">Monthly tenant sign-ups for {currentYear} (from database).</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
             {loading ? (
               <Skeleton className="h-64 w-full rounded-lg" />
             ) : tenants.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+              <div className="h-64 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                 <Building2 size={40} className="mb-3 opacity-30" />
                 <p className="font-medium">No tenant registration data available</p>
                 <p className="text-xs mt-1">Tenants will appear here once provisioned.</p>
@@ -210,16 +210,16 @@ const SuperAdminDashboard = () => {
         </Card>
 
         {/* Tenant Status Distribution */}
-        <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl">
+        <Card className="border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-slate-800">Tenant Distribution</CardTitle>
-            <CardDescription>Paid subscriptions vs free trials.</CardDescription>
+            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100">Tenant Distribution</CardTitle>
+            <CardDescription className="dark:text-slate-400">Paid subscriptions vs free trials.</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col items-center">
             {loading ? (
               <Skeleton className="h-48 w-48 rounded-full" />
             ) : distributionData.length === 0 ? (
-              <div className="h-48 flex flex-col items-center justify-center text-slate-400">
+              <div className="h-48 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                 <CheckCircle size={40} className="mb-3 opacity-30" />
                 <p className="font-medium text-sm">No tenant data</p>
               </div>
@@ -245,19 +245,19 @@ const SuperAdminDashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-extrabold text-slate-800">{tenants.length}</span>
-                    <span className="text-xs text-slate-400 font-semibold uppercase">Total</span>
+                    <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{tenants.length}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase">Total</span>
                   </div>
                 </div>
 
                 <div className="flex gap-6 mt-4 text-sm font-semibold">
                   <div className="flex items-center space-x-2">
                     <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLORS[0] }} />
-                    <span className="text-slate-600">Paid ({paidCount})</span>
+                    <span className="text-slate-600 dark:text-slate-300">Paid ({paidCount})</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLORS[1] }} />
-                    <span className="text-slate-600">Trials ({trialCount})</span>
+                    <span className="text-slate-600 dark:text-slate-300">Trials ({trialCount})</span>
                   </div>
                 </div>
               </>

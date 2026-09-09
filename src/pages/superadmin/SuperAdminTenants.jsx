@@ -168,8 +168,8 @@ const SuperAdminTenants = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-slate-900">Tenant Businesses</h2>
-          <p className="text-base text-slate-600">Provision, inspect, and configure multi-tenant databases.</p>
+          <h2 className="text-slate-900 dark:text-white">Tenant Businesses</h2>
+          <p className="text-base text-slate-600 dark:text-slate-400">Provision, inspect, and configure multi-tenant databases.</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -185,15 +185,15 @@ const SuperAdminTenants = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm">
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-xl text-sm">
           <span>{error}</span>
         </div>
       )}
 
       {/* Control panel and Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Search Toolbar */}
-        <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex items-center">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -201,7 +201,7 @@ const SuperAdminTenants = () => {
               placeholder="Search by company name, slug, or admin details..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner"
+              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner"
             />
           </div>
         </div>
@@ -210,7 +210,7 @@ const SuperAdminTenants = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-100/50 text-slate-600 uppercase text-xs font-bold border-b border-slate-200">
+              <tr className="bg-slate-100/50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase text-xs font-bold border-b border-slate-200 dark:border-slate-800">
                 <th className="px-6 py-4">Company Name</th>
                 <th className="px-6 py-4">Slug</th>
                 <th className="px-6 py-4">Current Plan</th>
@@ -221,7 +221,7 @@ const SuperAdminTenants = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className={`divide-y divide-slate-100 text-slate-700 text-sm ${loading && tenants.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+            <tbody className={`divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 text-sm ${loading && tenants.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
               {loading && tenants.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
@@ -233,29 +233,29 @@ const SuperAdminTenants = () => {
                 </tr>
               ) : paginatedTenants.length > 0 ? (
                 paginatedTenants.map((t) => (
-                  <tr key={t._id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={t._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                     <td
-                      className="px-6 py-4 font-bold text-slate-900 cursor-pointer hover:text-[#008ecc] hover:underline"
+                      className="px-6 py-4 font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#008ecc] hover:underline"
                       onClick={() => navigate(`/superadmin/tenants/${t._id}`)}
                     >
                       {t.name}
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-[#008ecc] bg-[#f2fbff] rounded px-2.5 py-1 inline-block my-3 ml-6 border border-blue-100 font-semibold">
+                    <td className="px-6 py-4 font-mono text-xs text-[#008ecc] dark:text-[#33b8ff] bg-[#f2fbff] dark:bg-[#008ecc]/10 rounded px-2.5 py-1 inline-block my-3 ml-6 border border-blue-100 dark:border-[#008ecc]/30 font-semibold">
                       {t.slug}
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-800">
+                    <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">
                       {t.plan_id?.plan_name || "Trial / Custom"}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
                           t.plan_status === "active"
-                            ? "bg-green-50 text-green-700 border-green-200"
+                            ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
                             : t.plan_status === "trial"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
                             : t.plan_status === "expired"
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-gray-50 text-gray-500 border-gray-200"
+                            ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
+                            : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                         }`}
                       >
                         {t.plan_status ? t.plan_status.charAt(0).toUpperCase() + t.plan_status.slice(1) : "Unknown"}
@@ -263,19 +263,19 @@ const SuperAdminTenants = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-slate-800">{t.adminName}</span>
-                        <span className="text-xs text-slate-500">{t.adminEmail}</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{t.adminName}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{t.adminEmail}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
                       {t.createdAt ? format(new Date(t.createdAt), "MMM dd, yyyy") : "N/A"}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
                           t.isActive
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-gray-50 text-gray-500 border-gray-200"
+                            ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                            : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
                         }`}
                       >
                         {t.isActive ? "Active" : "Inactive"}
@@ -300,7 +300,7 @@ const SuperAdminTenants = () => {
                         {/* Edit button */}
                         <button
                           onClick={() => handleEditClick(t)}
-                          className="p-1.5 border border-slate-200 rounded-lg hover:border-[#008ecc]/40 hover:text-[#008ecc] transition-all cursor-pointer flex items-center justify-center"
+                          className="p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-[#008ecc]/40 hover:text-[#008ecc] transition-all cursor-pointer flex items-center justify-center"
                           title="Edit Tenant Details"
                         >
                           <Edit size={15} />
@@ -308,7 +308,7 @@ const SuperAdminTenants = () => {
                         {/* Delete button */}
                         <button
                           onClick={() => setDeleteTarget(t)}
-                          className="p-1.5 border border-red-100 rounded-lg hover:bg-red-50 text-red-500 transition-all cursor-pointer"
+                          className="p-1.5 border border-red-100 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-all cursor-pointer"
                           title="Delete Tenant"
                         >
                           <Trash2 size={15} />
@@ -330,17 +330,17 @@ const SuperAdminTenants = () => {
 
         {/* Pagination controls */}
         {filteredTenants.length > 0 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <span className="text-xs text-slate-500 font-bold">
-                Showing <span className="text-slate-700">{(page - 1) * limit + 1}</span>–<span className="text-slate-700">{Math.min(page * limit, filteredTenants.length)}</span> of <span className="text-slate-700">{filteredTenants.length}</span> records
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                Showing <span className="text-slate-700 dark:text-slate-200">{(page - 1) * limit + 1}</span>–<span className="text-slate-700 dark:text-slate-200">{Math.min(page * limit, filteredTenants.length)}</span> of <span className="text-slate-700 dark:text-slate-200">{filteredTenants.length}</span> records
               </span>
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
                 <span>Rows per page:</span>
                 <select 
                   value={limit}
                   onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#008ecc]/50 cursor-pointer"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
@@ -353,17 +353,17 @@ const SuperAdminTenants = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-xs font-bold text-slate-600 px-3 bg-white border border-slate-200 py-1.5 rounded-xl shadow-sm">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 rounded-xl shadow-sm">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="p-2 border border-slate-200 rounded-xl bg-white hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 hover:border-[#008ecc]/40 hover:text-[#008ecc] text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
               >
                 <ChevronRight size={16} />
               </button>
@@ -375,7 +375,7 @@ const SuperAdminTenants = () => {
       {/* DANGER: DELETE CONFIRMATION MODAL */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-red-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full border border-red-100 dark:border-red-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-5 bg-red-600 text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={22} className="animate-bounce" />
@@ -390,18 +390,18 @@ const SuperAdminTenants = () => {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3 text-red-800">
+              <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl flex items-start space-x-3 text-red-800 dark:text-red-300">
                 <AlertTriangle size={24} className="flex-shrink-0 mt-0.5" />
                 <div>
                   <h3 className="">Destructive Action Warning</h3>
-                  <p className="text-base text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-base text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                     Deleting the tenant <strong>{deleteTarget.name}</strong> is permanent. This wipes all CRM leads, deals, proposals, invoices, settings, and documents under slug <strong>{deleteTarget.slug}</strong>. There is no undo.
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Type <span className="font-bold text-red-600">"delete"</span> below to authorize:
                 </label>
                 <input
@@ -409,7 +409,7 @@ const SuperAdminTenants = () => {
                   placeholder="delete"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-mono text-center"
+                  className="w-full border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-mono text-center"
                 />
               </div>
 
@@ -417,7 +417,7 @@ const SuperAdminTenants = () => {
               <div className="flex space-x-3 pt-2">
                 <button
                   onClick={() => setDeleteTarget(null)}
-                  className="flex-1 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer text-sm"
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-sm"
                 >
                   Cancel
                 </button>
@@ -437,10 +437,10 @@ const SuperAdminTenants = () => {
       {/* EDIT TENANT DETAILS MODAL */}
       {isEditModalOpen && editingTenant && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="px-6 py-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-slate-800">
+            <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-slate-800 dark:text-slate-100">
                 <Building2 size={20} className="text-[#008ecc]" />
                 <h3 className="">Edit Tenant Details</h3>
               </div>
@@ -455,7 +455,7 @@ const SuperAdminTenants = () => {
             {/* Modal Body */}
             <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Company Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -463,12 +463,12 @@ const SuperAdminTenants = () => {
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner text-slate-800"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-inner"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Administrator Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -476,12 +476,12 @@ const SuperAdminTenants = () => {
                   type="text"
                   value={editForm.adminName}
                   onChange={(e) => setEditForm({ ...editForm, adminName: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner text-slate-800"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-inner"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Administrator Email <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -489,11 +489,11 @@ const SuperAdminTenants = () => {
                   type="email"
                   value={editForm.adminEmail}
                   onChange={(e) => setEditForm({ ...editForm, adminEmail: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner text-slate-800"
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-inner"
                 />
               </div>
 
-              <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed">
+              <div className="p-3.5 bg-blue-50/50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                 Updating the company and administrator information here will automatically update the master record and synchronize it with the tenant's primary database user.
               </div>
 
@@ -503,7 +503,7 @@ const SuperAdminTenants = () => {
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
                   disabled={isEditing}
-                  className="flex-1 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer text-sm disabled:opacity-50"
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -524,18 +524,18 @@ const SuperAdminTenants = () => {
       {/* Toggle Status Confirmation Modal */}
       {toggleTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95">
-            <h3 className="text-xl font-bold text-slate-900 mb-2">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-transparent dark:border-slate-700 w-full max-w-md p-6 animate-in zoom-in-95">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
               {toggleTarget.isActive ? "Deactivate" : "Activate"} Tenant?
             </h3>
-            <p className="text-slate-600 mb-6 text-sm">
+            <p className="text-slate-600 dark:text-slate-300 mb-6 text-sm">
               Are you sure you want to {toggleTarget.isActive ? "deactivate" : "activate"} the account for <strong>{toggleTarget.name}</strong>? 
               {toggleTarget.isActive && " They will immediately lose access to the CRM."}
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setToggleTarget(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>

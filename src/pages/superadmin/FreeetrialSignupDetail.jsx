@@ -31,7 +31,7 @@ const FreeTrialSignupDetail = () => {
         &larr; Back to List
       </button>
       
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
         <h2 className="text-2xl font-bold mb-4">Free Trial Signup Details</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -76,7 +76,7 @@ const FreeTrialSignupDetail = () => {
       </div>
 
       {details.tenant && (
-        <div className="bg-white p-6 rounded-lg shadow mt-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow mt-6">
           <h2 className="text-2xl font-bold mb-4">Provisioned Tenant Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>

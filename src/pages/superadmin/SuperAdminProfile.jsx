@@ -81,30 +81,30 @@ const SuperAdminProfile = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-slate-900">SuperAdmin Profile</h2>
-        <p className="text-base text-slate-600">Manage administrative credentials and security options.</p>
+        <h2 className="text-slate-900 dark:text-white">SuperAdmin Profile</h2>
+        <p className="text-base text-slate-600 dark:text-slate-400">Manage administrative credentials and security options.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Info Left Column */}
         <div className="md:col-span-1 space-y-6">
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardContent className="p-6 flex flex-col items-center text-center">
-              <div className="w-24 h-24 rounded-full bg-[#f2fbff] text-[#008ecc] flex items-center justify-center font-black text-3xl shadow-lg border-2 border-[#008ecc]/20 mb-4">
+              <div className="w-24 h-24 rounded-full bg-[#f2fbff] dark:bg-blue-900/30 text-[#008ecc] dark:text-[#33b8ff] flex items-center justify-center font-black text-3xl shadow-lg border-2 border-[#008ecc]/20 mb-4">
                 {name ? name.charAt(0).toUpperCase() : "SA"}
               </div>
-              <h3 className="text-slate-700">{name || "—"}</h3>
-              <p className="text-base text-slate-600 uppercase tracking-widest mt-1">Super Admin</p>
+              <h3 className="text-slate-700 dark:text-slate-300">{name || "—"}</h3>
+              <p className="text-base text-slate-600 dark:text-slate-400 uppercase tracking-widest mt-1">Super Admin</p>
 
-              <div className="w-full border-t border-slate-100 my-4" />
+              <div className="w-full border-t border-slate-100 dark:border-slate-800 my-4" />
 
               <div className="text-left w-full space-y-3">
                 <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
-                  <span className="text-sm font-medium text-slate-700">{email || "—"}</span>
+                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Email Address</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{email || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Access Role</span>
+                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Access Role</span>
                   <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 uppercase">
                     {roleName}
                   </span>
@@ -117,10 +117,10 @@ const SuperAdminProfile = () => {
         {/* Edit Right Column */}
         <div className="md:col-span-2 space-y-6">
           {/* Profile details form */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center space-x-2 text-slate-800">
-                <User size={18} className="text-[#008ecc]" />
+              <CardTitle className="text-lg font-bold flex items-center space-x-2 text-slate-800 dark:text-slate-200">
+                <User size={18} className="text-[#008ecc] dark:text-[#33b8ff]" />
                 <span>Account Information</span>
               </CardTitle>
               <CardDescription>Update your name and email address.</CardDescription>
@@ -128,7 +128,7 @@ const SuperAdminProfile = () => {
             <CardContent>
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Full Name
                   </label>
                   <input
@@ -136,11 +136,11 @@ const SuperAdminProfile = () => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Email Address
                   </label>
                   <input
@@ -148,7 +148,7 @@ const SuperAdminProfile = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div className="flex justify-end pt-2">
@@ -165,10 +165,10 @@ const SuperAdminProfile = () => {
           </Card>
 
           {/* Change Password form */}
-          <Card className="border-0 shadow-md bg-white">
+          <Card className="border-0 shadow-md bg-white dark:bg-slate-900">
             <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center space-x-2 text-slate-800">
-                <KeyRound size={18} className="text-[#008ecc]" />
+              <CardTitle className="text-lg font-bold flex items-center space-x-2 text-slate-800 dark:text-slate-200">
+                <KeyRound size={18} className="text-[#008ecc] dark:text-[#33b8ff]" />
                 <span>Change Password</span>
               </CardTitle>
               <CardDescription>Update your own login password.</CardDescription>
@@ -176,7 +176,7 @@ const SuperAdminProfile = () => {
             <CardContent>
               <form onSubmit={handleUpdatePassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Current Password
                   </label>
                   <input
@@ -185,12 +185,12 @@ const SuperAdminProfile = () => {
                     placeholder="••••••••"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                       New Password
                     </label>
                     <input
@@ -199,11 +199,11 @@ const SuperAdminProfile = () => {
                       placeholder="••••••••"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                       Confirm New Password
                     </label>
                     <input
@@ -212,7 +212,7 @@ const SuperAdminProfile = () => {
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]"
                     />
                   </div>
                 </div>
