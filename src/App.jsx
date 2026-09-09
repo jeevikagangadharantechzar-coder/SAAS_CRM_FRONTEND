@@ -38,9 +38,6 @@ import { SocketProvider } from "./context/SocketContext";
 import { TargetSocketProvider } from "./context/TargetSocketContext";
 import { FreeTrialProvider } from "./context/FreeTrialContext";
 import TrialReminderBanner from "./components/FreeTrial/TrialReminderBanner";
-import TrialExpiredModal from "./components/FreeTrial/TrialExpiredModal";
-
-// Pages
 import AdminDashboard from "./AdminDashboard/dashboard";
 import Leads from "./pages/Leads/Leads";
 import RejectedLeads from "./pages/Leads/RejectedLeads";
@@ -197,7 +194,6 @@ function App() {
         <BrowserRouter>
           <div className="min-h-screen">
             <TrialReminderBanner />
-            <TrialExpiredModal />
             <Routes>
               {/* PUBLIC */}
               <Route path="/" element={<SuperAdminLogin />} />
