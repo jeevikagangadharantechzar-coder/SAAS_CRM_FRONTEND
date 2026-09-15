@@ -157,7 +157,6 @@ const ExpireModal = ({ expiredNotice, setExpiredNotice, tenantSlug, navigate }) 
         exportRowsToCSV(exportData, exportColumns, `${filename}.csv`);
       }
       
-      setPassword("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to export data. Please check your credentials.");
     } finally {
