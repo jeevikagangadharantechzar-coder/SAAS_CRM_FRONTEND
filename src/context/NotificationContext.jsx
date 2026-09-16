@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { initSocket } from "../utils/socket";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const SI_URI  = import.meta.env.VITE_SI_URI;
@@ -112,10 +113,28 @@ export const NotificationProvider = ({ children }) => {
           console.log(" Duplicate notification skipped (same ID)");
           return prev;
         }
-        
+
         console.log(" Adding new notification:", notif);
         return [notif, ...prev];
       });
+
+      // Lead/deal assignment (and reassignment) is time-sensitive enough that
+      // a bell-badge increment alone is easy to miss — pop a toast too, right
+      // when it happens. Scoped to this one notification type only, so every
+      // other kind (follow-ups, tasks, targets, etc.) keeps its existing
+      // silent-badge-only behavior unless asked for separately.
+      //
+      // On every socket (re)connect — i.e. every page load/refresh — the
+      // backend replays every still-unread notification through this same
+      // "new_notification" event so the bell repopulates. Without the age
+      // check below, that replay would re-pop the toast on every refresh for
+      // as long as the notification stays unread, not just the one time it
+      // actually happened.
+      const ageMs = Date.now() - new Date(notif.createdAt).getTime();
+      const isFreshEvent = ageMs < 10_000;
+      if (data.meta?.leadOrDealAssigned && isFreshEvent) {
+        toast.info(notif.text || notif.title);
+      }
     };
 
     const handleNotificationDeleted = (data) => {
