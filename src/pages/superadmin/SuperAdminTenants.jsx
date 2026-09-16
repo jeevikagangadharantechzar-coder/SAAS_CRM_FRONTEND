@@ -28,6 +28,8 @@ const SuperAdminTenants = () => {
 
   const [tenants, setTenants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -110,7 +112,7 @@ const SuperAdminTenants = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, planFilter, statusFilter]);
 
 
 
@@ -150,14 +152,26 @@ const SuperAdminTenants = () => {
     }
   };
 
+  const planOptions = Array.from(
+    new Set(tenants.map((t) => t.plan_id?.plan_name).filter(Boolean))
+  ).sort();
+
+  const statusOptions = Array.from(
+    new Set(tenants.map((t) => t.plan_status).filter(Boolean))
+  ).sort();
+
   const filteredTenants = tenants.filter((t) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesQuery =
       t.name.toLowerCase().includes(query) ||
       t.slug.toLowerCase().includes(query) ||
       t.adminEmail.toLowerCase().includes(query) ||
-      t.adminName.toLowerCase().includes(query)
-    );
+      t.adminName.toLowerCase().includes(query);
+
+    const matchesPlan = planFilter === "all" || t.plan_id?.plan_name === planFilter;
+    const matchesStatus = statusFilter === "all" || t.plan_status === statusFilter;
+
+    return matchesQuery && matchesPlan && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredTenants.length / limit) || 1;
@@ -192,8 +206,8 @@ const SuperAdminTenants = () => {
 
       {/* Control panel and Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        {/* Search Toolbar */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center">
+        {/* Search & Filter Toolbar */}
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -204,6 +218,32 @@ const SuperAdminTenants = () => {
               className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner"
             />
           </div>
+
+          <select
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
+          >
+            <option value="all">All Plans</option>
+            {planOptions.map((plan) => (
+              <option key={plan} value={plan}>
+                {plan}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
+          >
+            <option value="all">All Plan Statuses</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Tenant Table */}

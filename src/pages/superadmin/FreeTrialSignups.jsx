@@ -91,6 +91,9 @@ const FreeTrialSignups = () => {
   const [period, setPeriod] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [industryFilter, setIndustryFilter] = useState("all");
+  const [packageFilter, setPackageFilter] = useState("all");
+  const [filterOptions, setFilterOptions] = useState({ industries: [], packages: [] });
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -132,6 +135,8 @@ const FreeTrialSignups = () => {
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
       }
+      if (industryFilter !== "all") params.industry = industryFilter;
+      if (packageFilter !== "all") params.package = packageFilter;
 
       const res = await superApi.get("/free-trials", { params });
       setSignups(res.data?.data || []);
@@ -144,11 +149,27 @@ const FreeTrialSignups = () => {
     }
   };
 
+  const fetchFilterOptions = async () => {
+    try {
+      const res = await superApi.get("/free-trials/filter-options");
+      setFilterOptions({
+        industries: res.data?.industries || [],
+        packages: res.data?.packages || [],
+      });
+    } catch (err) {
+      console.error("Failed to fetch free trial filter options:", err);
+    }
+  };
+
   useEffect(() => {
     fetchSignups();
     fetchTenantsList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, period, startDate, endDate, limit]);
+  }, [page, search, period, startDate, endDate, limit, industryFilter, packageFilter]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -158,6 +179,16 @@ const FreeTrialSignups = () => {
     }, 400);
     return () => clearTimeout(handle);
   }, [searchInput]);
+
+  const handleIndustryChange = (value) => {
+    setIndustryFilter(value);
+    setPage(1);
+  };
+
+  const handlePackageChange = (value) => {
+    setPackageFilter(value);
+    setPage(1);
+  };
 
   const handlePeriodChange = (value) => {
     setPeriod(value);
@@ -231,6 +262,32 @@ const FreeTrialSignups = () => {
               className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner"
             />
           </div>
+
+          <select
+            value={industryFilter}
+            onChange={(e) => handleIndustryChange(e.target.value)}
+            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
+          >
+            <option value="all">All Industries</option>
+            {filterOptions.industries.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={packageFilter}
+            onChange={(e) => handlePackageChange(e.target.value)}
+            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
+          >
+            <option value="all">All Packages</option>
+            {filterOptions.packages.map((pkg) => (
+              <option key={pkg} value={pkg}>
+                {pkg}
+              </option>
+            ))}
+          </select>
 
           <div className="flex items-center gap-2 flex-wrap">
             {PERIOD_OPTIONS.map((opt) => (
