@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback ,} from "react";
+import React, { useEffect, useRef, useState, useCallback ,} from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -11,6 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Filter,
+  ChevronDown,
+  SlidersHorizontal,
+  Check,
 } from "lucide-react";
 import { superApi } from "../../services/api";
 
@@ -20,6 +24,17 @@ const PERIOD_OPTIONS = [
   { value: "monthly", label: "Last 30 Days" },
   { value: "custom", label: "Custom Range" },
 ];
+
+const FILTER_FIELDS = [
+  { key: "search", label: "Search" },
+  { key: "industry", label: "Industry" },
+  { key: "package", label: "Package" },
+  { key: "country", label: "Country" },
+  { key: "trialStatus", label: "Trial Status" },
+  { key: "signupDate", label: "Signup Date" },
+];
+
+const FILTER_FIELDS_STORAGE_KEY = "superadmin_freetrial_filter_fields";
 
 const TrialStatusBadge = ({ tenant }) => {
   if (!tenant) {
@@ -93,7 +108,30 @@ const FreeTrialSignups = () => {
   const [endDate, setEndDate] = useState("");
   const [industryFilter, setIndustryFilter] = useState("all");
   const [packageFilter, setPackageFilter] = useState("all");
-  const [filterOptions, setFilterOptions] = useState({ industries: [], packages: [] });
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [trialStatusFilter, setTrialStatusFilter] = useState("all");
+  const [filterOptions, setFilterOptions] = useState({
+    industries: [],
+    packages: [],
+    countries: [],
+    trialStatuses: [],
+  });
+
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilterFields, setActiveFilterFields] = useState(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_FIELDS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore malformed/inaccessible localStorage, fall back to default
+    }
+    return FILTER_FIELDS.map((f) => f.key);
+  });
+  const [showFieldPicker, setShowFieldPicker] = useState(false);
+  const fieldPickerRef = useRef(null);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -137,6 +175,8 @@ const FreeTrialSignups = () => {
       }
       if (industryFilter !== "all") params.industry = industryFilter;
       if (packageFilter !== "all") params.package = packageFilter;
+      if (countryFilter !== "all") params.country = countryFilter;
+      if (trialStatusFilter !== "all") params.trialStatus = trialStatusFilter;
 
       const res = await superApi.get("/free-trials", { params });
       setSignups(res.data?.data || []);
@@ -155,6 +195,8 @@ const FreeTrialSignups = () => {
       setFilterOptions({
         industries: res.data?.industries || [],
         packages: res.data?.packages || [],
+        countries: res.data?.countries || [],
+        trialStatuses: res.data?.trialStatuses || [],
       });
     } catch (err) {
       console.error("Failed to fetch free trial filter options:", err);
@@ -165,10 +207,28 @@ const FreeTrialSignups = () => {
     fetchSignups();
     fetchTenantsList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, period, startDate, endDate, limit, industryFilter, packageFilter]);
+  }, [page, search, period, startDate, endDate, limit, industryFilter, packageFilter, countryFilter, trialStatusFilter]);
 
   useEffect(() => {
     fetchFilterOptions();
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTER_FIELDS_STORAGE_KEY, JSON.stringify(activeFilterFields));
+    } catch {
+      // ignore write failures (private browsing, storage disabled, etc.)
+    }
+  }, [activeFilterFields]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (fieldPickerRef.current && !fieldPickerRef.current.contains(e.target)) {
+        setShowFieldPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Debounce search input
@@ -190,6 +250,16 @@ const FreeTrialSignups = () => {
     setPage(1);
   };
 
+  const handleCountryChange = (value) => {
+    setCountryFilter(value);
+    setPage(1);
+  };
+
+  const handleTrialStatusChange = (value) => {
+    setTrialStatusFilter(value);
+    setPage(1);
+  };
+
   const handlePeriodChange = (value) => {
     setPeriod(value);
     setPage(1);
@@ -198,6 +268,64 @@ const FreeTrialSignups = () => {
       setEndDate("");
     }
   };
+
+  const resetFieldValue = (key) => {
+    if (key === "search") {
+      setSearchInput("");
+      setSearch("");
+    }
+    if (key === "industry") setIndustryFilter("all");
+    if (key === "package") setPackageFilter("all");
+    if (key === "country") setCountryFilter("all");
+    if (key === "trialStatus") setTrialStatusFilter("all");
+    if (key === "signupDate") {
+      setPeriod("all");
+      setStartDate("");
+      setEndDate("");
+    }
+  };
+
+  const toggleFilterField = (key) => {
+    setActiveFilterFields((prev) => {
+      if (prev.includes(key)) {
+        resetFieldValue(key);
+        return prev.filter((k) => k !== key);
+      }
+      return [...prev, key];
+    });
+  };
+
+  const areAllFieldsSelected = FILTER_FIELDS.every((field) => activeFilterFields.includes(field.key));
+
+  const handleSelectAllFields = () => {
+    if (areAllFieldsSelected) {
+      FILTER_FIELDS.forEach((field) => resetFieldValue(field.key));
+      setActiveFilterFields([]);
+    } else {
+      setActiveFilterFields(FILTER_FIELDS.map((f) => f.key));
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setIndustryFilter("all");
+    setPackageFilter("all");
+    setCountryFilter("all");
+    setTrialStatusFilter("all");
+    setPeriod("all");
+    setStartDate("");
+    setEndDate("");
+    setPage(1);
+  };
+
+  const hasActiveFilters =
+    search !== "" ||
+    industryFilter !== "all" ||
+    packageFilter !== "all" ||
+    countryFilter !== "all" ||
+    trialStatusFilter !== "all" ||
+    period !== "all";
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -248,88 +376,218 @@ const FreeTrialSignups = () => {
         </div>
       )}
 
-      {/* Control panel and Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        {/* Filters Toolbar */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col lg:flex-row lg:items-center gap-3">
-          <div className="relative w-full lg:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
-            <input
-              type="text"
-              placeholder="Search by name, email, or business name..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner"
-            />
-          </div>
+      {/* Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        {/* Filter Toggle Bar */}
+        <div className="p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Signup Filter</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+            </button>
 
-          <select
-            value={industryFilter}
-            onChange={(e) => handleIndustryChange(e.target.value)}
-            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
-          >
-            <option value="all">All Industries</option>
-            {filterOptions.industries.map((industry) => (
-              <option key={industry} value={industry}>
-                {industry}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={packageFilter}
-            onChange={(e) => handlePackageChange(e.target.value)}
-            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
-          >
-            <option value="all">All Packages</option>
-            {filterOptions.packages.map((pkg) => (
-              <option key={pkg} value={pkg}>
-                {pkg}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {PERIOD_OPTIONS.map((opt) => (
+            <div className="relative" ref={fieldPickerRef}>
               <button
-                key={opt.value}
-                onClick={() => handlePeriodChange(opt.value)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${period === opt.value
-                  ? "bg-[#008ecc] text-white border-[#008ecc] shadow-sm"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-[#008ecc]/40 hover:text-[#008ecc] dark:text-[#33b8ff]"
-                  }`}
+                onClick={() => setShowFieldPicker((v) => !v)}
+                title="Choose which filters to show"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer"
               >
-                {opt.label}
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Customize</span>
               </button>
-            ))}
+
+              {showFieldPicker && (
+                <div className="absolute left-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+                    Filters to show
+                  </div>
+                  <button
+                    onClick={handleSelectAllFields}
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700"
+                  >
+                    <span>{areAllFieldsSelected ? "Deselect All" : "Select All"}</span>
+                    <span
+                      className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        areAllFieldsSelected
+                          ? "bg-[#008ecc] border-[#008ecc] text-white"
+                          : "border-slate-300 dark:border-slate-600"
+                      }`}
+                    >
+                      {areAllFieldsSelected && <Check className="w-3 h-3" />}
+                    </span>
+                  </button>
+                  {FILTER_FIELDS.map((field) => {
+                    const isActive = activeFilterFields.includes(field.key);
+                    return (
+                      <button
+                        key={field.key}
+                        onClick={() => toggleFilterField(field.key)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                      >
+                        <span>{field.label}</span>
+                        <span
+                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            isActive
+                              ? "bg-[#008ecc] border-[#008ecc] text-white"
+                              : "border-slate-300 dark:border-slate-600"
+                          }`}
+                        >
+                          {isActive && <Check className="w-3 h-3" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          {period === "custom" && (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setPage(1);
-                }}
-                className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
-              />
-              <span className="text-slate-400 dark:text-slate-500 text-sm">to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setPage(1);
-                }}
-                className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
-              />
-            </div>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-semibold text-[#008ecc] hover:underline cursor-pointer"
+            >
+              Clear Filters
+            </button>
           )}
         </div>
 
-        {/* Table */}
+        {/* Collapsible Filters */}
+        {showFilters && (
+          <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-200">
+            {activeFilterFields.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No filters selected. Click <strong>Customize</strong> to add filters.
+              </p>
+            ) : (
+              <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
+                {activeFilterFields.includes("search") && (
+                  <div className="relative w-full lg:max-w-md">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
+                    <input
+                      type="text"
+                      placeholder="Search by name, email, or business name..."
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner"
+                    />
+                  </div>
+                )}
+
+                {activeFilterFields.includes("industry") && (
+                  <select
+                    value={industryFilter}
+                    onChange={(e) => handleIndustryChange(e.target.value)}
+                    className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Industries</option>
+                    {filterOptions.industries.map((industry) => (
+                      <option key={industry} value={industry}>
+                        {industry}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeFilterFields.includes("package") && (
+                  <select
+                    value={packageFilter}
+                    onChange={(e) => handlePackageChange(e.target.value)}
+                    className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Packages</option>
+                    {filterOptions.packages.map((pkg) => (
+                      <option key={pkg} value={pkg}>
+                        {pkg}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeFilterFields.includes("country") && (
+                  <select
+                    value={countryFilter}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Countries</option>
+                    {filterOptions.countries.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeFilterFields.includes("trialStatus") && (
+                  <select
+                    value={trialStatusFilter}
+                    onChange={(e) => handleTrialStatusChange(e.target.value)}
+                    className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Trial Statuses</option>
+                    {filterOptions.trialStatuses.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeFilterFields.includes("signupDate") && (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {PERIOD_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handlePeriodChange(opt.value)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${period === opt.value
+                            ? "bg-[#008ecc] text-white border-[#008ecc] shadow-sm"
+                            : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-[#008ecc]/40 hover:text-[#008ecc] dark:text-[#33b8ff]"
+                            }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {period === "custom" && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => {
+                            setStartDate(e.target.value);
+                            setPage(1);
+                          }}
+                          className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
+                        />
+                        <span className="text-slate-400 dark:text-slate-500 text-sm">to</span>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => {
+                            setEndDate(e.target.value);
+                            setPage(1);
+                          }}
+                          className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
