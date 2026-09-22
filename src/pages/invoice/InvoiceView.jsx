@@ -293,6 +293,58 @@ const InvoiceView = () => {
                   </div>
                 </div>
 
+                {invoice.breakdown?.length > 0 && (
+                  <div className="p-6 border-t border-slate-100">
+                    <h3 className="text-slate-700 mb-3">
+                      Item Breakdown
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        {(() => {
+                          // HSN/SAC and hours/days columns only show once a row actually uses them
+                          const showHsn = invoice.breakdown.some((r) => r.hsnSac && String(r.hsnSac).trim());
+                          const showQty = invoice.breakdown.some((r) => r.quantity !== null && r.quantity !== undefined);
+                          const qtyHeader =
+                            invoice.quantityLabel === "Days" ? "Total Days"
+                            : invoice.quantityLabel === "Qty" ? "Qty"
+                            : "Total Effort (Hours)";
+                          const leadingCols = 1 + (showHsn ? 1 : 0) + (showQty ? 1 : 0);
+                          return (
+                            <>
+                              <thead>
+                                <tr className="text-left text-slate-500 border-b border-slate-200">
+                                  <th className="py-2 pr-4 font-medium">Item</th>
+                                  {showHsn && <th className="py-2 px-2 text-right font-medium">HSN/SAC Code</th>}
+                                  {showQty && <th className="py-2 px-2 text-right font-medium">{qtyHeader}</th>}
+                                  <th className="py-2 text-right font-medium">Amount ({invoice.currency})</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {invoice.breakdown.map((row, index) => (
+                                  <tr key={row._id || index} className="border-b border-slate-100 text-slate-800">
+                                    <td className="py-2 pr-4">{row.label}</td>
+                                    {showHsn && <td className="py-2 px-2 text-right">{row.hsnSac || ""}</td>}
+                                    {showQty && (
+                                      <td className="py-2 px-2 text-right">
+                                        {row.quantity !== null && row.quantity !== undefined ? Number(row.quantity) : ""}
+                                      </td>
+                                    )}
+                                    <td className="py-2 text-right">{Number(row.amount).toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="font-semibold text-slate-900">
+                                  <td className="py-2 pr-4" colSpan={leadingCols}>Subtotal</td>
+                                  <td className="py-2 text-right">{Number(invoice.subtotal || 0).toFixed(2)}</td>
+                                </tr>
+                              </tbody>
+                            </>
+                          );
+                        })()}
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                 {invoice.customFields?.length > 0 && (
                   <div className="p-6 border-t border-slate-100">
                     <h3 className="text-slate-700 mb-3">

@@ -60,6 +60,18 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const { isOpen, closeModal } = useModal();
 
+  // The logged-in admin — /users/sales only returns sales people, so without
+  // this an admin could never pick themselves in "Assign To".
+  const currentUser = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}") || {}; } catch { return {}; }
+  })();
+  const isAdminUser = currentUser?.role?.name?.toLowerCase() === "admin";
+  const adminLabel =
+    `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() ||
+    currentUser.name ||
+    currentUser.email ||
+    "Admin";
+
   const [salesUsers, setSalesUsers] = useState([]);
   const [deals, setDeals] = useState([]);
   const [selectedDealRequirement, setSelectedDealRequirement] = useState(null);
@@ -83,6 +95,13 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   });
   // Ad-hoc fields the admin adds for invoices that need something the fixed form doesn't cover
   const [customFields, setCustomFields] = useState([]);
+  // Optional itemized split of the price (e.g. Frontend 5000 / Backend 2000) —
+  // display-only, the price/tax/total logic below doesn't depend on it
+  const [breakdown, setBreakdown] = useState([]);
+  // What the per-row quantity column means on this invoice (its printed header)
+  const [quantityLabel, setQuantityLabel] = useState("Hours");
+  // Default HSN/SAC code from Settings > Business Details, prefilled on new rows
+  const [defaultSacCode, setDefaultSacCode] = useState("");
   // The company's own GST state, set once in Settings > Business Details and reused here
   const [companyState, setCompanyState] = useState("");
   // Amount typed in "Amount Received Now" — only used for paid/partially_paid statuses
@@ -139,6 +158,15 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
       setCustomFields(
         (editingInvoice.customFields || []).map((f) => ({ ...f }))
       );
+      setBreakdown(
+        (editingInvoice.breakdown || []).map((r) => ({
+          label: r.label,
+          amount: String(r.amount ?? ""),
+          hsnSac: r.hsnSac || "",
+          quantity: r.quantity === null || r.quantity === undefined ? "" : String(r.quantity),
+        }))
+      );
+      setQuantityLabel(editingInvoice.quantityLabel || "Hours");
 
       const selectedDeal = deals.find(
         (d) => d._id === editingInvoice.items?.[0]?.deal?._id
@@ -183,6 +211,8 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
       setSelectedDealRequirement(presetDeal);
       setPaymentReceivedNow("");
       setCustomFields([]);
+      setBreakdown([]);
+      setQuantityLabel("Hours");
     } else {
       setInvoiceData({
         assignTo: "",
@@ -209,6 +239,8 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
       setSelectedDealRequirement(null);
       setPaymentReceivedNow("");
       setCustomFields([]);
+      setBreakdown([]);
+      setQuantityLabel("Hours");
     }
     setValidationErrors({});
   }, [editingInvoice, isOpen, deals, presetDeal]);
@@ -253,6 +285,7 @@ setSalesUsers(response.data.users);
       try {
         const { data } = await axios.get(`${API_URL}/settings`);
         setCompanyState(data?.state || "");
+        setDefaultSacCode(data?.defaultSacCode || "");
       } catch {
         // GST split just won't be shown until this loads — non-blocking
       }
@@ -336,6 +369,34 @@ setSalesUsers(response.data.users);
     setCustomFields((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Item breakdown — fully optional; a row counts once it has a name or an amount
+  const handleAddBreakdownRow = () => {
+    setBreakdown((prev) => [
+      ...prev,
+      { label: "", amount: "", hsnSac: defaultSacCode, quantity: "" },
+    ]);
+  };
+  const handleBreakdownChange = (index, key, value) => {
+    // amount/quantity take the same bounded numeric input as the price;
+    // HSN/SAC codes are numeric and at most 8 digits
+    const cleaned =
+      key === "amount" || key === "quantity"
+        ? sanitizePriceInput(value)
+        : key === "hsnSac"
+        ? value.replace(/\D/g, "").slice(0, 8)
+        : value;
+    setBreakdown((prev) => prev.map((r, i) => (i === index ? { ...r, [key]: cleaned } : r)));
+  };
+  const handleRemoveBreakdownRow = (index) => {
+    setBreakdown((prev) => prev.filter((_, i) => i !== index));
+  };
+  // A row counts once it has a name, amount or quantity — the prefilled default
+  // HSN/SAC alone doesn't make an untouched new row "filled"
+  const filledBreakdown = breakdown.filter(
+    (r) => r.label.trim() || String(r.amount).trim() !== "" || String(r.quantity ?? "").trim() !== ""
+  );
+  const breakdownSum = filledBreakdown.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
   const handleIssueDateChange = (date) => {
     setIssueDateObj(date);
     if (date) {
@@ -410,6 +471,16 @@ setSalesUsers(response.data.users);
       errors.customFields = "Every custom field needs a name.";
     }
 
+    // Breakdown is optional, but once any row is filled it has to add up to the price
+    if (filledBreakdown.length > 0) {
+      const priceNum = Number(price) || 0;
+      if (filledBreakdown.some((r) => !r.label.trim() || !(Number(r.amount) > 0))) {
+        errors.breakdown = "Every breakdown item needs a name and an amount greater than 0.";
+      } else if (Math.abs(breakdownSum - priceNum) > 0.01) {
+        errors.breakdown = `Breakdown items total ${breakdownSum.toFixed(2)} but the price is ${priceNum.toFixed(2)} — they must match.`;
+      }
+    }
+
     if (
       invoiceData.currency === "INR" &&
       invoiceData.clientTaxId.trim() &&
@@ -451,7 +522,7 @@ setSalesUsers(response.data.users);
     // only two fields that auto-scroll into focus below are issueDate/
     // dueDate) — so scroll straight to whichever field failed, of any kind,
     // and surface its exact message too.
-    const firstErrorId = { assignTo: "invoice-field-assignTo", deal: "invoice-field-deal", price: "invoice-field-price", paymentReceivedNow: "invoice-field-paymentReceivedNow" };
+    const firstErrorId = { assignTo: "invoice-field-assignTo", deal: "invoice-field-deal", price: "invoice-field-price", breakdown: "invoice-field-breakdown", paymentReceivedNow: "invoice-field-paymentReceivedNow" };
     const firstErrorKey = Object.keys(errors).find((k) => firstErrorId[k]);
     if (firstErrorKey) {
       setTimeout(() => document.getElementById(firstErrorId[firstErrorKey])?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
@@ -580,6 +651,13 @@ setSalesUsers(response.data.users);
       taxType: invoiceData.taxType === "none" ? "fixed" : invoiceData.taxType,
       total: Number(breakdown.total),
       customFields: customFields.filter((f) => f.label.trim()),
+      breakdown: filledBreakdown.map((r) => ({
+        label: r.label.trim(),
+        amount: Number(r.amount),
+        hsnSac: (r.hsnSac || "").trim(),
+        quantity: String(r.quantity ?? "").trim() === "" ? null : Number(r.quantity),
+      })),
+      quantityLabel,
     };
 
     // Freeze the preferred-currency conversion at save time — for the invoice
@@ -733,6 +811,11 @@ setSalesUsers(response.data.users);
                       }
                     >
                       <option value="">Select Sales User</option>
+                      {isAdminUser &&
+                        currentUser._id &&
+                        !salesUsers.some((u) => u._id === currentUser._id) && (
+                          <option value={currentUser._id}>{adminLabel} (You)</option>
+                        )}
                       {salesUsers.map((user) => (
                         <option key={user._id} value={user._id}>
                           {user.firstName} {user.lastName}
@@ -1007,6 +1090,115 @@ setSalesUsers(response.data.users);
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Item Breakdown — optional. Splits the price above into named parts
+              (e.g. Frontend / Backend / SEO); leave it empty for a normal single-total invoice. */}
+          <div id="invoice-field-breakdown" className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-slate-700">Item Breakdown (optional)</h3>
+              <button
+                type="button"
+                onClick={handleAddBreakdownRow}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Item
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Split the price into parts (for example Frontend, Backend, SEO). The items must add up to the price. Leave empty to keep a single total.
+            </p>
+
+            {breakdown.length === 0 ? (
+              <p className="text-sm text-gray-400">No breakdown added.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <label htmlFor="invoice-quantity-label">Quantity column shows:</label>
+                  <select
+                    id="invoice-quantity-label"
+                    value={quantityLabel}
+                    onChange={(e) => setQuantityLabel(e.target.value)}
+                    className="p-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="Hours">Hours</option>
+                    <option value="Days">Days</option>
+                    <option value="Qty">Qty</option>
+                  </select>
+                </div>
+                {breakdown.map((row, index) => (
+                  <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <input
+                      type="text"
+                      value={row.label}
+                      onChange={(e) => handleBreakdownChange(index, "label", e.target.value)}
+                      placeholder="name"
+                      className="w-full sm:flex-1 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={row.hsnSac ?? ""}
+                      onChange={(e) => handleBreakdownChange(index, "hsnSac", e.target.value)}
+                      placeholder="HSN/SAC"
+                      className="w-full sm:w-28 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.quantity ?? ""}
+                      onChange={(e) => handleBreakdownChange(index, "quantity", e.target.value)}
+                      placeholder={quantityLabel}
+                      className="w-full sm:w-24 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.amount}
+                      onChange={(e) => handleBreakdownChange(index, "amount", e.target.value)}
+                      placeholder="Amount"
+                      className="w-full sm:w-36 p-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveBreakdownRow(index)}
+                      className="p-2.5 text-red-500 hover:text-red-700 transition self-end sm:self-auto"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+
+                {(() => {
+                  const priceNum = Number(invoiceData.price) || 0;
+                  const remaining = priceNum - breakdownSum;
+                  const matches = Math.abs(remaining) <= 0.01;
+                  return (
+                    <div className="flex flex-wrap justify-between gap-2 pt-3 border-t border-gray-200 text-sm">
+                      <span className="text-gray-700">
+                        Items total: <span className="font-semibold">{invoiceData.currency} {breakdownSum.toFixed(2)}</span>
+                        {" "}of <span className="font-semibold">{invoiceData.currency} {priceNum.toFixed(2)}</span>
+                      </span>
+                      <span className={matches ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
+                        {matches
+                          ? "Matches the price"
+                          : remaining > 0
+                          ? `${remaining.toFixed(2)} still to allocate`
+                          : `${Math.abs(remaining).toFixed(2)} over the price`}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            {validationErrors.breakdown && (
+              <p className="mt-2 text-sm text-red-600">{validationErrors.breakdown}</p>
+            )}
           </div>
 
           {/* Billing Details — varies by country/client, so kept optional. Full-width,

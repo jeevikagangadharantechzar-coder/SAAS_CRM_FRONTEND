@@ -49,7 +49,7 @@ export default function Settings() {
 
   // Business details shown on invoices
   const [businessDetails, setBusinessDetails] = useState({
-    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "", state: "",
+    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "", state: "", defaultSacCode: "",
   });
 
   // Bank details shown on invoices
@@ -181,6 +181,7 @@ export default function Settings() {
         taxIdLabel: data?.taxIdLabel || "Tax ID",
         taxId: data?.taxId || "",
         state: data?.state || "",
+        defaultSacCode: data?.defaultSacCode || "",
       });
       setBankDetails({
         accountName: data?.bankDetails?.accountName || "",
@@ -816,6 +817,19 @@ export default function Settings() {
                 </select>
                 <p className="text-xs text-gray-500">
                   Used to decide CGST+SGST vs IGST on Indian invoices.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Default HSN/SAC Code</label>
+                <input
+                  type="text"
+                  value={businessDetails.defaultSacCode}
+                  onChange={(e) => setBusinessDetails((p) => ({ ...p, defaultSacCode: e.target.value }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  placeholder="e.g. 998314"
+                />
+                <p className="text-xs text-gray-500">
+                  Prefilled on each new invoice item row. You can still change it per row.
                 </p>
               </div>
             </div>
