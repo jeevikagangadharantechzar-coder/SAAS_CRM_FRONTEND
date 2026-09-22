@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -19,8 +19,22 @@ import {
   Edit,
   ChevronLeft,
   ChevronRight,
+  Filter,
+  ChevronDown,
+  SlidersHorizontal,
+  Check,
 } from "lucide-react";
 import { superApi } from "../../services/api";
+
+const FILTER_FIELDS = [
+  { key: "search", label: "Search" },
+  { key: "plan", label: "Current Plan" },
+  { key: "planStatus", label: "Plan Status" },
+  { key: "accountStatus", label: "Account Status" },
+  { key: "dateRange", label: "Created Date Range" },
+];
+
+const FILTER_FIELDS_STORAGE_KEY = "superadmin_tenant_filter_fields";
 
 const SuperAdminTenants = () => {
   const navigate = useNavigate();
@@ -28,10 +42,30 @@ const SuperAdminTenants = () => {
 
   const [tenants, setTenants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [planFilter, setPlanFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [accountStatusFilter, setAccountStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Which filter fields the admin has chosen to show in the Tenant Filter panel
+  const [activeFilterFields, setActiveFilterFields] = useState(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_FIELDS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore malformed/inaccessible localStorage, fall back to default
+    }
+    return FILTER_FIELDS.map((f) => f.key);
+  });
+  const [showFieldPicker, setShowFieldPicker] = useState(false);
+  const fieldPickerRef = useRef(null);
 
   // Pagination State
   const [page, setPage] = useState(1);
@@ -112,7 +146,74 @@ const SuperAdminTenants = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, planFilter, statusFilter]);
+  }, [searchQuery, planFilter, statusFilter, accountStatusFilter, dateFrom, dateTo]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTER_FIELDS_STORAGE_KEY, JSON.stringify(activeFilterFields));
+    } catch {
+      // ignore write failures (private browsing, storage disabled, etc.)
+    }
+  }, [activeFilterFields]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (fieldPickerRef.current && !fieldPickerRef.current.contains(e.target)) {
+        setShowFieldPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const resetFieldValue = (key) => {
+    if (key === "search") setSearchQuery("");
+    if (key === "plan") setPlanFilter("all");
+    if (key === "planStatus") setStatusFilter("all");
+    if (key === "accountStatus") setAccountStatusFilter("all");
+    if (key === "dateRange") {
+      setDateFrom("");
+      setDateTo("");
+    }
+  };
+
+  const toggleFilterField = (key) => {
+    setActiveFilterFields((prev) => {
+      if (prev.includes(key)) {
+        resetFieldValue(key);
+        return prev.filter((k) => k !== key);
+      }
+      return [...prev, key];
+    });
+  };
+
+  const areAllFieldsSelected = FILTER_FIELDS.every((field) => activeFilterFields.includes(field.key));
+
+  const handleSelectAllFields = () => {
+    if (areAllFieldsSelected) {
+      FILTER_FIELDS.forEach((field) => resetFieldValue(field.key));
+      setActiveFilterFields([]);
+    } else {
+      setActiveFilterFields(FILTER_FIELDS.map((f) => f.key));
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setPlanFilter("all");
+    setStatusFilter("all");
+    setAccountStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    planFilter !== "all" ||
+    statusFilter !== "all" ||
+    accountStatusFilter !== "all" ||
+    dateFrom !== "" ||
+    dateTo !== "";
 
 
 
@@ -171,7 +272,22 @@ const SuperAdminTenants = () => {
     const matchesPlan = planFilter === "all" || t.plan_id?.plan_name === planFilter;
     const matchesStatus = statusFilter === "all" || t.plan_status === statusFilter;
 
-    return matchesQuery && matchesPlan && matchesStatus;
+    const matchesAccountStatus =
+      accountStatusFilter === "all" ||
+      (accountStatusFilter === "active" ? !!t.isActive : !t.isActive);
+
+    let matchesDateRange = true;
+    if (dateFrom || dateTo) {
+      const created = t.createdAt ? new Date(t.createdAt) : null;
+      if (!created) {
+        matchesDateRange = false;
+      } else {
+        if (dateFrom && created < new Date(`${dateFrom}T00:00:00`)) matchesDateRange = false;
+        if (dateTo && created > new Date(`${dateTo}T23:59:59.999`)) matchesDateRange = false;
+      }
+    }
+
+    return matchesQuery && matchesPlan && matchesStatus && matchesAccountStatus && matchesDateRange;
   });
 
   const totalPages = Math.ceil(filteredTenants.length / limit) || 1;
@@ -204,49 +320,175 @@ const SuperAdminTenants = () => {
         </div>
       )}
 
-      {/* Control panel and Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        {/* Search & Filter Toolbar */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by company name, slug, or admin details..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner"
-            />
+      {/* Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        {/* Filter Toggle Bar */}
+        <div className="p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Tenant Filter</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+            </button>
+
+            <div className="relative" ref={fieldPickerRef}>
+              <button
+                onClick={() => setShowFieldPicker((v) => !v)}
+                title="Choose which filters to show"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Customize</span>
+              </button>
+
+              {showFieldPicker && (
+                <div className="absolute left-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+                    Filters to show
+                  </div>
+                  <button
+                    onClick={handleSelectAllFields}
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700"
+                  >
+                    <span>{areAllFieldsSelected ? "Deselect All" : "Select All"}</span>
+                    <span
+                      className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        areAllFieldsSelected
+                          ? "bg-[#008ecc] border-[#008ecc] text-white"
+                          : "border-slate-300 dark:border-slate-600"
+                      }`}
+                    >
+                      {areAllFieldsSelected && <Check className="w-3 h-3" />}
+                    </span>
+                  </button>
+                  {FILTER_FIELDS.map((field) => {
+                    const isActive = activeFilterFields.includes(field.key);
+                    return (
+                      <button
+                        key={field.key}
+                        onClick={() => toggleFilterField(field.key)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                      >
+                        <span>{field.label}</span>
+                        <span
+                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            isActive
+                              ? "bg-[#008ecc] border-[#008ecc] text-white"
+                              : "border-slate-300 dark:border-slate-600"
+                          }`}
+                        >
+                          {isActive && <Check className="w-3 h-3" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
-          >
-            <option value="all">All Plans</option>
-            {planOptions.map((plan) => (
-              <option key={plan} value={plan}>
-                {plan}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
-          >
-            <option value="all">All Plan Statuses</option>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </option>
-            ))}
-          </select>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-semibold text-[#008ecc] hover:underline cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
 
-        {/* Tenant Table */}
+        {/* Collapsible Filters */}
+        {showFilters && (
+          <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-200">
+            {activeFilterFields.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No filters selected. Click <strong>Customize</strong> to add filters.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeFilterFields.includes("search") && (
+                  <div className="relative w-full">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="text"
+                      placeholder="Search by company name, slug, or admin details..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner"
+                    />
+                  </div>
+                )}
+
+                {activeFilterFields.includes("plan") && (
+                  <select
+                    value={planFilter}
+                    onChange={(e) => setPlanFilter(e.target.value)}
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Plans</option>
+                    {planOptions.map((plan) => (
+                      <option key={plan} value={plan}>
+                        {plan}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeFilterFields.includes("planStatus") && (
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Plan Statuses</option>
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {activeFilterFields.includes("accountStatus") && (
+                  <select
+                    value={accountStatusFilter}
+                    onChange={(e) => setAccountStatusFilter(e.target.value)}
+                    className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner cursor-pointer"
+                  >
+                    <option value="all">All Account Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                )}
+
+                {activeFilterFields.includes("dateRange") && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner"
+                    />
+                    <span className="text-slate-400 dark:text-slate-500 text-sm">to</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-800 dark:text-white shadow-inner"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

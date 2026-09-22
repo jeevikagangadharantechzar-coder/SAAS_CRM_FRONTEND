@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   LifeBuoy,
   Search,
@@ -8,6 +8,10 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Filter,
+  ChevronDown,
+  SlidersHorizontal,
+  Check,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -41,6 +45,16 @@ const PRIORITY_STYLES = {
   Urgent: "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",
 };
 const PAGE_SIZE = 6;
+
+const FILTER_FIELDS = [
+  { key: "search", label: "Search" },
+  { key: "status", label: "Status" },
+  { key: "priority", label: "Priority" },
+  { key: "urgency", label: "Due Date" },
+  { key: "dateRange", label: "Created Date Range" },
+];
+
+const FILTER_FIELDS_STORAGE_KEY = "superadmin_supportticket_filter_fields";
 
 const formatDate = (iso) =>
   new Date(iso).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
@@ -90,6 +104,22 @@ const SupportTickets = () => {
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [activeTicket, setActiveTicket] = useState(null);
+
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilterFields, setActiveFilterFields] = useState(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_FIELDS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore malformed/inaccessible localStorage, fall back to default
+    }
+    return FILTER_FIELDS.map((f) => f.key);
+  });
+  const [showFieldPicker, setShowFieldPicker] = useState(false);
+  const fieldPickerRef = useRef(null);
 
   const fetchTickets = async () => {
     setLoading(true);
@@ -151,6 +181,56 @@ const SupportTickets = () => {
     setPage(1);
   };
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTER_FIELDS_STORAGE_KEY, JSON.stringify(activeFilterFields));
+    } catch {
+      // ignore write failures (private browsing, storage disabled, etc.)
+    }
+  }, [activeFilterFields]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (fieldPickerRef.current && !fieldPickerRef.current.contains(e.target)) {
+        setShowFieldPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const resetFieldValue = (key) => {
+    if (key === "search") setSearch("");
+    if (key === "status") setStatusFilter("All");
+    if (key === "priority") setPriorityFilter("All");
+    if (key === "urgency") setUrgencyFilter("All");
+    if (key === "dateRange") {
+      setDateFrom("");
+      setDateTo("");
+    }
+  };
+
+  const toggleFilterField = (key) => {
+    setActiveFilterFields((prev) => {
+      if (prev.includes(key)) {
+        resetFieldValue(key);
+        return prev.filter((k) => k !== key);
+      }
+      return [...prev, key];
+    });
+  };
+
+  const areAllFieldsSelected = FILTER_FIELDS.every((field) => activeFilterFields.includes(field.key));
+
+  const handleSelectAllFields = () => {
+    if (areAllFieldsSelected) {
+      FILTER_FIELDS.forEach((field) => resetFieldValue(field.key));
+      setActiveFilterFields([]);
+    } else {
+      setActiveFilterFields(FILTER_FIELDS.map((f) => f.key));
+    }
+  };
+
   const updateTicketInList = (ticket) => {
     setTickets((prev) => prev.map((t) => (t._id === ticket._id ? ticket : t)));
     setActiveTicket((prev) => (prev && prev._id === ticket._id ? ticket : prev));
@@ -207,97 +287,186 @@ const SupportTickets = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by tenant admin, email or subject"
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-4 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#008ecc] focus:bg-white dark:bg-slate-900 transition-colors"
-          />
+      {/* Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl">
+        <div className="p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Ticket Filter</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+            </button>
+
+            <div className="relative" ref={fieldPickerRef}>
+              <button
+                onClick={() => setShowFieldPicker((v) => !v)}
+                title="Choose which filters to show"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Customize</span>
+              </button>
+
+              {showFieldPicker && (
+                <div className="absolute left-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+                    Filters to show
+                  </div>
+                  <button
+                    onClick={handleSelectAllFields}
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700"
+                  >
+                    <span>{areAllFieldsSelected ? "Deselect All" : "Select All"}</span>
+                    <span
+                      className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        areAllFieldsSelected
+                          ? "bg-[#008ecc] border-[#008ecc] text-white"
+                          : "border-slate-300 dark:border-slate-600"
+                      }`}
+                    >
+                      {areAllFieldsSelected && <Check className="w-3 h-3" />}
+                    </span>
+                  </button>
+                  {FILTER_FIELDS.map((field) => {
+                    const isActive = activeFilterFields.includes(field.key);
+                    return (
+                      <button
+                        key={field.key}
+                        onClick={() => toggleFilterField(field.key)}
+                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                      >
+                        <span>{field.label}</span>
+                        <span
+                          className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            isActive
+                              ? "bg-[#008ecc] border-[#008ecc] text-white"
+                              : "border-slate-300 dark:border-slate-600"
+                          }`}
+                        >
+                          {isActive && <Check className="w-3 h-3" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-semibold text-[#008ecc] hover:underline cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s === "All" ? "All statuses" : s}
-            </option>
-          ))}
-        </select>
+        {showFilters && (
+          <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-200">
+            {activeFilterFields.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No filters selected. Click <strong>Customize</strong> to add filters.
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                {activeFilterFields.includes("search") && (
+                  <div className="relative flex-1 min-w-[220px]">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                    <input
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setPage(1);
+                      }}
+                      placeholder="Search by tenant admin, email or subject"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-4 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#008ecc] focus:bg-white dark:bg-slate-900 transition-colors"
+                    />
+                  </div>
+                )}
 
-        <select
-          value={priorityFilter}
-          onChange={(e) => {
-            setPriorityFilter(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
-        >
-          {PRIORITY_OPTIONS.map((p) => (
-            <option key={p} value={p}>
-              {p === "All" ? "All priorities" : p}
-            </option>
-          ))}
-        </select>
+                {activeFilterFields.includes("status") && (
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s === "All" ? "All statuses" : s}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
-        <select
-          value={urgencyFilter}
-          onChange={(e) => {
-            setUrgencyFilter(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
-        >
-          <option value="All">Due dates</option>
-          <option value="Due Today">Due Today</option>
-          <option value="Overdue">Overdue</option>
-        </select>
+                {activeFilterFields.includes("priority") && (
+                  <select
+                    value={priorityFilter}
+                    onChange={(e) => {
+                      setPriorityFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                  >
+                    {PRIORITY_OPTIONS.map((p) => (
+                      <option key={p} value={p}>
+                        {p === "All" ? "All priorities" : p}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5">
-          <Calendar size={14} className="text-slate-400 dark:text-slate-500" />
-          <input
-            type="date"
-            onKeyDown={(e) => e.preventDefault()}
-            value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              setPage(1);
-            }}
-            className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
-          />
-          <span className="text-slate-300">–</span>
-          <input
-            type="date"
-            onKeyDown={(e) => e.preventDefault()}
-            value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              setPage(1);
-            }}
-            className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
-          />
-        </div>
+                {activeFilterFields.includes("urgency") && (
+                  <select
+                    value={urgencyFilter}
+                    onChange={(e) => {
+                      setUrgencyFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                  >
+                    <option value="All">Due dates</option>
+                    <option value="Due Today">Due Today</option>
+                    <option value="Overdue">Overdue</option>
+                  </select>
+                )}
 
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-sm text-slate-400 dark:text-slate-500 hover:text-red-500 flex items-center gap-1 cursor-pointer"
-          >
-            <X size={14} />
-            Clear
-          </button>
+                {activeFilterFields.includes("dateRange") && (
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5">
+                    <Calendar size={14} className="text-slate-400 dark:text-slate-500" />
+                    <input
+                      type="date"
+                      onKeyDown={(e) => e.preventDefault()}
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setPage(1);
+                      }}
+                      className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
+                    />
+                    <span className="text-slate-300">–</span>
+                    <input
+                      type="date"
+                      onKeyDown={(e) => e.preventDefault()}
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setPage(1);
+                      }}
+                      className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
