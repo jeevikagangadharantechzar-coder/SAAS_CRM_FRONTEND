@@ -32,6 +32,7 @@ import {
   Bell,
   Share2,
   Trash2,
+  Package,
 } from "lucide-react";
 
 const WhatsAppIcon = ({ size = 18, color = "#475569" }) => (
@@ -880,6 +881,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           icon={<Calendar />}
           label={t("sidebar.meetings")}
           hasPermission={(isAdmin || userPermissions.meetings) && hasPlanFeature("meetings")}
+          sidebarOpen={isOpen}
+        />
+
+        {/* Assets Management */}
+        <SidebarItem
+          to="assets"
+          icon={<Package />}
+          label={t("sidebar.assets")}
+          hasPermission={(isAdmin || userPermissions.assets) && hasPlanFeature("assets")}
           sidebarOpen={isOpen}
         />
 

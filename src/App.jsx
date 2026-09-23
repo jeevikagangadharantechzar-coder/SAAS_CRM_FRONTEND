@@ -77,6 +77,7 @@ import ClientCLVDetails from "./pages/Clv/ClientCLVDetails";
 import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 
 import { Meetings } from "./pages/meetings/Meetings";
+import AssetsManagement from "./pages/assets/AssetsManagement";
 import GoogleIntegration from "./pages/settings/GoogleIntegration";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Support from "./pages/support/UserSupportView";
@@ -388,6 +389,11 @@ function App() {
                       {/* MEETINGS */}
                       <Route element={<PrivateRoute permission="meetings" planFeature="meetings" />}>
                         <Route path="meetings" element={<Meetings />} />
+                      </Route>
+
+                      {/* ASSETS MANAGEMENT */}
+                      <Route element={<PrivateRoute permission="assets" planFeature="assets" />}>
+                        <Route path="assets" element={<AssetsManagement />} />
                       </Route>
 
                       {/* GOOGLE INTEGRATION SETTINGS */}

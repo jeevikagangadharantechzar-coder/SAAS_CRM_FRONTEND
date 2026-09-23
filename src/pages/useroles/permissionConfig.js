@@ -18,6 +18,7 @@ import {
   Send,
   Calendar,
   Shield,
+  Package,
 } from "react-feather";
 
 // One entry per sidebar nav item — kept in sync with sidebar.jsx's
@@ -94,6 +95,14 @@ export const permissionGroups = [
       { key: "users_roles", label: "Users & Roles", icon: Shield },
     ],
   },
+  {
+    title: "Assets",
+    theme: "orange",
+    permissions: [
+      { key: "assets", label: "Assets Management", icon: Package },
+      { key: "assets_manage_categories", label: "Manage Asset Categories", icon: Shield },
+    ],
+  },
 ];
 
 // Default state for a brand-new role. Keys that the sidebar today shows to
@@ -128,4 +137,5 @@ export const THEME_STYLES = {
   indigo: { icon: "text-indigo-600", header: "text-indigo-700", selectedBg: "bg-indigo-50", selectedBorder: "border-indigo-500", chip: "bg-indigo-500", text: "text-indigo-800" },
   pink:   { icon: "text-pink-600",   header: "text-pink-700",   selectedBg: "bg-pink-50",   selectedBorder: "border-pink-500",   chip: "bg-pink-500",   text: "text-pink-800" },
   rose:   { icon: "text-rose-600",   header: "text-rose-700",   selectedBg: "bg-rose-50",   selectedBorder: "border-rose-500",   chip: "bg-rose-500",   text: "text-rose-800" },
+  orange: { icon: "text-orange-600", header: "text-orange-700", selectedBg: "bg-orange-50", selectedBorder: "border-orange-500", chip: "bg-orange-500", text: "text-orange-800" },
 };
