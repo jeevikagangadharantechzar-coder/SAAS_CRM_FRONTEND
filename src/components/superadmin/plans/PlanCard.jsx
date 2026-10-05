@@ -27,7 +27,7 @@ const FEATURE_LABELS = {
   deals_pipeline:     "Pipeline View",
   invoices:           "Invoices",
   proposal:           "Proposal",
-  documents:          "Document Center",
+  documents:          "Document Hub",
   users_roles:        "Users & Roles",
   admin_access:       "Admin Access",
   email_chat:         "Email Chat",

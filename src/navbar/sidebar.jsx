@@ -658,32 +658,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             in-page toggle rather than two separate sidebar links. */}
  
 
-        {/* Document (Collapsible) — independent "documents" permission now,
-            decoupled from Leads/Deals access (previously just an OR of
-            those two permissions, with no dedicated toggle of its own) */}
-        <Collapsible
-          label={t("sidebar.document")}
+        {/* Document Hub */}
+        <SidebarItem
+          to="documents"
           icon={<FileText />}
-          open={showDocument}
-          onToggle={() => setShowDocument((s) => !s)}
-          sidebarOpen={isOpen}
-          activePaths={["/deals-document", "/lead-document"]}
+          label="Document Hub"
           hasPermission={(isAdmin || userPermissions.documents) && hasPlanFeature("documents")}
-        >
-                <SmallLink
-            to="lead-document"
-            icon={<Users />}
-            label={t("sidebar.leads")}
-            hasPermission={(isAdmin || userPermissions.documents) && hasPlanFeature("documents")}
-          />
-          <SmallLink
-            to="deals-document"
-            icon={<Briefcase />}
-            label={t("sidebar.deals")}
-            hasPermission={(isAdmin || userPermissions.documents) && hasPlanFeature("documents")}
-          />
-    
-        </Collapsible>
+          sidebarOpen={isOpen}
+        />
 
         {/* Tasks (Collapsible) — the container itself must also respect plan
             features, otherwise it shows as an empty expandable group once every

@@ -32,6 +32,7 @@ export const permissionGroups = [
       { key: "dashboard", label: "Dashboard", icon: Home },
       { key: "leads", label: "Leads", icon: Users },
       { key: "schedule_view", label: "Calendar", icon: Calendar },
+      { key: "documents", label: "Document Hub", icon: FileText },
     ],
   },
   {
@@ -48,7 +49,6 @@ export const permissionGroups = [
     permissions: [
       { key: "invoices", label: "Invoices", icon: FileText },
       { key: "proposal", label: "Proposal", icon: Edit },
-      { key: "documents", label: "Document Center", icon: FileText },
     ],
   },
   {

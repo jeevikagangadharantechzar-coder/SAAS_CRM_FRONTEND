@@ -45,7 +45,6 @@ import CreateLeads from "./pages/Leads/CreateLeads";
 import { AllDeals } from "./pages/Deals/allDeals";
 import RejectedDeals from "./pages/Deals/RejectedDeals";
 import TrashPage from "./pages/Trash/TrashPage";
-import DealsDocument from "./pages/Deals/DealsDocument";
 import CreateDeal from "./pages/Deals/CreateDeal";
 import Pipeline_view from "./pages/Pipeline_View/Pipelien_view";
 import Pipeline_modal_view from "./pages/Pipeline_View/Pipeline_modal_view";
@@ -66,7 +65,7 @@ import EmailHistory from "./pages/Email/EmailHistory";
 import Settings from "./pages/settings/Settings";
 import NotificationsPage from "./pages/notification/NotificationsPage";
 import ViewLead from "./pages/Leads/ViewLead";
-import LeadDocument from "./pages/Leads/LeadDocument";
+import DocumentHub from "./pages/DocumentHub/DocumentHub";
 import ViewProposal from "./pages/proposal/ViewProposal";
 
 import DealIntelligenceDashboard from "./pages/Dealmetrics/pipeline";
@@ -312,12 +311,9 @@ function App() {
                         <Route path="deals/rejected" element={<RejectedDeals />} />
                       </Route>
 
-                      {/* Document module — independent permission, decoupled from
-                      Leads/Deals access (was previously just an OR of those
-                      two permissions with no dedicated toggle of its own) */}
+                      {/* Document module */}
                       <Route element={<PrivateRoute permission="documents" planFeature="documents" />}>
-                        <Route path="lead-document" element={<LeadDocument />} />
-                        <Route path="deals-document" element={<DealsDocument />} />
+                        <Route path="documents" element={<DocumentHub />} />
                       </Route>
 
                       <Route element={<PrivateRoute permission="create_deal" planFeature="deals_all" />}>

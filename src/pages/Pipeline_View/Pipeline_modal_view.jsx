@@ -1292,8 +1292,7 @@ function Pipeline_modal_view() {
       Array.from(files).forEach((f) => formData.append("attachments", f));
       await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
         headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${getAuthToken()}`
         },
       });
       toast.success(
@@ -1323,8 +1322,7 @@ function Pipeline_modal_view() {
       fileList.forEach((f) => formData.append("images", f));
       await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
         headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${getAuthToken()}`
         },
       });
       toast.success(fileList.length > 1 ? "Images uploaded" : "Image uploaded");
@@ -1346,16 +1344,45 @@ function Pipeline_modal_view() {
     if (!window.confirm("Delete this attachment?")) return;
     try {
       setDeletingAttachmentIdx(idx);
-      const remaining = (deal.attachments || []).filter((_, i) => i !== idx);
+      const attachmentToDelete = deal.attachments[idx];
+      const documentId = attachmentToDelete?._id;
+
+      const updatedAttachments = [...(deal.attachments || [])];
+      updatedAttachments[idx] = { ...updatedAttachments[idx], isDeleted: true };
+
       const formData = new FormData();
-      formData.append("existingAttachments", JSON.stringify(remaining));
+      formData.append("existingAttachments", JSON.stringify(updatedAttachments));
       await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
         headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${getAuthToken()}`
         },
       });
+      
+      if (documentId) {
+        try {
+          await axios.delete(`${API_URL}/document-hub/documents/source/${documentId}`, {
+            headers: { Authorization: `Bearer ${getAuthToken()}` }
+          });
+        } catch (err) {
+          console.error("Document Hub soft delete failed:", err);
+        }
+      }
+
       toast.success("Attachment deleted");
+      
+      // Optimistically hide the attachment by merging the isDeleted flag with the backend response
+      setDeal((prev) => {
+        if (!prev) return prev;
+        const merged = { 
+          ...prev,
+          attachments: [...(prev.attachments || [])]
+        };
+        if (merged.attachments && merged.attachments[idx]) {
+          merged.attachments[idx] = { ...merged.attachments[idx], isDeleted: true };
+        }
+        return merged;
+      });
+      
       fetchDealDetails();
       fetchActivity();
     } catch (err) {
@@ -1371,15 +1398,30 @@ function Pipeline_modal_view() {
     if (!window.confirm("Delete this image?")) return;
     try {
       setDeletingImageIdx(idx);
-      const remaining = (deal.images || []).filter((_, i) => i !== idx);
+      const imageToDelete = deal.images[idx];
+      const documentId = imageToDelete?._id;
+
+      const updatedImages = [...(deal.images || [])];
+      updatedImages[idx] = { ...updatedImages[idx], isDeleted: true };
+
       const formData = new FormData();
-      formData.append("existingImages", JSON.stringify(remaining));
+      formData.append("existingImages", JSON.stringify(updatedImages));
       await axios.patch(`${API_URL}/deals/update-deal/${dealId}`, formData, {
         headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${getAuthToken()}`
         },
       });
+      
+      if (documentId) {
+        try {
+          await axios.delete(`${API_URL}/document-hub/documents/source/${documentId}`, {
+            headers: { Authorization: `Bearer ${getAuthToken()}` }
+          });
+        } catch (err) {
+          console.error("Document Hub soft delete failed:", err);
+        }
+      }
+
       toast.success("Image deleted");
       fetchDealDetails();
       fetchActivity();
@@ -2854,8 +2896,8 @@ function Pipeline_modal_view() {
           >
             Attachments{" "}
             {deal.attachments &&
-              deal.attachments.length > 0 &&
-              `(${deal.attachments.length})`}
+              deal.attachments.filter(a => !a.isDeleted && !a.deletedAt).length > 0 &&
+              `(${deal.attachments.filter(a => !a.isDeleted && !a.deletedAt).length})`}
           </button>
           <button
             className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -2867,8 +2909,8 @@ function Pipeline_modal_view() {
           >
             Images{" "}
             {deal.images &&
-              deal.images.length > 0 &&
-              `(${deal.images.length})`}
+              deal.images.filter(i => !i.isDeleted && !i.deletedAt).length > 0 &&
+              `(${deal.images.filter(i => !i.isDeleted && !i.deletedAt).length})`}
           </button>
           <button
             className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
@@ -4781,9 +4823,10 @@ function Pipeline_modal_view() {
                   </label>
                 </div>
                 <div className="p-6">
-                  {deal.attachments && deal.attachments.length > 0 ? (
+                  {deal.attachments && deal.attachments.filter(a => !a.isDeleted && !a.deletedAt).length > 0 ? (
                     <ul className="space-y-3">
                       {deal.attachments.map((file, idx) => {
+                        if (file.isDeleted || file.deletedAt) return null;
                         const fileName =
                           file.name ||
                           file.path?.split("/").pop() ||
@@ -4938,9 +4981,10 @@ function Pipeline_modal_view() {
                   </label>
                 </div>
                 <div className="p-6">
-                  {deal.images && deal.images.length > 0 ? (
+                  {deal.images && deal.images.filter(img => !img.isDeleted && !img.deletedAt).length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                       {deal.images.map((image, idx) => {
+                        if (image.isDeleted || image.deletedAt) return null;
                         const fileName =
                           image.name || image.path?.split("/").pop() || `Image ${idx + 1}`;
                         const isLoadingThis = previewLoading === `image-${idx}`;

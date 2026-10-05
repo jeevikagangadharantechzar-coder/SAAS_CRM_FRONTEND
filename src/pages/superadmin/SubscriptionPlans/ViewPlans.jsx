@@ -29,7 +29,7 @@ const FEATURE_LABELS = {
   deals_pipeline: "Pipeline",
   invoices: "Invoices",
   proposal: "Proposal",
-  documents: "Document Center",
+  documents: "Document Hub",
   activities: "Activities",
   activities_list: "Activity List",
   users_roles: "User Roles",

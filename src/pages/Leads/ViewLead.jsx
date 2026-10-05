@@ -1667,7 +1667,7 @@ const ViewLead = () => {
       dataToSend.append("existingAttachments", JSON.stringify(lead.attachments || []));
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setLead(res.data.lead);
@@ -1701,7 +1701,7 @@ const ViewLead = () => {
       dataToSend.append("existingImages", JSON.stringify(lead.images || []));
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setLead(res.data.lead);
@@ -1720,15 +1720,39 @@ const ViewLead = () => {
     try {
       setDeletingAttachmentIdx(idx);
       const token = localStorage.getItem("token");
-      const remaining = (lead.attachments || []).filter((_, i) => i !== idx);
+      
+      const attachmentToDelete = lead.attachments[idx];
+      const documentId = attachmentToDelete?._id;
+
+      const updatedAttachments = [...(lead.attachments || [])];
+      updatedAttachments[idx] = { ...updatedAttachments[idx], isDeleted: true };
+
       const dataToSend = new FormData();
-      dataToSend.append("existingAttachments", JSON.stringify(remaining));
+      dataToSend.append("existingAttachments", JSON.stringify(updatedAttachments));
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      setLead(res.data.lead);
+      // Optimistically hide the attachment by merging the isDeleted flag with the backend response
+      setLead((prev) => {
+        const merged = { ...res.data.lead };
+        if (merged.attachments && merged.attachments[idx]) {
+          merged.attachments[idx] = { ...merged.attachments[idx], isDeleted: true };
+        }
+        return merged;
+      });
+      
+      if (documentId) {
+        try {
+          await axios.delete(`${API_URL}/document-hub/documents/source/${documentId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Document Hub sync failed:", e);
+        }
+      }
+
       toast.success("Attachment deleted");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete attachment");
@@ -1743,15 +1767,32 @@ const ViewLead = () => {
     try {
       setDeletingImageIdx(idx);
       const token = localStorage.getItem("token");
-      const remaining = (lead.images || []).filter((_, i) => i !== idx);
+
+      const imageToDelete = lead.images[idx];
+      const documentId = imageToDelete?._id;
+
+      const updatedImages = [...(lead.images || [])];
+      updatedImages[idx] = { ...updatedImages[idx], isDeleted: true };
+
       const dataToSend = new FormData();
-      dataToSend.append("existingImages", JSON.stringify(remaining));
+      dataToSend.append("existingImages", JSON.stringify(updatedImages));
 
       const res = await axios.put(`${API_URL}/leads/updateLead/${id}`, dataToSend, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setLead(res.data.lead);
+      
+      if (documentId) {
+        try {
+          await axios.delete(`${API_URL}/document-hub/documents/source/${documentId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Document Hub sync failed:", e);
+        }
+      }
+
       toast.success("Image deleted");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete image");
@@ -1944,15 +1985,15 @@ const ViewLead = () => {
                 ? "Notes"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
               {tab === "attachments" &&
-                lead.attachments?.length > 0 && (
+                lead.attachments?.filter(a => !a.isDeleted && !a.deletedAt).length > 0 && (
                   <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
-                    {lead.attachments.length}
+                    {lead.attachments.filter(a => !a.isDeleted && !a.deletedAt).length}
                   </span>
                 )}
               {tab === "images" &&
-                lead.images?.length > 0 && (
+                lead.images?.filter(i => !i.isDeleted && !i.deletedAt).length > 0 && (
                   <span className="ml-1 bg-gray-100 text-gray-500 py-0.5 px-1.5 rounded-full text-xs">
-                    {lead.images.length}
+                    {lead.images.filter(i => !i.isDeleted && !i.deletedAt).length}
                   </span>
                 )}
             </button>
@@ -2652,9 +2693,10 @@ const ViewLead = () => {
                   </label>
                 </div>
                 <div className="p-6">
-                  {lead.attachments?.length > 0 ? (
+                  {lead.attachments?.filter(a => !a.isDeleted && !a.deletedAt).length > 0 ? (
                     <ul className="space-y-3">
                       {lead.attachments.map((file, idx) => {
+                        if (file.isDeleted || file.deletedAt) return null;
                         const cat   = getCategory(file);
                         const s     = STYLES[cat];
                         return (

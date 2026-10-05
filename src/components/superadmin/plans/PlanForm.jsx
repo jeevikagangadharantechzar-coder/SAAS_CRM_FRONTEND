@@ -103,7 +103,7 @@ const FEATURE_GROUPS = [
     features: [
       { key: "invoices", label: "Invoices", icon: Receipt },
       { key: "proposal", label: "Proposal", icon: ClipboardEdit },
-      { key: "documents", label: "Document Center", icon: FileText },
+      { key: "documents", label: "Document Hub", icon: FileText },
     ],
   },
   {

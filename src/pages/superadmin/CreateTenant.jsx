@@ -572,7 +572,7 @@ const CreateTenant = () => {
                 const FEATURE_LABELS = {
                   dashboard: "Dashboard", leads: "Leads", create_lead: "Create Lead",
                   deals_all: "Deals", create_deal: "Create Deal", deals_pipeline: "Pipeline View",
-                  invoices: "Invoices", proposal: "Proposal", documents: "Document Center",
+                  invoices: "Invoices", proposal: "Proposal", documents: "Document Hub",
                   users_roles: "Users & Roles",
                   admin_access: "Admin Access", email_chat: "Email Chat", 
                   email_campaigns: "Email Campaigns", 
