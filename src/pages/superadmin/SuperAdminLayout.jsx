@@ -239,9 +239,7 @@ const SuperAdminLayout = () => {
             >
               {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
             </button>
-            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[#008ecc] dark:text-[#33b8ff] border border-blue-100 dark:border-blue-800">
-              Live Server
-            </span>
+
           </div>
         </header>
 
