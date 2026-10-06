@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { ChevronLeft, ChevronRight, Search, Users, ArrowLeft } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import DocumentTable from './DocumentTable';
+import { api } from '../../services/api';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-const LeadDocument = ({ assignments = [], recycleAssignments = [], onQuickAssign }) => {
+const LeadDocument = ({ searchTerm = "", assignments = [], recycleAssignments = [], onQuickAssign }) => {
   const { user } = useSelector(state => state.auth);
   const isAdmin = user?.role?.name === 'Admin';
   const [leads, setLeads] = useState([]);
@@ -15,15 +13,14 @@ const LeadDocument = ({ assignments = [], recycleAssignments = [], onQuickAssign
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   
   const [selectedLead, setSelectedLead] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -38,9 +35,7 @@ const LeadDocument = ({ assignments = [], recycleAssignments = [], onQuickAssign
         const params = new URLSearchParams({ page: currentPage, limit: itemsPerPage, hasAttachments: true });
         if (debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
 
-        const { data } = await axios.get(`${API_URL}/leads/getAllLead?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await api.get(`/leads/getAllLead?${params.toString()}`);
         if (!active) return;
 
         const isNew = data && !Array.isArray(data) && Array.isArray(data.leads);
@@ -127,16 +122,6 @@ const LeadDocument = ({ assignments = [], recycleAssignments = [], onQuickAssign
 
   return (
     <div className="flex flex-col h-full animate-in fade-in">
-      <div className="mb-4 relative w-full sm:w-80">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search Lead Name..."
-          className="w-full border border-slate-300 dark:border-slate-700 rounded-md pl-9 pr-4 py-2 bg-white dark:bg-slate-900 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex-1">
         <table className="min-w-full text-sm text-slate-700 dark:text-slate-200">

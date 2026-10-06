@@ -4,7 +4,7 @@ import { useUpdateDocumentStatus, useAddActivity, useSoftDeleteDocument, useSoft
 import { useSelector } from 'react-redux';
 import dayjs from 'dayjs';
 
-const getBaseUrl = () => import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const getBaseUrl = () => import.meta.env.VITE_SI_URI || "http://localhost:5000";
 
 import { api } from '../../services/api';
 

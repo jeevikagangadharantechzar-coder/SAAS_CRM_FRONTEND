@@ -10,6 +10,7 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState('Lead'); // Lead or Deal
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchAssignee, setSearchAssignee] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedSource, setSelectedSource] = useState(null);
@@ -34,10 +35,12 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
       setStep(1);
       setSourceType('Lead');
       setSearchQuery('');
+      setSearchAssignee('');
       setSelectedSource(null);
       setSelectedDocIds(new Set());
       setSelectedUserId('');
       setNote('');
+      setErrorMsg('');
     }
   }, [isOpen]);
 
@@ -47,12 +50,13 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
+        let assigneeQuery = searchAssignee ? `&assignee=${searchAssignee}` : '';
         if (sourceType === 'Lead') {
-          const res = await api.get(`/leads/getAllLead?search=${searchQuery}&limit=20&hasAttachments=true`);
+          const res = await api.get(`/leads/getAllLead?search=${searchQuery}${assigneeQuery}&limit=20&hasAttachments=true`);
           const data = res.data.leads || res.data;
           setSearchResults(Array.isArray(data) ? data : []);
         } else {
-          const res = await api.get(`/deals/getAll?search=${searchQuery}&limit=20&hasAttachments=true`);
+          const res = await api.get(`/deals/getAll?search=${searchQuery}${assigneeQuery}&limit=20&hasAttachments=true`);
           const data = res.data.deals || res.data;
           setSearchResults(Array.isArray(data) ? data : []);
         }
@@ -63,7 +67,7 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, sourceType, step]);
+  }, [searchQuery, searchAssignee, sourceType, step]);
 
   const handleSelectSource = (item) => {
     setSelectedSource(item);
@@ -97,21 +101,32 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
   };
 
   const toggleDocSelection = (id) => {
+    setErrorMsg('');
     const newSet = new Set(selectedDocIds);
     if (newSet.has(id)) newSet.delete(id);
     else newSet.add(id);
     setSelectedDocIds(newSet);
   };
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   const handleNextToConfirm = () => {
-    if (selectedDocIds.size === 0) return toast.error("Select at least one document");
-    if (!selectedUserId) return toast.error("Select a user to assign to");
+    setErrorMsg('');
+    if (selectedDocIds.size === 0) {
+      setErrorMsg("Please select at least one document.");
+      return;
+    }
+    if (!selectedUserId) {
+      setErrorMsg("Please select a user to assign to.");
+      return;
+    }
     setStep(3);
   };
 
   const handleAssign = () => {
-    if (selectedDocIds.size === 0) return toast.error("Select at least one document");
-    if (!selectedUserId) return toast.error("Select a user to assign to");
+    setErrorMsg('');
+    if (selectedDocIds.size === 0) return setErrorMsg("Please select at least one document.");
+    if (!selectedUserId) return setErrorMsg("Please select a user to assign to.");
 
     const selectedDocs = documents.filter(d => selectedDocIds.has(d.id));
 
@@ -160,15 +175,27 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
                 </button>
               </div>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder={`Search ${sourceType} name...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border rounded-md outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={`Search ${sourceType} name...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border rounded-md outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <select 
+                  value={searchAssignee}
+                  onChange={(e) => setSearchAssignee(e.target.value)}
+                  className="border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 w-1/3 text-sm text-slate-700 bg-white"
+                >
+                  <option value="">All Salesmen</option>
+                  {users.map(u => (
+                    <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="border rounded-md bg-white overflow-hidden shadow-sm h-[40vh] overflow-y-auto">
@@ -230,7 +257,7 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Assign To</label>
                     <select 
                       value={selectedUserId} 
-                      onChange={e => setSelectedUserId(e.target.value)}
+                      onChange={e => { setSelectedUserId(e.target.value); setErrorMsg(''); }}
                       disabled={sourceType === 'Lead' || sourceType === 'Deal'}
                       className={`w-full border rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500 ${
                         (sourceType === 'Lead' || sourceType === 'Deal') ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
@@ -298,23 +325,29 @@ const AssignDocumentModal = ({ isOpen, onClose }) => {
             ) : <div />}
             
             {step === 2 && documents.length > 0 && (
-              <button 
-                onClick={handleNextToConfirm}
-                className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center gap-2"
-              >
-                Next <ChevronRight size={16} />
-              </button>
+              <div className="flex items-center gap-4">
+                {errorMsg && <span className="text-red-500 text-sm font-medium">{errorMsg}</span>}
+                <button 
+                  onClick={handleNextToConfirm}
+                  className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center gap-2"
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
             )}
 
             {step === 3 && (
-              <button 
-                onClick={handleAssign}
-                disabled={assignMutation.isPending}
-                className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                {assignMutation.isPending && <Loader2 size={16} className="animate-spin" />}
-                Send for Review
-              </button>
+              <div className="flex items-center gap-4">
+                {errorMsg && <span className="text-red-500 text-sm font-medium">{errorMsg}</span>}
+                <button 
+                  onClick={handleAssign}
+                  disabled={assignMutation.isPending}
+                  className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {assignMutation.isPending && <Loader2 size={16} className="animate-spin" />}
+                  Send for Review
+                </button>
+              </div>
             )}
           </div>
         </DialogFooter>

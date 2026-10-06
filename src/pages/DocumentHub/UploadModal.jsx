@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { X, UploadCloud } from 'lucide-react';
 import { useUploadExternalDocument } from '../../hooks/useDocumentHub';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { api } from '../../services/api';
 
-const getBaseUrl = () => import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const UploadModal = ({ onClose }) => {
   const [file, setFile] = useState(null);
@@ -17,9 +16,7 @@ const UploadModal = ({ onClose }) => {
   const { data: usersData } = useQuery({
     queryKey: ["users-dropdown"],
     queryFn: async () => {
-      const response = await axios.get(`${getBaseUrl()}/api/users`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });
+      const response = await api.get("/users");
       // Adjust according to standard users response
       return response.data?.users || response.data || [];
     }

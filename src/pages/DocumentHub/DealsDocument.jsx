@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../../services/api';
 import { ChevronLeft, ChevronRight, Search, Briefcase, ArrowLeft } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import DocumentTable from './DocumentTable';
 
-const API_URL = import.meta.env.VITE_API_URL;
 
-const DealsDocument = ({ assignments = [], recycleAssignments = [], onQuickAssign }) => {
+const DealsDocument = ({ searchTerm = "", assignments = [], recycleAssignments = [], onQuickAssign }) => {
   const { user } = useSelector(state => state.auth);
   const isAdmin = user?.role?.name === 'Admin';
   const [deals, setDeals] = useState([]);
@@ -15,15 +14,14 @@ const DealsDocument = ({ assignments = [], recycleAssignments = [], onQuickAssig
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalDeals, setTotalDeals] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   
   const [selectedDeal, setSelectedDeal] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -38,9 +36,7 @@ const DealsDocument = ({ assignments = [], recycleAssignments = [], onQuickAssig
         const params = new URLSearchParams({ page: currentPage, limit: itemsPerPage, hasAttachments: true });
         if (debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
 
-        const { data } = await axios.get(`${API_URL}/deals/getAll?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await api.get(`/deals/getAll?${params.toString()}`);
         if (!active) return;
 
         const isNew = data && !Array.isArray(data) && Array.isArray(data.deals);
@@ -125,16 +121,6 @@ const DealsDocument = ({ assignments = [], recycleAssignments = [], onQuickAssig
 
   return (
     <div className="flex flex-col h-full animate-in fade-in">
-      <div className="mb-4 relative w-full sm:w-80">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search Deal Name..."
-          className="w-full border border-slate-300 dark:border-slate-700 rounded-md pl-9 pr-4 py-2 bg-white dark:bg-slate-900 text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex-1">
         <table className="min-w-full text-sm text-slate-700 dark:text-slate-200">

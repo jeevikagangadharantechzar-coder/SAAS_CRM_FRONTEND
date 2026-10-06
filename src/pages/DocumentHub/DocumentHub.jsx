@@ -25,9 +25,18 @@ const DocumentHub = () => {
   const { user } = useSelector((state) => state.auth);
   const isAdmin = user?.role?.name === 'Admin';
 
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
   const { data, isLoading, error } = useDocuments({
     sourceType: activeTab === "Assigned Documents" ? "All" : activeTab,
-    search: searchTerm,
+    search: debouncedSearch,
     status: statusFilter,
     page: currentPage,
     limit: itemsPerPage
@@ -119,9 +128,9 @@ const DocumentHub = () => {
         ) : error ? (
           <div className="flex h-full items-center justify-center p-12 text-red-500">Failed to load documents.</div>
         ) : activeTab === "Lead" ? (
-          <LeadDocument assignments={data?.data || []} recycleAssignments={recycleData || []} onQuickAssign={setQuickAssignDoc} />
+          <LeadDocument searchTerm={searchTerm} assignments={data?.data || []} recycleAssignments={recycleData || []} onQuickAssign={setQuickAssignDoc} />
         ) : activeTab === "Deal" ? (
-          <DealsDocument assignments={data?.data || []} recycleAssignments={recycleData || []} onQuickAssign={setQuickAssignDoc} />
+          <DealsDocument searchTerm={searchTerm} assignments={data?.data || []} recycleAssignments={recycleData || []} onQuickAssign={setQuickAssignDoc} />
         ) : (
           <DocumentTable 
             documents={data?.data || []}
