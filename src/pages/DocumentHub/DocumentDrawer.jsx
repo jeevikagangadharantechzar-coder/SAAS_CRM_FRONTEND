@@ -3,6 +3,9 @@ import { X, Download, MessageSquare, Trash2, CheckCircle, XCircle } from 'lucide
 import { useUpdateDocumentStatus, useAddActivity, useSoftDeleteDocument, useSoftDeleteSourceDocument, useMarkViewed } from '../../hooks/useDocumentHub';
 import { useSelector } from 'react-redux';
 import dayjs from 'dayjs';
+import { toast } from 'react-toastify';
+import ConfirmModal from './ConfirmModal';
+import PromptModal from './PromptModal';
 
 const getBaseUrl = () => import.meta.env.VITE_SI_URI || "http://localhost:5000";
 
@@ -23,6 +26,8 @@ const DocumentDrawer = ({ doc, onClose }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [textContent, setTextContent] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRejectPrompt, setShowRejectPrompt] = useState(false);
 
   useEffect(() => {
     // If status is Assigned, automatically mark as Viewed when drawer opens
@@ -85,22 +90,24 @@ const DocumentDrawer = ({ doc, onClose }) => {
   };
 
   const handleDelete = () => {
-    if(confirm("Are you sure you want to move this assignment to the Recycle Bin?")) {
-      // If it has assignmentId, it's a normalized doc from Lead/Deal tab that HAS an assignment.
-      // If it doesn't have assignmentId but has documentId, it's a raw DocumentAssignment from the API.
-      const assignmentIdToUse = doc.assignmentId || (doc.documentId ? (doc.id || doc._id) : null);
+    setShowDeleteConfirm(true);
+  };
 
-      if (assignmentIdToUse) {
-        softDelete.mutate(
-          { id: assignmentIdToUse },
-          { onSuccess: onClose }
-        );
-      } else {
-        softDeleteSource.mutate(
-          { id: doc.id || doc._id }, // Source document ID
-          { onSuccess: onClose }
-        );
-      }
+  const confirmDelete = () => {
+    // If it has assignmentId, it's a normalized doc from Lead/Deal tab that HAS an assignment.
+    // If it doesn't have assignmentId but has documentId, it's a raw DocumentAssignment from the API.
+    const assignmentIdToUse = doc.assignmentId || (doc.documentId ? (doc.id || doc._id) : null);
+
+    if (assignmentIdToUse) {
+      softDelete.mutate(
+        { id: assignmentIdToUse },
+        { onSuccess: onClose }
+      );
+    } else {
+      softDeleteSource.mutate(
+        { id: doc.id || doc._id }, // Source document ID
+        { onSuccess: onClose }
+      );
     }
   };
 
@@ -120,7 +127,7 @@ const DocumentDrawer = ({ doc, onClose }) => {
       link.remove();
     } catch (error) {
       console.error("Download error:", error);
-      alert("Failed to download document.");
+      toast.error("Failed to download document.");
     }
   };
 
@@ -177,13 +184,7 @@ const DocumentDrawer = ({ doc, onClose }) => {
                         <CheckCircle size={18} />
                       </button>
                       <button 
-                        onClick={() => {
-                          const reason = window.prompt("Please provide a reason for rejection:");
-                          if (reason !== null) {
-                            if (!reason.trim()) return alert("Rejection reason is required.");
-                            updateStatus.mutate({ id: doc.assignmentId || doc.id, status: 'Rejected', note: reason });
-                          }
-                        }}
+                        onClick={() => setShowRejectPrompt(true)}
                         title="Reject"
                         className="p-1 text-red-600 hover:bg-red-50 rounded"
                       >
@@ -297,6 +298,29 @@ const DocumentDrawer = ({ doc, onClose }) => {
           </button>
         </div>
       </div>
+      
+      <ConfirmModal 
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Move to Recycle Bin"
+        message="Are you sure you want to move this assignment to the Recycle Bin?"
+        confirmText="Move to Bin"
+        isDestructive={true}
+      />
+
+      <PromptModal
+        isOpen={showRejectPrompt}
+        onClose={() => setShowRejectPrompt(false)}
+        onSubmit={(reason) => {
+          updateStatus.mutate({ id: doc.assignmentId || doc.id, status: 'Rejected', note: reason });
+        }}
+        title="Reject Document"
+        message="Please provide a reason for rejection:"
+        placeholder="Enter rejection reason..."
+        submitText="Reject"
+        isDestructive={true}
+      />
     </div>
   );
 };

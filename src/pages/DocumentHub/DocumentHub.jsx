@@ -106,19 +106,21 @@ const DocumentHub = () => {
               className="pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-900 dark:text-white"
             />
           </div>
-          <select 
-            value={statusFilter} 
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md text-sm outline-none dark:bg-slate-900 dark:text-white cursor-pointer"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Assigned">Assigned</option>
-            <option value="Viewed">Viewed</option>
-            <option value="Replied">Replied</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Sent">Sent</option>
-          </select>
+          {activeTab === "Assigned Documents" && (
+            <select 
+              value={statusFilter} 
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md text-sm outline-none dark:bg-slate-900 dark:text-white cursor-pointer"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Assigned">Assigned</option>
+              <option value="Viewed">Viewed</option>
+              <option value="Replied">Replied</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Sent">Sent</option>
+            </select>
+          )}
         </div>
       </div>
 

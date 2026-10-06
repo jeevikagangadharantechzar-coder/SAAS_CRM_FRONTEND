@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, RotateCcw, Trash, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRecycleBin, useRestoreDocument, usePermanentDeleteDocument } from '../../hooks/useDocumentHub';
+import ConfirmModal from './ConfirmModal';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -18,9 +19,16 @@ const RecycleBin = ({ onClose }) => {
     restoreDoc.mutate({ id: doc.id });
   };
 
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = React.useState(null);
+
   const handlePermDelete = (doc) => {
-    if(confirm("Are you sure you want to permanently delete this document? This cannot be undone.")) {
-      permDelete.mutate({ id: doc.id });
+    setConfirmDeleteDoc(doc);
+  };
+
+  const confirmPermDelete = () => {
+    if (confirmDeleteDoc) {
+      permDelete.mutate({ id: confirmDeleteDoc.id });
+      setConfirmDeleteDoc(null);
     }
   };
 
@@ -124,6 +132,16 @@ const RecycleBin = ({ onClose }) => {
           )}
         </div>
       </div>
+      
+      <ConfirmModal 
+        isOpen={!!confirmDeleteDoc}
+        onClose={() => setConfirmDeleteDoc(null)}
+        onConfirm={confirmPermDelete}
+        title="Permanently Delete Document"
+        message="Are you sure you want to permanently delete this document? This action cannot be undone."
+        confirmText="Delete Permanently"
+        isDestructive={true}
+      />
     </div>
   );
 };

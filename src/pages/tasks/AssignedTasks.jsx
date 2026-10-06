@@ -619,7 +619,7 @@ function DealLinkCard({ deal, resolvedFromLead, linkedBadgeText, hasPendingIssue
             always available regardless of whether a target is set. */}
         {!isWon && !isLost && !isLeadCompleted && taskStatus !== "Completed" && (
           <ReportBox
-            mode="task" taskId={taskId} itemType="deal" itemName={dealName}
+            mode="task" taskId={taskId} itemType="deal" itemId={deal._id} itemName={dealName}
             itemDetails={{ companyName: deal.companyName, value: deal.value, currency: deal.currency, phoneNumber: deal.phoneNumber, email: deal.email, statusLabel: stage, statusColor: STAGE_COLOR[stage] }}
             baseUrl={baseUrl} headers={headers}
             isReported={hasPendingIssue}
@@ -681,7 +681,7 @@ function LeadLinkCard({ lead, linkedBadgeText, hasPendingIssue, adminReply, base
         </div>
         {taskStatus !== "Completed" && lead.status !== "Converted" && (
           <ReportBox
-            mode="task" taskId={taskId} itemType="lead" itemName={lead.leadName}
+            mode="task" taskId={taskId} itemType="lead" itemId={lead._id} itemName={lead.leadName}
             itemDetails={{ companyName: lead.companyName, phoneNumber: lead.phoneNumber, email: lead.email, statusLabel: lead.status, statusColor: LEAD_STATUS_COLOR[lead.status] }}
             baseUrl={baseUrl} headers={headers}
             isReported={hasPendingIssue}
@@ -704,10 +704,15 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
   const leadItems = task.leadRefs?.length ? task.leadRefs : (task.leadRef ? [task.leadRef] : []);
   const primaryDealId = task.dealRef?._id || task.dealRef || null;
   const primaryLeadId = task.leadRef?._id || task.leadRef || null;
-  const hasPendingIssue = (task.reasonNotes || []).some((n) => n.status === "pending");
   
-  const latestResolvedNote = [...(task.reasonNotes || [])].reverse().find(n => n.status === "resolved" && n.adminReply);
-  const adminReply = latestResolvedNote ? latestResolvedNote.adminReply : null;
+  const getAdminReplyFor = (itemId) => {
+    const note = [...(task.reasonNotes || [])].reverse().find(n => n.status === "resolved" && n.adminReply && (!n.itemId || String(n.itemId) === String(itemId)));
+    return note ? note.adminReply : null;
+  };
+
+  const hasPendingIssueFor = (itemId) => {
+    return (task.reasonNotes || []).some(n => n.status === "pending" && (!n.itemId || String(n.itemId) === String(itemId)));
+  };
 
   if (!dealItems.length && !leadItems.length) return null;
 
@@ -722,8 +727,8 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
               deal={deal}
               linkedBadgeText={String(deal._id) === String(primaryDealId) ? linkedBadgeText : null}
               isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(deal._id)))}
-              hasPendingIssue={hasPendingIssue}
-              adminReply={adminReply}
+              hasPendingIssue={hasPendingIssueFor(deal._id)}
+              adminReply={getAdminReplyFor(deal._id)}
               baseUrl={baseUrl}
               headers={headers}
               taskId={task._id}
@@ -756,8 +761,8 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
                   resolvedFromLead
                   linkedBadgeText={linkedBadgeText}
                   isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedDeals || []).some(id => String(id) === String(resolvedFromLead._id)))}
-                  hasPendingIssue={hasPendingIssue}
-                  adminReply={adminReply}
+                  hasPendingIssue={hasPendingIssueFor(lead._id)}
+                  adminReply={getAdminReplyFor(lead._id)}
                   baseUrl={baseUrl}
                   headers={headers}
                   taskId={task._id}
@@ -772,8 +777,8 @@ function LinkedItemDetail({ task, linkedBadgeText, baseUrl, headers, onRefresh, 
                 lead={lead}
                 linkedBadgeText={isPrimary ? linkedBadgeText : null}
                 isActiveTargetLink={targets?.some(t => new Date(t.startDate) <= new Date() && new Date(t.endDate) >= new Date() && (t.linkedLeads || []).some(id => String(id) === String(lead._id)))}
-                hasPendingIssue={hasPendingIssue}
-                adminReply={adminReply}
+                hasPendingIssue={hasPendingIssueFor(lead._id)}
+                adminReply={getAdminReplyFor(lead._id)}
                 baseUrl={baseUrl}
                 headers={headers}
                 taskId={task._id}
