@@ -1011,9 +1011,9 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Table header */}
-      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.4fr_1.3fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
-        {["Task", "Priority", "Status", "Due Date", "Linked Lead/Deal", "Actions"].map((h, i) => (
-          <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i >= 1 && i <= 3 ? "text-center" : i === 5 ? "text-center" : ""}`}>{h}</div>
+      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_2fr] bg-gray-50 border-b border-gray-200 px-4 py-3">
+        {["Task", "Priority", "Status", "Due Date", "Linked Lead/Deal"].map((h, i) => (
+          <div key={i} className={`text-xs font-bold text-gray-600 uppercase tracking-wide ${i >= 1 && i <= 3 ? "text-center" : ""}`}>{h}</div>
         ))}
       </div>
 
@@ -1039,7 +1039,7 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
           <div key={task._id} className="border-b border-gray-100 last:border-0">
             {/* Summary row */}
             <div
-              className={`grid grid-cols-[2fr_1fr_1fr_1fr_1.4fr_1.3fr] px-4 py-3.5 cursor-pointer transition-colors ${isExpanded ? "bg-blue-50/50" : "hover:bg-gray-50/70"}`}
+              className={`grid grid-cols-[2fr_1fr_1fr_1fr_2fr] px-4 py-3.5 cursor-pointer transition-colors ${isExpanded ? "bg-blue-50/50" : "hover:bg-gray-50/70"}`}
               onClick={() => setExpandedId(isExpanded ? null : task._id)}
             >
               {/* Task */}
@@ -1077,22 +1077,7 @@ function AssignedTaskTableView({ tasks, onStartTask, onCompleteTask, onAddNote, 
                 {linkedBadgeText && <span className="text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full border border-orange-200 w-fit truncate max-w-full">{linkedBadgeText}</span>}
                 {!leadName && !dealName && <span className="text-xs text-gray-300">—</span>}
               </div>
-              {/* Actions */}
-              <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                {isPending && (
-                  <>
-                    <button onClick={() => onAddNote(task)} className="p-1.5 rounded-md border border-amber-200 text-amber-600 hover:bg-amber-50" title="Add a note"><MessageSquare size={12} /></button>
-                    <button onClick={() => onStartTask(task)} className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-[#008ecc] text-white hover:bg-[#0077aa] text-xs font-semibold"><ArrowRight size={11} /> Start</button>
-                  </>
-                )}
-                {isInProgress && (
-                  <>
-                    <button onClick={() => onAddNote(task)} className="p-1.5 rounded-md border border-amber-200 text-amber-600 hover:bg-amber-50" title="Add a note"><MessageSquare size={12} /></button>
-                    <button onClick={() => onCompleteTask(task)} className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 text-xs font-bold"><CheckCircle size={11} /> Done</button>
-                  </>
-                )}
-                {isCompleted && <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle size={12} /> Completed</span>}
-              </div>
+
             </div>
 
             {/* Expanded — Tracking Journey */}
