@@ -353,6 +353,16 @@ setSalesUsers(response.data.users);
       if (selectedDeal?.address) {
         setInvoiceData((prev) => ({ ...prev, billingAddress: selectedDeal.address }));
       }
+      if (selectedDeal?.items?.length > 0) {
+        setBreakdown(
+          selectedDeal.items.map((it) => ({
+            label: it.name || "Item",
+            amount: String(it.lineTotal || (Number(it.unitPrice || 0) * (Number(it.quantity) || 1))),
+            hsnSac: it.hsnSac || defaultSacCode,
+            quantity: String(it.quantity || 1),
+          }))
+        );
+      }
     }
   };
 
@@ -635,13 +645,30 @@ setSalesUsers(response.data.users);
       ...invoiceData,
       issueDate: toISO(invoiceData.issueDate),
       dueDate: toISO(invoiceData.dueDate),
-      items: [
-        {
-          deal: invoiceData.deal,
-          price: Number(invoiceData.price),
-          amount: Number(invoiceData.price),
-        },
-      ],
+      items: editingInvoice?.items?.some((it) => it.name)
+        ? editingInvoice.items
+        : selectedDealRequirement?.items?.length > 0
+        ? selectedDealRequirement.items.map((it) => ({
+            deal: invoiceData.deal,
+            price: Number(it.unitPrice || 0),
+            amount: Number(it.lineTotal || (Number(it.unitPrice || 0) * (Number(it.quantity) || 1))),
+            catalogItem: it.catalogItem?._id || it.catalogItem,
+            name: it.name,
+            sku: it.sku,
+            type: it.type,
+            quantity: Number(it.quantity || 1),
+            taxRate: Number(it.taxRate || 0),
+            discount: Number(it.discount || 0),
+            hsnSac: it.hsnSac || "",
+            billingUnit: it.billingUnit || "",
+          }))
+        : [
+            {
+              deal: invoiceData.deal,
+              price: Number(invoiceData.price),
+              amount: Number(invoiceData.price),
+            },
+          ],
       discountValue: Number(invoiceData.discountValue),
       discountType:
         invoiceData.discountType === "none"

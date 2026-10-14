@@ -33,6 +33,8 @@ import {
   Share2,
   Trash2,
   Package,
+  Layers,
+  Boxes,
 } from "lucide-react";
 
 const WhatsAppIcon = ({ size = 18, color = "#475569" }) => (
@@ -463,6 +465,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         documents: true,
         activities_list: true,
         users_roles: true,
+        products_services: true,
+        manage_catalog_categories: true,
         email_chat: true,
         whatsapp_chat: true,
         reports: true,
@@ -863,6 +867,24 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           icon={<Calendar />}
           label={t("sidebar.meetings")}
           hasPermission={(isAdmin || userPermissions.meetings) && hasPlanFeature("meetings")}
+          sidebarOpen={isOpen}
+        />
+
+        {/* Product Catalog */}
+        <SidebarItem
+          to="products-catalog"
+          icon={<Boxes />}
+          label={t("sidebar.productCatalog", "Product Catalog")}
+          hasPermission={(isAdmin || userPermissions.products_services) && hasPlanFeature("products_services")}
+          sidebarOpen={isOpen}
+        />
+
+        {/* Service Catalog */}
+        <SidebarItem
+          to="services-catalog"
+          icon={<Briefcase />}
+          label={t("sidebar.serviceCatalog", "Service Catalog")}
+          hasPermission={(isAdmin || userPermissions.products_services) && hasPlanFeature("products_services")}
           sidebarOpen={isOpen}
         />
 

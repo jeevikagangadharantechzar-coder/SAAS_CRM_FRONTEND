@@ -160,6 +160,13 @@ const SendProposal = () => {
   formData.append("emails", emailArray.join(","));
   formData.append("isDraft", isDraftMode);
 
+  const selectedDeal = deals.find((d) => d._id === selectedDealId);
+  if (selectedDeal?.items?.length > 0) {
+    formData.append("items", JSON.stringify(selectedDeal.items));
+  } else if (proposalData?.items?.length > 0) {
+    formData.append("items", JSON.stringify(proposalData.items));
+  }
+
   if (isEditing) formData.append("id", proposalData?._id);
 
   if (attachments.length > 0) {
@@ -304,6 +311,57 @@ const SendProposal = () => {
               ))}
           </select>
         </div>
+
+        {/* Agreed Products & Services Preview */}
+        {(() => {
+          const dealObj = deals.find((d) => d._id === selectedDealId);
+          const itemsToPreview = dealObj?.items?.length > 0 ? dealObj.items : proposalData?.items;
+          if (!itemsToPreview || itemsToPreview.length === 0) return null;
+
+          return (
+            <div className="mb-6 p-4 rounded-xl border border-blue-100 bg-blue-50/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Agreed Products & Services ({itemsToPreview.length})
+                </span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                  Inherited from Deal
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <tr>
+                      <th className="py-2 px-3">Item / SKU</th>
+                      <th className="py-2 px-3 text-center">Qty</th>
+                      <th className="py-2 px-3 text-right">Unit Price</th>
+                      <th className="py-2 px-3 text-center">Tax</th>
+                      <th className="py-2 px-3 text-right">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {itemsToPreview.map((it, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50">
+                        <td className="py-2 px-3">
+                          <span className="font-semibold text-slate-800 block">{it.name || "Item"}</span>
+                          <span className="text-[0.65rem] font-mono text-slate-400">{it.sku || "—"}</span>
+                        </td>
+                        <td className="py-2 px-3 text-center font-bold text-slate-800">{it.quantity || 1}</td>
+                        <td className="py-2 px-3 text-right text-slate-600">
+                          {Number(it.unitPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-3 text-center text-slate-600">{it.taxRate ? `${it.taxRate}%` : "0%"}</td>
+                        <td className="py-2 px-3 text-right font-bold text-slate-900">
+                          {Number(it.lineTotal || (it.unitPrice * (it.quantity || 1))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Customer Emails */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4">

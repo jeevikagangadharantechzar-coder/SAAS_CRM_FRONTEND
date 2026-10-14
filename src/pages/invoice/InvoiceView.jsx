@@ -345,6 +345,66 @@ const InvoiceView = () => {
                   </div>
                 )}
 
+                {invoice.items?.some((it) => it.name || it.sku) && (
+                  <div className="p-6 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
+                        <Receipt size={18} className="text-blue-600" />
+                        Products & Services Line Items
+                      </h3>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        Preserved Invoice Snapshot
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                          <tr>
+                            <th className="py-2.5 px-3">Item / SKU</th>
+                            <th className="py-2.5 px-3">Type</th>
+                            <th className="py-2.5 px-3 text-center">Qty</th>
+                            <th className="py-2.5 px-3 text-right">Unit Price ({invoice.currency})</th>
+                            <th className="py-2.5 px-3 text-center">Tax</th>
+                            <th className="py-2.5 px-3 text-right">Total ({invoice.currency})</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                          {invoice.items.map((it, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="py-2.5 px-3">
+                                <span className="font-semibold text-slate-900 block">{it.name || "Item"}</span>
+                                <span className="text-[0.65rem] font-mono text-slate-400">
+                                  {it.sku || "—"} {it.hsnSac ? `• HSN/SAC: ${it.hsnSac}` : ""}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-semibold ${
+                                  it.type === "Service" ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
+                                }`}>
+                                  {it.type || "Product"}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-center font-bold text-slate-800">
+                                {it.quantity || 1} {it.billingUnit ? `(${it.billingUnit})` : ""}
+                              </td>
+                              <td className="py-2.5 px-3 text-right text-slate-600">
+                                {Number(it.price || it.unitPrice || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2.5 px-3 text-center text-slate-600">
+                                {it.taxRate ? `${it.taxRate}%` : "0%"}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                                {Number(it.amount || (Number(it.price || 0) * (Number(it.quantity) || 1))).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                 {invoice.customFields?.length > 0 && (
                   <div className="p-6 border-t border-slate-100">
                     <h3 className="text-slate-700 mb-3">

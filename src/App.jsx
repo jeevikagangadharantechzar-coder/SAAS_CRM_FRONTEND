@@ -77,6 +77,7 @@ import AllStreakLeaderboard from "./pages/streak/AllStreakLeaderboard";
 
 import { Meetings } from "./pages/meetings/Meetings";
 import AssetsManagement from "./pages/assets/AssetsManagement";
+import CatalogManagement from "./pages/catalog/CatalogManagement";
 import GoogleIntegration from "./pages/settings/GoogleIntegration";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Support from "./pages/support/UserSupportView";
@@ -385,6 +386,13 @@ function App() {
                       {/* MEETINGS */}
                       <Route element={<PrivateRoute permission="meetings" planFeature="meetings" />}>
                         <Route path="meetings" element={<Meetings />} />
+                      </Route>
+
+                      {/* PRODUCTS & SERVICES CATALOG (Unified, Product-only, Service-only) */}
+                      <Route element={<PrivateRoute permission="products_services" planFeature="products_services" />}>
+                        <Route path="catalog" element={<CatalogManagement mode="all" />} />
+                        <Route path="products-catalog" element={<CatalogManagement mode="product" />} />
+                        <Route path="services-catalog" element={<CatalogManagement mode="service" />} />
                       </Route>
 
                       {/* ASSETS MANAGEMENT */}

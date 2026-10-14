@@ -48,6 +48,7 @@ import {
   AlertTriangle,
   UserCheck,
   LocateFixed,
+  Package,
 } from "lucide-react";
 import {
   BarChart,
@@ -4190,6 +4191,68 @@ function Pipeline_modal_view() {
                                 </div>
                               </div>
                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {deal.items?.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-slate-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                              <Package size={16} className="text-blue-600" />
+                              Products & Services ({deal.items.length})
+                            </h3>
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                              Agreed Catalog Items
+                            </span>
+                          </div>
+
+                          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                                <tr>
+                                  <th className="py-2.5 px-3">Item / SKU</th>
+                                  <th className="py-2.5 px-3">Type</th>
+                                  <th className="py-2.5 px-3 text-center">Qty</th>
+                                  <th className="py-2.5 px-3 text-right">Unit Price</th>
+                                  <th className="py-2.5 px-3 text-center">Tax</th>
+                                  <th className="py-2.5 px-3 text-right">Line Total</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {deal.items.map((it, idx) => (
+                                  <tr key={idx} className="hover:bg-slate-50/50">
+                                    <td className="py-2.5 px-3">
+                                      <span className="font-semibold text-slate-800 block">
+                                        {it.name || it.catalogItem?.name || "Item"}
+                                      </span>
+                                      <span className="text-[0.65rem] font-mono text-slate-400">
+                                        {it.sku || it.catalogItem?.sku || "—"}
+                                      </span>
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-semibold ${
+                                        it.type === "Service" ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
+                                      }`}>
+                                        {it.type || "Product"}
+                                      </span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-center font-bold text-slate-800">
+                                      {it.quantity || 1}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right text-slate-600">
+                                      {Number(it.unitPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-center text-slate-600">
+                                      {it.taxRate ? `${it.taxRate}%` : "0%"}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                                      {Number(it.lineTotal || (it.unitPrice * (it.quantity || 1))).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       )}

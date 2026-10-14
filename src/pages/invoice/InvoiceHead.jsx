@@ -276,7 +276,8 @@ const InvoiceHead = () => {
     } catch (error) {
       setEmailStatus("error");
       setEmailMessage(" Failed to send email. Please try again.");
-      toast.error("Failed to send invoice email.");
+      const serverErr = error.response?.data?.details || error.response?.data?.error || "Failed to send invoice email.";
+      toast.error(serverErr);
       console.error("Error sending invoice:", error);
     } finally {
       setSendingEmailId(null);

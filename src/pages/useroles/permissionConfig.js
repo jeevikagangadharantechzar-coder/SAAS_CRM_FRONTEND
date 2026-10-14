@@ -96,6 +96,14 @@ export const permissionGroups = [
     ],
   },
   {
+    title: "Products & Services",
+    theme: "purple",
+    permissions: [
+      { key: "products_services", label: "Products & Services", icon: Tag },
+      { key: "manage_catalog_categories", label: "Manage Categories", icon: Shield },
+    ],
+  },
+  {
     title: "Assets",
     theme: "orange",
     permissions: [
@@ -119,6 +127,7 @@ const DEFAULT_TRUE_KEYS = new Set([
   "messages",
   "schedule_view",
   "documents",
+  "products_services",
 ]);
 
 export const DEFAULT_PERMISSIONS = permissionGroups.reduce((acc, group) => {

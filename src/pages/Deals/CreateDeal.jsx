@@ -31,6 +31,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import useLostDealModal from "../LostDealModal/LossDeal";
 import ReassignmentModal from "../components/ReassignmentModal";
+import DealProductsSection from "./DealProductsSection";
 
 const STANDARD_INDUSTRIES = [
   "IT",
@@ -238,6 +239,7 @@ export default function CreateDeal() {
   // Live "already exists" hints — { exists: true, dealName } | { exists: false } | undefined
   const [duplicateHints, setDuplicateHints] = useState({});
   const [salesUsers, setSalesUsers] = useState([]);
+  const [dealItems, setDealItems] = useState([]);
   // existingAttachments stores normalised { filePath, fileName } objects
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -383,6 +385,28 @@ export default function CreateDeal() {
           value: f.value || "",
         }))
       );
+
+      // Restore saved Products & Services catalog snapshot
+      if (existingDeal.items && existingDeal.items.length > 0) {
+        setDealItems(
+          existingDeal.items.map((it) => ({
+            catalogItem: it.catalogItem?._id || it.catalogItem || it._id,
+            name: it.name || it.catalogItem?.name || "",
+            sku: it.sku || it.catalogItem?.sku || "",
+            type: it.type || it.catalogItem?.type || "Product",
+            unitPrice: it.unitPrice !== undefined ? it.unitPrice : (it.catalogItem?.unitPrice || 0),
+            quantity: it.quantity || 1,
+            taxRate: it.taxRate !== undefined ? it.taxRate : (it.catalogItem?.taxRate || 0),
+            discount: it.discount || 0,
+            billingUnit: it.billingUnit || it.catalogItem?.billingUnit || "unit",
+            hsnSac: it.hsnSac || it.catalogItem?.hsnSac || "",
+            categoryName: it.categoryName || it.catalogItem?.category?.name || "",
+            isNewSelection: false,
+          }))
+        );
+      } else {
+        setDealItems([]);
+      }
     }
   }, [isEditMode, existingDeal]);
 
@@ -440,6 +464,19 @@ export default function CreateDeal() {
     }
 
     setFormData((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleDealItemsTotalChange = useCallback((calculatedTotal) => {
+    setFormData((prev) => {
+      if (String(prev.dealValue) === String(calculatedTotal)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        dealValue: calculatedTotal,
+      };
+    });
+    setErrors((prev) => (prev.dealValue ? { ...prev, dealValue: false } : prev));
   }, []);
 
   // Live "this email/phone is already used by another deal" hint — same
@@ -753,6 +790,26 @@ export default function CreateDeal() {
           }))
         )
       );
+
+      // Append Products & Services items snapshot
+      if (dealItems.length > 0) {
+        const formattedItems = dealItems.map((item) => ({
+          catalogItem: item.catalogItem,
+          name: item.name,
+          sku: item.sku,
+          type: item.type,
+          unitPrice: Number(item.unitPrice),
+          quantity: Number(item.quantity),
+          taxRate: Number(item.taxRate || 0),
+          discount: Number(item.discount || 0),
+          billingUnit: item.billingUnit,
+          hsnSac: item.hsnSac,
+          isNewSelection: !!item.isNewSelection,
+        }));
+        data.append("items", JSON.stringify(formattedItems));
+      } else if (isEditMode) {
+        data.append("items", JSON.stringify([]));
+      }
 
       let response;
       if (isEditMode && existingDeal) {
@@ -1579,6 +1636,14 @@ export default function CreateDeal() {
 
             {renderCustomFieldDraftPanel("Deal Information")}
           </div>
+
+          {/* Products & Services Section */}
+          <DealProductsSection
+            items={dealItems}
+            setItems={setDealItems}
+            currency={formData.currency}
+            onTotalChange={handleDealItemsTotalChange}
+          />
 
           {/* Location Section */}
           <div className="p-4 md:p-6 border border-gray-200 rounded-xl shadow-sm">
