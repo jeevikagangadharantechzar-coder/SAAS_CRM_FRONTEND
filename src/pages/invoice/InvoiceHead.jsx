@@ -210,7 +210,7 @@ const InvoiceHead = () => {
   // ─── Summary stats computed from statsInvoices (all statuses) ─────────────
   useEffect(() => {
     let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0;
-    let totalAmount = 0, paidAmount = 0, unpaidAmount = 0, partiallyPaidAmount = 0;
+    let totalAmount = 0, paidAmount = 0, unpaidAmount = 0, partiallyPaidAmount = 0, partiallyPaidDueAmount = 0;
 
     statsInvoices.forEach((inv) => {
       total++;
@@ -225,13 +225,15 @@ const InvoiceHead = () => {
         unpaidAmount += amount;
       } else if (inv.status === "partially_paid") {
         partiallyPaid++;
-        partiallyPaidAmount += amount;
+        const paidSoFar = Number(inv.amountPaid) || 0;
+        partiallyPaidAmount += paidSoFar;
+        partiallyPaidDueAmount += Math.max(amount - paidSoFar, 0);
       }
     });
 
     setSummaryStats({
       total, paid, unpaid, partiallyPaid,
-      totalAmount, paidAmount, unpaidAmount, partiallyPaidAmount,
+      totalAmount, paidAmount, unpaidAmount, partiallyPaidAmount, partiallyPaidDueAmount,
     });
   }, [statsInvoices]);
 
@@ -704,12 +706,12 @@ const InvoiceHead = () => {
 
   // ─── Preferred currency totals computed from statsInvoices ──────────────────
   const [preferredTotals, setPreferredTotals] = useState({
-    total: 0, paid: 0, unpaid: 0, partiallyPaid: 0,
+    total: 0, paid: 0, unpaid: 0, partiallyPaid: 0, partiallyPaidDue: 0,
   });
 
   useEffect(() => {
     const calculatePreferredTotals = async () => {
-      let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0;
+      let total = 0, paid = 0, unpaid = 0, partiallyPaid = 0, partiallyPaidDue = 0;
 
       for (const inv of statsInvoices) {
         const amount = Number(inv.total) || 0;
@@ -738,14 +740,24 @@ const InvoiceHead = () => {
           convertedCollected = inv.preferredCurrencyValue;
         }
 
+        // Frozen total preferred value if exists
+        if (inv.totalPreferredCurrencyValue != null && inv.preferredCurrency === userCurrency) {
+          convertedTotal = inv.totalPreferredCurrencyValue;
+        }
+
         total += convertedTotal;
 
-        if (inv.status === "paid") paid += convertedCollected;
-        else if (inv.status === "unpaid") unpaid += convertedTotal;
-        else if (inv.status === "partially_paid") partiallyPaid += convertedCollected;
+        if (inv.status === "paid") {
+          paid += convertedCollected;
+        } else if (inv.status === "unpaid") {
+          unpaid += convertedTotal;
+        } else if (inv.status === "partially_paid") {
+          partiallyPaid += convertedCollected;
+          partiallyPaidDue += Math.max(convertedTotal - convertedCollected, 0);
+        }
       }
 
-      setPreferredTotals({ total, paid, unpaid, partiallyPaid });
+      setPreferredTotals({ total, paid, unpaid, partiallyPaid, partiallyPaidDue });
     };
 
     calculatePreferredTotals();
@@ -953,8 +965,16 @@ const InvoiceHead = () => {
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-gray-500 mb-1">Partially Paid Value ({userCurrency})</span>
-            <span className="text-xl font-bold text-purple-600">{currencySymbol} {formatPreferred(preferredTotals.partiallyPaid)}</span>
+            <span className="text-xs text-gray-500 mb-1">Collected Value ({userCurrency})</span>
+            <span className="text-xl font-bold text-purple-600">
+              {currencySymbol} {formatPreferred(preferredTotals.partiallyPaid)}
+            </span>
+            <div className="mt-2 pt-2 border-t border-purple-200/60 flex items-center justify-between text-xs">
+              <span className="text-purple-700 font-medium">Due:</span>
+              <span className="font-semibold text-red-600">
+                {currencySymbol} {formatPreferred(preferredTotals.partiallyPaidDue || 0)}
+              </span>
+            </div>
           </div>
         </div>
 
