@@ -135,12 +135,19 @@ const DocumentHub = () => {
           <DealsDocument searchTerm={searchTerm} assignments={data?.data || []} recycleAssignments={recycleData || []} onQuickAssign={setQuickAssignDoc} />
         ) : (
           <DocumentTable 
-            documents={data?.data || []}
+            documents={
+              activeTab === "Assigned Documents"
+                ? (data?.data || []).filter(doc => !(doc.sourceType === "External" && (!doc.assignedTo || doc.status === "Not Assigned" || doc.assignedTo?._id === doc.uploadedBy?._id || doc.assignedTo === doc.uploadedBy)))
+                : (data?.data || [])
+            }
             pagination={data?.pagination}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             itemsPerPage={itemsPerPage}
             setItemsPerPage={setItemsPerPage}
+            isAdmin={isAdmin}
+            onQuickAssign={setQuickAssignDoc}
+            activeTab={activeTab}
           />
         )}
       </div>

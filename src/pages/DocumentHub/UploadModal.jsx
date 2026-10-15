@@ -1,35 +1,41 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { X, UploadCloud } from 'lucide-react';
 import { useUploadExternalDocument } from '../../hooks/useDocumentHub';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
-
 
 const UploadModal = ({ onClose }) => {
   const [file, setFile] = useState(null);
   const [name, setName] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
 
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user?.role?.name === 'Admin';
+
   const uploadMutation = useUploadExternalDocument();
 
-  // Fetch users for assignment dropdown
+  // Fetch users for assignment dropdown only if Admin
   const { data: usersData } = useQuery({
     queryKey: ["users-dropdown"],
     queryFn: async () => {
       const response = await api.get("/users");
-      // Adjust according to standard users response
       return response.data?.users || response.data || [];
-    }
+    },
+    enabled: isAdmin
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!file || !name || !assignedTo) return;
+    if (!file || !name) return;
+    if (isAdmin && !assignedTo) return;
 
     const formData = new FormData();
     formData.append("document", file);
     formData.append("name", name);
-    formData.append("assignedTo", assignedTo);
+    if (isAdmin && assignedTo) {
+      formData.append("assignedTo", assignedTo);
+    }
 
     uploadMutation.mutate({ formData }, {
       onSuccess: () => {
@@ -63,22 +69,24 @@ const UploadModal = ({ onClose }) => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assign Reviewer</label>
-            <select 
-              required
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md bg-transparent outline-none focus:border-blue-500 dark:text-white"
-            >
-              <option value="" disabled>Select User</option>
-              {Array.isArray(usersData) && usersData.map(user => (
-                <option key={user._id} value={user._id}>
-                  {user.firstName} {user.lastName} ({user.email})
-                </option>
-              ))}
-            </select>
-          </div>
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assign Reviewer</label>
+              <select 
+                required
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md bg-transparent outline-none focus:border-blue-500 dark:text-white"
+              >
+                <option value="" disabled>Select User</option>
+                {Array.isArray(usersData) && usersData.map(user => (
+                  <option key={user._id} value={user._id}>
+                    {user.firstName} {user.lastName} ({user.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">File</label>

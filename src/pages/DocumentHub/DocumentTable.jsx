@@ -11,6 +11,7 @@ const getFileIcon = (type) => {
 
 const getStatusColor = (status) => {
   switch (status) {
+    case 'Not Assigned': return 'bg-amber-100 text-amber-700 border border-amber-200';
     case 'Assigned': return 'bg-blue-100 text-blue-700';
     case 'Viewed': return 'bg-indigo-100 text-indigo-700';
     case 'Replied': return 'bg-purple-100 text-purple-700';
@@ -20,7 +21,7 @@ const getStatusColor = (status) => {
   }
 };
 
-const DocumentTable = ({ documents, onQuickAssign, isAdmin, pagination, currentPage = 1, setCurrentPage, itemsPerPage = 10, setItemsPerPage }) => {
+const DocumentTable = ({ documents, onQuickAssign, isAdmin, pagination, currentPage = 1, setCurrentPage, itemsPerPage = 10, setItemsPerPage, activeTab }) => {
   const [selectedDoc, setSelectedDoc] = useState(null);
 
   if (!documents || documents.length === 0) {
@@ -70,21 +71,34 @@ const DocumentTable = ({ documents, onQuickAssign, isAdmin, pagination, currentP
                   </div>
                 </td>
                 <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                  {/* Need assignedTo population to show names, assuming it's populated or id is shown. The controller isn't populating assignTo fully for all, but for External it is. */}
-                  {doc.assignedTo?.firstName ? `${doc.assignedTo.firstName} ${doc.assignedTo.lastName}` : 'Assigned Salesman'}
+                  {(() => {
+                    const isUnassignedExternal = doc.sourceType === 'External' && (doc.status === 'Not Assigned' || doc.assignedTo?._id === doc.uploadedBy?._id || doc.assignedTo === doc.uploadedBy);
+                    if (isUnassignedExternal) {
+                      return <span className="text-slate-400 italic">Not Assigned</span>;
+                    }
+                    return doc.assignedTo?.firstName ? `${doc.assignedTo.firstName} ${doc.assignedTo.lastName}` : (doc.status === 'Not Assigned' ? <span className="text-slate-400 italic">Not Assigned</span> : 'Assigned Salesman');
+                  })()}
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
-                    {doc.status}
-                  </span>
-                  {isAdmin && doc.status === 'Not Assigned' && onQuickAssign && (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onQuickAssign(doc); }}
-                      className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded text-xs transition"
-                    >
-                      Assign
-                    </button>
-                  )}
+                  {(() => {
+                    const isUnassignedExternal = doc.sourceType === 'External' && (doc.status === 'Not Assigned' || doc.assignedTo?._id === doc.uploadedBy?._id || doc.assignedTo === doc.uploadedBy);
+                    const displayStatus = isUnassignedExternal ? 'Not Assigned' : doc.status;
+                    return (
+                      <div className="flex items-center">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(displayStatus)}`}>
+                          {displayStatus}
+                        </span>
+                        {isAdmin && isUnassignedExternal && onQuickAssign && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onQuickAssign(doc); }}
+                            className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded text-xs transition"
+                          >
+                            Assign
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4 text-slate-500">
                   {dayjs(doc.updatedAt).format('MMM D, YYYY')}
