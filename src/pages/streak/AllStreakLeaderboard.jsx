@@ -161,7 +161,7 @@ const AllStreakLeaderboard = () => {
 
   /* ── UPDATED: clearFilter resets month too ──────────────────────────── */
   const clearFilter = () => {
-    if (filterMode === "single") setSelectedDate(getTodayDate());
+    if (filterMode === "single") setSelectedDate("");
     if (filterMode === "range") { setRangeStart(""); setRangeEnd(""); }
     if (filterMode === "alltime") setSelectedMonth("");
   };
@@ -476,6 +476,16 @@ const AllStreakLeaderboard = () => {
                       onKeyDown={(e) => e.preventDefault()}   // 🚫 prevents typing
                       className="bg-transparent border-none focus:outline-none text-gray-700 text-sm w-full cursor-pointer"
                     />
+                    {selectedDate && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDate("")}
+                        className="text-gray-400 hover:text-gray-600 font-bold px-1 text-sm leading-none"
+                        title="Clear date"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 )}
 
