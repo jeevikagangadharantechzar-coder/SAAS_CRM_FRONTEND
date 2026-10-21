@@ -169,6 +169,7 @@ const DocumentDrawer = ({ doc, onClose }) => {
                   <span className={`px-2 py-1 rounded text-xs font-medium border ${
                     doc.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
                     doc.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                    doc.status === 'Not Assigned' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                     'bg-blue-50 text-blue-700 border-blue-200'
                   }`}>
                     {doc.status}
