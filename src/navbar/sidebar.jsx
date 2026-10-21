@@ -590,7 +590,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               isOpen ? "h-16" : "h-7"
             }`}
             onError={(e) => {
-              e.target.src = "https://tzicrm.com/images/TZI-Logo.svg";
+              e.target.onerror = null;
+              e.target.src = "/images/TZI_Logo-04_-_Copy-removebg-preview.png";
             }}
           />
         </NavLink>
