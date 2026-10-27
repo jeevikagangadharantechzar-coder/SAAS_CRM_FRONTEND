@@ -29,7 +29,8 @@ const CatalogManagement = ({ mode = "all" }) => {
   }, []);
 
   const isAdmin = userRole.toLowerCase() === "admin";
-  const canManageItems = isAdmin || userPermissions.products_services === true;
+  // products_services only grants viewing; create/edit/toggle/delete are adminOnly on the backend (catalog.routes.js)
+  const canManageItems = isAdmin;
   const canManageCategories = isAdmin || userPermissions.manage_catalog_categories === true;
 
   const fetchCategories = useCallback(async () => {
@@ -260,6 +261,7 @@ const CatalogManagement = ({ mode = "all" }) => {
       {/* Main Content Area */}
       {activeTab === "items" ? (
         <CatalogItemsTab
+          key={isProductOnly ? "Product" : isServiceOnly ? "Service" : "all"}
           categories={categories}
           canManage={canManageItems}
           initialType={isProductOnly ? "Product" : isServiceOnly ? "Service" : ""}

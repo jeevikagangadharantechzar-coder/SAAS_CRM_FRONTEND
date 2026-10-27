@@ -234,7 +234,10 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
     setFormData((prev) => ({
       ...prev,
       parentProduct: productId,
-      category: selectedProd?.category?._id || selectedProd?.category || prev.category,
+      // Switching back to Standalone clears the category inherited from the product
+      category: productId
+        ? selectedProd?.category?._id || selectedProd?.category || prev.category
+        : "",
       currency: selectedProd?.currency || prev.currency,
       taxRate: selectedProd?.taxRate !== undefined ? selectedProd.taxRate : prev.taxRate,
       billingUnit: prev.billingUnit === "unit" ? "year" : prev.billingUnit,
@@ -253,12 +256,8 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
     if (formData.type === "Product") {
       if (!formData.sku.trim()) newErrors.sku = "Product SKU / Code is required";
       if (!formData.category) newErrors.category = "Category is required";
-    } else {
-      // For Service: If not linked to a parent product, category is required
-      if (!formData.parentProduct && !formData.category) {
-        newErrors.category = "Please select a Category for this standalone service";
-      }
     }
+    // Service category is optional (linked services inherit it from the product)
 
     if (formData.unitPrice === "" || isNaN(Number(formData.unitPrice)) || Number(formData.unitPrice) < 0) {
       newErrors.unitPrice = "Please enter a valid price";
@@ -284,7 +283,13 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
           ? formData.sku.trim().toUpperCase() 
           : (formData.sku.trim() || undefined),
         type: formData.type,
-        category: formData.category || (selectedParent?.category?._id || selectedParent?.category || undefined),
+        // Standalone service with no category sends null so an existing category gets cleared
+        category: formData.category
+          || (selectedParent?.category?._id || selectedParent?.category
+            || (formData.type === "Service" && !formData.parentProduct ? null : undefined)),
+        ...(formData.type === "Service" && !formData.parentProduct && !formData.category
+          ? { categoryName: "" }
+          : {}),
         description: formData.description.trim(),
         unitPrice: Number(formData.unitPrice),
         currency: formData.currency || selectedParent?.currency || "INR",
@@ -381,10 +386,10 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-150 w-full max-w-2xl my-auto max-h-[92vh] flex flex-col overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-150 w-full max-w-2xl lg:max-w-3xl my-auto max-h-[96dvh] sm:max-h-[92vh] flex flex-col overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 ${
               formData.type === "Service" ? "bg-purple-50 border border-purple-100 text-purple-600" : "bg-blue-50 border border-blue-100 text-blue-600"
             }`}>
@@ -412,7 +417,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="px-4 pt-4 sm:px-6 sm:pt-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Top Toggle: Product vs Service */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -440,8 +445,10 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <Wrench size={15} />
-                Service (AMC / Installation / Support)
+                <Wrench size={15} className="shrink-0" />
+                <span className="truncate">
+                  Service<span className="hidden sm:inline"> (AMC / Installation / Support)</span>
+                </span>
               </button>
             </div>
           </div>
@@ -453,7 +460,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
             <div className="space-y-4">
               {/* 1. SELECT LINKED PRODUCT OR STANDALONE */}
               <div className="p-3.5 sm:p-4 rounded-2xl border-2 border-purple-200 bg-purple-50/40 space-y-2.5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
                     <Link2 size={16} className="text-purple-600" />
                     Linked Product <span className="text-[11px] font-normal text-purple-600">(Optional)</span>
@@ -479,15 +486,15 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
 
                 {/* Linked Product Preview Banner */}
                 {selectedParentProduct ? (
-                  <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-purple-200/80 text-xs text-slate-700">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 p-2.5 bg-white rounded-xl border border-purple-200/80 text-xs text-slate-700">
+                    <div className="flex items-start sm:items-center gap-2 min-w-0 break-words">
                       <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
                       <span>
                         Auto-linked to: <strong className="text-slate-900">{selectedParentProduct.name}</strong> 
                         {selectedParentProduct.categoryName ? ` • Category: ${selectedParentProduct.categoryName}` : ""}
                       </span>
                     </div>
-                    <span className="font-semibold text-purple-700 shrink-0">
+                    <span className="font-semibold text-purple-700 shrink-0 pl-6 sm:pl-0">
                       Currency: {selectedParentProduct.currency || "INR"}
                     </span>
                   </div>
@@ -495,7 +502,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                   /* Standalone: Let user pick category directly */
                   <div className="pt-2 border-t border-purple-200/70">
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Service Category <span className="text-rose-500">*</span>
+                      Service Category <span className="text-[11px] font-normal text-purple-600 normal-case tracking-normal">(Optional)</span>
                     </label>
                     <select
                       name="category"
@@ -507,7 +514,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                           : "border-slate-200 focus:border-purple-500 focus:ring-purple-100"
                       }`}
                     >
-                      <option value="">-- Select Service Category --</option>
+                      <option value="">-- No Category / Other --</option>
                       {categories.map((cat) => (
                         <option key={cat._id} value={cat._id}>
                           {cat.icon ? `${cat.icon} ` : ""}{cat.name}
@@ -560,13 +567,25 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
               </div>
 
               {/* 3. SERVICE PRICING & BILLING UNIT */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Service Price <span className="text-rose-500">*</span>
                   </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-sm font-semibold text-slate-500 select-none min-w-[18px] text-center">{currentSymbol}</span>
+                  {/* Symbol is a prefix box so multi-letter symbols (AED, Mex$) don't overlap the value */}
+                  <div
+                    className={`flex items-stretch w-full rounded-xl border bg-slate-50/50 overflow-hidden focus-within:bg-white focus-within:ring-2 transition-all ${
+                      errors.unitPrice
+                        ? "border-rose-300 focus-within:ring-rose-200"
+                        : "border-slate-200 focus-within:border-purple-500 focus-within:ring-purple-100"
+                    }`}
+                  >
+                    <span
+                      className="flex items-center px-3 text-sm font-semibold text-slate-500 bg-slate-100/80 border-r border-slate-200 select-none shrink-0 whitespace-nowrap"
+                      title={formData.currency}
+                    >
+                      {currentSymbol}
+                    </span>
                     <input
                       type="number"
                       step="any"
@@ -575,11 +594,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                       value={formData.unitPrice}
                       onChange={handleChange}
                       placeholder="e.g. 5000"
-                      className={`w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 transition-all ${
-                        errors.unitPrice
-                          ? "border-rose-300 focus:ring-rose-200"
-                          : "border-slate-200 focus:border-purple-500 focus:ring-purple-100"
-                      }`}
+                      className="flex-1 min-w-0 px-3 py-2 text-sm bg-transparent focus:outline-none"
                     />
                   </div>
                   {errors.unitPrice && <p className="text-xs text-rose-500 mt-1">{errors.unitPrice}</p>}
@@ -603,7 +618,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                   </select>
                 </div>
 
-                <div>
+                <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Tax Rate (%)
                   </label>
@@ -631,7 +646,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                   Service Delivery & Terms
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Delivery Mode
@@ -663,7 +678,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                     />
                   </div>
 
-                  <div>
+                  <div className="sm:col-span-2 lg:col-span-1">
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Coverage Duration
                     </label>
@@ -777,13 +792,25 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
               </div>
 
               {/* Pricing & Currency */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Unit Price <span className="text-rose-500">*</span>
                   </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-sm font-semibold text-slate-500 select-none min-w-[18px] text-center">{currentSymbol}</span>
+                  {/* Symbol is a prefix box so multi-letter symbols (AED, Mex$) don't overlap the value */}
+                  <div
+                    className={`flex items-stretch w-full rounded-xl border bg-slate-50/50 overflow-hidden focus-within:bg-white focus-within:ring-2 transition-all ${
+                      errors.unitPrice
+                        ? "border-rose-300 focus-within:ring-rose-200"
+                        : "border-slate-200 focus-within:border-blue-500 focus-within:ring-blue-100"
+                    }`}
+                  >
+                    <span
+                      className="flex items-center px-3 text-sm font-semibold text-slate-500 bg-slate-100/80 border-r border-slate-200 select-none shrink-0 whitespace-nowrap"
+                      title={formData.currency}
+                    >
+                      {currentSymbol}
+                    </span>
                     <input
                       type="number"
                       step="any"
@@ -792,11 +819,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                       value={formData.unitPrice}
                       onChange={handleChange}
                       placeholder="0.00"
-                      className={`w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 transition-all ${
-                        errors.unitPrice
-                          ? "border-rose-300 focus:ring-rose-200"
-                          : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                      }`}
+                      className="flex-1 min-w-0 px-3 py-2 text-sm bg-transparent focus:outline-none"
                     />
                   </div>
                   {errors.unitPrice && <p className="text-xs text-rose-500 mt-1">{errors.unitPrice}</p>}
@@ -820,7 +843,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                   </select>
                 </div>
 
-                <div>
+                <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Billing Unit
                   </label>
@@ -920,7 +943,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
 
           {/* DYNAMIC CUSTOM EXTRA FIELDS SECTION */}
           <div className="pt-2 border-t border-slate-200/80">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <span className="text-[0.7rem] font-bold text-slate-600 uppercase tracking-wider">
                 Additional Custom Attributes
               </span>
@@ -942,7 +965,7 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                     key={field.id || idx}
                     className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 text-xs"
                   >
-                    <span className="font-semibold text-slate-700 min-w-[120px] truncate">
+                    <span className="font-semibold text-slate-700 shrink-0 max-w-[40%] sm:max-w-none sm:min-w-[120px] truncate" title={field.fieldName}>
                       {field.fieldName}:
                     </span>
                     <input
@@ -950,12 +973,12 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
                       value={field.fieldValue || ""}
                       onChange={(e) => handleCustomFieldValueChange(idx, e.target.value)}
                       placeholder="Value..."
-                      className="flex-1 px-2.5 py-1 text-xs rounded border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 min-w-0 px-2.5 py-1 text-xs rounded border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemoveCustomField(idx)}
-                      className="text-slate-400 hover:text-rose-600 transition px-1"
+                      className="text-slate-400 hover:text-rose-600 transition px-1.5 text-base leading-none shrink-0"
                       title="Remove attribute"
                     >
                       ×
@@ -1004,8 +1027,8 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
           </div>
 
           {/* Status */}
-          <div className="flex items-center gap-3 pt-1">
-            <label className="relative inline-flex items-center cursor-pointer">
+          <div className="flex items-start sm:items-center gap-3 pt-1">
+            <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5 sm:mt-0">
               <input
                 type="checkbox"
                 name="isActive"
@@ -1021,19 +1044,20 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          {/* Sticky so the actions stay visible while the form scrolls */}
+          <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 sm:py-4 bg-white flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2 text-sm font-medium text-white rounded-xl shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              className={`w-full sm:w-auto px-6 py-2 text-sm font-medium text-white rounded-xl shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                 formData.type === "Service" ? "bg-purple-600 hover:bg-purple-700" : "bg-blue-600 hover:bg-blue-700"
               }`}
             >

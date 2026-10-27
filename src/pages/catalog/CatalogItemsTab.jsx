@@ -49,44 +49,46 @@ const CatalogItemsTab = ({
   const [typeFilter, setTypeFilter] = useState(initialType || "");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [parentProductFilter, setParentProductFilter] = useState("");
+  // Date filter is stored per module so Products and Services don't share it
+  const storageKey = (name) => `catalog_${initialType || "all"}_${name}`;
   // Date mode: "range" or "single"
   const [dateMode, setDateMode] = useState(() => {
-    return sessionStorage.getItem("catalog_dateMode") || "range";
+    return sessionStorage.getItem(storageKey("dateMode")) || "range";
   });
   const [startDate, setStartDate] = useState(() => {
-    return sessionStorage.getItem("catalog_startDate") || "";
+    return sessionStorage.getItem(storageKey("startDate")) || "";
   });
   const [endDate, setEndDate] = useState(() => {
-    return sessionStorage.getItem("catalog_endDate") || "";
+    return sessionStorage.getItem(storageKey("endDate")) || "";
   });
   const [singleDate, setSingleDate] = useState(() => {
-    return sessionStorage.getItem("catalog_singleDate") || "";
+    return sessionStorage.getItem(storageKey("singleDate")) || "";
   });
   const [sortField, setSortField] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
 
-  // Keep date filter synchronized across Products & Services pages
   const updateStartDate = (val) => {
     setStartDate(val);
-    if (val) sessionStorage.setItem("catalog_startDate", val);
-    else sessionStorage.removeItem("catalog_startDate");
+    if (val) sessionStorage.setItem(storageKey("startDate"), val);
+    else sessionStorage.removeItem(storageKey("startDate"));
   };
 
   const updateEndDate = (val) => {
     setEndDate(val);
-    if (val) sessionStorage.setItem("catalog_endDate", val);
-    else sessionStorage.removeItem("catalog_endDate");
+    if (val) sessionStorage.setItem(storageKey("endDate"), val);
+    else sessionStorage.removeItem(storageKey("endDate"));
   };
 
   const updateSingleDate = (val) => {
     setSingleDate(val);
     if (val) {
-      sessionStorage.setItem("catalog_singleDate", val);
+      sessionStorage.setItem(storageKey("singleDate"), val);
       // In single date mode, query range is from start of that date to end of that date
       updateStartDate(val);
       updateEndDate(val);
     } else {
-      sessionStorage.removeItem("catalog_singleDate");
+      sessionStorage.removeItem(storageKey("singleDate"));
       updateStartDate("");
       updateEndDate("");
     }
@@ -94,7 +96,7 @@ const CatalogItemsTab = ({
 
   const updateDateMode = (mode) => {
     setDateMode(mode);
-    sessionStorage.setItem("catalog_dateMode", mode);
+    sessionStorage.setItem(storageKey("dateMode"), mode);
     if (mode === "single") {
       if (startDate) {
         updateSingleDate(startDate);
@@ -144,6 +146,7 @@ const CatalogItemsTab = ({
       if (typeFilter) params.type = typeFilter;
       if (categoryFilter) params.category = categoryFilter;
       if (statusFilter !== "") params.isActive = statusFilter === "active";
+      if (parentProductFilter) params.parentProduct = parentProductFilter;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
@@ -161,7 +164,7 @@ const CatalogItemsTab = ({
     } finally {
       setLoading(false);
     }
-  }, [page, search, typeFilter, categoryFilter, statusFilter, startDate, endDate, sortField, sortOrder, onStatsUpdate]);
+  }, [page, search, typeFilter, categoryFilter, statusFilter, parentProductFilter, startDate, endDate, sortField, sortOrder, onStatsUpdate]);
 
   useEffect(() => {
     fetchItems();
@@ -208,7 +211,9 @@ const CatalogItemsTab = ({
 
   const handleQuickDatePreset = (preset) => {
     const today = new Date();
-    const formatDate = (d) => d.toISOString().split("T")[0];
+    // Local date parts, not toISOString() — that converts to UTC and shifts IST dates back a day
+    const formatDate = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
     if (preset === "today") {
       const dStr = formatDate(today);
@@ -320,6 +325,36 @@ const CatalogItemsTab = ({
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
+
+          {/* Service Linkage Filter (Shown for Services mode) */}
+          {(typeFilter === "Service" || initialType === "Service") && (
+            <select
+              value={parentProductFilter}
+              onChange={(e) => {
+                setParentProductFilter(e.target.value);
+                setPage(1);
+              }}
+              className="flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-xl border border-purple-200 bg-purple-50/50 text-purple-700 hover:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-100 cursor-pointer min-w-[135px]"
+            >
+              <option value="">All Services</option>
+              <option value="none">Standalone Only</option>
+              {allServices.length > 0 &&
+                Array.from(
+                  new Set(
+                    allServices
+                      .filter((s) => s.parentProduct && s.parentProductName)
+                      .map((s) => JSON.stringify({ id: s.parentProduct?._id || s.parentProduct, name: s.parentProductName }))
+                  )
+                ).map((str) => {
+                  const p = JSON.parse(str);
+                  return (
+                    <option key={p.id} value={p.id}>
+                      ↳ Linked: {p.name}
+                    </option>
+                  );
+                })}
+            </select>
+          )}
 
           {/* Responsive Date Filter Container */}
           <div className="w-full lg:w-auto flex flex-wrap sm:flex-nowrap items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 sm:py-1">
@@ -540,10 +575,16 @@ const CatalogItemsTab = ({
                                   {item.description}
                                 </p>
                               )}
-                              {!isProduct && item.parentProductName && (
-                                <span className="text-[0.65rem] font-medium text-purple-600 block mt-0.5">
-                                  ↳ Linked to: <strong>{item.parentProductName}</strong>
-                                </span>
+                              {!isProduct && (
+                                item.parentProductName ? (
+                                  <span className="text-[0.65rem] font-medium text-purple-600 block mt-0.5">
+                                    ↳ Linked to: <strong>{item.parentProductName}</strong>
+                                  </span>
+                                ) : (
+                                  <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[0.62rem] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                                    Standalone Service
+                                  </span>
+                                )
                               )}
                             </div>
                           </div>

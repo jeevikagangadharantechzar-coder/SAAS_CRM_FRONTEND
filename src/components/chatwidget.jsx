@@ -9,6 +9,40 @@ import { toast } from 'react-hot-toast';
 // ─── Base API URL from environment ───────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
+// ─── Result types returned by the chatbot module handlers (backend services/ai/modules) ───
+// plural: label in "Found N …"; path(item): page the record opens (null = not clickable)
+const TYPE_META = {
+  lead:           { plural: 'leads' },
+  deal:           { plural: 'deals' },
+  invoice:        { plural: 'invoices' },
+  task:           { plural: 'tasks' },
+  target:         { plural: 'targets' },
+  user:           { plural: 'users' },
+  clv_client:     { plural: 'clients' },
+  proposal:       { plural: 'proposals' },
+  meeting:        { plural: 'meetings', path: () => 'meetings' },
+  activity:       { plural: 'activities', path: (i) => (i.dealId ? `Pipelineview/${i.dealId}` : 'schedule') },
+  call:           { plural: 'calls' },
+  catalog_item:   { plural: 'catalog items', path: (i) => (i.itemType === 'Service' ? 'services-catalog' : 'products-catalog') },
+  catalog_category: { plural: 'categories', path: (i) => (i.itemType === 'Service' ? 'services-catalog' : 'products-catalog') },
+  ticket:         { plural: 'tickets', path: () => 'support-tickets' },
+  asset:          { plural: 'assets', path: () => 'assets' },
+  asset_category: { plural: 'asset categories', path: () => 'assets' },
+  document:       { plural: 'documents', path: () => 'documents' },
+  email_campaign: { plural: 'email campaigns', path: () => 'email-history' },
+  email_template: { plural: 'email templates', path: () => 'mass-email' },
+  streak:         { plural: 'streaks', path: () => 'leaderboard' },
+  social_message: { plural: 'messages', path: (i) => i.channel || 'messages' },
+  notification:   { plural: 'notifications', path: () => 'dashboard/notifications' },
+  client_review:  { plural: 'client reviews', path: () => 'cltv/dashboard' },
+  group:          { plural: 'groups', path: () => 'messages' },
+  location:       { plural: 'locations', path: () => 'live-locations' },
+  lost_reason:    { plural: 'lost deals', path: () => 'LossAnalysis' },
+  agreement:      { plural: 'records' },
+  stat:           { plural: 'figures' },
+};
+const pluralLabel = (type) => TYPE_META[type]?.plural || 'records';
+
 // ─── Logo Component ───────────────────────────────────────────────────────────
 const AILogo = ({ size = "medium" }) => {
   const sizes = {
@@ -693,15 +727,7 @@ export default function ChatWidget() {
               {message.data && Array.isArray(message.data) && message.data.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <div className="text-xs font-medium mb-2 text-gray-600">
-                    Found {message.data.length} {
-                      message.data[0]?.type === 'lead' ? 'leads' :
-                        message.data[0]?.type === 'deal' ? 'deals' :
-                          message.data[0]?.type === 'invoice' ? 'invoices' :
-                            message.data[0]?.type === 'task' ? 'tasks' :
-                              message.data[0]?.type === 'target' ? 'targets' :
-                                message.data[0]?.type === 'user' ? 'users' :
-                                  message.data[0]?.type === 'clv_client' ? 'clients' : 'records'
-                    }:
+                    Found {message.data.length} {pluralLabel(message.data[0]?.type)}:
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                     {(expandedMessageId === message.id ? message.data : message.data.slice(0, 5)).map((item, idx) => {
@@ -749,6 +775,10 @@ export default function ChatWidget() {
                               <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/cltv/client/${encodeURIComponent(item.companyName || "")}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
                                 {item.companyName || `Client ${idx + 1}`}
                               </span>
+                            ) : TYPE_META[item.type]?.path ? (
+                              <span onClick={() => { setIsOpen(false); navigate(`/${tenantSlug}/${TYPE_META[item.type].path(item)}`); }} className="cursor-pointer text-blue-600 hover:underline truncate">
+                                {item.name || item.title || `Record ${idx + 1}`}
+                              </span>
                             ) : (
                               <span>{item.name || item.title || item.leadName || item.dealName || item.invoiceNumber || `Record ${idx + 1}`}</span>
                             )}
@@ -759,6 +789,12 @@ export default function ChatWidget() {
                             )}
                           </div>
                           {(item.company || item.companyName) && <div className="text-gray-600 mb-1"> {item.company || item.companyName}</div>}
+                          {item.detail && <div className="text-gray-500 mb-1 break-words">{item.detail}</div>}
+                          {item.link && (
+                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mb-1 inline-block">
+                              {item.type === 'meeting' ? 'Join meeting ↗' : item.type === 'location' ? 'Open in Maps ↗' : 'Open link ↗'}
+                            </a>
+                          )}
                           {(item.phone || item.phoneNumber) && <div className="text-gray-600 mb-1"> {item.phone || item.phoneNumber}</div>}
                           {item.lossReason && <div className="text-red-500 mb-1 font-medium"> Reason: {item.lossReason}</div>}
                           {item.value && <div className="text-green-600 font-medium mb-1"> {item.value}</div>}
@@ -814,7 +850,8 @@ export default function ChatWidget() {
                             </div>
                           )}
 
-                          {item.type !== 'user' && (
+                          {/* handledBy: null means the record has no owner to show (stats, messages, catalog items) */}
+                          {item.type !== 'user' && item.handledBy !== null && (
                             <div className="text-gray-600 mt-2 pt-2 border-t border-gray-200">
                               <span className="font-medium"> Handled by: </span>
                               <span className="text-blue-600">
@@ -833,13 +870,7 @@ export default function ChatWidget() {
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium py-2 px-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                           {expandedMessageId === message.id
                             ? 'Show less'
-                            : `View all ${message.data.length} ${message.data[0]?.type === 'lead' ? 'leads' :
-                              message.data[0]?.type === 'deal' ? 'deals' :
-                                message.data[0]?.type === 'invoice' ? 'invoices' :
-                                  message.data[0]?.type === 'task' ? 'tasks' :
-                                    message.data[0]?.type === 'target' ? 'targets' :
-                                      message.data[0]?.type === 'user' ? 'users' : 'records'
-                            }`}
+                            : `View all ${message.data.length} ${pluralLabel(message.data[0]?.type)}`}
                         </button>
                       </div>
                     )}
