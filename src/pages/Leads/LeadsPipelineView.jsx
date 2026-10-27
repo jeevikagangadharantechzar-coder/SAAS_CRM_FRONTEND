@@ -4,7 +4,7 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Loader2, MoreVertical, Edit, Calendar, Ban, Handshake, Flag, Target, MessageSquarePlus, Eye } from "lucide-react";
+import { Loader2, MoreVertical, Edit, Calendar, Ban, Handshake, Flag, Target, MessageSquarePlus, Eye, Trash2 } from "lucide-react";
 
 const ItemTypes = {
   LEAD: "LEAD",
@@ -65,6 +65,7 @@ const STAGES = [
 export default function LeadsPipelineView({
   filters,
   onRejectClick,
+  onTrashClick,
   onConvertClick,
   onEditClick,
   onLinkedWorkClick,
@@ -312,6 +313,7 @@ export default function LeadsPipelineView({
             leads={columns[stage.id] || []}
             moveLead={moveLead}
             onReject={onRejectClick}
+            onTrash={onTrashClick}
             onConvert={onConvertClick}
             onEdit={onEditClick}
             onLinkedWork={onLinkedWorkClick}
@@ -339,6 +341,7 @@ function Column({
   leads,
   moveLead,
   onReject,
+  onTrash,
   onConvert,
   onEdit,
   onLinkedWork,
@@ -382,6 +385,7 @@ function Column({
               stageId={id}
               moveLead={moveLead}
               onReject={onReject}
+              onTrash={onTrash}
               onConvert={onConvert}
               onEdit={onEdit}
               onLinkedWork={onLinkedWork}
@@ -410,6 +414,7 @@ function LeadCard({
   lead,
   stageId,
   onReject,
+  onTrash,
   onConvert,
   onEdit,
   onLinkedWork,
@@ -561,6 +566,14 @@ function LeadCard({
                 className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
               >
                 <Ban className="w-4 h-4 mr-2" /> Reject
+              </button>
+            )}
+            {onTrash && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onTrash(lead); }}
+                className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
               </button>
             )}
           </div>,

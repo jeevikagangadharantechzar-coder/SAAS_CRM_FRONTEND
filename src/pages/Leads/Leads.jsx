@@ -1475,6 +1475,7 @@ const updateFilter = (key, value, setter) => {
             endDate: dateFilterTo
           }}
           onRejectClick={handleRejectClick}
+          onTrashClick={handleTrashClick}
           onConvertClick={openConvertModal}
           onEditClick={handleEdit}
           onLinkedWorkClick={(data) => {
@@ -1495,7 +1496,7 @@ const updateFilter = (key, value, setter) => {
         />
       ) : (
         <div className="tour-lead-table">
-          {userRole === "Admin" && selectedLeadIds.length > 0 && (
+          {selectedLeadIds.length > 0 && (
             <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-3">
               <span className="text-sm font-medium text-blue-700">
                 {selectedLeadIds.length} lead{selectedLeadIds.length === 1 ? "" : "s"} selected
@@ -1522,17 +1523,15 @@ const updateFilter = (key, value, setter) => {
           <table className="min-w-max w-full table-auto divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr className="whitespace-nowrap">
-                {userRole === "Admin" && (
-                  <th className="w-10 px-4 py-3 sticky left-0 z-20 bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={isAllOnPageSelected}
-                      onChange={toggleSelectAllOnPage}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                  </th>
-                )}
-                <th className={`px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"}`}>{t("leads.table.lead")}</th>
+                <th className="w-10 px-4 py-3 sticky left-0 z-20 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={isAllOnPageSelected}
+                    onChange={toggleSelectAllOnPage}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
+                <th className={`px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none left-10`}>{t("leads.table.lead")}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
@@ -1574,19 +1573,17 @@ const updateFilter = (key, value, setter) => {
                             : ""
                         }`}
                     >
-                      {userRole === "Admin" && (
-                        <td className={`w-10 px-4 py-3 sticky left-0 z-10 ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
-                          }`}>
-                          <input
-                            type="checkbox"
-                            checked={selectedLeadIds.includes(lead._id)}
-                            onChange={() => toggleSelectLead(lead._id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                          />
-                        </td>
-                      )}
-                      <td className={`px-4 py-3 sticky z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none ${userRole === "Admin" ? "left-10" : "left-0"} ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                      <td className={`w-10 px-4 py-3 sticky left-0 z-10 ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
+                        }`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIds.includes(lead._id)}
+                          onChange={() => toggleSelectLead(lead._id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className={`px-4 py-3 sticky z-10 transition-colors shadow-[1px_0_0_0_#e5e7eb] max-w-[150px] sm:max-w-[250px] lg:max-w-none left-10 ${idx % 2 === 0 ? "bg-white group-hover:bg-gray-50" : "bg-gray-50 group-hover:bg-gray-50"
                         }`}>
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
@@ -1841,17 +1838,15 @@ const updateFilter = (key, value, setter) => {
                               </button>
                             )}
 
-                            {userRole === "Admin" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleTrashClick(lead);
-                                }}
-                                className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTrashClick(lead);
+                              }}
+                              className="flex items-center w-full px-3 py-2 text-sm whitespace-nowrap text-red-600 hover:bg-gray-100"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" /> Move to Trash
+                            </button>
                           </div>,
                           document.body
                         )}
