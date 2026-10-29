@@ -807,7 +807,7 @@ const InvoiceHead = () => {
               <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
-          {user?.role?.name?.toLowerCase() === "admin" && (
+          {(user?.role?.name?.toLowerCase() === "admin" || !!user?.role?.permissions?.create_invoice) && (
             <button
               onClick={() => { setEditingInvoice(null); openModal(); }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2"

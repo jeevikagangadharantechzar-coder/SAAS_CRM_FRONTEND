@@ -28,6 +28,11 @@ api.interceptors.response.use(
     const isPlanExpired = error.response?.status === 403 && error.response.data?.planExpired;
     const isSuspended = error.response?.status === 403 && error.response.data?.message?.includes("suspended");
     
+    if (error.response?.status === 429) {
+      const rateMsg = error.response.data?.error || error.response.data?.message || "Too many requests. Please wait a moment and try again.";
+      console.warn("⚠️ Rate limit reached:", rateMsg);
+    }
+
     if (error.response && (error.response.status === 401 || isPlanExpired || isSuspended)) {
       const slug = store.getState().auth.slug;
       if (error.response.data?.planExpired) {

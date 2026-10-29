@@ -270,27 +270,31 @@ function App() {
                       <Route index element={<Navigate to="dashboard" replace />} />
 
                       {/* COMMON ROUTES */}
-                      <Route element={<PrivateRoute planFeature="deal_analysis" />}>
+                      <Route element={<PrivateRoute permission="deal_analysis" planFeature="deal_analysis" />}>
                         <Route path="DealAnalysis" element={<DealIntelligenceDashboard />} />
                       </Route>
-                      <Route element={<PrivateRoute planFeature="loss_analysis" />}>
+                      <Route element={<PrivateRoute permission="loss_analysis" planFeature="loss_analysis" />}>
                         <Route path="LossAnalysis" element={<LostDealAnalytics />} />
                         <Route path="leads/lead-loss-analysis" element={<LeadLossAnalytics />} />
                       </Route>
-                      <Route element={<PrivateRoute planFeature="won_analysis" />}>
+                      <Route element={<PrivateRoute permission="won_analysis" planFeature="won_analysis" />}>
                         <Route path="cltv/dashboard" element={<CLVDashboard />} />
                         <Route path="cltv/client/:companyName" element={<ClientCLVDetails />} />
                       </Route>
-                      <Route path="leaderboard" element={<AllStreakLeaderboard />} />
+                      <Route element={<PrivateRoute permission="streak_leaderboard" />}>
+                        <Route path="leaderboard" element={<AllStreakLeaderboard />} />
+                      </Route>
                       <Route path="dashboard/notifications" element={<NotificationsPage />} />
                       <Route path="trash" element={<TrashPage />} />
 
                       {/* campaigns */}
-                      <Route path="mass-email" element={<MassEmail />} />
-                      <Route path="create-email" element={<CreateEmail />} />
-                      <Route path="create-email/:id" element={<CreateEmail />} />
-                      <Route path="scheduled-emails" element={<ScheduledEmails />} />
-                      <Route path="email-history" element={<EmailHistory />} />
+                      <Route element={<PrivateRoute permission="email_campaigns" />}>
+                        <Route path="mass-email" element={<MassEmail />} />
+                        <Route path="create-email" element={<CreateEmail />} />
+                        <Route path="create-email/:id" element={<CreateEmail />} />
+                        <Route path="scheduled-emails" element={<ScheduledEmails />} />
+                        <Route path="email-history" element={<EmailHistory />} />
+                      </Route>
 
                       {/* PERMISSION CHECKED ROUTES */}
                       <Route element={<PrivateRoute permission="dashboard" />}>
@@ -375,14 +379,22 @@ function App() {
                       <Route path="support" element={<Support />} />
 
                       {/* MESSAGES */}
-                      <Route element={<PrivateRoute planFeature="messages" />}>
+                      <Route element={<PrivateRoute permission="messages" planFeature="messages" />}>
                         <Route path="messages" element={<MessagesPage />} />
                       </Route>
                       {/* TASKS & TARGETS */}
-                      <Route path="task-management" element={<TaskManagement />} />
-                      <Route path="assigned-tasks" element={<AssignedTasks />} />
-                      <Route path="target-management" element={<TargetManagement />} />
-                      <Route path="my-targets" element={<MyTargets />} />
+                      <Route element={<PrivateRoute permission="task_management" />}>
+                        <Route path="task-management" element={<TaskManagement />} />
+                      </Route>
+                      <Route element={<PrivateRoute permission="assigned_tasks" />}>
+                        <Route path="assigned-tasks" element={<AssignedTasks />} />
+                      </Route>
+                      <Route element={<PrivateRoute permission="target_management" />}>
+                        <Route path="target-management" element={<TargetManagement />} />
+                      </Route>
+                      <Route element={<PrivateRoute permission="my_targets" />}>
+                        <Route path="my-targets" element={<MyTargets />} />
+                      </Route>
                       {/* MEETINGS */}
                       <Route element={<PrivateRoute permission="meetings" planFeature="meetings" />}>
                         <Route path="meetings" element={<Meetings />} />

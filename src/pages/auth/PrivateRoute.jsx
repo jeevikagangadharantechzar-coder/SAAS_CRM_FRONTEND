@@ -39,7 +39,15 @@ const PrivateRoute = ({ permission, planFeature }) => {
 
     // RBAC Permission check
     if (permission && !user.role?.permissions?.[permission]) {
-      // Show "Access Denied" or redirect to user's dashboard
+      // Redirecting a role without "dashboard" back to the dashboard would
+      // loop forever, so show a message there instead.
+      if (permission === "dashboard") {
+        return (
+          <div className="p-8 text-center text-gray-600">
+            You don't have access to the dashboard. Use the sidebar to open the modules assigned to your role.
+          </div>
+        );
+      }
       return <Navigate to={`/${userSlug}/dashboard`} replace />;
     }
 

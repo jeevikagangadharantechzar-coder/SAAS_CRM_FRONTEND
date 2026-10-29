@@ -1,4 +1,5 @@
   import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+  import { isSalesLike } from "../../utils/roles";
   import { DndProvider, useDrag, useDrop } from "react-dnd";
   import { HTML5Backend } from "react-dnd-html5-backend";
   import axios from "axios";
@@ -765,7 +766,7 @@ const STAGES = [
               >
                 <Eye className="w-4 h-4" /> Take Tour
               </button>
-              {(userRole === "Admin" || userRole === "Sales") && (
+              {(userRole === "Admin" || isSalesLike(userRole)) && (
                 <button
                   className="create-deal-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
                   onClick={() => navigate(`/${tenantSlug}/createDeal`)}

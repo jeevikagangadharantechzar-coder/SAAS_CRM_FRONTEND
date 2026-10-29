@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { isSalesLike, hasRolePermission } from "../../utils/roles";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { MoreVertical, Edit, Trash2, Eye, Plus, Trophy, Calendar, Clock, AlertCircle, Bell, X, Ban, Upload, Download, FileSpreadsheet, MessageSquarePlus, ChevronLeft, ChevronRight, Flag, Target, Filter, ChevronDown, TrendingUp } from "lucide-react";
@@ -235,6 +236,8 @@ function AllDealsComponent() {
     }
     setUserRole(role);
   }, [setIsOpen, setSteps]);
+
+  const canViewAllDeals = hasRolePermission("deals_view_all");
 
   useEffect(() => {
     initSocket();
@@ -922,7 +925,7 @@ function AllDealsComponent() {
           >
             <Eye className="w-4 h-4" />
           </button>
-          {(userRole === "Admin" || userRole === "Sales") && (
+          {(userRole === "Admin" || isSalesLike(userRole)) && (
             <button
               onClick={() => navigate(`/${tenantSlug}/createDeal`)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2 tour-create-deal"
@@ -930,7 +933,7 @@ function AllDealsComponent() {
               <Plus className="w-4 h-4" /> Create Deal
             </button>
           )}
-          {(userRole === "Admin" || userRole === "Sales") && (
+          {(userRole === "Admin" || isSalesLike(userRole)) && (
             <>
               <input
                 ref={importFileInputRef}
@@ -1030,7 +1033,7 @@ function AllDealsComponent() {
             <option value="Closed Lost">Deal Lost</option>
           </select>
 
-          {userRole === "Admin" && (
+          {canViewAllDeals && (
             <select
               value={filters.assignedTo}
               onChange={(e) =>
@@ -1302,7 +1305,7 @@ function AllDealsComponent() {
               <th className="px-6 py-3 text-left">Stage</th>
               <th className="px-6 py-3 text-left">Value</th>
               {/* <th className="px-6 py-3 text-left">Value ({userCurrency})</th> */}
-              {userRole === "Admin" && (
+              {canViewAllDeals && (
                 <th className="px-6 py-3 text-left">Assigned To</th>
               )}
               <th className="px-6 py-3 text-left">Created At</th>
@@ -1457,7 +1460,7 @@ function AllDealsComponent() {
                         ? `${userCurrencySymbol} ${Number(deal.preferredCurrencyValue).toLocaleString("en-IN")}`
                         : "-"}
                     </td> */}
-                    {userRole === "Admin" && (
+                    {canViewAllDeals && (
                       <td className="px-6 py-4">
                         {deal.assignedTo
                           ? `${deal.assignedTo.firstName} ${deal.assignedTo.lastName}`
@@ -1649,7 +1652,9 @@ function AllDealsComponent() {
             {(() => {
               const activeDeal = baseDeals.find((d) => d._id === openDropdownId);
               const activeIsTerminal = activeDeal?.stage === "Rejected" || activeDeal?.stage === "Closed Won";
-              const editDisabled = activeIsTerminal;
+              // "View All Deals" is read-only for deals the user isn't assigned to.
+              const isOwnDeal = !activeDeal?.assignedTo || (activeDeal.assignedTo._id || activeDeal.assignedTo) === currentUserId;
+              const editDisabled = activeIsTerminal || (userRole !== "Admin" && !isOwnDeal);
               return (
                 <>
                   <button

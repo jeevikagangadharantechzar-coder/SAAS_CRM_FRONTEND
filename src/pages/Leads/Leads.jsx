@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { isSalesLike } from "../../utils/roles";
 import ReactDOM from "react-dom";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -420,7 +421,7 @@ const updateFilter = (key, value, setter) => {
     const socket = getSocket();
     if (!socket) return;
     const handler = ({ leadId }) => {
-      if (userRole === "Sales") {
+      if (isSalesLike(userRole)) {
         setLeads((prev) => prev.map((l) => (l._id === leadId ? { ...l, status: "Converted" } : l)));
       } else {
         setLeads((prev) => prev.filter((l) => l._id !== leadId));
@@ -877,7 +878,7 @@ const updateFilter = (key, value, setter) => {
       // The lead always keeps a "Converted" copy server-side. Admin sees every
       // conversion; a Sales user sees it too, but only for their own leads
       // (getAllLead already scopes non-Admins to leads assigned to them).
-      if (userRole === "Admin" || userRole === "Sales") {
+      if (userRole === "Admin" || isSalesLike(userRole)) {
         setLeads((prev) => prev.map((l) => (l._id === selectedLead._id ? { ...l, status: "Converted" } : l)));
       } else {
         setLeads((prev) => prev.filter((l) => l._id !== selectedLead._id));
@@ -1203,7 +1204,7 @@ const updateFilter = (key, value, setter) => {
             </>
           )} */}
 
-          {(userRole === "Admin" || userRole === "Sales") && (
+          {(userRole === "Admin" || isSalesLike(userRole)) && (
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2"
               onClick={() => navigate(`/${tenantSlug}/createleads`)}
@@ -1229,7 +1230,7 @@ const updateFilter = (key, value, setter) => {
             </button>
           </div>
 
-          {(userRole === "Admin" || userRole === "Sales") && (
+          {(userRole === "Admin" || isSalesLike(userRole)) && (
             <>
               <input
                 ref={importFileInputRef}

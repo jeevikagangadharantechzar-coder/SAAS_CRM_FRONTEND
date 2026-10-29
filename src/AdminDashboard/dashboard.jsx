@@ -814,8 +814,30 @@ const AdminDashboard = () => {
     return () => clearTimeout(timeoutId);
   }, [customWidgets, builtinWidgetsConfig, dashboardNotes, storedUser?._id]);
 
+  // Role permissions gate each widget by the module its data comes from, so a
+  // role given e.g. only Leads + Dashboard doesn't see deal/invoice widgets.
+  const isAdminUser = storedUser?.role?.name?.toLowerCase() === "admin";
+  const rolePerms = storedUser?.role?.permissions || {};
+  const hasPerm = (...keys) => isAdminUser || keys.some((k) => rolePerms[k]);
+  const WIDGET_PERMISSIONS = {
+    currency: ["invoices"],
+    pending: ["invoices"],
+    revenue: ["invoices"],
+    leaderboard: isAdminUser ? [] : ["meetings"],
+    pipeline: ["leads"],
+    distribution: ["deals_all", "deals_pipeline"],
+  };
+  const SUMMARY_CARD_PERMISSIONS = {
+    totalLeads: ["leads"],
+    dealsWon: ["deals_all", "deals_pipeline"],
+    totalRevenue: ["invoices"],
+    pendingInvoices: ["invoices"],
+  };
+
   // Helper to check visibility
   const isWidgetVisible = (id) => {
+    const perms = WIDGET_PERMISSIONS[id];
+    if (perms && perms.length && !hasPerm(...perms)) return false;
     const widget = builtinWidgetsConfig.find(w => w.id === id);
     return widget ? widget.visible !== false : true; // default to true if missing
   };
@@ -1087,7 +1109,9 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {loading
             ? Array(4).fill(0).map((_, i) => <SummaryCard key={i} loading />)
-            : summaryCards.map((card) => (
+            : summaryCards
+              .filter((card) => !SUMMARY_CARD_PERMISSIONS[card.id] || hasPerm(...SUMMARY_CARD_PERMISSIONS[card.id]))
+              .map((card) => (
               <SummaryCard
                 key={card.id}
                 {...card}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { isSalesLike } from "../../utils/roles";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
@@ -760,7 +761,7 @@ export default function CreateDeal() {
         }
       });
 
-      if (!isEditMode && userRole === "Sales" && !formDataToSubmit.assignTo) {
+      if (!isEditMode && isSalesLike(userRole) && !formDataToSubmit.assignTo) {
         data.set("assignTo", userId);
       }
 

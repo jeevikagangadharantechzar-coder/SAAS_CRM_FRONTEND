@@ -519,7 +519,7 @@ export default function EditUserModal({ user, roles, users = [], onClose, onUser
           {/* Date of Birth */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">
-              Date of Birth<span className="text-red-500">*</span>
+              Date of Birth
             </label>
             <input
               type="date"

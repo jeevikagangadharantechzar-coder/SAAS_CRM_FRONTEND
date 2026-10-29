@@ -679,7 +679,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           userPermissions.task_management ||
           userPermissions.target_management ||
           userPermissions.assigned_tasks ||
-          (!isAdmin && userPermissions.my_targets !== false)) &&
+          (!isAdmin && userPermissions.my_targets)) &&
           (hasPlanFeature("task_management") ||
             hasPlanFeature("target_management") ||
             hasPlanFeature("assigned_tasks")) && (
@@ -720,7 +720,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               />
             )}
 
-            {!isAdmin && userPermissions.my_targets !== false && hasPlanFeature("target_management") && (
+            {!isAdmin && userPermissions.my_targets && hasPlanFeature("target_management") && (
               <SmallLink
                 to="my-targets"
                 icon={<Target />}

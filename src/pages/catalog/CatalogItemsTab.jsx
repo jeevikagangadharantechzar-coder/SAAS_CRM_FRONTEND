@@ -400,11 +400,18 @@ const CatalogItemsTab = ({
                 <input
                   type="date"
                   value={singleDate || startDate}
+                  onClick={(e) => {
+                    try {
+                      if (typeof e.target.showPicker === "function") {
+                        e.target.showPicker();
+                      }
+                    } catch (_) {}
+                  }}
                   onChange={(e) => {
                     updateSingleDate(e.target.value);
                     setPage(1);
                   }}
-                  className="bg-transparent border-0 text-xs text-slate-700 focus:outline-none cursor-pointer w-28 sm:w-auto"
+                  className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer min-w-[125px]"
                 />
               </div>
             ) : (
@@ -414,11 +421,18 @@ const CatalogItemsTab = ({
                   <input
                     type="date"
                     value={startDate}
+                    onClick={(e) => {
+                      try {
+                        if (typeof e.target.showPicker === "function") {
+                          e.target.showPicker();
+                        }
+                      } catch (_) {}
+                    }}
                     onChange={(e) => {
                       updateStartDate(e.target.value);
                       setPage(1);
                     }}
-                    className="bg-transparent border-0 text-xs text-slate-700 focus:outline-none cursor-pointer w-28 sm:w-auto"
+                    className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer min-w-[125px]"
                   />
                 </div>
 
@@ -427,11 +441,18 @@ const CatalogItemsTab = ({
                   <input
                     type="date"
                     value={endDate}
+                    onClick={(e) => {
+                      try {
+                        if (typeof e.target.showPicker === "function") {
+                          e.target.showPicker();
+                        }
+                      } catch (_) {}
+                    }}
                     onChange={(e) => {
                       updateEndDate(e.target.value);
                       setPage(1);
                     }}
-                    className="bg-transparent border-0 text-xs text-slate-700 focus:outline-none cursor-pointer w-28 sm:w-auto"
+                    className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer min-w-[125px]"
                   />
                 </div>
               </>

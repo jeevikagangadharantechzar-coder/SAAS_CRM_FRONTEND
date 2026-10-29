@@ -19,6 +19,8 @@ import {
   Calendar,
   Shield,
   Package,
+  PlusCircle,
+  Eye,
 } from "react-feather";
 
 // One entry per sidebar nav item — kept in sync with sidebar.jsx's
@@ -41,6 +43,7 @@ export const permissionGroups = [
     permissions: [
       { key: "deals_all", label: "All Deals", icon: TrendingUp },
       { key: "deals_pipeline", label: "Pipeline View", icon: GitBranch },
+      { key: "deals_view_all", label: "View All Deals (read-only)", icon: Eye },
     ],
   },
   {
@@ -48,6 +51,8 @@ export const permissionGroups = [
     theme: "amber",
     permissions: [
       { key: "invoices", label: "Invoices", icon: FileText },
+      { key: "create_invoice", label: "Create Invoice", icon: PlusCircle },
+      { key: "invoices_view_all", label: "View All Invoices", icon: Eye },
       { key: "proposal", label: "Proposal", icon: Edit },
     ],
   },
@@ -113,26 +118,13 @@ export const permissionGroups = [
   },
 ];
 
-// Default state for a brand-new role. Keys that the sidebar today shows to
-// EVERY user unconditionally when unset (assigned_tasks, my_targets, the 3
-// Analysis links, Messages) default to true so a freshly created role
-// doesn't silently lose access to something that "always worked" — the admin
-// can still explicitly uncheck them. Everything else starts unchecked.
-const DEFAULT_TRUE_KEYS = new Set([
-  "assigned_tasks",
-  "my_targets",
-  "deal_analysis",
-  "won_analysis",
-  "loss_analysis",
-  "messages",
-  "schedule_view",
-  "documents",
-  "products_services",
-]);
-
+// Default state for a brand-new role: everything unchecked, so the role sees
+// exactly the modules the Admin ticks and nothing else. (Previously 9 keys —
+// incl. the Deal/Won/Loss Analysis links — started pre-checked, so a role
+// given only Leads + Dashboard still got deal pages.)
 export const DEFAULT_PERMISSIONS = permissionGroups.reduce((acc, group) => {
   group.permissions.forEach(({ key }) => {
-    acc[key] = DEFAULT_TRUE_KEYS.has(key);
+    acc[key] = false;
   });
   return acc;
 }, {});

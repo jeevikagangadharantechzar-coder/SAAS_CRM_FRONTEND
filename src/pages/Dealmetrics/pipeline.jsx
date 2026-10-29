@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { isSalesLike, hasRolePermission } from "../../utils/roles";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -1379,7 +1380,7 @@ function DealIntelligenceDashboard() {
       });
 
       let filteredDeals = dealsRes.data || [];
-      if (userRole === "Sales") {
+      if (isSalesLike(userRole) && !hasRolePermission("deals_view_all")) {
         filteredDeals = filteredDeals.filter(deal => deal.assignedTo?._id === userId);
       }
 
@@ -1668,7 +1669,7 @@ function DealIntelligenceDashboard() {
   }, [handleOpenModal]);
 
   const canExport = userRole === "Admin" || userRole === "Manager";
-  const canCreateDeal = userRole === "Admin" || userRole === "Sales";
+  const canCreateDeal = userRole === "Admin" || isSalesLike(userRole);
 
   if (isLoading) {
     return (
