@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
@@ -15,8 +15,14 @@ import {
   Receipt,
   CheckCircle,
   AlertCircle,
+  Eye,
+  Pencil,
+  Phone,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useModal } from "../../context/ModalContext";
+import InvoiceModal from "./InvoiceModal";
+import InvoicePreviewModal from "./InvoicePreviewModal";
 
 const InvoiceView = () => {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -29,25 +35,39 @@ const InvoiceView = () => {
   const [invoice, setInvoice] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
   const [loading, setLoading] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  // The edit form (and the data it loads) is only mounted while editing
+  const [isEditing, setIsEditing] = useState(false);
+  const { isOpen: isModalOpen, openModal } = useModal();
 
   // Fetch invoice details
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_URL}/invoices/getSingle/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setInvoice(res.data);
-      } catch (err) {
-        console.error("Error fetching invoice:", err);
-        toast.error("Failed to fetch invoice details");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchInvoice();
+  const fetchInvoice = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}/invoices/getSingle/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setInvoice(res.data);
+    } catch (err) {
+      console.error("Error fetching invoice:", err);
+      toast.error("Failed to fetch invoice details");
+    } finally {
+      setLoading(false);
+    }
   }, [id, API_URL]);
+
+  useEffect(() => {
+    fetchInvoice();
+  }, [fetchInvoice]);
+
+  useEffect(() => {
+    if (!isModalOpen) setIsEditing(false);
+  }, [isModalOpen]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    openModal();
+  };
 
   if (loading) {
     return (
@@ -101,7 +121,7 @@ const InvoiceView = () => {
             </div>
             <div className="flex items-center gap-4">
               <h1 className="text-gray-900">
-                Invoice #{invoice.invoicenumber || id}
+                {invoice.invoiceType || "Invoice"} #{invoice.invoicenumber || id}
               </h1>
               <span
                 className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusClasses(
@@ -111,6 +131,22 @@ const InvoiceView = () => {
                 {invoice.status || "N/A"}
               </span>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Eye size={16} /> Preview
+            </button>
+            {invoice.status !== "paid" && (
+              <button
+                onClick={handleEdit}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Pencil size={16} /> Edit
+              </button>
+            )}
           </div>
         </div>
 
@@ -170,6 +206,28 @@ const InvoiceView = () => {
                           </p>
                         </div>
                       </div>
+                      {(invoice.clientEmail || invoice.items?.[0]?.deal?.email) && (
+                        <div className="flex items-center text-slate-700">
+                          <Mail size={18} className="mr-3 text-slate-500" />
+                          <div>
+                            <p className="text-sm font-medium">Email</p>
+                            <p className="text-slate-900">
+                              {invoice.clientEmail || invoice.items?.[0]?.deal?.email}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {(invoice.clientPhone || invoice.items?.[0]?.deal?.phoneNumber) && (
+                        <div className="flex items-center text-slate-700">
+                          <Phone size={18} className="mr-3 text-slate-500" />
+                          <div>
+                            <p className="text-sm font-medium">Phone</p>
+                            <p className="text-slate-900">
+                              {invoice.clientPhone || invoice.items?.[0]?.deal?.phoneNumber}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       {(invoice.billingAddress || invoice.items?.[0]?.deal?.address) && (
                         <div className="flex items-start text-slate-700">
                           <FileText size={18} className="mr-3 mt-0.5 text-slate-500" />
@@ -524,6 +582,13 @@ const InvoiceView = () => {
           </div>
         </div>
       </div>
+
+      {showPreview && (
+        <InvoicePreviewModal invoice={invoice} onClose={() => setShowPreview(false)} />
+      )}
+      {isEditing && (
+        <InvoiceModal editingInvoice={invoice} onInvoiceSaved={fetchInvoice} />
+      )}
     </div>
   );
 };

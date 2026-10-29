@@ -56,6 +56,67 @@ const sanitizeDiscountInput = (raw, discountType, price) => {
   return cleaned;
 };
 
+// Document title printed in the PDF header — label only, same format for all
+const INVOICE_TYPES = ["Invoice", "Performa Invoice", "Credit Note", "Service Invoice"];
+
+const EMPTY_INVOICE_DATA = {
+  assignTo: "",
+  issueDate: "",
+  dueDate: "",
+  status: "unpaid",
+  deal: "",
+  price: 0,
+  tax: "0",
+  taxType: "none",
+  discountType: "none",
+  discountValue: 0,
+  note: "",
+  currency: "INR",
+  invoiceType: "Invoice",
+  clientName: "",
+  clientEmail: "",
+  clientPhone: "",
+  billingAddress: "",
+  clientTaxId: "",
+  poNumber: "",
+  clientState: "",
+};
+
+// Fields prefilled from a deal when it's chosen — all still editable afterwards.
+const getDealAutofill = (deal) => {
+  const fields = {
+    clientName: deal.companyName || deal.dealName || "",
+    clientEmail: deal.email || "",
+    clientPhone: deal.phoneNumber || "",
+    billingAddress: deal.address || "",
+  };
+  if (deal.value) {
+    const raw = String(deal.value);
+    const rawCurrency = raw.replace(/[\d.,\s]/g, "").trim();
+    fields.price = Number(raw.replace(/[^0-9.]/g, ""));
+    fields.currency = CURRENCY_SYMBOL_MAP[rawCurrency] || rawCurrency.toUpperCase() || "INR";
+  }
+  if (INDIAN_STATES.includes(deal.state)) fields.clientState = deal.state;
+  const assignee = deal.assignedTo?._id || deal.assignedTo;
+  if (assignee) fields.assignTo = assignee;
+  return fields;
+};
+
+// "MM/DD/YYYY" (the form's stored date format) back to a Date for the pickers
+const parseMMDDYYYY = (value) => {
+  const [mm, dd, yyyy] = (value || "").split("/").map(Number);
+  return mm && dd && yyyy ? new Date(yyyy, mm - 1, dd) : null;
+};
+
+const readDraft = (key) => {
+  try {
+    const draft = JSON.parse(localStorage.getItem(key) || "null");
+    return draft?.invoiceData ? { ...draft, invoiceData: { ...EMPTY_INVOICE_DATA, ...draft.invoiceData } } : null;
+  } catch {
+    return null;
+  }
+};
+
 const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const { isOpen, closeModal } = useModal();
@@ -75,24 +136,7 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   const [salesUsers, setSalesUsers] = useState([]);
   const [deals, setDeals] = useState([]);
   const [selectedDealRequirement, setSelectedDealRequirement] = useState(null);
-  const [invoiceData, setInvoiceData] = useState({
-    assignTo: "",
-    issueDate: "",
-    dueDate: "",
-    status: "unpaid",
-    deal: "",
-    price: 0,
-    tax: "0",
-    taxType: "none",
-    discountType: "none",
-    discountValue: 0,
-    note: "",
-    currency: "INR",
-    billingAddress: "",
-    clientTaxId: "",
-    poNumber: "",
-    clientState: "",
-  });
+  const [invoiceData, setInvoiceData] = useState(EMPTY_INVOICE_DATA);
   // Ad-hoc fields the admin adds for invoices that need something the fixed form doesn't cover
   const [customFields, setCustomFields] = useState([]);
   // Optional itemized split of the price (e.g. Frontend 5000 / Backend 2000) —
@@ -115,6 +159,16 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
   const issueDateRef = useRef(null);
   const dueDateRef = useRef(null);
 
+  // Unsaved form contents are autosaved per user + per invoice/deal, so closing
+  // the modal (or an accidental outside click) never loses what was typed.
+  const draftKey = `invoiceDraft:${currentUser._id || "me"}:${
+    editingInvoice?._id || (presetDeal ? `deal-${presetDeal._id}` : "new")
+  }`;
+  const baseFormRef = useRef(null); // the untouched form for this open, to tell real edits apart
+  const draftTimerRef = useRef(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+
   const toMMDDYYYY = (isoOrDate) => {
     if (!isoOrDate) return { formatted: "", obj: null };
     const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
@@ -123,12 +177,34 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
     return { formatted: `${mm}/${dd}/${d.getFullYear()}`, obj: d };
   };
 
-  // Load editing invoice if any
+  const applyForm = (form, issueObj, dueObj, dealInfo) => {
+    setInvoiceData(form.invoiceData);
+    setIssueDateObj(issueObj);
+    setDueDateObj(dueObj);
+    setNote(form.invoiceData.note || "");
+    setIsNoteVisible(!!form.invoiceData.note);
+    setPaymentReceivedNow(form.paymentReceivedNow);
+    setCustomFields(form.customFields);
+    setBreakdown(form.breakdown);
+    setQuantityLabel(form.quantityLabel);
+    setSelectedDealRequirement(dealInfo || null);
+  };
+
+  // Load editing invoice / preset deal / blank form — then restore a saved draft over it
   useEffect(() => {
+    let invoiceFields = { ...EMPTY_INVOICE_DATA };
+    let customFieldsInit = [];
+    let breakdownInit = [];
+    let quantityLabelInit = "Hours";
+    let issueObj = null;
+    let dueObj = null;
+    let dealInfo = null;
+
     if (editingInvoice) {
       const issue = toMMDDYYYY(editingInvoice.issueDate);
       const due = toMMDDYYYY(editingInvoice.dueDate);
-      setInvoiceData({
+      invoiceFields = {
+        ...invoiceFields,
         // Fall back to the deal's own assigned sales person if this invoice
         // was saved without one (e.g. created from the Deal page before this
         // field was auto-filled) — otherwise every edit silently fails
@@ -145,105 +221,114 @@ const InvoiceModal = ({ onInvoiceSaved, editingInvoice, presetDeal }) => {
         discountValue: editingInvoice.discountValue || 0,
         note: editingInvoice.note || "",
         currency: editingInvoice.currency || "INR",
+        invoiceType: editingInvoice.invoiceType || "Invoice",
+        clientName: editingInvoice.clientName || "",
+        clientEmail: editingInvoice.clientEmail || "",
+        clientPhone: editingInvoice.clientPhone || "",
         billingAddress: editingInvoice.billingAddress || "",
         clientTaxId: editingInvoice.clientTaxId || "",
         poNumber: editingInvoice.poNumber || "",
         clientState: editingInvoice.clientState || "",
-      });
-      setIssueDateObj(issue.obj);
-      setDueDateObj(due.obj);
-      setNote(editingInvoice.note || "");
-      setIsNoteVisible(!!editingInvoice.note);
-      setPaymentReceivedNow("");
-      setCustomFields(
-        (editingInvoice.customFields || []).map((f) => ({ ...f }))
-      );
-      setBreakdown(
-        (editingInvoice.breakdown || []).map((r) => ({
-          label: r.label,
-          amount: String(r.amount ?? ""),
-          hsnSac: r.hsnSac || "",
-          quantity: r.quantity === null || r.quantity === undefined ? "" : String(r.quantity),
-        }))
-      );
-      setQuantityLabel(editingInvoice.quantityLabel || "Hours");
-
-      const selectedDeal = deals.find(
-        (d) => d._id === editingInvoice.items?.[0]?.deal?._id
-      );
-      setSelectedDealRequirement(selectedDeal || null);
+      };
+      issueObj = issue.obj;
+      dueObj = due.obj;
+      customFieldsInit = (editingInvoice.customFields || []).map((f) => ({ ...f }));
+      breakdownInit = (editingInvoice.breakdown || []).map((r) => ({
+        label: r.label,
+        amount: String(r.amount ?? ""),
+        hsnSac: r.hsnSac || "",
+        quantity: r.quantity === null || r.quantity === undefined ? "" : String(r.quantity),
+      }));
+      quantityLabelInit = editingInvoice.quantityLabel || "Hours";
+      dealInfo = deals.find((d) => d._id === editingInvoice.items?.[0]?.deal?._id);
     } else if (presetDeal) {
       // Opened from a Deal's own Invoice tab — skip the deal-select dropdown
       // entirely and prefill from the deal object we already have, same
       // fields the "deal" branch of handleChange fills in for the dropdown flow.
-      const numericValue = presetDeal.value
-        ? Number(String(presetDeal.value).replace(/[^0-9.]/g, ""))
-        : 0;
-      const rawCurrency = presetDeal.value
-        ? String(presetDeal.value).replace(/[\d.,\s]/g, "").trim()
-        : "";
-      const currency = CURRENCY_SYMBOL_MAP[rawCurrency] || rawCurrency.toUpperCase() || "INR";
-      setInvoiceData({
-        // Default to the deal's own assigned sales person — still editable
-        // via the dropdown below, this just avoids an easy-to-miss required
-        // field being left blank when the deal-select dropdown is hidden.
-        assignTo: presetDeal.assignedTo?._id || presetDeal.assignedTo || "",
-        issueDate: "",
-        dueDate: "",
-        status: "unpaid",
-        deal: presetDeal._id,
-        price: numericValue,
-        tax: "0",
-        taxType: "none",
-        discountType: "none",
-        discountValue: 0,
-        note: "",
-        currency,
-        billingAddress: presetDeal.address || "",
-        clientTaxId: "",
-        poNumber: "",
-        clientState: "",
-      });
-      setIssueDateObj(null);
-      setDueDateObj(null);
-      setNote("");
-      setIsNoteVisible(false);
-      setSelectedDealRequirement(presetDeal);
-      setPaymentReceivedNow("");
-      setCustomFields([]);
-      setBreakdown([]);
-      setQuantityLabel("Hours");
-    } else {
-      setInvoiceData({
-        assignTo: "",
-        issueDate: "",
-        dueDate: "",
-        status: "unpaid",
-        deal: "",
-        price: 0,
-        tax: "0",
-        taxType: "none",
-        discountType: "none",
-        discountValue: 0,
-        note: "",
-        currency: "INR",
-        billingAddress: "",
-        clientTaxId: "",
-        poNumber: "",
-        clientState: "",
-      });
-      setIssueDateObj(null);
-      setDueDateObj(null);
-      setNote("");
-      setIsNoteVisible(false);
-      setSelectedDealRequirement(null);
-      setPaymentReceivedNow("");
-      setCustomFields([]);
-      setBreakdown([]);
-      setQuantityLabel("Hours");
+      invoiceFields = { ...invoiceFields, deal: presetDeal._id, ...getDealAutofill(presetDeal) };
+      dealInfo = presetDeal;
     }
+
+    const base = {
+      invoiceData: invoiceFields,
+      customFields: customFieldsInit,
+      breakdown: breakdownInit,
+      quantityLabel: quantityLabelInit,
+      paymentReceivedNow: "",
+    };
+    baseFormRef.current = { form: base, issueObj, dueObj, dealInfo };
+
+    const draft = isOpen ? readDraft(draftKey) : null;
+    if (draft) {
+      applyForm(
+        { ...base, ...draft },
+        parseMMDDYYYY(draft.invoiceData.issueDate),
+        parseMMDDYYYY(draft.invoiceData.dueDate),
+        deals.find((d) => d._id === draft.invoiceData.deal) || dealInfo
+      );
+    } else {
+      applyForm(base, issueObj, dueObj, dealInfo);
+    }
+    setDraftRestored(!!draft);
+    setConfirmCloseOpen(false);
     setValidationErrors({});
-  }, [editingInvoice, isOpen, deals, presetDeal]);
+  }, [editingInvoice, isOpen, deals, presetDeal, draftKey]);
+
+  // Writes the current form as a draft — or removes it when nothing differs
+  // from the untouched form, so opening and closing never leaves a stale draft.
+  const saveDraftNow = () => {
+    try {
+      const snapshot = JSON.stringify({ invoiceData, customFields, breakdown, quantityLabel, paymentReceivedNow });
+      if (snapshot === JSON.stringify(baseFormRef.current?.form)) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, snapshot);
+    } catch {
+      // storage full/blocked — the form still works, just without a draft
+    }
+  };
+
+  const clearDraft = () => {
+    clearTimeout(draftTimerRef.current);
+    try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+  };
+
+  // Debounced autosave while the modal is open
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    draftTimerRef.current = setTimeout(saveDraftNow, 400);
+    return () => clearTimeout(draftTimerRef.current);
+    // saveDraftNow only reads the form state listed here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, invoiceData, customFields, breakdown, quantityLabel, paymentReceivedNow]);
+
+  // X button — closes straight away, keeping the draft
+  const closeKeepingDraft = () => {
+    clearTimeout(draftTimerRef.current);
+    saveDraftNow();
+    setConfirmCloseOpen(false);
+    closeModal();
+  };
+
+  const discardDraftAndClose = () => {
+    clearDraft();
+    setConfirmCloseOpen(false);
+    closeModal();
+  };
+
+  // Resets the open form back to its untouched state and drops the draft
+  const handleDiscardDraft = () => {
+    clearDraft();
+    const { form, issueObj, dueObj, dealInfo } = baseFormRef.current;
+    applyForm(form, issueObj, dueObj, dealInfo);
+    setDraftRestored(false);
+    setValidationErrors({});
+  };
+
+  // Outside click / Escape asks first instead of closing the form outright
+  const handleOutsidePointerDown = (e) => {
+    e.preventDefault();
+    if (e.target?.closest?.(".Toastify, .react-datepicker, .react-datepicker-popper")) return;
+    setConfirmCloseOpen(true);
+  };
 
   // Fetch sales users
   useEffect(() => {
@@ -339,19 +424,9 @@ setSalesUsers(response.data.users);
       const selectedDeal = deals.find((d) => d._id === value);
       setSelectedDealRequirement(selectedDeal || null);
 
-      if (selectedDeal?.value) {
-        const numericValue = Number(selectedDeal.value.replace(/[^0-9.]/g, ""));
-        const rawCurrency = selectedDeal.value.replace(/[\d.,\s]/g, "").trim();
-        const currency =
-          CURRENCY_SYMBOL_MAP[rawCurrency] || rawCurrency.toUpperCase() || "INR";
-        setInvoiceData((prev) => ({
-          ...prev,
-          price: numericValue,
-          currency,
-        }));
-      }
-      if (selectedDeal?.address) {
-        setInvoiceData((prev) => ({ ...prev, billingAddress: selectedDeal.address }));
+      // Autofill everything the invoice needs from the deal — still editable below
+      if (selectedDeal) {
+        setInvoiceData((prev) => ({ ...prev, ...getDealAutofill(selectedDeal) }));
       }
       if (selectedDeal?.items?.length > 0) {
         setBreakdown(
@@ -767,6 +842,7 @@ setSalesUsers(response.data.users);
       }
 
       if (response.status === 200 || response.status === 201) {
+        clearDraft();
         closeModal();
         if (onInvoiceSaved) onInvoiceSaved();
       } else {
@@ -788,15 +864,29 @@ setSalesUsers(response.data.users);
       : 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={closeModal}>
-      <DialogContent className="w-[95vw] md:w-full md:min-w-[800px] lg:min-w-[1000px] max-w-4xl p-0 overflow-hidden rounded-lg shadow-xl">
+    <>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) closeKeepingDraft(); }}>
+      <DialogContent
+        className="w-[95vw] md:w-full md:min-w-[800px] lg:min-w-[1000px] max-w-4xl p-0 overflow-hidden rounded-lg shadow-xl"
+        onPointerDownOutside={handleOutsidePointerDown}
+        onFocusOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { e.preventDefault(); setConfirmCloseOpen(true); }}
+      >
         <DialogHeader className="bg-gray-50  text-black p-6">
           <DialogTitle className="text-xl font-semibold">
             {editingInvoice ? "Edit Invoice" : "Create New Invoice"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="p-6 max-h-[80vh] overflow-y-auto ">
+        <div className="p-6 max-h-[80vh] modal-scroll">
+          {draftRestored && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              <span>Restored your unsaved draft.</span>
+              <button type="button" onClick={handleDiscardDraft} className="font-medium underline hover:text-amber-900">
+                Discard draft
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
             {/* Left Column */}
             <div>
@@ -818,6 +908,21 @@ setSalesUsers(response.data.users);
                   Basic Information
                 </h3>
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Invoice Type
+                    </label>
+                    <select
+                      name="invoiceType"
+                      value={invoiceData.invoiceType}
+                      onChange={handleChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    >
+                      {INVOICE_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Assign To (Sales User) *
@@ -1043,6 +1148,9 @@ setSalesUsers(response.data.users);
                             {validationErrors.deal}
                           </p>
                         )}
+                        <p className="mt-1 text-xs text-gray-500">
+                          Choosing a deal autofills price, client name, email, phone, address, state and assignee — you can still edit them.
+                        </p>
                       </>
                     )}
                   </div>
@@ -1249,6 +1357,44 @@ setSalesUsers(response.data.users);
               </svg>
               Billing Details
             </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  name="clientName"
+                  value={invoiceData.clientName}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Email
+                </label>
+                <input
+                  type="email"
+                  name="clientEmail"
+                  value={invoiceData.clientEmail}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Phone
+                </label>
+                <input
+                  type="text"
+                  name="clientPhone"
+                  value={invoiceData.clientPhone}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1716,6 +1862,29 @@ setSalesUsers(response.data.users);
         <ToastContainer />
       </DialogContent>
     </Dialog>
+
+    <Dialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Close this form?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-gray-600">
+          Your entered details are saved as a draft and will be restored the next time you open this form.
+        </p>
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
+          <button type="button" onClick={() => setConfirmCloseOpen(false)} className="px-4 py-2 border rounded-md text-sm hover:bg-gray-50">
+            Keep editing
+          </button>
+          <button type="button" onClick={discardDraftAndClose} className="px-4 py-2 border border-red-200 text-red-600 rounded-md text-sm hover:bg-red-50">
+            Discard &amp; close
+          </button>
+          <button type="button" onClick={closeKeepingDraft} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
+            Close
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

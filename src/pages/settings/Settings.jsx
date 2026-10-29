@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText, Shield } from "react-feather";
 import MfaSetupModal from "../../components/MfaSetupModal";
@@ -49,12 +49,12 @@ export default function Settings() {
 
   // Business details shown on invoices
   const [businessDetails, setBusinessDetails] = useState({
-    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "", state: "", defaultSacCode: "",
+    address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "", extraTaxIds: [], state: "", defaultSacCode: "",
   });
 
   // Bank details shown on invoices
   const [bankDetails, setBankDetails] = useState({
-    accountName: "", accountNumber: "", bankName: "", ifscOrSwift: "", branch: "",
+    accountName: "", accountNumber: "", bankName: "", ifsc: "", swift: "", branch: "",
   });
 
   // Invoice terms & conditions footer text
@@ -180,15 +180,22 @@ export default function Settings() {
         email: data?.email || "",
         taxIdLabel: data?.taxIdLabel || "Tax ID",
         taxId: data?.taxId || "",
+        extraTaxIds: (data?.extraTaxIds || []).map((r) => ({ label: r.label || "", value: r.value || "" })),
         state: data?.state || "",
         defaultSacCode: data?.defaultSacCode || "",
       });
+      // Older settings only have the combined IFSC/SWIFT value — place it in
+      // whichever separate field it matches until the user saves the new ones.
+      const bank = data?.bankDetails || {};
+      const legacyCode = !bank.ifsc && !bank.swift ? (bank.ifscOrSwift || "").trim() : "";
+      const legacyIsIfsc = /^[A-Z]{4}0[A-Z0-9]{6}$/i.test(legacyCode);
       setBankDetails({
-        accountName: data?.bankDetails?.accountName || "",
-        accountNumber: data?.bankDetails?.accountNumber || "",
-        bankName: data?.bankDetails?.bankName || "",
-        ifscOrSwift: data?.bankDetails?.ifscOrSwift || "",
-        branch: data?.bankDetails?.branch || "",
+        accountName: bank.accountName || "",
+        accountNumber: bank.accountNumber || "",
+        bankName: bank.bankName || "",
+        ifsc: bank.ifsc || (legacyIsIfsc ? legacyCode : ""),
+        swift: bank.swift || (!legacyIsIfsc ? legacyCode : ""),
+        branch: bank.branch || "",
       });
       setTermsAndConditions(data?.termsAndConditions || "");
       setInvoiceGmailEmail(data?.invoiceSenderEmail || null);
@@ -399,6 +406,17 @@ export default function Settings() {
     }
   };
 
+  /* ── Extra Tax ID Rows (Business Details) ─────────────────────── */
+  const addExtraTaxId = () =>
+    setBusinessDetails((p) => ({ ...p, extraTaxIds: [...p.extraTaxIds, { label: "", value: "" }] }));
+  const updateExtraTaxId = (index, key, value) =>
+    setBusinessDetails((p) => ({
+      ...p,
+      extraTaxIds: p.extraTaxIds.map((r, i) => (i === index ? { ...r, [key]: value } : r)),
+    }));
+  const removeExtraTaxId = (index) =>
+    setBusinessDetails((p) => ({ ...p, extraTaxIds: p.extraTaxIds.filter((_, i) => i !== index) }));
+
   /* ── Handle Business Details Update Function ─────────────────────── */
   const handleBusinessDetailsUpdate = async () => {
     try {
@@ -453,6 +471,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         
         {/* PAGE HEADER */}
@@ -803,6 +822,47 @@ export default function Settings() {
                   />
                 </div>
               </div>
+              {/* Additional label/value pairs (e.g. PAN, CIN) — printed under the Tax ID on invoices */}
+              {businessDetails.extraTaxIds.map((row, index) => (
+                <div key={index} className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium text-gray-700">Label</label>
+                    <input
+                      type="text"
+                      value={row.label}
+                      onChange={(e) => updateExtraTaxId(index, "label", e.target.value)}
+                      className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                      placeholder="e.g. PAN, CIN"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium text-gray-700">Value</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={row.value}
+                        onChange={(e) => updateExtraTaxId(index, "value", e.target.value)}
+                        className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExtraTaxId(index)}
+                        className="px-2 text-red-500 hover:text-red-700"
+                        title="Remove"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addExtraTaxId}
+                className="text-xs sm:text-sm font-medium text-orange-600 hover:text-orange-700"
+              >
+                + Add another label &amp; value
+              </button>
               <div className="space-y-2">
                 <label className="text-xs sm:text-sm font-medium text-gray-700">State (for GST)</label>
                 <select
@@ -888,23 +948,32 @@ export default function Settings() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-gray-700">IFSC / SWIFT</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">IFSC Code</label>
                   <input
                     type="text"
-                    value={bankDetails.ifscOrSwift}
-                    onChange={(e) => setBankDetails((p) => ({ ...p, ifscOrSwift: e.target.value }))}
+                    value={bankDetails.ifsc}
+                    onChange={(e) => setBankDetails((p) => ({ ...p, ifsc: e.target.value }))}
                     className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-gray-700">Branch</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">SWIFT Code</label>
                   <input
                     type="text"
-                    value={bankDetails.branch}
-                    onChange={(e) => setBankDetails((p) => ({ ...p, branch: e.target.value }))}
+                    value={bankDetails.swift}
+                    onChange={(e) => setBankDetails((p) => ({ ...p, swift: e.target.value }))}
                     className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Branch</label>
+                <input
+                  type="text"
+                  value={bankDetails.branch}
+                  onChange={(e) => setBankDetails((p) => ({ ...p, branch: e.target.value }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                />
               </div>
             </div>
 

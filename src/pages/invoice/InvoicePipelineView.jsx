@@ -41,6 +41,7 @@ export default function InvoicePipelineView({
   tenantSlug,
   handleSendEmail,
   downloadInvoice,
+  handlePreview,
   handleEdit,
   confirmDelete,
 }) {
@@ -93,6 +94,7 @@ export default function InvoicePipelineView({
             tenantSlug={tenantSlug}
             handleSendEmail={handleSendEmail}
             downloadInvoice={downloadInvoice}
+            handlePreview={handlePreview}
             handleEdit={handleEdit}
             confirmDelete={confirmDelete}
           />
@@ -115,6 +117,7 @@ function Column({
   tenantSlug,
   handleSendEmail,
   downloadInvoice,
+  handlePreview,
   handleEdit,
   confirmDelete,
 }) {
@@ -153,6 +156,7 @@ function Column({
               tenantSlug={tenantSlug}
               handleSendEmail={handleSendEmail}
               downloadInvoice={downloadInvoice}
+              handlePreview={handlePreview}
               handleEdit={handleEdit}
               confirmDelete={confirmDelete}
             />
@@ -177,6 +181,7 @@ function InvoiceCard({
   tenantSlug,
   handleSendEmail,
   downloadInvoice,
+  handlePreview,
   handleEdit,
   confirmDelete,
 }) {
@@ -230,6 +235,12 @@ function InvoiceCard({
               onClick={(e) => { e.stopPropagation(); setMenuOpen(false); handleSendEmail(invoice._id); }}
             >
               Send to Email
+            </button>
+            <button
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); handlePreview(invoice); }}
+            >
+              Preview
             </button>
             <button
               className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

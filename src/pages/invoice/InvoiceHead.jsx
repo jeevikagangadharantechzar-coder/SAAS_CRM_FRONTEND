@@ -11,6 +11,7 @@ import {
 } from "react-icons/fa";
 import { useModal } from "../../context/ModalContext.jsx";
 import InvoiceModal from "./InvoiceModal.jsx";
+import InvoicePreviewModal from "./InvoicePreviewModal.jsx";
 import axios from "axios";
 import ReactDOM from "react-dom";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
@@ -94,6 +95,7 @@ const InvoiceHead = () => {
   const [sendingEmailId, setSendingEmailId] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [previewInvoice, setPreviewInvoice] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
@@ -1172,6 +1174,12 @@ const InvoiceHead = () => {
                             </button>
                             <button
                               className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                              onClick={() => { setOpenIndex(null); setPreviewInvoice(invoice); }}
+                            >
+                              Preview
+                            </button>
+                            <button
+                              className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                               onClick={() => downloadInvoice(invoice._id, invoice.invoicenumber)}
                             >
                               Download
@@ -1272,6 +1280,7 @@ const InvoiceHead = () => {
           tenantSlug={tenantSlug}
           handleSendEmail={handleSendEmail}
           downloadInvoice={downloadInvoice}
+          handlePreview={setPreviewInvoice}
           handleEdit={handleEdit}
           confirmDelete={confirmDelete}
         />
@@ -1351,6 +1360,8 @@ const InvoiceHead = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <InvoicePreviewModal invoice={previewInvoice} onClose={() => setPreviewInvoice(null)} />
 
       {/* Download PDF Modal */}
       <Dialog open={downloadModalOpen} onOpenChange={setDownloadModalOpen}>
