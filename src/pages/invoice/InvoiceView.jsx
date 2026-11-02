@@ -193,7 +193,10 @@ const InvoiceView = () => {
                         <div>
                           <p className="text-sm font-medium">Client Name</p>
                           <p className="text-slate-900">
-                            {invoice.items?.[0]?.deal?.dealName || "No deal"}
+                            {invoice.clientName ||
+                              invoice.items?.[0]?.deal?.companyName ||
+                              invoice.items?.[0]?.deal?.dealName ||
+                              "No deal"}
                           </p>
                         </div>
                       </div>
