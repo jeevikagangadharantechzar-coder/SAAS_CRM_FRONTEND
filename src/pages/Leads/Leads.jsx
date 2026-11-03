@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { isSalesLike } from "../../utils/roles";
+import { isSalesLike, hasRolePermission } from "../../utils/roles";
 import ReactDOM from "react-dom";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -1204,7 +1204,8 @@ const updateFilter = (key, value, setter) => {
             </>
           )} */}
 
-          {(userRole === "Admin" || isSalesLike(userRole)) && (
+          {/* Same check as the createleads route guard, so the button never leads to a redirect */}
+          {hasRolePermission("create_lead") && (
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2"
               onClick={() => navigate(`/${tenantSlug}/createleads`)}

@@ -925,7 +925,8 @@ function AllDealsComponent() {
           >
             <Eye className="w-4 h-4" />
           </button>
-          {(userRole === "Admin" || isSalesLike(userRole)) && (
+          {/* Same check as the createDeal route guard */}
+          {hasRolePermission("create_deal") && (
             <button
               onClick={() => navigate(`/${tenantSlug}/createDeal`)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2 tour-create-deal"

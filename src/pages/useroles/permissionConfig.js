@@ -33,6 +33,7 @@ export const permissionGroups = [
     permissions: [
       { key: "dashboard", label: "Dashboard", icon: Home },
       { key: "leads", label: "Leads", icon: Users },
+      { key: "create_lead", label: "Create Lead", icon: PlusCircle },
       { key: "schedule_view", label: "Calendar", icon: Calendar },
       { key: "documents", label: "Document Hub", icon: FileText },
     ],
@@ -42,6 +43,7 @@ export const permissionGroups = [
     theme: "purple",
     permissions: [
       { key: "deals_all", label: "All Deals", icon: TrendingUp },
+      { key: "create_deal", label: "Create Deal", icon: PlusCircle },
       { key: "deals_pipeline", label: "Pipeline View", icon: GitBranch },
       { key: "deals_view_all", label: "View All Deals (read-only)", icon: Eye },
     ],

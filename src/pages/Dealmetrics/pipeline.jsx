@@ -1669,7 +1669,8 @@ function DealIntelligenceDashboard() {
   }, [handleOpenModal]);
 
   const canExport = userRole === "Admin" || userRole === "Manager";
-  const canCreateDeal = userRole === "Admin" || isSalesLike(userRole);
+  // Same check as the createDeal route guard
+  const canCreateDeal = hasRolePermission("create_deal");
 
   if (isLoading) {
     return (

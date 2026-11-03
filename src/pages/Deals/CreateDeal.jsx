@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { isSalesLike } from "../../utils/roles";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
@@ -761,7 +760,8 @@ export default function CreateDeal() {
         }
       });
 
-      if (!isEditMode && isSalesLike(userRole) && !formDataToSubmit.assignTo) {
+      // Only Admin sees the Assign To field — anyone else owns the deal they create
+      if (!isEditMode && userRole !== "Admin" && !formDataToSubmit.assignTo) {
         data.set("assignTo", userId);
       }
 
