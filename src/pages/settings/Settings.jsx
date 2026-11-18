@@ -50,6 +50,7 @@ export default function Settings() {
   // Business details shown on invoices
   const [businessDetails, setBusinessDetails] = useState({
     address: "", phone: "", email: "", taxIdLabel: "Tax ID", taxId: "", extraTaxIds: [], state: "", defaultSacCode: "",
+    invoicePrefix: "TZI-", invoiceStartNumber: "0001",
   });
 
   // Bank details shown on invoices
@@ -183,6 +184,8 @@ export default function Settings() {
         extraTaxIds: (data?.extraTaxIds || []).map((r) => ({ label: r.label || "", value: r.value || "" })),
         state: data?.state || "",
         defaultSacCode: data?.defaultSacCode || "",
+        invoicePrefix: data?.invoicePrefix ?? "TZI-",
+        invoiceStartNumber: data?.invoiceStartNumber || "0001",
       });
       // Older settings only have the combined IFSC/SWIFT value — place it in
       // whichever separate field it matches until the user saves the new ones.
@@ -890,6 +893,36 @@ export default function Settings() {
                 />
                 <p className="text-xs text-gray-500">
                   Prefilled on each new invoice item row. You can still change it per row.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Invoice Number Prefix</label>
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={businessDetails.invoicePrefix}
+                  onChange={(e) => setBusinessDetails((p) => ({ ...p, invoicePrefix: e.target.value.replace(/[^A-Za-z0-9\-_/#.]/g, "") }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  placeholder="e.g. TZI-"
+                />
+                <p className="text-xs text-gray-500">
+                  Letters, numbers and - _ / # . (up to 20 characters).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Invoice Starting Number</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={9}
+                  value={businessDetails.invoiceStartNumber}
+                  onChange={(e) => setBusinessDetails((p) => ({ ...p, invoiceStartNumber: e.target.value.replace(/\D/g, "") }))}
+                  className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  placeholder="e.g. 0001"
+                />
+                <p className="text-xs text-gray-500">
+                  Numbering starts here: <span className="font-medium text-gray-700">{businessDetails.invoicePrefix}{businessDetails.invoiceStartNumber || "0001"}</span>
+                  {" "}and counts up after that. Changing this restarts the numbering.
                 </p>
               </div>
             </div>
