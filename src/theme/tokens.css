@@ -1,0 +1,181 @@
+/* ==========================================================================
+   CRM THEME — DESIGN TOKENS  (single source of truth for every colour)
+   --------------------------------------------------------------------------
+   The whole CRM is themed from the six palette colours below. Nothing else in
+   the app should hard-code a neutral colour: use the semantic tokens
+   (Tailwind: bg-surface, text-fg, border-line … see @theme inline below) or the
+   regular Tailwind neutral scales (gray/slate/zinc/neutral/stone), which are
+   remapped here onto the palette for BOTH themes.
+
+   Theme is selected by the ThemeProvider (src/theme/ThemeProvider.jsx), which
+   puts `class="dark"` + `data-theme="dark|light"` on <html>.
+   ========================================================================== */
+
+:root {
+  /* ---- Brand palette (exact reference colours) ---------------------------- */
+  --palette-ink: #0A1018;    /* darkest  — dark page bg / light primary text   */
+  --palette-navy: #1D2B3A;   /* dark surfaces (cards, sidebar, modals)         */
+  --palette-slate: #38506A;  /* dark borders / light secondary text            */
+  --palette-steel: #71859A;  /* muted text & icons (both themes)               */
+  --palette-mist: #B8C4CF;   /* light borders / dark secondary text            */
+  --palette-cloud: #F2F5F6;  /* light page bg / dark primary text              */
+}
+
+/* ---- LIGHT THEME (default) ------------------------------------------------ */
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --theme-bg: var(--palette-cloud);
+  --theme-surface: #ffffff;
+  --theme-surface-muted: var(--palette-cloud);
+  --theme-surface-hover: #E1E6EA /* 70% cloud + mist */;
+  --theme-surface-raised: #ffffff;
+  --theme-border: #D5DCE2 /* 50% cloud + mist */;
+  --theme-border-strong: var(--palette-mist);
+  --theme-text: var(--palette-ink);
+  --theme-text-secondary: var(--palette-slate);
+  --theme-text-muted: var(--palette-steel);
+  --theme-input-bg: #ffffff;
+  --theme-overlay: rgb(10 16 24 / 0.5);
+  --theme-scrollbar-track: var(--palette-cloud);
+  --theme-scrollbar-thumb: var(--palette-mist);
+  --theme-scrollbar-thumb-hover: var(--palette-steel);
+  --theme-tooltip-bg: var(--palette-navy);
+  --theme-tooltip-text: var(--palette-cloud);
+
+  /* Neutral scale (gray / slate / zinc / neutral / stone) mapped onto the palette */
+  --tz-n-50: var(--palette-cloud);
+  --tz-n-100: #E6EBEE /* 80% cloud + mist */;
+  --tz-n-200: #D8DFE4 /* 55% cloud + mist */;
+  --tz-n-300: var(--palette-mist);
+  --tz-n-400: #8D9EAF /* 40% mist + steel */;
+  --tz-n-500: var(--palette-steel);
+  --tz-n-600: #4F657D /* 40% steel + slate */;
+  --tz-n-700: var(--palette-slate);
+  --tz-n-800: var(--palette-navy);
+  --tz-n-900: #121B26 /* 40% navy + ink */;
+  --tz-n-950: var(--palette-ink);
+}
+
+/* ---- DARK THEME ----------------------------------------------------------- */
+html.dark,
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --theme-bg: var(--palette-ink);
+  --theme-surface: var(--palette-navy);
+  --theme-surface-muted: #121B26 /* 60% ink + navy */;
+  --theme-surface-hover: #26384B /* 65% navy + slate */;
+  --theme-surface-raised: #223244 /* 80% navy + slate */;
+  --theme-border: #2F4359 /* 35% navy + slate */;
+  --theme-border-strong: var(--palette-slate);
+  --theme-text: var(--palette-cloud);
+  --theme-text-secondary: var(--palette-mist);
+  --theme-text-muted: var(--palette-steel);
+  --theme-input-bg: var(--palette-navy);
+  --theme-overlay: rgb(10 16 24 / 0.75);
+  --theme-scrollbar-track: var(--palette-ink);
+  --theme-scrollbar-thumb: var(--palette-slate);
+  --theme-scrollbar-thumb-hover: var(--palette-steel);
+  --theme-tooltip-bg: var(--palette-cloud);
+  --theme-tooltip-text: var(--palette-ink);
+
+  /* Inverted neutral scale: light shades become dark surfaces, dark shades
+     (used for text) become light. Shades that are used as *dark backgrounds*
+     or *light text* in light mode are corrected in overrides.css. */
+  --tz-n-50: #121B26 /* 60% ink + navy */;
+  --tz-n-100: #26384B /* 65% navy + slate */;
+  --tz-n-200: #2F4359 /* 35% navy + slate */;
+  --tz-n-300: var(--palette-slate);
+  --tz-n-400: var(--palette-steel);
+  --tz-n-500: #8D9EAF /* 60% steel + mist */;
+  --tz-n-600: #A6B4C2 /* 25% steel + mist */;
+  --tz-n-700: var(--palette-mist);
+  --tz-n-800: #DBE1E6 /* 40% mist + cloud */;
+  --tz-n-900: var(--palette-cloud);
+  --tz-n-950: var(--palette-cloud);
+}
+
+/* ---- Feed the neutral scale into every Tailwind neutral palette ----------- */
+:root {
+  --color-gray-50: var(--tz-n-50);    --color-slate-50: var(--tz-n-50);
+  --color-gray-100: var(--tz-n-100);  --color-slate-100: var(--tz-n-100);
+  --color-gray-200: var(--tz-n-200);  --color-slate-200: var(--tz-n-200);
+  --color-gray-300: var(--tz-n-300);  --color-slate-300: var(--tz-n-300);
+  --color-gray-400: var(--tz-n-400);  --color-slate-400: var(--tz-n-400);
+  --color-gray-500: var(--tz-n-500);  --color-slate-500: var(--tz-n-500);
+  --color-gray-600: var(--tz-n-600);  --color-slate-600: var(--tz-n-600);
+  --color-gray-700: var(--tz-n-700);  --color-slate-700: var(--tz-n-700);
+  --color-gray-800: var(--tz-n-800);  --color-slate-800: var(--tz-n-800);
+  --color-gray-900: var(--tz-n-900);  --color-slate-900: var(--tz-n-900);
+  --color-gray-950: var(--tz-n-950);  --color-slate-950: var(--tz-n-950);
+
+  --color-zinc-50: var(--tz-n-50);    --color-neutral-50: var(--tz-n-50);    --color-stone-50: var(--tz-n-50);
+  --color-zinc-100: var(--tz-n-100);  --color-neutral-100: var(--tz-n-100);  --color-stone-100: var(--tz-n-100);
+  --color-zinc-200: var(--tz-n-200);  --color-neutral-200: var(--tz-n-200);  --color-stone-200: var(--tz-n-200);
+  --color-zinc-300: var(--tz-n-300);  --color-neutral-300: var(--tz-n-300);  --color-stone-300: var(--tz-n-300);
+  --color-zinc-400: var(--tz-n-400);  --color-neutral-400: var(--tz-n-400);  --color-stone-400: var(--tz-n-400);
+  --color-zinc-500: var(--tz-n-500);  --color-neutral-500: var(--tz-n-500);  --color-stone-500: var(--tz-n-500);
+  --color-zinc-600: var(--tz-n-600);  --color-neutral-600: var(--tz-n-600);  --color-stone-600: var(--tz-n-600);
+  --color-zinc-700: var(--tz-n-700);  --color-neutral-700: var(--tz-n-700);  --color-stone-700: var(--tz-n-700);
+  --color-zinc-800: var(--tz-n-800);  --color-neutral-800: var(--tz-n-800);  --color-stone-800: var(--tz-n-800);
+  --color-zinc-900: var(--tz-n-900);  --color-neutral-900: var(--tz-n-900);  --color-stone-900: var(--tz-n-900);
+  --color-zinc-950: var(--tz-n-950);  --color-neutral-950: var(--tz-n-950);  --color-stone-950: var(--tz-n-950);
+
+  /* shadcn/ui component tokens */
+  --background: var(--theme-bg);
+  --foreground: var(--theme-text);
+  --card: var(--theme-surface);
+  --card-foreground: var(--theme-text);
+  --popover: var(--theme-surface);
+  --popover-foreground: var(--theme-text);
+  --primary: var(--theme-text);
+  --primary-foreground: var(--theme-surface);
+  --secondary: var(--tz-n-100);
+  --secondary-foreground: var(--theme-text);
+  --muted: var(--tz-n-100);
+  --muted-foreground: var(--theme-text-muted);
+  --accent: var(--theme-surface-hover);
+  --accent-foreground: var(--theme-text);
+  --border: var(--theme-border);
+  --input: var(--theme-border);
+  --ring: var(--palette-steel);
+  --sidebar: var(--theme-surface);
+  --sidebar-foreground: var(--theme-text);
+  --sidebar-primary: var(--theme-text);
+  --sidebar-primary-foreground: var(--theme-surface);
+  --sidebar-accent: var(--theme-surface-hover);
+  --sidebar-accent-foreground: var(--theme-text);
+  --sidebar-border: var(--theme-border);
+  --sidebar-ring: var(--palette-steel);
+
+  /* react-toastify */
+  --toastify-color-light: var(--theme-surface);
+  --toastify-text-color-light: var(--theme-text);
+  --toastify-color-progress-light: #008ecc;
+}
+
+/* ---- Semantic Tailwind utilities for new code ------------------------------
+   bg-app  bg-surface  bg-surface-muted  bg-surface-hover  bg-surface-raised
+   text-fg  text-fg-secondary  text-fg-muted   border-line  border-line-strong
+   palette-ink / navy / slate / steel / mist / cloud (raw palette)            */
+@theme inline {
+  --color-app: var(--theme-bg);
+  --color-surface: var(--theme-surface);
+  --color-surface-muted: var(--theme-surface-muted);
+  --color-surface-hover: var(--theme-surface-hover);
+  --color-surface-raised: var(--theme-surface-raised);
+  --color-fg: var(--theme-text);
+  --color-fg-secondary: var(--theme-text-secondary);
+  --color-fg-muted: var(--theme-text-muted);
+  --color-line: var(--theme-border);
+  --color-line-strong: var(--theme-border-strong);
+
+  --color-palette-ink: var(--palette-ink);
+  --color-palette-navy: var(--palette-navy);
+  --color-palette-slate: var(--palette-slate);
+  --color-palette-steel: var(--palette-steel);
+  --color-palette-mist: var(--palette-mist);
+  --color-palette-cloud: var(--palette-cloud);
+}

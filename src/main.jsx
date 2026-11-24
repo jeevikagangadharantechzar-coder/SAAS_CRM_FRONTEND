@@ -13,6 +13,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ModalProvider } from "./context/ModalContext.jsx";
 import { TemplateProvider } from "./context/TemplateContext.jsx";
 import { FontSizeProvider } from "./context/FontSizeContext.jsx";
+import { ThemeProvider } from "./theme";
 import { getGlobalSettings } from "./utils/globalSettings.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -51,15 +52,17 @@ loadGlobalSettings().finally(() => {
   createRoot(document.getElementById("root")).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <FontSizeProvider>
-          <ModalProvider>
-            <TemplateProvider>
-              <Provider store={store}>
-                <App />
-              </Provider>
-            </TemplateProvider>
-          </ModalProvider>
-        </FontSizeProvider>
+        <ThemeProvider>
+          <FontSizeProvider>
+            <ModalProvider>
+              <TemplateProvider>
+                <Provider store={store}>
+                  <App />
+                </Provider>
+              </TemplateProvider>
+            </ModalProvider>
+          </FontSizeProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </StrictMode>
   );

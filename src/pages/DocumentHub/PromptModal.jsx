@@ -30,7 +30,7 @@ const PromptModal = ({ isOpen, onClose, onSubmit, title, message, placeholder = 
         </DialogHeader>
         <div className="py-4 space-y-4">
           {message && (
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="text-sm text-slate-600">
               {message}
             </p>
           )}

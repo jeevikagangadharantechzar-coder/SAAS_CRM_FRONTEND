@@ -82,46 +82,46 @@ const UserFormModal = ({ isOpen, onClose, onSaved, editingUser, roles }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="text-slate-800 dark:text-slate-200">{editingUser ? "Edit Super Admin" : "Create Super Admin"}</h3>
-          <button onClick={onClose} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-400 cursor-pointer">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-100 overflow-hidden">
+        <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-slate-800">{editingUser ? "Edit Super Admin" : "Create Super Admin"}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
             <input
               type="text"
               required
               placeholder="e.g. Jordan Lee"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Email</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email</label>
             <input
               type="email"
               required
               placeholder="e.g. jordan@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Role</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Role</label>
             <select
               required
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white dark:bg-slate-900"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all bg-white"
             >
               <option value="">Select a role</option>
               {roles.map((r) => (
@@ -143,7 +143,7 @@ const UserFormModal = ({ isOpen, onClose, onSaved, editingUser, roles }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer text-sm"
+              className="flex-1 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer text-sm"
             >
               Cancel
             </button>
@@ -206,40 +206,40 @@ const RoleFormModal = ({ isOpen, onClose, onSaved, editingRole }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full border border-slate-100 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="text-slate-800 dark:text-slate-200">{editingRole ? "Edit Role" : "Create Role"}</h3>
-          <button onClick={onClose} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-400 cursor-pointer">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-100 overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-slate-800">{editingRole ? "Edit Role" : "Create Role"}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5 overflow-y-auto">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Role Name</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Role Name</label>
             <input
               type="text"
               required
               placeholder="e.g. Support Manager"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Description</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Description</label>
             <textarea
               rows={2}
               placeholder="Optional"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all resize-none"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] transition-all resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Permissions</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Permissions</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
                 <label
@@ -247,14 +247,14 @@ const RoleFormModal = ({ isOpen, onClose, onSaved, editingRole }) => {
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium cursor-pointer transition-all ${
                     permissions[key]
                       ? "bg-[#f2fbff] dark:bg-blue-900/30 border-[#008ecc]/40 text-[#008ecc] dark:text-[#33b8ff]"
-                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={!!permissions[key]}
                     onChange={() => togglePermission(key)}
-                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
+                    className="h-4 w-4 rounded border-slate-300"
                   />
                   {label}
                 </label>
@@ -266,7 +266,7 @@ const RoleFormModal = ({ isOpen, onClose, onSaved, editingRole }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer text-sm"
+              className="flex-1 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer text-sm"
             >
               Cancel
             </button>
@@ -491,18 +491,18 @@ const SuperAdminUserRoles = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-slate-900 dark:text-white">Super Admin Users & Roles</h2>
-          <p className="text-base text-slate-600 dark:text-slate-400">Manage who can access the Management Console and what they can do.</p>
+          <h2 className="text-slate-900">Super Admin Users & Roles</h2>
+          <p className="text-base text-slate-600">Manage who can access the Management Console and what they can do.</p>
         </div>
 
         {/* Tab Controls */}
-        <div className="flex bg-slate-150 p-1 rounded-xl border border-slate-200 dark:border-slate-700 self-start md:self-auto" style={{ backgroundColor: "#f1f5f9" }}>
+        <div className="flex bg-slate-150 p-1 rounded-xl border border-slate-200 self-start md:self-auto" style={{ backgroundColor: "var(--theme-surface-muted)" }}>
           <button
             onClick={() => setActiveTab("users")}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === "users"
-                ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700/50"
-                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:text-slate-200"
+                ? "bg-white text-slate-800 shadow-sm border border-slate-200"
+                : "text-slate-500 hover:text-slate-800"
             }`}
           >
             <Users size={16} />
@@ -512,8 +512,8 @@ const SuperAdminUserRoles = () => {
             onClick={() => setActiveTab("roles")}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === "roles"
-                ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700/50"
-                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:text-slate-200"
+                ? "bg-white text-slate-800 shadow-sm border border-slate-200"
+                : "text-slate-500 hover:text-slate-800"
             }`}
           >
             <Shield size={16} />
@@ -523,12 +523,12 @@ const SuperAdminUserRoles = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl">
+      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl">
         <div className="p-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-100 rounded-md font-medium text-sm transition-colors border border-slate-200 bg-white cursor-pointer"
             >
               <Filter className="w-4 h-4" />
               <span>{activeTab === "users" ? "User Filter" : "Role Filter"}</span>
@@ -539,27 +539,27 @@ const SuperAdminUserRoles = () => {
               <button
                 onClick={() => setShowFieldPicker((v) => !v)}
                 title="Choose which filters to show"
-                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-100 rounded-md font-medium text-sm transition-colors border border-slate-200 bg-white cursor-pointer"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Customize</span>
               </button>
 
               {showFieldPicker && (
-                <div className="absolute left-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+                <div className="absolute left-0 z-20 mt-1 w-56 bg-white rounded-lg shadow-xl border border-slate-200 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                     Filters to show
                   </div>
                   <button
                     onClick={handleSelectAllFields}
-                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700"
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 cursor-pointer border-b border-slate-100"
                   >
                     <span>{areAllFieldsSelected ? "Deselect All" : "Select All"}</span>
                     <span
                       className={`w-4 h-4 rounded border flex items-center justify-center ${
                         areAllFieldsSelected
                           ? "bg-[#008ecc] border-[#008ecc] text-white"
-                          : "border-slate-300 dark:border-slate-600"
+                          : "border-slate-300"
                       }`}
                     >
                       {areAllFieldsSelected && <Check className="w-3 h-3" />}
@@ -571,14 +571,14 @@ const SuperAdminUserRoles = () => {
                       <button
                         key={field.key}
                         onClick={() => toggleFilterField(field.key)}
-                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer"
                       >
                         <span>{field.label}</span>
                         <span
                           className={`w-4 h-4 rounded border flex items-center justify-center ${
                             isActive
                               ? "bg-[#008ecc] border-[#008ecc] text-white"
-                              : "border-slate-300 dark:border-slate-600"
+                              : "border-slate-300"
                           }`}
                         >
                           {isActive && <Check className="w-3 h-3" />}
@@ -604,19 +604,19 @@ const SuperAdminUserRoles = () => {
         {showFilters && (
           <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-200">
             {activeFilterFields.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500">
                 No filters selected. Click <strong>Customize</strong> to add filters.
               </p>
             ) : (
               <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
                 {activeFilterFields.includes("search") && (
                   <div className="relative w-full lg:max-w-xs">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={activeTab === "users" ? "Search by name or email" : "Search by name or description"}
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 pl-9 pr-4 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#008ecc] focus:bg-white dark:bg-slate-900 transition-colors"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-sm text-slate-700 focus:outline-none focus:border-[#008ecc] focus:bg-white transition-colors"
                     />
                   </div>
                 )}
@@ -625,7 +625,7 @@ const SuperAdminUserRoles = () => {
                   <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
                   >
                     <option value="all">All Roles</option>
                     {roles.map((r) => (
@@ -637,19 +637,19 @@ const SuperAdminUserRoles = () => {
                 )}
 
                 {activeTab === "users" && activeFilterFields.includes("dateRange") && (
-                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5">
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5">
                     <input
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
+                      className="text-sm text-slate-600 bg-transparent focus:outline-none cursor-pointer"
                     />
                     <span className="text-slate-300">–</span>
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className="text-sm text-slate-600 dark:text-slate-400 bg-transparent focus:outline-none cursor-pointer"
+                      className="text-sm text-slate-600 bg-transparent focus:outline-none cursor-pointer"
                     />
                   </div>
                 )}
@@ -658,7 +658,7 @@ const SuperAdminUserRoles = () => {
                   <select
                     value={permissionFilter}
                     onChange={(e) => setPermissionFilter(e.target.value)}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 focus:outline-none focus:border-[#008ecc] cursor-pointer"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#008ecc] cursor-pointer"
                   >
                     <option value="all">All Permissions</option>
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
@@ -686,10 +686,10 @@ const SuperAdminUserRoles = () => {
             </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-slate-600 dark:text-slate-400">
-                <thead className="bg-slate-50/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+              <table className="w-full text-sm text-left text-slate-600">
+                <thead className="bg-slate-50/70 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
                   <tr>
                     <th className="px-6 py-4">Name</th>
                     <th className="px-6 py-4">Email</th>
@@ -698,15 +698,15 @@ const SuperAdminUserRoles = () => {
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">Loading super admins...</td></tr>
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">Loading super admins...</td></tr>
                   ) : filteredUsers.length === 0 ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-semibold">{hasActiveFilters ? "No super admins matching your filters." : "No super admin accounts found."}</td></tr>
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-semibold">{hasActiveFilters ? "No super admins matching your filters." : "No super admin accounts found."}</td></tr>
                   ) : (
                     filteredUsers.map((user) => (
-                      <tr key={user._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                        <td className="px-6 py-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <tr key={user._id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-2">
                           <UserCog size={16} className="text-[#008ecc] dark:text-[#33b8ff]" />
                           {user.name}
                           {user._id === currentAdminId && (
@@ -715,11 +715,11 @@ const SuperAdminUserRoles = () => {
                         </td>
                         <td className="px-6 py-4">{user.email}</td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 uppercase">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 text-slate-700 border-slate-200 uppercase">
                             {user.role?.name || "No Role"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                        <td className="px-6 py-4 text-slate-500">
                           {user.createdAt ? format(new Date(user.createdAt), "MMM dd, yyyy") : "—"}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -727,14 +727,14 @@ const SuperAdminUserRoles = () => {
                             <button
                               onClick={() => handleResetPassword(user)}
                               disabled={busyId === user._id}
-                              className="text-slate-400 dark:text-slate-500 hover:text-amber-600 transition-colors cursor-pointer disabled:opacity-40"
+                              className="text-slate-400 hover:text-amber-600 transition-colors cursor-pointer disabled:opacity-40"
                               title="Reset password"
                             >
                               <KeyRound size={16} />
                             </button>
                             <button
                               onClick={() => { setEditingUser(user); setUserModalOpen(true); }}
-                              className="text-slate-400 dark:text-slate-500 hover:text-[#008ecc] dark:text-[#33b8ff] transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-[#008ecc] dark:text-[#33b8ff] transition-colors cursor-pointer"
                               title="Edit super admin"
                             >
                               <Pencil size={16} />
@@ -742,7 +742,7 @@ const SuperAdminUserRoles = () => {
                             <button
                               onClick={() => handleDeleteUser(user)}
                               disabled={busyId === user._id || user._id === currentAdminId}
-                              className="text-slate-400 dark:text-slate-500 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="text-slate-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                               title={user._id === currentAdminId ? "You cannot delete your own account" : "Delete super admin"}
                             >
                               <Trash2 size={16} />
@@ -769,10 +769,10 @@ const SuperAdminUserRoles = () => {
             </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-slate-600 dark:text-slate-400">
-                <thead className="bg-slate-50/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+              <table className="w-full text-sm text-left text-slate-600">
+                <thead className="bg-slate-50/70 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
                   <tr>
                     <th className="px-6 py-4">Role Name</th>
                     <th className="px-6 py-4">Description</th>
@@ -780,21 +780,21 @@ const SuperAdminUserRoles = () => {
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">Loading roles...</td></tr>
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">Loading roles...</td></tr>
                   ) : filteredRoles.length === 0 ? (
-                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-semibold">{hasActiveFilters ? "No roles matching your filters." : "No roles created yet."}</td></tr>
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-semibold">{hasActiveFilters ? "No roles matching your filters." : "No roles created yet."}</td></tr>
                   ) : (
                     filteredRoles.map((role) => {
                       const enabledCount = Object.values(role.permissions || {}).filter(Boolean).length;
                       return (
-                        <tr key={role._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                          <td className="px-6 py-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <tr key={role._id} className="hover:bg-slate-50 transition">
+                          <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-2">
                             <ShieldCheck size={16} className="text-[#008ecc] dark:text-[#33b8ff]" />
                             {role.name}
                           </td>
-                          <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{role.description || "—"}</td>
+                          <td className="px-6 py-4 text-slate-500">{role.description || "—"}</td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 dark:bg-blue-900/30 text-[#008ecc] dark:text-[#33b8ff] border-blue-100 dark:border-blue-800/50">
                               {enabledCount} / {Object.keys(PERMISSION_LABELS).length}
@@ -804,7 +804,7 @@ const SuperAdminUserRoles = () => {
                             <div className="flex items-center justify-end gap-3">
                               <button
                                 onClick={() => { setEditingRole(role); setRoleModalOpen(true); }}
-                                className="text-slate-400 dark:text-slate-500 hover:text-[#008ecc] dark:text-[#33b8ff] transition-colors cursor-pointer"
+                                className="text-slate-400 hover:text-[#008ecc] dark:text-[#33b8ff] transition-colors cursor-pointer"
                                 title="Edit role"
                               >
                                 <Pencil size={16} />
@@ -812,7 +812,7 @@ const SuperAdminUserRoles = () => {
                               <button
                                 onClick={() => handleDeleteRole(role)}
                                 disabled={role.name.toLowerCase() === "owner"}
-                                className="text-slate-400 dark:text-slate-500 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400 dark:text-slate-500"
+                                className="text-slate-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400"
                                 title={role.name.toLowerCase() === "owner" ? "The Owner role cannot be deleted" : "Delete role"}
                               >
                                 <Trash2 size={16} />

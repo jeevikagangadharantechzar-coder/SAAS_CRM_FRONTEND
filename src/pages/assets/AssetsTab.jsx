@@ -366,7 +366,7 @@ const AssetViewModal = ({ asset, onClose, onEdit }) => {
         <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
           <span
             className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-            style={{ backgroundColor: `${category?.color || "#6B7280"}22`, color: category?.color || "#6B7280" }}
+            style={{ backgroundColor: `${category?.color || "#6B7280"}22`, color: category?.color || "var(--theme-text-secondary)" }}
           >
             {category?.icon || <Package size={18} />}
           </span>
@@ -652,7 +652,7 @@ const AssetsTab = ({ categories, setCategories, categoriesLoaded, setCategoriesL
                       <div className="flex items-center gap-3">
                         <span
                           className="w-9 h-9 rounded-lg flex items-center justify-center text-base flex-shrink-0"
-                          style={{ backgroundColor: `${a.category?.color || "#6B7280"}22`, color: a.category?.color || "#6B7280" }}
+                          style={{ backgroundColor: `${a.category?.color || "#6B7280"}22`, color: a.category?.color || "var(--theme-text-secondary)" }}
                         >
                           {a.category?.icon || <Package size={16} />}
                         </span>

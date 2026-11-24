@@ -1869,7 +1869,7 @@ export default function LostDealAnalytics() {
           <Tooltip
             contentStyle={{
               borderRadius: "8px",
-              border: "1px solid #e5e7eb",
+              border: "1px solid var(--theme-border)",
             }}
             formatter={(value, name) =>
               name === "Value"

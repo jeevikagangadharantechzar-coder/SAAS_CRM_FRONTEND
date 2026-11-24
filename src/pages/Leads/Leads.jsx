@@ -2569,7 +2569,7 @@ export default function LeadTable() {
       afterOpen={() => (document.body.style.overflow = "hidden")}
       beforeClose={() => (document.body.style.overflow = "unset")}
       styles={{
-        popover: (base) => ({ ...base, backgroundColor: "#fff", color: "#1f1f1f" }),
+        popover: (base) => ({ ...base, backgroundColor: "var(--theme-surface)", color: "var(--theme-text)" }),
         maskArea: (base) => ({ ...base, rx: 8 }),
         badge: (base) => ({ ...base, display: "none" }),
         close: (base) => ({ ...base, right: "auto", left: 8, top: 8 }),

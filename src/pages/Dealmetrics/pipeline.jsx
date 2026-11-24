@@ -14,6 +14,7 @@ import {
   Eye as ViewIcon, ChevronLeft, ChevronRight as ChevronRightIcon
 } from "lucide-react";
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import useChartTheme from '../../theme/useChartTheme';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -389,6 +390,7 @@ const NotificationsPanel = ({ deals, onClose, isOpen }) => {
 // ==================== METRICS MODAL ====================
 
 const MetricsModal = ({ deals = [], onClose, isOpen }) => {
+  useChartTheme();
   const [winRateData, setWinRateData] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
   const [distributionData, setDistributionData] = useState(null);

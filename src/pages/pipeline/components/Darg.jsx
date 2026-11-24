@@ -78,7 +78,7 @@ export default function DragBoard() {
                           {...provided.dragHandleProps}
                           style={{
                             ...provided.draggableProps.style,
-                            backgroundColor: "#fff",
+                            backgroundColor: "var(--theme-surface)",
                             padding: 16,
                             marginBottom: 12,
                             borderRadius: 8,

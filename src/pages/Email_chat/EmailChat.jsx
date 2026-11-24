@@ -139,7 +139,7 @@ const GmailConnectScreen = ({
               <button
                 onClick={onConnect} disabled={isConnecting}
                 className="w-full flex items-center justify-center gap-3 py-3 px-5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 shadow-sm disabled:opacity-60"
-                style={{ color: "#3c4043", fontSize: "0.9375rem", fontWeight: 500 }}
+                style={{ color: "var(--theme-text)", fontSize: "0.9375rem", fontWeight: 500 }}
               >
                 {isConnecting ? (
                   <><FaSpinner className="animate-spin" size={18} style={{ color: "#1a73e8" }} /><span>Connecting...</span></>
@@ -1263,9 +1263,9 @@ const EmailChat = () => {
         {/* SIDEBAR */}
         <div
           className={`${sidebarCollapsed ? "w-16" : "w-60"} bg-white flex flex-col transition-all duration-300 ease-in-out ${showMobileSidebar ? "fixed inset-y-0 left-0 z-40 shadow-xl" : "hidden lg:flex"}`}
-          style={{ borderRight: "1px solid #e8eaed" }}
+          style={{ borderRight: "1px solid var(--theme-border)" }}
         >
-          <div className="px-3 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #e8eaed" }}>
+          <div className="px-3 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--theme-border)" }}>
             <div className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2.5"}`}>
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
@@ -1276,7 +1276,7 @@ const EmailChat = () => {
               {!sidebarCollapsed && (
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-gray-800 truncate">{userEmail}</p>
-                  <p className="text-xs" style={{ color: "#5f6368" }}>{actualCounts.UNREAD} unread</p>
+                  <p className="text-xs" style={{ color: "var(--theme-text-secondary)" }}>{actualCounts.UNREAD} unread</p>
                 </div>
               )}
             </div>
@@ -1285,11 +1285,11 @@ const EmailChat = () => {
             </button>
           </div>
 
-          <div className="p-3" style={{ borderBottom: "1px solid #f1f3f4" }}>
+          <div className="p-3" style={{ borderBottom: "1px solid var(--theme-border)" }}>
             <button
               onClick={() => { setComposeMode("new"); setShowCompose(true); }}
               className={`w-full text-sm font-medium py-2.5 rounded-2xl flex items-center justify-center gap-2 transition hover:shadow-md ${sidebarCollapsed ? "px-2" : "px-4"}`}
-              style={{ background: "#c2e7ff", color: "#001d35" }}
+              style={{ background: "color-mix(in srgb, #1a73e8 18%, var(--theme-surface))", color: "var(--theme-text)" }}
             >
               <FaEdit size={14} className="flex-shrink-0" />
               {!sidebarCollapsed && <span>Compose</span>}
@@ -1306,21 +1306,21 @@ const EmailChat = () => {
                   className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-3"} py-2 transition-all duration-100 text-sm`}
                   style={{
                     borderRadius: "0 100px 100px 0",
-                    background:   isActive ? "#d3e3fd" : "transparent",
-                    color:        isActive ? "#1a73e8" : "#444746",
+                    background:   isActive ? "color-mix(in srgb, #1a73e8 18%, var(--theme-surface))" : "transparent",
+                    color:        isActive ? "#1a73e8" : "var(--theme-text-secondary)",
                     fontWeight:   isActive ? 600 : 400,
                     marginRight:  "8px",
                   }}
-                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "#f1f3f4"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive ? "#d3e3fd" : "transparent"; }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "var(--theme-surface-hover)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive ? "color-mix(in srgb, #1a73e8 18%, var(--theme-surface))" : "transparent"; }}
                   title={sidebarCollapsed ? label.name : ""}
                 >
                   <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-3"}`}>
-                    <span style={{ color: isActive ? "#1a73e8" : "#444746" }}>{label.icon}</span>
+                    <span style={{ color: isActive ? "#1a73e8" : "var(--theme-text-secondary)" }}>{label.icon}</span>
                     {!sidebarCollapsed && <span>{label.name}</span>}
                   </div>
                   {!sidebarCollapsed && count > 0 && (
-                    <span className="text-xs font-semibold" style={{ color: isActive ? "#1a73e8" : "#444746" }}>
+                    <span className="text-xs font-semibold" style={{ color: isActive ? "#1a73e8" : "var(--theme-text-secondary)" }}>
                       {count > 999 ? `${Math.floor(count / 1000)}k` : count}
                     </span>
                   )}
@@ -1329,7 +1329,7 @@ const EmailChat = () => {
             })}
           </div>
 
-          <div className="p-3" style={{ borderTop: "1px solid #e8eaed" }}>
+          <div className="p-3" style={{ borderTop: "1px solid var(--theme-border)" }}>
             <button
               onClick={() => setShowDisconnModal(true)}
               className={`w-full text-xs text-red-500 hover:bg-red-50 px-3 py-2 rounded-xl transition flex items-center ${sidebarCollapsed ? "justify-center" : "gap-2"}`}
@@ -1341,9 +1341,9 @@ const EmailChat = () => {
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#f6f8fc" }}>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "var(--theme-surface-muted)" }}>
           {/* HEADER */}
-          <div className="bg-white px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid #e8eaed" }}>
+          <div className="bg-white px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--theme-border)" }}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 <button
@@ -1364,16 +1364,16 @@ const EmailChat = () => {
                     <FaArrowLeft size={15} />
                   </button>
                 )}
-                <h1 className="flex items-center gap-2 min-w-0" style={{ color: "#202124" }}>
+                <h1 className="flex items-center gap-2 min-w-0" style={{ color: "var(--theme-text)" }}>
                   {selectedThread ? (
                     threadLoading
                       ? <span className="text-gray-400 text-sm animate-pulse">Loading email…</span>
                       : <span className="truncate max-w-[60vw] sm:max-w-md">{messages[0]?.subject || "Email"}</span>
                   ) : (
                     <>
-                      <span style={{ color: "#5f6368" }}>{labelOptions.find((l) => l.id === activeLabel)?.icon}</span>
+                      <span style={{ color: "var(--theme-text-secondary)" }}>{labelOptions.find((l) => l.id === activeLabel)?.icon}</span>
                       <span>{labelOptions.find((l) => l.id === activeLabel)?.name}</span>
-                      <span className="text-sm font-normal ml-1" style={{ color: "#5f6368" }}>
+                      <span className="text-sm font-normal ml-1" style={{ color: "var(--theme-text-secondary)" }}>
                         ({actualCounts[activeLabel] || 0})
                       </span>
                     </>
@@ -1384,7 +1384,7 @@ const EmailChat = () => {
                 <button
                   onClick={() => fetchLabel({ label: activeLabel, force: true })}
                   disabled={listLoading && listLoadLabel === activeLabel}
-                  className="p-2 rounded-full hover:bg-gray-100 transition" style={{ color: "#5f6368" }}
+                  className="p-2 rounded-full hover:bg-gray-100 transition" style={{ color: "var(--theme-text-secondary)" }}
                 >
                   {listLoading && listLoadLabel === activeLabel
                     ? <FaSpinner className="animate-spin" size={15} />
@@ -1394,35 +1394,35 @@ const EmailChat = () => {
             </div>
 
             {showBulkActions && !selectedThread && (
-              <div className="mt-3 px-3 py-2 rounded-xl flex items-center gap-3 flex-wrap" style={{ background: "#e8f0fe" }}>
+              <div className="mt-3 px-3 py-2 rounded-xl flex items-center gap-3 flex-wrap" style={{ background: "color-mix(in srgb, #1a73e8 18%, var(--theme-surface))" }}>
                 <span className="text-xs font-medium flex items-center gap-1" style={{ color: "#1a73e8" }}>
                   <FaCheckSquare size={13} />{selectedThreads.size} selected
                 </span>
-                <button onClick={() => handleBulkAction("read", true)}  className="text-xs bg-white px-3 py-1 rounded-full border" style={{ color: "#1a73e8", borderColor: "#c5d6f5" }}>Mark Read</button>
-                <button onClick={() => handleBulkAction("star", true)}  className="text-xs bg-white px-3 py-1 rounded-full border" style={{ color: "#1a73e8", borderColor: "#c5d6f5" }}>⭐ Star</button>
-                <button onClick={() => handleBulkAction("trash")}       className="text-xs bg-white px-3 py-1 rounded-full border" style={{ color: "#1a73e8", borderColor: "#c5d6f5" }}>🗑 Trash</button>
+                <button onClick={() => handleBulkAction("read", true)}  className="text-xs bg-white px-3 py-1 rounded-full border" style={{ color: "#1a73e8", borderColor: "var(--theme-border)" }}>Mark Read</button>
+                <button onClick={() => handleBulkAction("star", true)}  className="text-xs bg-white px-3 py-1 rounded-full border" style={{ color: "#1a73e8", borderColor: "var(--theme-border)" }}>⭐ Star</button>
+                <button onClick={() => handleBulkAction("trash")}       className="text-xs bg-white px-3 py-1 rounded-full border" style={{ color: "#1a73e8", borderColor: "var(--theme-border)" }}>🗑 Trash</button>
                 <button onClick={() => { setSelectedThreads(new Set()); setShowBulkActions(false); }}
-                  className="ml-auto text-xs" style={{ color: "#5f6368" }}>Clear</button>
+                  className="ml-auto text-xs" style={{ color: "var(--theme-text-secondary)" }}>Clear</button>
               </div>
             )}
 
             {!selectedThread && (
               <div className="mt-3 flex gap-2">
                 <div className="flex-1 relative">
-                  <FaSearch size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#5f6368" }} />
+                  <FaSearch size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--theme-text-secondary)" }} />
                   <input
                     type="text" value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={`Search in ${activeLabel.toLowerCase()}...`}
                     className="w-full pl-9 pr-4 py-2 rounded-2xl text-sm border-0 outline-none"
-                    style={{ background: "#eaf1fb", color: "#202124" }}
+                    style={{ background: "var(--theme-surface-hover)", color: "var(--theme-text)" }}
                   />
                 </div>
                 {activeLabel === "INBOX" && (
                   <button
                     onClick={() => handleLabelClick("UNREAD")}
                     className="px-3.5 py-2 rounded-2xl text-sm flex items-center gap-2 transition"
-                    style={{ background: "#fff", border: "1px solid #e8eaed", color: "#5f6368" }}
+                    style={{ background: "var(--theme-surface)", border: "1px solid var(--theme-border)", color: "var(--theme-text-secondary)" }}
                   >
                     <FaEnvelope size={13} />
                     <span className="hidden sm:inline">Unread</span>
@@ -1452,11 +1452,11 @@ const EmailChat = () => {
                 ) : filteredThreads.length === 0 ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
-                      <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "#f1f3f4" }}>
-                        <FaEnvelope size={34} style={{ color: "#dadce0" }} />
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "var(--theme-surface-hover)" }}>
+                        <FaEnvelope size={34} style={{ color: "var(--theme-border-strong)" }} />
                       </div>
-                      <h3 className="mb-1" style={{ color: "#5f6368" }}>No emails found</h3>
-                      <p className="text-base text-slate-600" style={{ color: "#80868b" }}>
+                      <h3 className="mb-1" style={{ color: "var(--theme-text-secondary)" }}>No emails found</h3>
+                      <p className="text-base text-slate-600" style={{ color: "var(--theme-text-muted)" }}>
                         {searchQuery ? "Try adjusting your search"
                           : activeLabel === "UNREAD" ? "You're all caught up! "
                           : `No emails in ${activeLabel.toLowerCase()}`}
@@ -1464,16 +1464,16 @@ const EmailChat = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl overflow-hidden bg-white" style={{ border: "1px solid #e8eaed" }}>
+                  <div className="rounded-2xl overflow-hidden bg-white" style={{ border: "1px solid var(--theme-border)" }}>
                     {filteredThreads.map((thread) => {
                       const isThisOpening = openingRef.current === thread.id && threadLoading;
                       return (
                         <div
                           key={thread.id}
                           className="group flex items-center px-2.5 sm:px-4 py-2.5 border-b last:border-0 transition-colors duration-100"
-                          style={{ borderColor: "#f1f3f4", background: thread.unread ? "#f8f9ff" : "white" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = "#f0f4ff"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = thread.unread ? "#f8f9ff" : "white"; }}
+                          style={{ borderColor: "var(--theme-border)", background: thread.unread ? "var(--theme-surface-muted)" : "var(--theme-surface)" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--theme-surface-hover)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = thread.unread ? "var(--theme-surface-muted)" : "var(--theme-surface)"; }}
                         >
                           <input
                             type="checkbox" checked={selectedThreads.has(thread.id)}
@@ -1489,7 +1489,7 @@ const EmailChat = () => {
                           <button
                             onClick={(e) => { e.stopPropagation(); markThreadAs(thread.id, "star", !thread.starred); }}
                             className={`mr-2 sm:mr-3 flex-shrink-0 transition-opacity ${thread.starred ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                            style={{ color: thread.starred ? "#f4b400" : "#dadce0" }}
+                            style={{ color: thread.starred ? "#f4b400" : "var(--theme-border-strong)" }}
                           >
                             <FaStar size={15} />
                           </button>
@@ -1503,13 +1503,13 @@ const EmailChat = () => {
                             <div className="flex items-center gap-2 min-w-0">
                               <span
                                 className="text-sm truncate min-w-0 max-w-[38%] shrink sm:w-40 sm:max-w-none sm:flex-shrink-0"
-                                style={{ color: thread.unread ? "#202124" : "#5f6368", fontWeight: thread.unread ? 600 : 400 }}
+                                style={{ color: thread.unread ? "var(--theme-text)" : "var(--theme-text-secondary)", fontWeight: thread.unread ? 600 : 400 }}
                               >
                                 {extractName(thread.from)}
                               </span>
-                              <span className="text-sm truncate flex-1 min-w-0" style={{ color: thread.unread ? "#202124" : "#5f6368" }}>
+                              <span className="text-sm truncate flex-1 min-w-0" style={{ color: thread.unread ? "var(--theme-text)" : "var(--theme-text-secondary)" }}>
                                 {thread.subject || "(No Subject)"}
-                                <span className="font-normal ml-1.5" style={{ color: "#80868b" }}>{thread.snippet}</span>
+                                <span className="font-normal ml-1.5" style={{ color: "var(--theme-text-muted)" }}>{thread.snippet}</span>
                               </span>
                             </div>
                           </div>
@@ -1517,11 +1517,11 @@ const EmailChat = () => {
                             {isThisOpening
                               ? <FaSpinner className="animate-spin" size={12} style={{ color: "#1a73e8" }} />
                               : thread.unread && <div className="w-2 h-2 rounded-full" style={{ background: "#1a73e8" }} />}
-                            <span className="text-xs whitespace-nowrap" style={{ color: "#5f6368" }}>{formatDateTime(thread.date)}</span>
+                            <span className="text-xs whitespace-nowrap" style={{ color: "var(--theme-text-secondary)" }}>{formatDateTime(thread.date)}</span>
                             <button
                               onClick={(e) => { e.stopPropagation(); setThreadToDelete({ id: thread.id, permanent: activeLabel === "TRASH" }); setShowDeleteModal(true); }}
                               className="opacity-0 group-hover:opacity-100 transition p-1 rounded-full hover:bg-gray-100"
-                              style={{ color: "#5f6368" }}
+                              style={{ color: "var(--theme-text-secondary)" }}
                             >
                               <FaTrash size={13} />
                             </button>
@@ -1538,7 +1538,7 @@ const EmailChat = () => {
                       onClick={() => fetchLabel({ label: activeLabel, loadMore: true })}
                       disabled={listLoading && listLoadLabel === activeLabel}
                       className="text-sm px-5 py-2 rounded-full border transition"
-                      style={{ borderColor: "#dadce0", color: "#1a73e8", background: "white" }}
+                      style={{ borderColor: "var(--theme-border-strong)", color: "#1a73e8", background: "var(--theme-surface)" }}
                     >
                       {listLoading && listLoadLabel === activeLabel
                         ? <><FaSpinner className="animate-spin inline mr-2" size={13} />Loading...</>
@@ -1549,18 +1549,18 @@ const EmailChat = () => {
               </div>
             ) : (
               /* DETAIL VIEW */
-              <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eaed" }}>
+              <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid var(--theme-border)" }}>
                 {threadLoading ? (
                   <MessageSkeleton />
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12">
-                    <FaEnvelope size={46} className="mx-auto mb-3" style={{ color: "#dadce0" }} />
-                    <p className="text-sm" style={{ color: "#5f6368" }}>No messages</p>
+                    <FaEnvelope size={46} className="mx-auto mb-3" style={{ color: "var(--theme-border-strong)" }} />
+                    <p className="text-sm" style={{ color: "var(--theme-text-secondary)" }}>No messages</p>
                   </div>
                 ) : (
                   <div>
                     {messages.map((msg) => (
-                      <div key={msg.id} className="p-4 sm:p-6" style={{ borderBottom: "1px solid #f1f3f4" }}>
+                      <div key={msg.id} className="p-4 sm:p-6" style={{ borderBottom: "1px solid var(--theme-border)" }}>
                         <div className="flex items-start justify-between flex-wrap gap-2 mb-4">
                           <div className="flex items-center gap-3 min-w-0">
                             <div
@@ -1570,53 +1570,53 @@ const EmailChat = () => {
                               {extractName(msg.from).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <h3 className="truncate" style={{ color: "#202124" }}>{extractName(msg.from)}</h3>
-                              <p className="text-base text-slate-600 truncate" style={{ color: "#5f6368" }}>{extractEmail(msg.from)}</p>
+                              <h3 className="truncate" style={{ color: "var(--theme-text)" }}>{extractName(msg.from)}</h3>
+                              <p className="text-base text-slate-600 truncate" style={{ color: "var(--theme-text-secondary)" }}>{extractEmail(msg.from)}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-xs whitespace-nowrap" style={{ color: "#5f6368" }}>{new Date(msg.date).toLocaleString()}</span>
+                            <span className="text-xs whitespace-nowrap" style={{ color: "var(--theme-text-secondary)" }}>{new Date(msg.date).toLocaleString()}</span>
                             <button
                               onClick={() => markThreadAs(selectedThread, "star", !msg.starred)}
                               className="p-1.5 rounded-full hover:bg-gray-100"
-                              style={{ color: msg.starred ? "#f4b400" : "#dadce0" }}
+                              style={{ color: msg.starred ? "#f4b400" : "var(--theme-border-strong)" }}
                             >
                               <FaStar size={15} />
                             </button>
                             <button
                               onClick={() => markThreadAs(selectedThread, "important", !msg.important)}
                               className="p-1.5 rounded-full hover:bg-gray-100"
-                              style={{ color: msg.important ? "#f29900" : "#dadce0" }}
+                              style={{ color: msg.important ? "#f29900" : "var(--theme-border-strong)" }}
                             >
                               <FaExclamationCircle size={15} />
                             </button>
                           </div>
                         </div>
                         {(msg.to || msg.cc) && (
-                          <div className="mb-4 text-xs" style={{ color: "#5f6368" }}>
+                          <div className="mb-4 text-xs" style={{ color: "var(--theme-text-secondary)" }}>
                             {msg.to && <p><span className="font-medium">To:</span> {msg.to}</p>}
                             {msg.cc && <p><span className="font-medium">Cc:</span> {msg.cc}</p>}
                           </div>
                         )}
                         {msg.hasAttachments && msg.attachments?.length > 0 && (
-                          <div className="mb-4 p-3 rounded-xl" style={{ background: "#f6f8fc" }}>
-                            <h3 className="mb-2 flex items-center gap-1.5" style={{ color: "#444746" }}>
+                          <div className="mb-4 p-3 rounded-xl" style={{ background: "var(--theme-surface-muted)" }}>
+                            <h3 className="mb-2 flex items-center gap-1.5" style={{ color: "var(--theme-text-secondary)" }}>
                               <FaPaperclip size={11} />Attachments ({msg.attachments.length})
                             </h3>
                             <div className="space-y-1.5">
                               {msg.attachments.map((att, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg" style={{ border: "1px solid #e8eaed" }}>
+                                <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg" style={{ border: "1px solid var(--theme-border)" }}>
                                   <div className="flex items-center gap-2">
                                     {getFileIcon({ mimeType: att.mimeType, filename: att.filename })}
                                     <div>
-                                      <p className="text-xs font-medium" style={{ color: "#202124" }}>{att.filename}</p>
-                                      <p className="text-xs" style={{ color: "#5f6368" }}>{formatFileSize(att.size)}</p>
+                                      <p className="text-xs font-medium" style={{ color: "var(--theme-text)" }}>{att.filename}</p>
+                                      <p className="text-xs" style={{ color: "var(--theme-text-secondary)" }}>{formatFileSize(att.size)}</p>
                                     </div>
                                   </div>
                                   <button
                                     onClick={() => downloadAttachment(msg.id, att)}
                                     className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1"
-                                    style={{ color: "#1a73e8", background: "#e8f0fe" }}
+                                    style={{ color: "#1a73e8", background: "color-mix(in srgb, #1a73e8 18%, var(--theme-surface))" }}
                                   >
                                     <FaDownload size={11} />Download
                                   </button>
@@ -1627,23 +1627,23 @@ const EmailChat = () => {
                         )}
                         <div className="prose max-w-none">
                           {msg.htmlBody
-                            ? <div className="text-sm leading-relaxed" style={{ color: "#202124" }} dangerouslySetInnerHTML={{ __html: msg.htmlBody }} />
-                            : <pre className="text-sm whitespace-pre-wrap font-sans" style={{ color: "#202124" }}>{msg.body || "No content"}</pre>}
+                            ? <div className="text-sm leading-relaxed" style={{ color: "var(--theme-text)" }} dangerouslySetInnerHTML={{ __html: msg.htmlBody }} />
+                            : <pre className="text-sm whitespace-pre-wrap font-sans" style={{ color: "var(--theme-text)" }}>{msg.body || "No content"}</pre>}
                         </div>
-                        <div className="mt-5 flex items-center flex-wrap gap-2 pt-4" style={{ borderTop: "1px solid #f1f3f4" }}>
+                        <div className="mt-5 flex items-center flex-wrap gap-2 pt-4" style={{ borderTop: "1px solid var(--theme-border)" }}>
                           <button onClick={() => openReply(msg, "reply")}
                             className="text-sm px-4 py-1.5 rounded-full flex items-center gap-1.5"
-                            style={{ background: "#c2e7ff", color: "#001d35" }}>
+                            style={{ background: "color-mix(in srgb, #1a73e8 18%, var(--theme-surface))", color: "var(--theme-text)" }}>
                             <FaReply size={13} />Reply
                           </button>
                           <button onClick={() => openReply(msg, "replyAll")}
                             className="text-sm px-4 py-1.5 rounded-full border flex items-center gap-1.5 hover:bg-gray-50"
-                            style={{ border: "1px solid #dadce0", color: "#444746" }}>
+                            style={{ border: "1px solid var(--theme-border-strong)", color: "var(--theme-text-secondary)" }}>
                             <FaReplyAll size={13} />Reply All
                           </button>
                           <button onClick={() => openReply(msg, "forward")}
                             className="text-sm px-4 py-1.5 rounded-full border flex items-center gap-1.5 hover:bg-gray-50"
-                            style={{ border: "1px solid #dadce0", color: "#444746" }}>
+                            style={{ border: "1px solid var(--theme-border-strong)", color: "var(--theme-text-secondary)" }}>
                             <FaForward size={13} />Forward
                           </button>
                         </div>

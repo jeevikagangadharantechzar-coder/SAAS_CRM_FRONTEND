@@ -283,25 +283,25 @@ function UserManagementInner() {
           },
           success: {
             style: {
-              background: "#f0fdf4",
-              color: "#166534",
-              border: "1px solid #bbf7d0",
+              background: "color-mix(in srgb, #22c55e 14%, var(--theme-surface))",
+              color: "var(--theme-text)",
+              border: "1px solid color-mix(in srgb, #22c55e 35%, var(--theme-surface))",
             },
-            iconTheme: { primary: "#22c55e", secondary: "#f0fdf4" },
+            iconTheme: { primary: "#22c55e", secondary: "#ffffff" },
           },
           error: {
             style: {
-              background: "#fef2f2",
-              color: "#991b1b",
-              border: "1px solid #fecaca",
+              background: "color-mix(in srgb, #ef4444 14%, var(--theme-surface))",
+              color: "var(--theme-text)",
+              border: "1px solid color-mix(in srgb, #ef4444 35%, var(--theme-surface))",
             },
-            iconTheme: { primary: "#ef4444", secondary: "#fef2f2" },
+            iconTheme: { primary: "#ef4444", secondary: "#ffffff" },
           },
           loading: {
             style: {
-              background: "#eff6ff",
-              color: "#1e40af",
-              border: "1px solid #bfdbfe",
+              background: "color-mix(in srgb, #3b82f6 14%, var(--theme-surface))",
+              color: "var(--theme-text)",
+              border: "1px solid color-mix(in srgb, #3b82f6 35%, var(--theme-surface))",
             },
           },
         }}
@@ -765,12 +765,12 @@ export default function UserManagement() {
       styles={{
         popover: (base) => ({
           ...base,
-          backgroundColor: "#fff",
-          color: "#1f1f1f",
+          backgroundColor: "var(--theme-surface)",
+          color: "var(--theme-text)",
           maxWidth: "320px",
           borderRadius: "8px",
           boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-          border: "1px solid #e5e7eb",
+          border: "1px solid var(--theme-border)",
         }),
         maskArea: (base) => ({ ...base, rx: 8 }),
         badge:   (base) => ({ ...base, display: "none" }),

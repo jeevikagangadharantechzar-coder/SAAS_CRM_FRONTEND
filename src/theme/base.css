@@ -1,0 +1,273 @@
+/* ==========================================================================
+   CRM THEME — BASE ELEMENTS + THIRD-PARTY WIDGETS
+   Everything here reads the semantic tokens from tokens.css, so both themes
+   are covered by the same rules.
+   ========================================================================== */
+
+@layer base {
+  html,
+  body {
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  h1, h2 { color: var(--theme-text); }
+  h3 { color: var(--theme-text-secondary); }
+
+  /* Un-classed native controls follow the theme (classes still win: :where = 0 specificity) */
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea) {
+    color: inherit;
+  }
+  :where(html.dark) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea) {
+    background-color: var(--theme-input-bg);
+  }
+  :where(option, optgroup) {
+    background-color: var(--theme-surface);
+    color: var(--theme-text);
+  }
+  ::placeholder { color: var(--theme-text-muted); }
+  hr { border-color: var(--theme-border); }
+}
+
+/* ---- Theme switch performance (see ThemeProvider.jsx) ---------------------
+   1. For the single frame in which the theme flips, every CSS transition is
+      disabled, so the ~900 elements with transition-colors/-all don't each
+      tween separately (that's the cause of lag and staggered "flicker").
+   2. The visible smoothness comes from one View Transition cross-fade, which is
+      composited on the GPU from two page snapshots. Its cost doesn't depend on
+      page size. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  mix-blend-mode: normal;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}
+
+/* ---- Scrollbars ---------------------------------------------------------- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--theme-scrollbar-track); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background-color: var(--theme-scrollbar-thumb); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--theme-scrollbar-thumb-hover); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+.sidebar-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.sidebar-scroll:hover { scrollbar-color: var(--theme-scrollbar-thumb) var(--theme-scrollbar-track); }
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background-color: transparent; }
+.sidebar-scroll:hover::-webkit-scrollbar-thumb { background-color: var(--theme-scrollbar-thumb); }
+
+.modal-scroll {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.modal-scroll::-webkit-scrollbar { width: 10px; }
+.modal-scroll::-webkit-scrollbar-track { background: var(--theme-scrollbar-track); border-radius: 10px; }
+.modal-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--theme-scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid var(--theme-scrollbar-track);
+}
+.modal-scroll::-webkit-scrollbar-thumb:hover { background-color: var(--theme-scrollbar-thumb-hover); }
+@supports not selector(::-webkit-scrollbar) {
+  .modal-scroll { scrollbar-width: auto; scrollbar-color: var(--theme-scrollbar-thumb) var(--theme-scrollbar-track); }
+}
+
+/* ==========================================================================
+   THIRD-PARTY WIDGETS
+   ========================================================================== */
+
+/* ---- react-datepicker ---------------------------------------------------- */
+.react-datepicker,
+.react-datepicker__header,
+.react-datepicker__time-container .react-datepicker__time,
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
+  background-color: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text) !important;
+}
+.react-datepicker__header { background-color: var(--theme-surface-muted) !important; }
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header,
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name,
+.react-datepicker__time-list-item { color: var(--theme-text) !important; }
+.react-datepicker__day--outside-month,
+.react-datepicker__day--disabled { color: var(--theme-text-muted) !important; }
+.react-datepicker__day:hover,
+.react-datepicker__month-text:hover,
+.react-datepicker__time-list-item:hover { background-color: var(--theme-surface-hover) !important; }
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__day--in-range,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__time-list-item--selected {
+  background-color: #008ecc !important;
+  color: #fff !important;
+}
+.react-datepicker__triangle,
+.react-datepicker__triangle::before,
+.react-datepicker__triangle::after { fill: var(--theme-surface-muted) !important; color: var(--theme-surface-muted) !important; border-bottom-color: var(--theme-surface-muted) !important; }
+
+/* ---- react-big-calendar -------------------------------------------------- */
+.rbc-calendar { color: var(--theme-text); }
+.rbc-month-view, .rbc-time-view, .rbc-agenda-view table.rbc-agenda-table,
+.rbc-header, .rbc-header + .rbc-header, .rbc-month-row + .rbc-month-row,
+.rbc-day-bg + .rbc-day-bg, .rbc-time-header-content, .rbc-time-content,
+.rbc-time-content > * + * > *, .rbc-timeslot-group, .rbc-day-slot .rbc-time-slot,
+.rbc-time-header.rbc-overflowing, .rbc-agenda-view table.rbc-agenda-table tbody > tr > td + td,
+.rbc-agenda-view table.rbc-agenda-table tbody > tr + tr { border-color: var(--theme-border) !important; }
+.rbc-off-range-bg { background: var(--theme-surface-muted) !important; }
+.rbc-off-range { color: var(--theme-text-muted) !important; }
+.rbc-today { background-color: color-mix(in srgb, #008ecc 12%, var(--theme-surface)) !important; }
+.rbc-toolbar button { color: var(--theme-text) !important; border-color: var(--theme-border) !important; background: var(--theme-surface); }
+.rbc-toolbar button:hover, .rbc-toolbar button:focus { background-color: var(--theme-surface-hover) !important; }
+.rbc-toolbar button.rbc-active, .rbc-toolbar button:active { background-color: var(--theme-surface-hover) !important; box-shadow: none; }
+.rbc-show-more { background: transparent !important; color: #008ecc !important; }
+.rbc-overlay { background: var(--theme-surface) !important; border-color: var(--theme-border) !important; color: var(--theme-text); }
+
+/* ---- react-date-range ---------------------------------------------------- */
+.rdrCalendarWrapper, .rdrDateRangeWrapper, .rdrDefinedRangesWrapper, .rdrStaticRange,
+.rdrDateDisplayWrapper, .rdrMonthAndYearWrapper, .rdrInputRanges {
+  background-color: var(--theme-surface) !important;
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+.rdrStaticRange:hover .rdrStaticRangeLabel, .rdrStaticRange:focus .rdrStaticRangeLabel { background: var(--theme-surface-hover) !important; }
+.rdrDayNumber span, .rdrMonthName, .rdrWeekDay, .rdrMonthAndYearPickers select { color: var(--theme-text) !important; }
+.rdrDayPassive .rdrDayNumber span, .rdrDayDisabled .rdrDayNumber span { color: var(--theme-text-muted) !important; }
+.rdrDayDisabled { background-color: var(--theme-surface-muted) !important; }
+.rdrDateDisplayItem, .rdrDateDisplayItem input, .rdrInputRangeInput, .rdrNextPrevButton {
+  background-color: var(--theme-surface-muted) !important;
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+
+/* ---- CKEditor 5 ---------------------------------------------------------- */
+:root {
+  --ck-color-base-background: var(--theme-surface);
+  --ck-color-base-foreground: var(--theme-surface-muted);
+  --ck-color-base-border: var(--theme-border);
+  --ck-color-text: var(--theme-text);
+  --ck-color-toolbar-background: var(--theme-surface-muted);
+  --ck-color-toolbar-border: var(--theme-border);
+  --ck-color-button-default-hover-background: var(--theme-surface-hover);
+  --ck-color-button-default-active-background: var(--theme-surface-hover);
+  --ck-color-button-on-background: var(--theme-surface-hover);
+  --ck-color-button-on-hover-background: var(--theme-surface-hover);
+  --ck-color-button-on-color: #008ecc;
+  --ck-color-dropdown-panel-background: var(--theme-surface);
+  --ck-color-dropdown-panel-border: var(--theme-border);
+  --ck-color-input-background: var(--theme-input-bg);
+  --ck-color-input-border: var(--theme-border);
+  --ck-color-input-text: var(--theme-text);
+  --ck-color-panel-background: var(--theme-surface);
+  --ck-color-panel-border: var(--theme-border);
+  --ck-color-list-background: var(--theme-surface);
+  --ck-color-list-button-hover-background: var(--theme-surface-hover);
+  --ck-color-labeled-field-label-background: var(--theme-surface);
+  --ck-color-split-button-hover-background: var(--theme-surface-hover);
+  --ck-color-split-button-hover-border: var(--theme-border);
+  --ck-color-shadow-drop: rgb(10 16 24 / 0.25);
+}
+.ck.ck-editor__main > .ck-editor__editable { background: var(--theme-surface) !important; color: var(--theme-text); }
+.ck.ck-editor__editable.ck-focused:not(.ck-editor__nested-editable) { border-color: #008ecc !important; }
+
+/* ---- Tiptap / ProseMirror / Quill ---------------------------------------- */
+.ProseMirror { min-height: 400px; height: 400px; overflow-y: auto; color: var(--theme-text); }
+.ProseMirror table td, .ProseMirror table th { border-color: var(--theme-border); }
+.ProseMirror table th { background-color: var(--theme-surface-muted); }
+.ql-toolbar.ql-snow, .ql-container.ql-snow { border-color: var(--theme-border) !important; }
+.ql-editor { color: var(--theme-text); }
+html.dark .ql-snow .ql-stroke { stroke: var(--theme-text-secondary); }
+html.dark .ql-snow .ql-fill { fill: var(--theme-text-secondary); }
+html.dark .ql-snow .ql-picker { color: var(--theme-text-secondary); }
+html.dark .ql-snow .ql-picker-options { background-color: var(--theme-surface); }
+
+/* ---- Phone inputs -------------------------------------------------------- */
+.PhoneInputInput,
+.PhoneInputCountry,
+.PhoneInputCountryIcon,
+.PhoneInputCountrySelect,
+.PhoneInputInput:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.PhoneInputInput { background: transparent !important; color: inherit; }
+.react-tel-input .form-control {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: inherit !important;
+}
+.react-tel-input .flag-dropdown { background-color: transparent !important; border-color: var(--theme-border) !important; }
+.react-tel-input .selected-flag:hover, .react-tel-input .selected-flag:focus,
+.react-tel-input .flag-dropdown.open .selected-flag { background-color: var(--theme-surface-hover) !important; }
+.react-tel-input .country-list,
+.react-tel-input .country-list .search { background-color: var(--theme-surface) !important; color: var(--theme-text); }
+.react-tel-input .country-list .search-box { background-color: var(--theme-input-bg); color: var(--theme-text); border-color: var(--theme-border); }
+.react-tel-input .country-list .country:hover,
+.react-tel-input .country-list .country.highlight { background-color: var(--theme-surface-hover) !important; }
+.react-tel-input .country-list .country .dial-code { color: var(--theme-text-muted) !important; }
+
+/* ---- react-select (classNamePrefix not required: matches emotion classes) */
+html.dark [class$="-control"][class*="css-"] { background-color: var(--theme-input-bg) !important; border-color: var(--theme-border) !important; }
+html.dark [class$="-menu"][class*="css-"] { background-color: var(--theme-surface) !important; border: 1px solid var(--theme-border); }
+html.dark [class$="-option"][class*="css-"] { background-color: transparent; color: var(--theme-text); }
+html.dark [class$="-option"][class*="css-"]:hover { background-color: var(--theme-surface-hover) !important; }
+html.dark [class$="-singleValue"][class*="css-"],
+html.dark [class$="-Input"][class*="css-"],
+html.dark [class$="-Input"][class*="css-"] input { color: var(--theme-text) !important; }
+html.dark [class$="-multiValue"][class*="css-"] { background-color: var(--theme-surface-hover) !important; }
+html.dark [class$="-MultiValueLabel"][class*="css-"], html.dark [class$="-multiValue"][class*="css-"] > div:first-child { color: var(--theme-text) !important; }
+html.dark [class$="-placeholder"][class*="css-"] { color: var(--theme-text-muted) !important; }
+
+/* ---- Toasts -------------------------------------------------------------- */
+/* html:root / html .x beat react-toastify's own :root vars regardless of import order */
+html:root {
+  --toastify-color-light: var(--theme-surface);
+  --toastify-text-color-light: var(--theme-text);
+}
+html .Toastify__toast-theme--light { background: var(--theme-surface); color: var(--theme-text); border: 1px solid var(--theme-border); }
+html .Toastify__close-button--light { color: var(--theme-text-muted); }
+
+/* ---- Recharts (CSS beats SVG presentation attributes) -------------------- */
+.recharts-cartesian-grid line, .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line { stroke: var(--theme-border); }
+.recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line { stroke: var(--theme-border-strong); }
+.recharts-cartesian-axis-tick-value, .recharts-text.recharts-label, .recharts-polar-angle-axis-tick-value, .recharts-polar-radius-axis-tick-value { fill: var(--theme-text-muted); }
+.recharts-legend-item-text { color: var(--theme-text-secondary) !important; }
+.recharts-default-tooltip {
+  background-color: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text);
+}
+.recharts-tooltip-label { color: var(--theme-text) !important; }
+.recharts-tooltip-cursor { fill: color-mix(in srgb, var(--palette-steel) 15%, transparent); }
+.recharts-polar-grid line, .recharts-polar-grid polygon, .recharts-polar-grid circle { stroke: var(--theme-border); }
+html.dark .recharts-pie-sector path, html.dark .recharts-sector { stroke: var(--theme-surface); }
+
+/* ---- Leaflet ------------------------------------------------------------- */
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--theme-surface) !important; color: var(--theme-text) !important; }
+.leaflet-bar a, .leaflet-bar a:hover { background-color: var(--theme-surface) !important; color: var(--theme-text) !important; border-color: var(--theme-border) !important; }
+html.dark .leaflet-control-attribution { background: rgb(29 43 58 / 0.8) !important; color: var(--theme-text-muted) !important; }
+html.dark .leaflet-control-attribution a { color: var(--palette-mist) !important; }
+
+/* ---- Reactour product tours ---------------------------------------------- */
+.reactour__popover { background-color: var(--theme-surface) !important; color: var(--theme-text) !important; }
+.reactour__popover button { color: var(--theme-text-secondary); }

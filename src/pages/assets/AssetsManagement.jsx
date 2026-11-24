@@ -16,7 +16,7 @@ const AssetsManagement = () => {
           <p className="text-base text-slate-600">Track equipment, property, licenses and anything else your business owns.</p>
         </div>
 
-        <div className="flex bg-slate-150 p-1 rounded-xl border border-slate-200 self-start md:self-auto" style={{ backgroundColor: "#f1f5f9" }}>
+        <div className="flex bg-slate-150 p-1 rounded-xl border border-slate-200 self-start md:self-auto" style={{ backgroundColor: "var(--theme-surface-muted)" }}>
           <button
             onClick={() => setActiveTab("assets")}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${

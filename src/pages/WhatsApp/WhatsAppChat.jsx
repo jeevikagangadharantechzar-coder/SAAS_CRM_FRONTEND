@@ -570,7 +570,7 @@ export default function WhatsAppChat() {
                     </p>
                   </div>
                   <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                       style={{ background: "#e7fbe9" }}>
+                       style={{ background: "color-mix(in srgb, #25D366 16%, var(--theme-surface))" }}>
                     {WA_SVG(14, "#25D366")}
                   </div>
                 </button>
@@ -586,7 +586,7 @@ export default function WhatsAppChat() {
         {/* No contact selected */}
         {!selectedContact ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center bg-gray-50 px-4">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{ background: "#e7fbe9" }}>
+            <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{ background: "color-mix(in srgb, #25D366 16%, var(--theme-surface))" }}>
               {WA_SVG(48, "#25D366")}
             </div>
             <h3 className="text-slate-700 mb-2">WhatsApp Messages</h3>
@@ -647,7 +647,7 @@ export default function WhatsAppChat() {
             )}
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-1" style={{ background: "#ECE5DD" }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-1" style={{ background: "var(--theme-surface-muted)" }}>
               {loadingMsgs ? (
                 <div className="flex items-center justify-center h-full text-gray-400">
                   <RefreshCw size={20} className="animate-spin mr-2" /> Loading...
@@ -676,11 +676,11 @@ export default function WhatsAppChat() {
                       <div className={`flex mb-1 ${isOut ? "justify-end" : "justify-start"}`}>
                         <div
                           className={`max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg px-3 py-2 rounded-2xl shadow-sm ${isOut ? "rounded-tr-sm" : "rounded-tl-sm"}`}
-                          style={{ background: isOut ? "#DCF8C6" : "#FFFFFF", minWidth: 80 }}
+                          style={{ background: isOut ? "color-mix(in srgb, #25D366 22%, var(--theme-surface))" : "var(--theme-surface)", minWidth: 80 }}
                         >
                           <Bubble msg={msg} />
                           <div className="flex items-center justify-end gap-1 mt-0.5">
-                            <span className="text-xs" style={{ color: "#9aa3a3" }}>{fmtMsgTime(msg.createdAt)}</span>
+                            <span className="text-xs" style={{ color: "var(--theme-text-muted)" }}>{fmtMsgTime(msg.createdAt)}</span>
                             {isOut && <StatusIcon status={msg.status} />}
                           </div>
                         </div>

@@ -339,7 +339,7 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
         {/* Messages */}
         {integration && phoneNumber && (
           <>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ background: "#ECE5DD" }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ background: "var(--theme-surface-muted)" }}>
               {loading ? (
                 <div className="flex items-center justify-center h-full text-gray-400">
                   <RefreshCw size={18} className="animate-spin mr-2" /> Loading...
@@ -370,11 +370,11 @@ export default function WhatsAppMessageModal({ isOpen, onClose, lead, integratio
                       <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
                         <div
                           className={`max-w-[80%] px-3 py-2 rounded-2xl shadow-sm ${isOut ? "rounded-tr-sm" : "rounded-tl-sm"}`}
-                          style={{ background: isOut ? "#DCF8C6" : "#FFFFFF" }}
+                          style={{ background: isOut ? "color-mix(in srgb, #25D366 22%, var(--theme-surface))" : "var(--theme-surface)" }}
                         >
                           <BubbleBody msg={msg} />
                           <div className="flex items-center justify-end gap-1 mt-0.5">
-                            <span className="text-xs" style={{ color: "#9aa3a3" }}>
+                            <span className="text-xs" style={{ color: "var(--theme-text-muted)" }}>
                               {formatTime(msg.createdAt)}
                             </span>
                             {isOut && <StatusDots status={msg.status} />}

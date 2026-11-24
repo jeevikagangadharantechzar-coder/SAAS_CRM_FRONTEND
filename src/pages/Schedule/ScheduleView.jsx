@@ -470,8 +470,8 @@ const ScheduleView = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 style={{
                   backgroundColor: active ? `${meta.color}1A` : "#f8fafc",
-                  color: active ? meta.color : "#94a3b8",
-                  borderColor: active ? meta.color : "#e2e8f0",
+                  color: active ? meta.color : "var(--theme-text-muted)",
+                  borderColor: active ? meta.color : "var(--theme-border)",
                 }}
               >
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: active ? meta.color : "#cbd5e1" }} />

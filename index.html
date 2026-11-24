@@ -5,6 +5,19 @@
     <link id="dynamic-favicon" style="width: 60px; height: 60px;" rel="icon" type="image/x-icon"  href="/src/assets/crm logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TZI CRM</title>
+    <!-- Apply the saved theme before first paint (no light/dark flash). Logic mirrors src/theme/ThemeProvider.jsx -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("crmTheme") || localStorage.getItem("superAdminTheme") || "light";
+          if (t === "system") t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          var r = document.documentElement;
+          if (t === "dark") r.classList.add("dark");
+          r.setAttribute("data-theme", t === "dark" ? "dark" : "light");
+          r.style.colorScheme = t === "dark" ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
