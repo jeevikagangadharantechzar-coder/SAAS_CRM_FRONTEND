@@ -499,6 +499,8 @@ const ACTIVITY_TYPE_META = {
     bg: "bg-red-100",
     iconColor: "text-red-600",
   },
+  deal_created: { icon: Briefcase, bg: "bg-green-100", iconColor: "text-green-600" },
+  deal_edited: { icon: Edit, bg: "bg-indigo-100", iconColor: "text-indigo-600" },
   default: { icon: Clock, bg: "bg-slate-100", iconColor: "text-slate-600" },
 };
 
@@ -2271,6 +2273,8 @@ function Pipeline_modal_view() {
       setIsEditingDetails(false);
       setEditFormData(null);
       toast.success(response.data.message || "Deal updated successfully");
+      // Show this edit in the Activity Timeline straight away.
+      fetchActivity();
     } catch (err) {
       if (!handleAuthError(err)) {
         console.error("Failed to update deal:", err);
