@@ -215,7 +215,11 @@ const SuperAdminLayout = () => {
             <h1 className="text-gray-900 font-semibold">Management Console</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <ThemeToggle size={18} />
+            <ThemeToggle
+              size={18}
+              showTooltip={false}
+              buttonClassName="p-2 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            />
 
           </div>
         </header>

@@ -21,12 +21,38 @@
  * The file only references CSS variables from tokens.css — change colours
  * there, not here.
  */
-import { writeFileSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { writeFileSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(__dirname, "../src/theme/overrides.css");
+const SRC = resolve(__dirname, "../src");
+
+/* ---- Prune to classes the app actually uses -------------------------------
+ * Same rule as Tailwind's own scanner: a class only exists in the CSS if its
+ * full name appears literally in source. Emitting overrides for unused classes
+ * only bloats the stylesheet and slows the style recalc on every theme switch.
+ * Runs automatically before `npm run dev` / `npm run build`.
+ * Set THEME_PRUNE=0 to emit everything. */
+const PRUNE = process.env.THEME_PRUNE !== "0";
+const TOKEN = /[A-Za-z0-9_:\-[\]#/.%!]+/g;
+const USED = new Set();
+const addTokens = (text) => {
+  for (const t of text.match(TOKEN) || []) USED.add(t.replace(/^!/, "").replace(/\.$/, ""));
+};
+const scan = (dir) => {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) scan(full);
+    else if (/\.(jsx?|tsx?|html)$/.test(name)) addTokens(readFileSync(full, "utf8"));
+  }
+};
+if (PRUNE) {
+  scan(SRC);
+  addTokens(readFileSync(resolve(__dirname, "../index.html"), "utf8"));
+}
+const isUsed = (cls) => !PRUNE || USED.has(cls);
 
 const D = ":where(html.dark)";
 const NEUTRALS = ["gray", "slate", "zinc", "neutral", "stone"];
@@ -41,20 +67,26 @@ const mixT = (c, pct) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 
 /** variant → selector suffix builder */
 const VARIANTS = {
-  "": (c) => `.${esc(c)}`,
-  "hover:": (c) => `.${esc("hover:" + c)}:hover`,
-  "focus:": (c) => `.${esc("focus:" + c)}:focus`,
-  "active:": (c) => `.${esc("active:" + c)}:active`,
-  "group-hover:": (c) => `.${esc("group-hover:" + c)}:is(:where(.group):hover *)`,
-  "file:": (c) => `.${esc("file:" + c)}::file-selector-button`,
-  "hover:file:": (c) => `.${esc("hover:file:" + c)}:hover::file-selector-button`,
+  "": (c) => ({ cls: c, sel: `.${esc(c)}` }),
+  "hover:": (c) => ({ cls: "hover:" + c, sel: `.${esc("hover:" + c)}:hover` }),
+  "focus:": (c) => ({ cls: "focus:" + c, sel: `.${esc("focus:" + c)}:focus` }),
+  "active:": (c) => ({ cls: "active:" + c, sel: `.${esc("active:" + c)}:active` }),
+  "group-hover:": (c) => ({ cls: "group-hover:" + c, sel: `.${esc("group-hover:" + c)}:is(:where(.group):hover *)` }),
+  "file:": (c) => ({ cls: "file:" + c, sel: `.${esc("file:" + c)}::file-selector-button` }),
+  "hover:file:": (c) => ({ cls: "hover:file:" + c, sel: `.${esc("hover:file:" + c)}:hover::file-selector-button` }),
 };
 const DEFAULT_VARIANTS = ["", "hover:", "focus:", "active:", "group-hover:"];
 const WITH_FILE = [...DEFAULT_VARIANTS, "file:", "hover:file:"];
 
 const blocks = [];
+let totalSelectors = 0;
+let keptSelectors = 0;
 const rule = (selectors, decl) => {
-  blocks.push(`${selectors.map((s) => `${D} ${s}`).join(",\n")} {\n  ${decl}\n}`);
+  totalSelectors += selectors.length;
+  const kept = selectors.filter((s) => isUsed(s.cls));
+  if (!kept.length) return;
+  keptSelectors += kept.length;
+  blocks.push(`${kept.map((s) => `${D} ${s.sel}`).join(",\n")} {\n  ${decl}\n}`);
 };
 const forVariants = (cls, variants = DEFAULT_VARIANTS) =>
   variants.map((v) => VARIANTS[v](cls));
@@ -73,7 +105,7 @@ rule(forVariants("to-white", ["", "hover:"]), "--tw-gradient-to: var(--theme-sur
 rule(forVariants("border-white", ["", "hover:"]), "border-color: var(--theme-surface);");
 rule(forVariants("ring-white", ["", "focus:"]), "--tw-ring-color: var(--theme-surface);");
 rule(forVariants("ring-offset-white", ["", "focus:"]), "--tw-ring-offset-color: var(--theme-surface);");
-rule(forVariants("divide-white").map((s) => `${s} > :not(:last-child)`), "border-color: var(--theme-border);");
+rule(forVariants("divide-white").map((s) => ({ ...s, sel: `${s.sel} > :not(:last-child)` })),"border-color: var(--theme-border);");
 rule(forVariants("text-black", ["", "hover:"]), "color: var(--theme-text);");
 rule(forVariants("bg-gray-white"), "background-color: var(--theme-surface);"); // typo seen in codebase
 
@@ -174,4 +206,6 @@ ${blocks.join("\n")}
 `;
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, css);
-console.log(`Wrote ${OUT} (${blocks.length} blocks, ${(css.length / 1024).toFixed(1)} KB)`);
+console.log(
+  `Wrote ${OUT}: ${keptSelectors}/${totalSelectors} selectors in use${PRUNE ? "" : " (pruning off)"}, ${(css.length / 1024).toFixed(1)} KB`
+);

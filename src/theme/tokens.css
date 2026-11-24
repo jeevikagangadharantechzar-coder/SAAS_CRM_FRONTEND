@@ -149,11 +149,6 @@ html[data-theme="dark"] {
   --sidebar-accent-foreground: var(--theme-text);
   --sidebar-border: var(--theme-border);
   --sidebar-ring: var(--palette-steel);
-
-  /* react-toastify */
-  --toastify-color-light: var(--theme-surface);
-  --toastify-text-color-light: var(--theme-text);
-  --toastify-color-progress-light: #008ecc;
 }
 
 /* ---- Semantic Tailwind utilities for new code ------------------------------

@@ -287,7 +287,7 @@ function UserManagementInner() {
               color: "var(--theme-text)",
               border: "1px solid color-mix(in srgb, #22c55e 35%, var(--theme-surface))",
             },
-            iconTheme: { primary: "#22c55e", secondary: "#ffffff" },
+            iconTheme: { primary: "#22c55e", secondary: "#f0fdf4" },
           },
           error: {
             style: {
@@ -295,7 +295,7 @@ function UserManagementInner() {
               color: "var(--theme-text)",
               border: "1px solid color-mix(in srgb, #ef4444 35%, var(--theme-surface))",
             },
-            iconTheme: { primary: "#ef4444", secondary: "#ffffff" },
+            iconTheme: { primary: "#ef4444", secondary: "#fef2f2" },
           },
           loading: {
             style: {

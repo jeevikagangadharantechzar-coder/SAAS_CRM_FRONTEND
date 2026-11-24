@@ -14,7 +14,14 @@ const OPTIONS = [
   { value: "system", label: "System", Icon: Monitor },
 ];
 
-export default function ThemeToggle({ variant = "icon", size = 20, className = "", showTooltip = true, compact = false }) {
+export default function ThemeToggle({
+  variant = "icon",
+  size = 20,
+  className = "",
+  showTooltip = true,
+  compact = false,
+  buttonClassName, // fully replaces the icon button's classes, to keep a page's original design
+}) {
   const { theme, isDark, setTheme, toggleTheme } = useTheme();
 
   if (variant === "segmented") {
@@ -58,7 +65,11 @@ export default function ThemeToggle({ variant = "icon", size = 20, className = "
         type="button"
         onClick={toggleTheme}
         aria-label={label}
-        className={`p-1.5 sm:p-2 rounded-lg text-fg-secondary hover:bg-surface-hover transition-colors ${className}`}
+        title={showTooltip ? undefined : label}
+        className={
+          buttonClassName ??
+          `p-1.5 sm:p-2 rounded-lg text-fg-secondary hover:bg-surface-hover transition-colors ${className}`
+        }
       >
         {isDark ? <Sun size={size} /> : <Moon size={size} />}
       </button>

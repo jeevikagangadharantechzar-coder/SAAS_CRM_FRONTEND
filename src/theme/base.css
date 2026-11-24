@@ -15,19 +15,24 @@
   h1, h2 { color: var(--theme-text); }
   h3 { color: var(--theme-text-secondary); }
 
-  /* Un-classed native controls follow the theme (classes still win: :where = 0 specificity) */
-  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea) {
-    color: inherit;
+  html,
+  body {
+    transition-property: color, background-color, border-color;
+    transition-duration: 300ms; /* original transition-colors duration-300 */
   }
+
+  /* Dark theme only: un-classed native controls follow the theme
+     (classes still win: :where = 0 specificity). Light keeps browser/Tailwind defaults. */
   :where(html.dark) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea) {
+    color: inherit;
     background-color: var(--theme-input-bg);
   }
-  :where(option, optgroup) {
+  :where(html.dark) :where(option, optgroup) {
     background-color: var(--theme-surface);
     color: var(--theme-text);
   }
-  ::placeholder { color: var(--theme-text-muted); }
-  hr { border-color: var(--theme-border); }
+  :where(html.dark) ::placeholder { color: var(--theme-text-muted); }
+  :where(html.dark) hr { border-color: var(--theme-border); }
 }
 
 /* ---- Theme switch performance (see ThemeProvider.jsx) ---------------------
@@ -86,79 +91,104 @@ html.theme-switching *::after {
 }
 
 /* ==========================================================================
-   THIRD-PARTY WIDGETS
+   THIRD-PARTY WIDGETS — dark theme only.
+   Light theme keeps every library's original appearance untouched.
    ========================================================================== */
 
 /* ---- react-datepicker ---------------------------------------------------- */
-.react-datepicker,
-.react-datepicker__header,
-.react-datepicker__time-container .react-datepicker__time,
-.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
+html.dark .react-datepicker,
+html.dark .react-datepicker__header,
+html.dark .react-datepicker__time-container .react-datepicker__time,
+html.dark .react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
   background-color: var(--theme-surface) !important;
   border-color: var(--theme-border) !important;
   color: var(--theme-text) !important;
 }
-.react-datepicker__header { background-color: var(--theme-surface-muted) !important; }
-.react-datepicker__current-month,
-.react-datepicker-time__header,
-.react-datepicker-year-header,
-.react-datepicker__day-name,
-.react-datepicker__day,
-.react-datepicker__time-name,
-.react-datepicker__time-list-item { color: var(--theme-text) !important; }
-.react-datepicker__day--outside-month,
-.react-datepicker__day--disabled { color: var(--theme-text-muted) !important; }
-.react-datepicker__day:hover,
-.react-datepicker__month-text:hover,
-.react-datepicker__time-list-item:hover { background-color: var(--theme-surface-hover) !important; }
-.react-datepicker__day--selected,
-.react-datepicker__day--keyboard-selected,
-.react-datepicker__day--in-range,
-.react-datepicker__day--in-selecting-range,
-.react-datepicker__time-list-item--selected {
+html.dark .react-datepicker__header { background-color: var(--theme-surface-muted) !important; }
+html.dark .react-datepicker__current-month,
+html.dark .react-datepicker-time__header,
+html.dark .react-datepicker-year-header,
+html.dark .react-datepicker__day-name,
+html.dark .react-datepicker__day,
+html.dark .react-datepicker__time-name,
+html.dark .react-datepicker__time-list-item { color: var(--theme-text) !important; }
+html.dark .react-datepicker__day--outside-month,
+html.dark .react-datepicker__day--disabled { color: var(--theme-text-muted) !important; }
+html.dark .react-datepicker__day:hover,
+html.dark .react-datepicker__month-text:hover,
+html.dark .react-datepicker__time-list-item:hover { background-color: var(--theme-surface-hover) !important; }
+html.dark .react-datepicker__day--selected,
+html.dark .react-datepicker__day--keyboard-selected,
+html.dark .react-datepicker__day--in-range,
+html.dark .react-datepicker__day--in-selecting-range,
+html.dark .react-datepicker__time-list-item--selected {
   background-color: #008ecc !important;
   color: #fff !important;
 }
-.react-datepicker__triangle,
-.react-datepicker__triangle::before,
-.react-datepicker__triangle::after { fill: var(--theme-surface-muted) !important; color: var(--theme-surface-muted) !important; border-bottom-color: var(--theme-surface-muted) !important; }
+html.dark .react-datepicker__triangle,
+html.dark .react-datepicker__triangle::before,
+html.dark .react-datepicker__triangle::after { fill: var(--theme-surface-muted) !important; color: var(--theme-surface-muted) !important; border-bottom-color: var(--theme-surface-muted) !important; }
 
 /* ---- react-big-calendar -------------------------------------------------- */
-.rbc-calendar { color: var(--theme-text); }
-.rbc-month-view, .rbc-time-view, .rbc-agenda-view table.rbc-agenda-table,
-.rbc-header, .rbc-header + .rbc-header, .rbc-month-row + .rbc-month-row,
-.rbc-day-bg + .rbc-day-bg, .rbc-time-header-content, .rbc-time-content,
-.rbc-time-content > * + * > *, .rbc-timeslot-group, .rbc-day-slot .rbc-time-slot,
-.rbc-time-header.rbc-overflowing, .rbc-agenda-view table.rbc-agenda-table tbody > tr > td + td,
-.rbc-agenda-view table.rbc-agenda-table tbody > tr + tr { border-color: var(--theme-border) !important; }
-.rbc-off-range-bg { background: var(--theme-surface-muted) !important; }
-.rbc-off-range { color: var(--theme-text-muted) !important; }
-.rbc-today { background-color: color-mix(in srgb, #008ecc 12%, var(--theme-surface)) !important; }
-.rbc-toolbar button { color: var(--theme-text) !important; border-color: var(--theme-border) !important; background: var(--theme-surface); }
-.rbc-toolbar button:hover, .rbc-toolbar button:focus { background-color: var(--theme-surface-hover) !important; }
-.rbc-toolbar button.rbc-active, .rbc-toolbar button:active { background-color: var(--theme-surface-hover) !important; box-shadow: none; }
-.rbc-show-more { background: transparent !important; color: #008ecc !important; }
-.rbc-overlay { background: var(--theme-surface) !important; border-color: var(--theme-border) !important; color: var(--theme-text); }
+html.dark .rbc-calendar { color: var(--theme-text); }
+html.dark .rbc-month-view,
+html.dark .rbc-time-view,
+html.dark .rbc-agenda-view table.rbc-agenda-table,
+html.dark .rbc-header,
+html.dark .rbc-header + .rbc-header,
+html.dark .rbc-month-row + .rbc-month-row,
+html.dark .rbc-day-bg + .rbc-day-bg,
+html.dark .rbc-time-header-content,
+html.dark .rbc-time-content,
+html.dark .rbc-time-content > * + * > *,
+html.dark .rbc-timeslot-group,
+html.dark .rbc-day-slot .rbc-time-slot,
+html.dark .rbc-time-header.rbc-overflowing,
+html.dark .rbc-agenda-view table.rbc-agenda-table tbody > tr > td + td,
+html.dark .rbc-agenda-view table.rbc-agenda-table tbody > tr + tr { border-color: var(--theme-border) !important; }
+html.dark .rbc-off-range-bg { background: var(--theme-surface-muted) !important; }
+html.dark .rbc-off-range { color: var(--theme-text-muted) !important; }
+html.dark .rbc-today { background-color: color-mix(in srgb, #008ecc 12%, var(--theme-surface)) !important; }
+html.dark .rbc-toolbar button { color: var(--theme-text) !important; border-color: var(--theme-border) !important; background: var(--theme-surface); }
+html.dark .rbc-toolbar button:hover,
+html.dark .rbc-toolbar button:focus { background-color: var(--theme-surface-hover) !important; }
+html.dark .rbc-toolbar button.rbc-active,
+html.dark .rbc-toolbar button:active { background-color: var(--theme-surface-hover) !important; box-shadow: none; }
+html.dark .rbc-show-more { background: transparent !important; color: #008ecc !important; }
+html.dark .rbc-overlay { background: var(--theme-surface) !important; border-color: var(--theme-border) !important; color: var(--theme-text); }
 
 /* ---- react-date-range ---------------------------------------------------- */
-.rdrCalendarWrapper, .rdrDateRangeWrapper, .rdrDefinedRangesWrapper, .rdrStaticRange,
-.rdrDateDisplayWrapper, .rdrMonthAndYearWrapper, .rdrInputRanges {
+html.dark .rdrCalendarWrapper,
+html.dark .rdrDateRangeWrapper,
+html.dark .rdrDefinedRangesWrapper,
+html.dark .rdrStaticRange,
+html.dark .rdrDateDisplayWrapper,
+html.dark .rdrMonthAndYearWrapper,
+html.dark .rdrInputRanges {
   background-color: var(--theme-surface) !important;
   color: var(--theme-text) !important;
   border-color: var(--theme-border) !important;
 }
-.rdrStaticRange:hover .rdrStaticRangeLabel, .rdrStaticRange:focus .rdrStaticRangeLabel { background: var(--theme-surface-hover) !important; }
-.rdrDayNumber span, .rdrMonthName, .rdrWeekDay, .rdrMonthAndYearPickers select { color: var(--theme-text) !important; }
-.rdrDayPassive .rdrDayNumber span, .rdrDayDisabled .rdrDayNumber span { color: var(--theme-text-muted) !important; }
-.rdrDayDisabled { background-color: var(--theme-surface-muted) !important; }
-.rdrDateDisplayItem, .rdrDateDisplayItem input, .rdrInputRangeInput, .rdrNextPrevButton {
+html.dark .rdrStaticRange:hover .rdrStaticRangeLabel,
+html.dark .rdrStaticRange:focus .rdrStaticRangeLabel { background: var(--theme-surface-hover) !important; }
+html.dark .rdrDayNumber span,
+html.dark .rdrMonthName,
+html.dark .rdrWeekDay,
+html.dark .rdrMonthAndYearPickers select { color: var(--theme-text) !important; }
+html.dark .rdrDayPassive .rdrDayNumber span,
+html.dark .rdrDayDisabled .rdrDayNumber span { color: var(--theme-text-muted) !important; }
+html.dark .rdrDayDisabled { background-color: var(--theme-surface-muted) !important; }
+html.dark .rdrDateDisplayItem,
+html.dark .rdrDateDisplayItem input,
+html.dark .rdrInputRangeInput,
+html.dark .rdrNextPrevButton {
   background-color: var(--theme-surface-muted) !important;
   color: var(--theme-text) !important;
   border-color: var(--theme-border) !important;
 }
 
 /* ---- CKEditor 5 ---------------------------------------------------------- */
-:root {
+html.dark :root {
   --ck-color-base-background: var(--theme-surface);
   --ck-color-base-foreground: var(--theme-surface-muted);
   --ck-color-base-border: var(--theme-border);
@@ -184,90 +214,91 @@ html.theme-switching *::after {
   --ck-color-split-button-hover-border: var(--theme-border);
   --ck-color-shadow-drop: rgb(10 16 24 / 0.25);
 }
-.ck.ck-editor__main > .ck-editor__editable { background: var(--theme-surface) !important; color: var(--theme-text); }
-.ck.ck-editor__editable.ck-focused:not(.ck-editor__nested-editable) { border-color: #008ecc !important; }
+html.dark .ck.ck-editor__main > .ck-editor__editable { background: var(--theme-surface) !important; color: var(--theme-text); }
+html.dark .ck.ck-editor__editable.ck-focused:not(.ck-editor__nested-editable) { border-color: #008ecc !important; }
 
 /* ---- Tiptap / ProseMirror / Quill ---------------------------------------- */
-.ProseMirror { min-height: 400px; height: 400px; overflow-y: auto; color: var(--theme-text); }
-.ProseMirror table td, .ProseMirror table th { border-color: var(--theme-border); }
-.ProseMirror table th { background-color: var(--theme-surface-muted); }
-.ql-toolbar.ql-snow, .ql-container.ql-snow { border-color: var(--theme-border) !important; }
-.ql-editor { color: var(--theme-text); }
+html.dark .ProseMirror { color: var(--theme-text); }
+html.dark .ProseMirror table td,
+html.dark .ProseMirror table th { border-color: var(--theme-border); }
+html.dark .ProseMirror table th { background-color: var(--theme-surface-muted); }
+html.dark .ql-toolbar.ql-snow,
+html.dark .ql-container.ql-snow { border-color: var(--theme-border) !important; }
+html.dark .ql-editor { color: var(--theme-text); }
 html.dark .ql-snow .ql-stroke { stroke: var(--theme-text-secondary); }
 html.dark .ql-snow .ql-fill { fill: var(--theme-text-secondary); }
 html.dark .ql-snow .ql-picker { color: var(--theme-text-secondary); }
 html.dark .ql-snow .ql-picker-options { background-color: var(--theme-surface); }
 
 /* ---- Phone inputs -------------------------------------------------------- */
-.PhoneInputInput,
-.PhoneInputCountry,
-.PhoneInputCountryIcon,
-.PhoneInputCountrySelect,
-.PhoneInputInput:focus {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-.PhoneInputInput { background: transparent !important; color: inherit; }
-.react-tel-input .form-control {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  color: inherit !important;
-}
-.react-tel-input .flag-dropdown { background-color: transparent !important; border-color: var(--theme-border) !important; }
-.react-tel-input .selected-flag:hover, .react-tel-input .selected-flag:focus,
-.react-tel-input .flag-dropdown.open .selected-flag { background-color: var(--theme-surface-hover) !important; }
-.react-tel-input .country-list,
-.react-tel-input .country-list .search { background-color: var(--theme-surface) !important; color: var(--theme-text); }
-.react-tel-input .country-list .search-box { background-color: var(--theme-input-bg); color: var(--theme-text); border-color: var(--theme-border); }
-.react-tel-input .country-list .country:hover,
-.react-tel-input .country-list .country.highlight { background-color: var(--theme-surface-hover) !important; }
-.react-tel-input .country-list .country .dial-code { color: var(--theme-text-muted) !important; }
+/* Shape/border rules for these live unchanged in index.css; colours only here. */
+html.dark .PhoneInputInput { color: inherit; }
+html.dark .react-tel-input .form-control { color: inherit !important; }
+html.dark .react-tel-input .flag-dropdown { background-color: var(--theme-surface-muted) !important; border-color: var(--theme-border) !important; }
+html.dark .react-tel-input .selected-flag:hover,
+html.dark .react-tel-input .selected-flag:focus,
+html.dark .react-tel-input .flag-dropdown.open .selected-flag { background-color: var(--theme-surface-hover) !important; }
+html.dark .react-tel-input .country-list,
+html.dark .react-tel-input .country-list .search { background-color: var(--theme-surface) !important; color: var(--theme-text); }
+html.dark .react-tel-input .country-list .search-box { background-color: var(--theme-input-bg); color: var(--theme-text); border-color: var(--theme-border); }
+html.dark .react-tel-input .country-list .country:hover,
+html.dark .react-tel-input .country-list .country.highlight { background-color: var(--theme-surface-hover) !important; }
+html.dark .react-tel-input .country-list .country .dial-code { color: var(--theme-text-muted) !important; }
 
 /* ---- react-select (classNamePrefix not required: matches emotion classes) */
-html.dark [class$="-control"][class*="css-"] { background-color: var(--theme-input-bg) !important; border-color: var(--theme-border) !important; }
-html.dark [class$="-menu"][class*="css-"] { background-color: var(--theme-surface) !important; border: 1px solid var(--theme-border); }
+html.dark html.dark [class$="-control"][class*="css-"] { background-color: var(--theme-input-bg) !important; border-color: var(--theme-border) !important; }
+html.dark [class$="-menu"][class*="css-"] { background-color: var(--theme-surface) !important; }
 html.dark [class$="-option"][class*="css-"] { background-color: transparent; color: var(--theme-text); }
 html.dark [class$="-option"][class*="css-"]:hover { background-color: var(--theme-surface-hover) !important; }
 html.dark [class$="-singleValue"][class*="css-"],
 html.dark [class$="-Input"][class*="css-"],
 html.dark [class$="-Input"][class*="css-"] input { color: var(--theme-text) !important; }
 html.dark [class$="-multiValue"][class*="css-"] { background-color: var(--theme-surface-hover) !important; }
-html.dark [class$="-MultiValueLabel"][class*="css-"], html.dark [class$="-multiValue"][class*="css-"] > div:first-child { color: var(--theme-text) !important; }
+html.dark [class$="-MultiValueLabel"][class*="css-"],
+html.dark [class$="-multiValue"][class*="css-"] > div:first-child { color: var(--theme-text) !important; }
 html.dark [class$="-placeholder"][class*="css-"] { color: var(--theme-text-muted) !important; }
 
 /* ---- Toasts -------------------------------------------------------------- */
-/* html:root / html .x beat react-toastify's own :root vars regardless of import order */
-html:root {
+/* html.dark beats react-toastify's own :root vars regardless of import order */
+html.dark {
   --toastify-color-light: var(--theme-surface);
   --toastify-text-color-light: var(--theme-text);
 }
-html .Toastify__toast-theme--light { background: var(--theme-surface); color: var(--theme-text); border: 1px solid var(--theme-border); }
-html .Toastify__close-button--light { color: var(--theme-text-muted); }
+html.dark .Toastify__toast-theme--light { background: var(--theme-surface); color: var(--theme-text); border: 1px solid var(--theme-border); }
+html.dark .Toastify__close-button--light { color: var(--theme-text-muted); }
 
 /* ---- Recharts (CSS beats SVG presentation attributes) -------------------- */
-.recharts-cartesian-grid line, .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line { stroke: var(--theme-border); }
-.recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line { stroke: var(--theme-border-strong); }
-.recharts-cartesian-axis-tick-value, .recharts-text.recharts-label, .recharts-polar-angle-axis-tick-value, .recharts-polar-radius-axis-tick-value { fill: var(--theme-text-muted); }
-.recharts-legend-item-text { color: var(--theme-text-secondary) !important; }
-.recharts-default-tooltip {
+html.dark .recharts-cartesian-grid line,
+html.dark .recharts-cartesian-grid-horizontal line,
+html.dark .recharts-cartesian-grid-vertical line { stroke: var(--theme-border); }
+html.dark .recharts-cartesian-axis-line,
+html.dark .recharts-cartesian-axis-tick-line { stroke: var(--theme-border-strong); }
+html.dark .recharts-cartesian-axis-tick-value,
+html.dark .recharts-text.recharts-label,
+html.dark .recharts-polar-angle-axis-tick-value,
+html.dark .recharts-polar-radius-axis-tick-value { fill: var(--theme-text-muted); }
+html.dark .recharts-legend-item-text { color: var(--theme-text-secondary) !important; }
+html.dark .recharts-default-tooltip {
   background-color: var(--theme-surface) !important;
   border-color: var(--theme-border) !important;
   color: var(--theme-text);
 }
-.recharts-tooltip-label { color: var(--theme-text) !important; }
-.recharts-tooltip-cursor { fill: color-mix(in srgb, var(--palette-steel) 15%, transparent); }
-.recharts-polar-grid line, .recharts-polar-grid polygon, .recharts-polar-grid circle { stroke: var(--theme-border); }
-html.dark .recharts-pie-sector path, html.dark .recharts-sector { stroke: var(--theme-surface); }
+html.dark .recharts-tooltip-label { color: var(--theme-text) !important; }
+html.dark .recharts-tooltip-cursor { fill: color-mix(in srgb, var(--palette-steel) 15%, transparent); }
+html.dark .recharts-polar-grid line,
+html.dark .recharts-polar-grid polygon,
+html.dark .recharts-polar-grid circle { stroke: var(--theme-border); }
+html.dark .recharts-pie-sector path,
+html.dark .recharts-sector { stroke: var(--theme-surface); }
 
 /* ---- Leaflet ------------------------------------------------------------- */
-.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--theme-surface) !important; color: var(--theme-text) !important; }
-.leaflet-bar a, .leaflet-bar a:hover { background-color: var(--theme-surface) !important; color: var(--theme-text) !important; border-color: var(--theme-border) !important; }
+html.dark .leaflet-popup-content-wrapper,
+html.dark .leaflet-popup-tip { background: var(--theme-surface) !important; color: var(--theme-text) !important; }
+html.dark .leaflet-bar a,
+html.dark .leaflet-bar a:hover { background-color: var(--theme-surface) !important; color: var(--theme-text) !important; border-color: var(--theme-border) !important; }
 html.dark .leaflet-control-attribution { background: rgb(29 43 58 / 0.8) !important; color: var(--theme-text-muted) !important; }
 html.dark .leaflet-control-attribution a { color: var(--palette-mist) !important; }
 
 /* ---- Reactour product tours ---------------------------------------------- */
-.reactour__popover { background-color: var(--theme-surface) !important; color: var(--theme-text) !important; }
-.reactour__popover button { color: var(--theme-text-secondary); }
+html.dark .reactour__popover { background-color: var(--theme-surface) !important; color: var(--theme-text) !important; }
+html.dark .reactour__popover button { color: var(--theme-text-secondary); }
