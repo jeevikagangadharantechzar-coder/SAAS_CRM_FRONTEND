@@ -2155,12 +2155,13 @@ const ViewLead = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h3 className="text-slate-700 mb-1">
-                          Client Information
-                        </h3>
+                  <div className="p-6 space-y-6">
+                    {/* Section 1: Basic Information */}
+                    <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                      <h3 className="text-base font-semibold text-blue-600 border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <User size={18} /> Basic Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">
                             Lead Name <span className="text-red-500">*</span>
@@ -2216,7 +2217,7 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
                           <div
                             className={`border rounded-lg ${
                               editErrors.phoneNumber ? "border-red-500" : "border-slate-300"
@@ -2240,7 +2241,7 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Phone</label>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Alternate Phone Number</label>
                           <div
                             className={`border rounded-lg ${
                               editErrors.alternatePhoneNumber ? "border-red-500" : "border-slate-300"
@@ -2263,6 +2264,15 @@ const ViewLead = () => {
                             <p className="text-red-500 text-xs mt-1">Invalid phone number format</p>
                           )}
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Business Details */}
+                    <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                      <h3 className="text-base font-semibold text-green-600 border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <Briefcase size={18} /> Business Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Client Type</label>
                           <select
@@ -2274,23 +2284,6 @@ const ViewLead = () => {
                             <option value="">Select Client Type</option>
                             <option value="B2B">B2B</option>
                             <option value="B2C">B2C</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
-                          <select
-                            name="source"
-                            value={editFormData.source}
-                            onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                          >
-                            <option value="">Select Source</option>
-                            <option value="Website">Website</option>
-                            <option value="Referral">Referral</option>
-                            <option value="Social Media">Social Media</option>
-                            <option value="Email">Email</option>
-                            <option value="Phone">Phone</option>
-                            <option value="Other">Other</option>
                           </select>
                         </div>
                         <div>
@@ -2321,6 +2314,23 @@ const ViewLead = () => {
                           )}
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
+                          <select
+                            name="source"
+                            value={editFormData.source}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="">Select Source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email">Email</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Number of Employees</label>
                           <input
                             type="number"
@@ -2330,45 +2340,7 @@ const ViewLead = () => {
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           />
                         </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h3 className="text-slate-700 mb-1">
-                          Lead Information
-                        </h3>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                          <select
-                            name="status"
-                            value={editFormData.status}
-                            onChange={handleEditChange}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                          >
-                            <option value="New">New</option>
-                            <option value="Hot">Hot</option>
-                            <option value="Warm">Warm</option>
-                            <option value="Cold">Cold</option>
-                            <option value="Junk">Junk</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Follow-up Date</label>
-                          <DatePicker
-                            selected={followUpDateObj}
-                            onChange={(date) => {
-                              setFollowUpDateObj(date);
-                              setEditFormData((prev) => ({
-                                ...prev,
-                                followUpDate: date ? date.toISOString() : "",
-                              }));
-                            }}
-                            showTimeSelect
-                            dateFormat="MMMM d, yyyy h:mm aa"
-                            placeholderText="Select Date & Time"
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                          />
-                        </div>
-                        <div>
+                        <div className="md:col-span-2">
                           <label className="block text-sm font-medium text-slate-700 mb-1">Requirement</label>
                           <textarea
                             name="requirement"
@@ -2378,19 +2350,28 @@ const ViewLead = () => {
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                           />
                         </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-sm font-medium text-slate-700">Address</label>
-                            <button
-                              type="button"
-                              onClick={handleUseCurrentLocation}
-                              disabled={isFetchingLocation}
-                              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <LocateFixed size={14} />
-                              {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
-                            </button>
-                          </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Location */}
+                    <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                        <h3 className="text-base font-semibold text-teal-600 flex items-center gap-1.5">
+                          <MapPin size={18} /> Location
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={handleUseCurrentLocation}
+                          disabled={isFetchingLocation}
+                          className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <LocateFixed size={14} />
+                          {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
                           <input
                             name="address"
                             value={editFormData.address}
@@ -2459,8 +2440,49 @@ const ViewLead = () => {
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                           />
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Section 4: Lead Management */}
+                    <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                      <h3 className="text-base font-semibold text-amber-600 border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <UserCheck size={18} /> Lead Management
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                          <select
+                            name="status"
+                            value={editFormData.status}
+                            onChange={handleEditChange}
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          >
+                            <option value="New">New</option>
+                            <option value="Hot">Hot</option>
+                            <option value="Warm">Warm</option>
+                            <option value="Cold">Cold</option>
+                            <option value="Junk">Junk</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Follow-up Date</label>
+                          <DatePicker
+                            selected={followUpDateObj}
+                            onChange={(date) => {
+                              setFollowUpDateObj(date);
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                followUpDate: date ? date.toISOString() : "",
+                              }));
+                            }}
+                            showTimeSelect
+                            dateFormat="MMMM d, yyyy h:mm aa"
+                            placeholderText="Select Date & Time"
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                          />
+                        </div>
                         {userRole !== "Sales" && (
-                          <div>
+                          <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
                             <select
                               name="assignTo"
@@ -2479,15 +2501,16 @@ const ViewLead = () => {
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-6 border-t border-slate-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">
-                          Custom Fields
+                    {/* Section 5: Custom Fields */}
+                    <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <h3 className="text-base font-semibold text-purple-600 flex items-center gap-2">
+                          <Tag size={18} /> Custom Fields
                         </h3>
                         <button
                           type="button"
                           onClick={toggleCfDraft}
-                          className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 transition"
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-purple-400 text-purple-600 hover:bg-purple-50 transition"
                         >
                           <Plus size={14} /> Add Field
                         </button>

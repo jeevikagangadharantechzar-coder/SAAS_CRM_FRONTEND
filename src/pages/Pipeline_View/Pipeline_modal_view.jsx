@@ -4262,17 +4262,16 @@ function Pipeline_modal_view() {
                       )}
                       </>
                     ) : (
-                      <div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Deal Information (edit) */}
-                          <div className="space-y-4">
-                            <h3 className="text-slate-700 mb-1">
-                              Deal Information
-                            </h3>
+                      <div className="space-y-6">
+                        {/* Section 1: Deal Information */}
+                        <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                          <h3 className="text-base font-semibold text-blue-600 border-b border-slate-100 pb-2">
+                            Deal Information
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Deal Name{" "}
-                                <span className="text-red-500">*</span>
+                                Deal Name <span className="text-red-500">*</span>
                               </label>
                               <input
                                 name="dealName"
@@ -4281,6 +4280,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Value
@@ -4316,6 +4316,7 @@ function Pipeline_modal_view() {
                                 />
                               </div>
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Stage
@@ -4324,7 +4325,6 @@ function Pipeline_modal_view() {
                                 name="stage"
                                 value={editFormData.stage}
                                 onChange={handleEditChange}
-                                // Closed Won deals keep their stage; other details stay editable.
                                 disabled={deal.stage === "Closed Won"}
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                               >
@@ -4335,49 +4335,31 @@ function Pipeline_modal_view() {
                                 ))}
                               </select>
                             </div>
-                            <div>
+
+                            <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Notes
                               </label>
                               <textarea
                                 name="notes"
-                                rows={4}
+                                rows={3}
                                 value={editFormData.notes}
                                 onChange={handleEditChange}
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                               />
                             </div>
-                            {userRole === "Admin" && (
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                  Assign To
-                                </label>
-                                <select
-                                  name="assignTo"
-                                  value={editFormData.assignTo}
-                                  onChange={handleEditChange}
-                                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
-                                >
-                                  <option value="">Select User</option>
-                                  {salesUsers.map((u) => (
-                                    <option key={u._id} value={u._id}>
-                                      {u.firstName} {u.lastName}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
                           </div>
+                        </div>
 
-                          {/* Company Information (edit) */}
-                          <div className="space-y-4">
-                            <h3 className="text-slate-700 mb-1">
-                              Company Information
-                            </h3>
+                        {/* Section 2: Company & Contact Information */}
+                        <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                          <h3 className="text-base font-semibold text-green-600 border-b border-slate-100 pb-2">
+                            Company & Contact Information
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Company Name{" "}
-                                <span className="text-red-500">*</span>
+                                Company Name <span className="text-red-500">*</span>
                               </label>
                               <input
                                 name="companyName"
@@ -4386,6 +4368,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Email
@@ -4408,6 +4391,30 @@ function Pipeline_modal_view() {
                                 </p>
                               )}
                             </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Alternate Email
+                              </label>
+                              <input
+                                type="email"
+                                name="alternativeEmail"
+                                value={editFormData.alternativeEmail}
+                                onChange={handleEditChange}
+                                placeholder="alt@example.com"
+                                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
+                                  editErrors.alternativeEmail
+                                    ? "border-red-500"
+                                    : "border-slate-300"
+                                }`}
+                              />
+                              {editErrors.alternativeEmail && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Invalid email format
+                                </p>
+                              )}
+                            </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Phone Number
@@ -4443,31 +4450,10 @@ function Pipeline_modal_view() {
                                 </p>
                               )}
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Alternative Email
-                              </label>
-                              <input
-                                type="email"
-                                name="alternativeEmail"
-                                value={editFormData.alternativeEmail}
-                                onChange={handleEditChange}
-                                placeholder="alt@example.com"
-                                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition ${
-                                  editErrors.alternativeEmail
-                                    ? "border-red-500"
-                                    : "border-slate-300"
-                                }`}
-                              />
-                              {editErrors.alternativeEmail && (
-                                <p className="text-red-500 text-xs mt-1">
-                                  Invalid email format
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Alternative Number
+                                Alternate Phone Number
                               </label>
                               <div
                                 className={`border rounded-lg ${
@@ -4500,6 +4486,7 @@ function Pipeline_modal_view() {
                                 </p>
                               )}
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Client Type
@@ -4515,6 +4502,7 @@ function Pipeline_modal_view() {
                                 <option value="B2C">B2C</option>
                               </select>
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Industry
@@ -4541,6 +4529,7 @@ function Pipeline_modal_view() {
                                 ))}
                               </select>
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Source
@@ -4566,21 +4555,30 @@ function Pipeline_modal_view() {
                                 ))}
                               </select>
                             </div>
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <label className="block text-sm font-medium text-slate-700">
-                                  Address
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={handleUseCurrentLocation}
-                                  disabled={isFetchingLocation}
-                                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <LocateFixed size={14} />
-                                  {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
-                                </button>
-                              </div>
+                          </div>
+                        </div>
+
+                        {/* Section 3: Location */}
+                        <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <h3 className="text-base font-semibold text-teal-600 flex items-center gap-1.5">
+                              <MapPin size={18} /> Location
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={handleUseCurrentLocation}
+                              disabled={isFetchingLocation}
+                              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-teal-300 text-teal-700 hover:bg-teal-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <LocateFixed size={14} />
+                              {isFetchingLocation ? "Fetching location..." : "Use Current Location"}
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Address
+                              </label>
                               <input
                                 name="address"
                                 value={editFormData.address}
@@ -4588,6 +4586,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 City
@@ -4599,6 +4598,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 State
@@ -4610,6 +4610,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Pincode
@@ -4621,6 +4622,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Country
@@ -4639,6 +4641,7 @@ function Pipeline_modal_view() {
                                 ))}
                               </select>
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Latitude
@@ -4651,6 +4654,7 @@ function Pipeline_modal_view() {
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                               />
                             </div>
+
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Longitude
@@ -4666,27 +4670,55 @@ function Pipeline_modal_view() {
                           </div>
                         </div>
 
-                        <div className="mt-6 pt-6 border-t border-slate-200">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-medium text-slate-700 uppercase tracking-wide">
+                        {/* Section 4: Management (if Admin) */}
+                        {userRole === "Admin" && (
+                          <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                            <h3 className="text-base font-semibold text-amber-600 border-b border-slate-100 pb-2">
+                              Management
+                            </h3>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Assign To
+                              </label>
+                              <select
+                                name="assignTo"
+                                value={editFormData.assignTo}
+                                onChange={handleEditChange}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                              >
+                                <option value="">Select User</option>
+                                {salesUsers.map((u) => (
+                                  <option key={u._id} value={u._id}>
+                                    {u.firstName} {u.lastName}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Section 5: Custom Fields */}
+                        <div className="space-y-4 p-5 border border-slate-200 rounded-xl bg-white shadow-sm">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <h3 className="text-base font-semibold text-purple-600">
                               Custom Fields
                             </h3>
                             <button
                               type="button"
                               onClick={toggleCfDraft}
-                              className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-blue-400 text-blue-600 hover:bg-blue-50 transition"
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-purple-400 text-purple-600 hover:bg-purple-50 transition"
                             >
                               <Plus size={14} /> Add Field
                             </button>
                           </div>
 
                           {(editFormData.customFields || []).length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {editFormData.customFields.map((f) => (
                                 <div key={f.id}>
                                   <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
                                     {f.name}
-                                    <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                    <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
                                       Custom
                                     </span>
                                     <button
@@ -4700,19 +4732,22 @@ function Pipeline_modal_view() {
 
                                   {f.type === "textarea" ? (
                                     <textarea
-                                      rows={3}
-                                      value={f.value}
-                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
-                                      placeholder={`Enter ${f.name}`}
+                                      rows={2}
+                                      value={f.value || ""}
+                                      onChange={(e) =>
+                                        updateEditCustomFieldValue(f.id, e.target.value)
+                                      }
                                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition resize-none"
                                     />
                                   ) : f.type === "dropdown" ? (
                                     <select
-                                      value={f.value}
-                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
+                                      value={f.value || ""}
+                                      onChange={(e) =>
+                                        updateEditCustomFieldValue(f.id, e.target.value)
+                                      }
                                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                                     >
-                                      <option value="">Select {f.name}</option>
+                                      <option value="">Select an option</option>
                                       {(f.options || []).map((opt) => (
                                         <option key={opt} value={opt}>
                                           {opt}
@@ -4721,10 +4756,17 @@ function Pipeline_modal_view() {
                                     </select>
                                   ) : (
                                     <input
-                                      type={f.type}
-                                      value={f.value}
-                                      onChange={(e) => updateEditCustomFieldValue(f.id, e.target.value)}
-                                      placeholder={`Enter ${f.name}`}
+                                      type={
+                                        f.type === "number"
+                                          ? "number"
+                                          : f.type === "date"
+                                          ? "date"
+                                          : "text"
+                                      }
+                                      value={f.value || ""}
+                                      onChange={(e) =>
+                                        updateEditCustomFieldValue(f.id, e.target.value)
+                                      }
                                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
                                     />
                                   )}
@@ -4733,16 +4775,19 @@ function Pipeline_modal_view() {
                             </div>
                           )}
 
+                          {/* Custom fields inline draft editor */}
                           {cfDraftOpen && (
-                            <div className="space-y-3 bg-blue-50 border border-dashed border-blue-300 rounded-lg p-4">
-                              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
-                                New fields (not saved yet)
-                              </p>
+                            <div className="mt-4 p-4 rounded-xl border border-dashed border-purple-300 bg-purple-50/40 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                                  Add Custom Fields
+                                </span>
+                              </div>
 
                               {cfDraftRows.map((row) => (
                                 <div
                                   key={row.id}
-                                  className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-3 items-end"
+                                  className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"
                                 >
                                   <div>
                                     <label className="block text-xs text-slate-500 mb-1">Field name</label>
@@ -4801,7 +4846,7 @@ function Pipeline_modal_view() {
                                 <button
                                   type="button"
                                   onClick={addCfDraftRow}
-                                  className="text-xs font-semibold text-blue-600 hover:underline"
+                                  className="text-xs font-semibold text-purple-600 hover:underline"
                                 >
                                   + Add another field
                                 </button>
@@ -4816,7 +4861,7 @@ function Pipeline_modal_view() {
                                 <button
                                   type="button"
                                   onClick={saveCfDraft}
-                                  className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-md bg-purple-600 text-white hover:bg-purple-700"
                                 >
                                   Save Fields
                                 </button>
