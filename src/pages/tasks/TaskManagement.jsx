@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
 import { useSocket } from "../../context/SocketContext";
@@ -17,6 +17,13 @@ import {
 } from "lucide-react";
 
 import TaskPipelineView from "./TaskPipelineView";
+import { validateForm, requiredFields, requiredString, FieldError } from "../../utils/formValidation";
+
+const taskRequiredSchema = requiredFields({
+  title: requiredString("Title"),
+  dueDate: requiredString("Due date"),
+  assignedTo: requiredString("Assign to"),
+});
 
 function fmt(date) {
   if (!date) return "—";
@@ -1004,6 +1011,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
   });
   const [saving, setSaving] = useState(false);
   const [dateError, setDateError] = useState(null);
+  const [requiredErrors, setRequiredErrors] = useState({});
   // Snapshot of the leads/deals already linked when this edit session opened —
   // only leads/deals added AFTER that (not these) require their own due date.
   const [initialRefs, setInitialRefs] = useState({ leadRefs: [], dealRefs: [] });
@@ -1045,6 +1053,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
         setInitialRefs({ leadRefs: [], dealRefs: [] });
       }
       setDateError(null);
+      setRequiredErrors({});
     }
   }, [editTask, open]);
 
@@ -1073,10 +1082,15 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
   const handleDueDateChange = (value) => {
     setForm((f) => ({ ...f, dueDate: value }));
     setDateError(validateTaskDueDate(value));
+    setRequiredErrors((p) => ({ ...p, dueDate: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    const required = validateForm(taskRequiredSchema, form);
+    setRequiredErrors(required.errors);
+    if (!required.success) return;
     if (form.leadRefs.length === 0 && form.dealRefs.length === 0) {
       toast.error("Please select at least one Lead or Deal to link to this task.");
       return;
@@ -1138,16 +1152,20 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
+          <form onSubmit={handleSubmit} noValidate className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
               <input
                 required
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc]/30 focus:border-[#008ecc]"
                 value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, title: e.target.value });
+                  if (requiredErrors.title) setRequiredErrors((p) => ({ ...p, title: undefined }));
+                }}
                 placeholder="What needs to be done?"
               />
+              <FieldError error={requiredErrors.title} />
             </div>
 
             <div>
@@ -1187,6 +1205,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
               </div>
             </div>
             {dateError && <p className="text-xs text-red-600 font-medium -mt-2">{dateError}</p>}
+            {!dateError && <FieldError error={requiredErrors.dueDate} className="-mt-2" />}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
@@ -1197,6 +1216,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
                 value={form.assignedTo}
                 onChange={(e) => {
                   const newAssignee = e.target.value;
+                  setRequiredErrors((p) => ({ ...p, assignedTo: undefined }));
                   setForm((f) => {
                     if (f.assignedTo) {
                       assigneeCacheRef.current[f.assignedTo] = {
@@ -1216,6 +1236,7 @@ function TaskModal({ open, onClose, onSaved, salesUsers, editTask, baseUrl, head
                   </option>
                 ))}
               </select>
+              <FieldError error={requiredErrors.assignedTo} />
             </div>
 
             {/* Linked summary chip */}
@@ -2051,7 +2072,6 @@ export default function TaskManagement() {
       : tasks.filter((t) => t.status === filter);
   return (
     <div className="p-6 min-h-screen bg-gray-50">
-      <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">

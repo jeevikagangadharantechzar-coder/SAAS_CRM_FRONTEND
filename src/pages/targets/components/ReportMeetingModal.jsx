@@ -2,6 +2,13 @@ import React, { useState, useRef } from "react";
 import { X, Calendar, Upload, Image as ImageIcon } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { z } from "zod";
+import { validateForm, requiredFields, requiredString } from "../../../utils/formValidation";
+
+const meetingReportRequiredSchema = requiredFields({
+  companyName: requiredString("Company name"),
+  meetingSummary: requiredString("Meeting summary"),
+});
 
 export default function ReportMeetingModal({ isOpen, onClose, targetId, baseUrl, headers, onSuccess }) {
   const [form, setForm] = useState({ companyName: "", meetingSummary: "", companyUrl: "" });
@@ -15,8 +22,14 @@ export default function ReportMeetingModal({ isOpen, onClose, targetId, baseUrl,
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    if (!form.companyName.trim() || !form.meetingSummary.trim()) {
-      setError("Company Name and Meeting Summary are required.");
+    // Mandatory fields — name every missing one.
+    const required = validateForm(meetingReportRequiredSchema, form);
+    if (!required.success) {
+      setError(Object.values(required.errors).join(" · "));
+      return;
+    }
+    if (form.companyUrl.trim() && !z.string().url().safeParse(form.companyUrl.trim()).success) {
+      setError("Enter a valid company URL (e.g. https://example.com)");
       return;
     }
 
@@ -83,7 +96,7 @@ export default function ReportMeetingModal({ isOpen, onClose, targetId, baseUrl,
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="p-6 overflow-y-auto space-y-5">
           {error && <div className="p-3 bg-red-50 text-red-600 text-sm font-medium rounded-xl border border-red-100 flex items-start gap-2">{error}</div>}
           
           <div>

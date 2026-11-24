@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
 import { Receipt, CheckCircle, Clock, FileText, Trash2, List, LayoutGrid, Download, Filter, ChevronDown, Eye, Plus, Calendar, X } from "lucide-react";
@@ -262,8 +262,10 @@ const InvoiceHead = () => {
       // so its failure must not be reported as a failure to send the email.
       const invoice = invoices.find((inv) => inv._id === invoiceId);
       const dealId = invoice?.items?.[0]?.deal?._id;
+      // Closed Won deals stay Closed Won when an invoice is (re)sent for them.
+      const dealIsWon = invoice?.items?.[0]?.deal?.stage === "Closed Won";
 
-      if (dealId) {
+      if (dealId && !dealIsWon) {
         try {
           await axios.patch(
             `${API_URL}/deals/update-deal/${dealId}`,
@@ -1383,7 +1385,6 @@ const InvoiceHead = () => {
         </DialogContent>
       </Dialog>
 
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
     </div>
   );
 };

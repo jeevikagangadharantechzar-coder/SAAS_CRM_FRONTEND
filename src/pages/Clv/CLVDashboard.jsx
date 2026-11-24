@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import ClientReviewTable from "./ClientReviewTable";
 import ClassificationModal from "./ClassificationModal";
 
@@ -462,7 +462,6 @@ const CLVDashboard = () => {
 
   return (
     <div className="p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
-      <ToastContainer position="top-right" autoClose={5000} />
 
       {/* Classification Modals */}
       <ClassificationModal

@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const categoryRequiredSchema = requiredFields({
+  name: requiredString("Category name"),
+});
 import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
 
 const FIELD_TYPES = ["Text", "Number", "Date", "Dropdown", "Currency"];
@@ -92,10 +97,8 @@ const CategoryFormModal = ({ isOpen, onClose, onSaved, editingCategory }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.warn("Category name is required.");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(categoryRequiredSchema, { name }).success) return;
     const cleanedFields = fields
       .filter((f) => f.label.trim())
       .map((f) => ({
@@ -132,7 +135,7 @@ const CategoryFormModal = ({ isOpen, onClose, onSaved, editingCategory }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5 overflow-y-auto">
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Category Name</label>
             <input

@@ -3,6 +3,15 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Send, AlertTriangle, ShieldCheck } from "lucide-react";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../../utils/formValidation";
+
+const upgradeRequiredSchema = requiredFields({
+  selectedPlanId: requiredString("Plan"),
+  description: requiredString("Reason / description"),
+});
+const upgradeTieredRequiredSchema = upgradeRequiredSchema.extend({
+  selectedBillingCycle: requiredString("Billing period"),
+});
 
 const TIER_LABELS = { monthly: "Monthly", half_yearly: "Half Year", yearly: "Yearly" };
 
@@ -108,8 +117,9 @@ const UpgradePlan = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedPlanId) { toast.warn("Please select a plan."); return; }
-    if (hasTiers && !selectedBillingCycle) { toast.warn("Please select a billing period."); return; }
+    // Mandatory fields — the toast names every missing one.
+    const schema = hasTiers ? upgradeTieredRequiredSchema : upgradeRequiredSchema;
+    if (!validateForm(schema, { selectedPlanId, selectedBillingCycle, description }).success) return;
 
     setSubmitting(true);
     try {
@@ -221,7 +231,7 @@ const UpgradePlan = () => {
             <Send size={20} className="opacity-80" />
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-5 gap-8">
+          <form onSubmit={handleSubmit} noValidate className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-5 gap-8">
 
             <div className="md:col-span-3 space-y-6">
 

@@ -9,6 +9,11 @@ import {
   MessageCircle, Bookmark, UserPlus, EyeOff, Trash2, Reply,
 } from "lucide-react";
 import { api } from "../../services/api";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const igLeadRequiredSchema = requiredFields({
+  leadName: requiredString("Name"),
+});
 
 // ── Instagram branding ────────────────────────────────────────────────────────
 const IG_GRADIENT  = "linear-gradient(135deg, #E1306C, #833AB4, #F77737)";
@@ -1025,9 +1030,9 @@ function InstagramCreateLeadModal({ contact, onClose, onLeadCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = {};
-    if (!form.leadName.trim()) errs.leadName = "Name is required";
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    // Mandatory fields — the toast names every missing one.
+    const required = validateForm(igLeadRequiredSchema, form);
+    if (!required.success) { setErrors(required.errors); return; }
 
     try {
       setSaving(true);

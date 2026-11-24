@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -1068,7 +1068,6 @@ const EmailChat = () => {
   if (!authStatus.authenticated) {
     return (
       <>
-        <ToastContainer position="top-right" autoClose={3000} />
         <GmailConnectScreen
           authUrl={authUrl} authStatus={authStatus} error={error}
           loading={authLoading} isConnecting={isConnecting}
@@ -1082,7 +1081,6 @@ const EmailChat = () => {
   // ─── MAIN APP ─────────────────────────────────────────────────────────────
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-      <ToastContainer position="top-right" autoClose={3000} />
 
       {/* DISCONNECT MODAL */}
       <Dialog open={showDisconnModal} onOpenChange={setShowDisconnModal}>

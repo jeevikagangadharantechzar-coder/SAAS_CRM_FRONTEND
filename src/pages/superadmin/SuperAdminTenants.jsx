@@ -25,6 +25,13 @@ import {
   Check,
 } from "lucide-react";
 import { superApi } from "../../services/api";
+import { validateForm, requiredFields, requiredString, requiredEmail } from "../../utils/formValidation";
+
+const tenantEditRequiredSchema = requiredFields({
+  name: requiredString("Business name"),
+  adminName: requiredString("Administrator name"),
+  adminEmail: requiredEmail("Administrator email"),
+});
 
 const FILTER_FIELDS = [
   { key: "search", label: "Search" },
@@ -117,10 +124,8 @@ const SuperAdminTenants = () => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!editForm.name.trim() || !editForm.adminName.trim() || !editForm.adminEmail.trim()) {
-      alert("Please fill in all required fields.");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(tenantEditRequiredSchema, editForm).success) return;
 
     setIsEditing(true);
     try {
@@ -735,7 +740,7 @@ const SuperAdminTenants = () => {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleEditSubmit} noValidate className="p-6 space-y-4">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Company Name <span className="text-red-500">*</span>

@@ -1,6 +1,13 @@
 import React, { useState, useRef } from "react";
 import { X, Phone, Upload, Mic } from "lucide-react";
 import axios from "axios";
+import { z } from "zod";
+import { validateForm, requiredFields, requiredString } from "../../../utils/formValidation";
+
+const callReportRequiredSchema = requiredFields({
+  companyName: requiredString("Company name"),
+  callSummary: requiredString("Call summary"),
+});
 
 export default function ReportCallModal({ isOpen, onClose, targetId, baseUrl, headers, onSuccess }) {
   const [form, setForm] = useState({ companyName: "", callSummary: "", companyUrl: "" });
@@ -14,8 +21,14 @@ export default function ReportCallModal({ isOpen, onClose, targetId, baseUrl, he
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    if (!form.companyName.trim() || !form.callSummary.trim()) {
-      setError("Company Name and Call Summary are required.");
+    // Mandatory fields — name every missing one.
+    const required = validateForm(callReportRequiredSchema, form);
+    if (!required.success) {
+      setError(Object.values(required.errors).join(" · "));
+      return;
+    }
+    if (form.companyUrl.trim() && !z.string().url().safeParse(form.companyUrl.trim()).success) {
+      setError("Enter a valid company URL (e.g. https://example.com)");
       return;
     }
 
@@ -66,7 +79,7 @@ export default function ReportCallModal({ isOpen, onClose, targetId, baseUrl, he
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="p-6 overflow-y-auto space-y-5">
           {error && <div className="p-3 bg-red-50 text-red-600 text-sm font-medium rounded-xl border border-red-100 flex items-start gap-2">{error}</div>}
           
           <div>

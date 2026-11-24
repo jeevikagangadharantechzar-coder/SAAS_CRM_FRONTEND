@@ -3,6 +3,16 @@ import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
 import { superApi } from "../../services/api";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString, requiredEmail } from "../../utils/formValidation";
+
+const adminUserRequiredSchema = requiredFields({
+  name: requiredString("Name"),
+  email: requiredEmail("Email"),
+  roleId: requiredString("Role"),
+});
+const adminRoleRequiredSchema = requiredFields({
+  name: requiredString("Role name"),
+});
 import { format } from "date-fns";
 import {
   UserCog, ShieldCheck, Plus, Pencil, Trash2, X, Loader2, KeyRound, MailCheck, Users, Shield,
@@ -50,10 +60,8 @@ const UserFormModal = ({ isOpen, onClose, onSaved, editingUser, roles }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !roleId) {
-      toast.warn("Name, email, and role are all required.");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(adminUserRequiredSchema, { name, email, roleId }).success) return;
     setSaving(true);
     try {
       if (editingUser) {
@@ -82,7 +90,7 @@ const UserFormModal = ({ isOpen, onClose, onSaved, editingUser, roles }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
             <input
@@ -176,10 +184,8 @@ const RoleFormModal = ({ isOpen, onClose, onSaved, editingRole }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.warn("Role name is required.");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(adminRoleRequiredSchema, { name }).success) return;
     setSaving(true);
     try {
       if (editingRole) {
@@ -208,7 +214,7 @@ const RoleFormModal = ({ isOpen, onClose, onSaved, editingRole }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5 overflow-y-auto">
           <div>
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Role Name</label>
             <input

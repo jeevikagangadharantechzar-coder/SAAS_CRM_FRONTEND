@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const assetRequiredSchema = requiredFields({
+  categoryId: requiredString("Asset category"),
+  name: requiredString("Asset name"),
+});
 import { Plus, Pencil, Trash2, X, Loader2, Package, IndianRupee, StickyNote, PlusCircle } from "lucide-react";
 
 const STATUS_LIST = ["In stock", "Assigned", "In use", "Under maintenance", "Retired"];
@@ -83,8 +89,9 @@ const AssetFormModal = ({ isOpen, onClose, onSaved, editingAsset, categories, as
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!categoryId) { toast.warn("Please select a category."); return; }
-    if (!name.trim()) { toast.warn("Asset name is required."); return; }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(assetRequiredSchema, { categoryId, name }).success) return;
+    if (value !== "" && Number(value) < 0) { toast.warn("Estimated value cannot be negative."); return; }
     if (customFields.some((f) => !f.label.trim())) { toast.warn("Every custom field needs a name."); return; }
 
     const payload = {
@@ -172,7 +179,7 @@ const AssetFormModal = ({ isOpen, onClose, onSaved, editingAsset, categories, as
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Asset Category</label>
             <select

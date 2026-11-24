@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { isSalesLike, hasRolePermission } from "../../utils/roles";
 import ReactDOM from "react-dom";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { TourProvider, useTour } from "@reactour/tour";
@@ -173,6 +173,11 @@ function FollowUpAudioPlayer({ audioPath }) {
   return <audio controls src={src} className="w-full mt-2 h-9" />;
 }
 
+// The Leads page's filters (and whether the filter panel is open) are saved
+// here so they survive navigating to another page and back, until the user
+// clears them with the panel's X button.
+const LEADS_FILTERS_KEY = "leads_filters";
+
 /* ── Lead Table Component ─────────────────────── */
 function LeadTableComponent() {
   const navigate = useNavigate();
@@ -182,9 +187,33 @@ function LeadTableComponent() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Filters the page starts with: the URL's own, or — when the user comes back
+  // to Leads with a bare URL (e.g. from the sidebar) — the ones saved when
+  // they left. Computed once on mount.
+  const [initParams] = useState(() => {
+    if (searchParams.toString()) return new URLSearchParams(searchParams);
+    let saved = "";
+    try { saved = sessionStorage.getItem(LEADS_FILTERS_KEY) || ""; } catch { /* storage unavailable */ }
+    return new URLSearchParams(saved);
+  });
+
+  // Put restored filters back into the URL so the rest of the page (which
+  // reads/writes filters through the URL) stays in sync with them.
+  useEffect(() => {
+    if (!searchParams.toString() && initParams.toString()) {
+      setSearchParams(initParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save the current filters so coming back to this page restores them.
+  useEffect(() => {
+    try { sessionStorage.setItem(LEADS_FILTERS_KEY, searchParams.toString()); } catch { /* storage unavailable */ }
+  }, [searchParams]);
+
   const [leads, setLeads] = useState([]);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'pipeline'
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(initParams.get("showFilters") === "true");
   const [pipelineTrigger, setPipelineTrigger] = useState(0);
 
   // Import / Export
@@ -205,7 +234,7 @@ function LeadTableComponent() {
 
   // Active Linked Work Filters
   const [activeWorkFilter, setActiveWorkFilter] = useState(
-    searchParams.get("activeWork") || ""
+    initParams.get("activeWork") || ""
   );
 
   // Rejection-reason hover tooltip (portalled so it never gets clipped by the
@@ -249,36 +278,36 @@ function LeadTableComponent() {
   const [targetLinkedLeadIds, setTargetLinkedLeadIds] = useState(new Map());
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initParams.get("search") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(initParams.get("search") || "");
   // const [assigneeFilter, setAssigneeFilter] = useState("");
   // const [statusFilter, setStatusFilter] = useState("");
   // const [sourceFilter, setSourceFilter] = useState("");
   // const [clientTypeFilter, setClientTypeFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState(
-    searchParams.get("assignee") || "");
+    initParams.get("assignee") || "");
   const [statusFilter, setStatusFilter] = useState(
-    searchParams.get("status") || ""
+    initParams.get("status") || ""
   );
   const [sourceFilter, setSourceFilter] = useState(
-    searchParams.get("source") || ""
+    initParams.get("source") || ""
   );
   const [clientTypeFilter, setClientTypeFilter] = useState(
-    searchParams.get("clientType") || ""
+    initParams.get("clientType") || ""
   );
   // const [followUpFilter, setFollowUpFilter] = useState(
   //   location.state?.followUpFilter === "missed" ? "missed" : "all"
   // );
   const [followUpFilter, setFollowUpFilter] = useState(
-    searchParams.get("followUp") || "all"
+    initParams.get("followUp") || "all"
   );
   // General Start/End Date filter — plain createdAt range; leaving either
   // blank (or both) shows every record, same as every other filter here.
   const [dateFilterFrom, setDateFilterFrom] = useState(
-    searchParams.get("startDate") || ""
+    initParams.get("startDate") || ""
   );
   const [dateFilterTo, setDateFilterTo] = useState(
-    searchParams.get("endDate") || ""
+    initParams.get("endDate") || ""
   );
 
   // Store users with their IDs for assignee filter
@@ -335,6 +364,24 @@ const updateFilter = (key, value, setter) => {
     }
 
     setSearchParams(params);
+  };
+
+  // X on the filter panel: reset every filter, close the panel, and forget
+  // the saved filters so they aren't restored next time.
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setAssigneeFilter("");
+    setStatusFilter("");
+    setSourceFilter("");
+    setClientTypeFilter("");
+    setFollowUpFilter("all");
+    setDateFilterFrom("");
+    setDateFilterTo("");
+    setActiveWorkFilter("");
+    setShowFilters(false);
+    setCurrentPage(1);
+    try { sessionStorage.removeItem(LEADS_FILTERS_KEY); } catch { /* storage unavailable */ }
+    setSearchParams({});
   };
   // user role
   useEffect(() => {
@@ -1149,15 +1196,6 @@ const updateFilter = (key, value, setter) => {
 
   return (
     <div className="p-6">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        newestOnTop
-        closeOnClick
-        draggable
-        pauseOnHover
-        theme="light"
-      />
 
       {/* Page Title */}
       <div className="mb-5">
@@ -1171,7 +1209,14 @@ const updateFilter = (key, value, setter) => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <button
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => {
+                const next = !showFilters;
+                setShowFilters(next);
+                const params = new URLSearchParams(searchParams);
+                if (next) params.set("showFilters", "true");
+                else params.delete("showFilters");
+                setSearchParams(params);
+              }}
               className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-gray-100 rounded-md font-medium text-sm transition-colors border border-gray-200 bg-white"
             >
               <Filter className="w-4 h-4" />
@@ -1296,6 +1341,17 @@ const updateFilter = (key, value, setter) => {
       {/* Collapsible Filters */}
       {showFilters && (
         <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex justify-end -mt-1 mb-2">
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              title="Clear all filters and close"
+              aria-label="Clear all filters and close"
+              className="p-1 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 tour-filters">
             <div className="relative w-full tour-search">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -1303,7 +1359,15 @@ const updateFilter = (key, value, setter) => {
                 type="text"
                 placeholder={t("leads.filters.searchPlaceholder")}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  // Page reset is handled by the debounce effect.
+                  const params = new URLSearchParams(searchParams);
+                  if (value) params.set("search", value);
+                  else params.delete("search");
+                  setSearchParams(params);
+                }}
                 className="w-11/12 md:w-full mx-auto pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 block text-sm"
               />
             </div>
@@ -1881,6 +1945,8 @@ const updateFilter = (key, value, setter) => {
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
             </select>
           </div>
 

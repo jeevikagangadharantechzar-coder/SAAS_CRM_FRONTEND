@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { Trash2, RotateCcw, Search, Info, Users, Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
@@ -238,7 +238,6 @@ export default function TrashPage() {
 
   return (
     <div className="p-3 md:p-6 overflow-hidden">
-      <ToastContainer position="top-right" autoClose={3000} newestOnTop closeOnClick draggable pauseOnHover theme="light" />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">

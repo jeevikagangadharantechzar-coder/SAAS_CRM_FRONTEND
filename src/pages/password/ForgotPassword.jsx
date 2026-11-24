@@ -3,6 +3,12 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Loader2, Mail, ArrowLeft, CheckCircle2, AlertCircle, Building2 } from "lucide-react";
+import { validateForm, requiredFields, requiredString, requiredEmail } from "../../utils/formValidation";
+
+const forgotRequiredSchema = requiredFields({
+  tenantInputSlug: requiredString("Company identifier"),
+  email: requiredEmail("Email address"),
+});
 
 /* ── Forgot Password Component ─────────────────────── */
 
@@ -29,6 +35,13 @@ const ForgotPassword = ({ isOpen, onClose }) => {
 /* ── Handle Forgot Password Function ─────────────────────── */
   const handleForgot = async (e) => {
     e.preventDefault();
+    // Mandatory fields — name every missing one.
+    const required = validateForm(forgotRequiredSchema, { tenantInputSlug, email }, { toast: false });
+    if (!required.success) {
+      setMessage(Object.values(required.errors).join(" · "));
+      setIsError(true);
+      return;
+    }
     setIsLoading(true);
     setIsError(false);
     
@@ -91,7 +104,7 @@ const ForgotPassword = ({ isOpen, onClose }) => {
                   Enter your email address and we'll send you a link to reset your password.
                 </p>
                 
-                <form onSubmit={handleForgot} className="space-y-4">
+                <form onSubmit={handleForgot} noValidate className="space-y-4">
                   {message && (
                     <div className={`p-3 rounded-md flex items-start gap-2 ${isError ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
                       <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />

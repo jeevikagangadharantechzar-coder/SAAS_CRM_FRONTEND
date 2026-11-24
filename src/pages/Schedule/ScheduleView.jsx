@@ -4,7 +4,7 @@ import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CalendarClock, StickyNote, X, Trash2, Layers, Users } from "lucide-react";
 
@@ -415,7 +415,6 @@ const ScheduleView = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
-      <ToastContainer position="top-right" autoClose={3000} />
       {/* react-big-calendar's own time-grid label always renders event.start
           -event.end as a range, but only Meeting/Target genuinely have an
           end time — everything else is a single point padded only for

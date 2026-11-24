@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { isSalesLike, hasRolePermission } from "../../utils/roles";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
@@ -1691,7 +1691,6 @@ function DealIntelligenceDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
-      <ToastContainer position="top-right" autoClose={3000} />
 
       <NotificationsPanel deals={deals} isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
       <MetricsModal deals={deals} isOpen={showMetrics} onClose={() => setShowMetrics(false)} />

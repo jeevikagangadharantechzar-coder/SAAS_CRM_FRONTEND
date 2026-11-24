@@ -2,6 +2,12 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const resetRequiredSchema = requiredFields({
+  password: requiredString("New password"),
+  confirmPassword: requiredString("Confirm password"),
+});
 
 const ResetPassword = () => {
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -37,6 +43,19 @@ const ResetPassword = () => {
 /* ── Handle Reset Function ─────────────────────── */
 const handleReset = async (e) => {
   e.preventDefault();
+
+  // Mandatory fields — name every missing one.
+  const required = validateForm(resetRequiredSchema, { password, confirmPassword }, { toast: false });
+  if (!required.success) {
+    setMessage(Object.values(required.errors).join(" · "));
+    setIsError(true);
+    return;
+  }
+  if (password.length < 6) {
+    setMessage("Password must be at least 6 characters long");
+    setIsError(true);
+    return;
+  }
 
   if (password !== confirmPassword) {
     setMessage("Passwords do not match");
@@ -134,7 +153,7 @@ const handleReset = async (e) => {
           </div>
         )}
         
-        <form onSubmit={handleReset} className="space-y-5">
+        <form onSubmit={handleReset} noValidate className="space-y-5">
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               New Password

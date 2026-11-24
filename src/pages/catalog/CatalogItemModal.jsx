@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { X, AlertCircle, Package, Tag, DollarSign, Percent, Layers, Hash, Wrench, Link2, CheckCircle2, ArrowRightLeft, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
+import { validateForm, showValidationToast, requiredFields, requiredString } from "../../utils/formValidation";
+
+const serviceRequiredSchema = requiredFields({
+  name: requiredString("Service name"),
+});
+const productRequiredSchema = requiredFields({
+  name: requiredString("Product name"),
+  sku: requiredString("Product SKU / Code"),
+  category: requiredString("Category"),
+});
 import { createCatalogItem, updateCatalogItem, getCatalogItems, getCurrencyExchangeRate } from "../../services/catalog.service";
 
 const BILLING_UNITS_PRODUCT = [
@@ -248,15 +258,9 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
   };
 
   const validate = () => {
-    const newErrors = {};
-    if (!formData.name.trim()) {
-      newErrors.name = formData.type === "Service" ? "Service Name is required" : "Product Name is required";
-    }
-
-    if (formData.type === "Product") {
-      if (!formData.sku.trim()) newErrors.sku = "Product SKU / Code is required";
-      if (!formData.category) newErrors.category = "Category is required";
-    }
+    // Mandatory fields (zod); the checks below cover price and tax format.
+    const schema = formData.type === "Product" ? productRequiredSchema : serviceRequiredSchema;
+    const newErrors = { ...validateForm(schema, formData, { toast: false }).errors };
     // Service category is optional (linked services inherit it from the product)
 
     if (formData.unitPrice === "" || isNaN(Number(formData.unitPrice)) || Number(formData.unitPrice) < 0) {
@@ -266,6 +270,8 @@ const CatalogItemModal = ({ isOpen, onClose, onItemSaved, editingItem, categorie
       newErrors.taxRate = "Tax rate must be between 0 and 100%";
     }
     setErrors(newErrors);
+    // One toast naming every problem, e.g. "Product name is required".
+    showValidationToast(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 

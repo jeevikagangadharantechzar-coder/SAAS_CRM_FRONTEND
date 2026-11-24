@@ -2,6 +2,13 @@ import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { X, Plus, Trash2, Video } from "lucide-react";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const meetingRequiredSchema = requiredFields({
+  title: requiredString("Title"),
+  startDateTime: requiredString("Start time"),
+  endDateTime: requiredString("End time"),
+});
 
 const EMPTY_FORM = {
   title: "",
@@ -76,9 +83,8 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return toast.error("Title is required");
-    if (!form.startDateTime) return toast.error("Start time is required");
-    if (!form.endDateTime) return toast.error("End time is required");
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(meetingRequiredSchema, form).success) return;
     if (new Date(form.startDateTime) >= new Date(form.endDateTime))
       return toast.error("End time must be after start time");
 
@@ -114,7 +120,7 @@ export default function MeetingModal({ isOpen, onClose, onSave, editMeeting, zoo
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-5 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="px-4 sm:px-6 py-5 flex flex-col gap-4">
           {/* Title */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">

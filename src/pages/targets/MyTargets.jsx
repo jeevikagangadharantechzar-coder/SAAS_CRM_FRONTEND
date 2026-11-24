@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNotifications } from "../../context/NotificationContext";
 import { isDateOverdue } from "../../utils/dateValidation";
@@ -1316,7 +1316,6 @@ export default function MyTargets() {
 
   return (
     <div className="p-6 min-h-screen bg-gray-50 relative">
-      <ToastContainer position="top-right" autoClose={3000} />
 
       {overdueBlockingTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">

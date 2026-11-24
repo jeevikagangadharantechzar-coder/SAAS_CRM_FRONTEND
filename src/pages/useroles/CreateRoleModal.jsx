@@ -2,11 +2,16 @@
 import { useState } from "react";
 import axios from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Check, X, UserPlus } from "react-feather";
 import { DEFAULT_PERMISSIONS } from "./permissionConfig";
 import PermissionsGrid from "./PermissionsGrid";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const roleRequiredSchema = requiredFields({
+  name: requiredString("Role name"),
+});
 
 export default function CreateRoleModal({ onRoleCreated }) {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -54,6 +59,8 @@ export default function CreateRoleModal({ onRoleCreated }) {
 /* ── Handle Submit Function ─────────────────────── */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(roleRequiredSchema, roleData).success) return;
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.post(
@@ -73,7 +80,6 @@ export default function CreateRoleModal({ onRoleCreated }) {
 
   return (
     <div>
-      <ToastContainer />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
           <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md">
@@ -93,7 +99,7 @@ export default function CreateRoleModal({ onRoleCreated }) {
             </p>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 p-1">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6 p-1">
             <div className="space-y-2">
               <label htmlFor="roleName" className="block text-sm font-medium text-gray-700">
                 Role Name

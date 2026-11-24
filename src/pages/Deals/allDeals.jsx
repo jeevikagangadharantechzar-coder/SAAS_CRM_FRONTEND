@@ -10,6 +10,11 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
+
+// The Deals page's filters (and whether the filter panel is open) are saved
+// here so they survive navigating to another page and back, until the user
+// clears them with the panel's X button.
+const DEALS_FILTERS_KEY = "deals_filters";
 import ReactDOM from "react-dom";
 import { TourProvider, useTour } from "@reactour/tour";
 import { initSocket, getSocket } from "../../utils/socket";
@@ -96,6 +101,25 @@ function AllDealsComponent() {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get("status");
 
+  // Filters the page starts with: the URL's own, or — when the user comes back
+  // to Deals with a bare URL (e.g. from the sidebar) — the ones saved when
+  // they left. Computed once on mount.
+  const [initParams] = useState(() => {
+    if (searchParams.toString()) return new URLSearchParams(searchParams);
+    let saved = "";
+    try { saved = sessionStorage.getItem(DEALS_FILTERS_KEY) || ""; } catch { /* storage unavailable */ }
+    return new URLSearchParams(saved);
+  });
+
+  // Put restored filters back into the URL so the rest of the page (which
+  // reads/writes filters through the URL) stays in sync with them.
+  useEffect(() => {
+    if (!searchParams.toString() && initParams.toString()) {
+      setSearchParams(initParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Mirrors the same pattern used on the Leads page — every filter's
   // onChange writes into the URL, so navigating to a deal and back (or
   // reloading) restores the exact filter state instead of resetting it.
@@ -105,6 +129,26 @@ function AllDealsComponent() {
     if (value) params.set(key, value);
     else params.delete(key);
     setSearchParams(params);
+  };
+
+  // X on the filter panel: reset every filter, close the panel, and forget
+  // the saved filters so they aren't restored next time.
+  const clearAllFilters = () => {
+    setFilters({ stage: "", assignedTo: "" });
+    setSearchTerm("");
+    setClientTypeFilter("");
+    setShowTodayOnly(false);
+    setActiveWorkFilter("");
+    setDateFilterFrom("");
+    setDateFilterTo("");
+    setCustomFrom("");
+    setCustomTo("");
+    setDealTypeFilter({ won: false, lost: false, pending: false });
+    setShowCustomRange(false);
+    setShowFilters(false);
+    setCurrentPage(1);
+    try { sessionStorage.removeItem(DEALS_FILTERS_KEY); } catch { /* storage unavailable */ }
+    setSearchParams({});
   };
 
   const updateDealType = (type, checked) => {
@@ -119,8 +163,8 @@ function AllDealsComponent() {
     });
   };
 
-  const [clientTypeFilter, setClientTypeFilter] = useState(searchParams.get("clientType") || "");
-  const [showTodayOnly, setShowTodayOnly] = useState(searchParams.get("todayOnly") === "1");
+  const [clientTypeFilter, setClientTypeFilter] = useState(initParams.get("clientType") || "");
+  const [showTodayOnly, setShowTodayOnly] = useState(initParams.get("todayOnly") === "1");
   const { setIsOpen, setSteps, setCurrentStep, close } = useTour();
 
   const [deals, setDeals] = useState([]);
@@ -151,11 +195,19 @@ function AllDealsComponent() {
   const [userRole, setUserRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
   const [filters, setFilters] = useState({
-    stage: searchParams.get("stage") || "",
-    assignedTo: searchParams.get("assignedTo") || "",
+    stage: initParams.get("stage") || "",
+    assignedTo: initParams.get("assignedTo") || "",
   });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initParams.get("search") || "");
   const [dropdownCoords, setDropdownCoords] = useState(null);
+
+  // Save the current filters (except the one-off dashboard "status" link
+  // filter) so coming back to this page restores them.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("status");
+    try { sessionStorage.setItem(DEALS_FILTERS_KEY, params.toString()); } catch { /* storage unavailable */ }
+  }, [searchParams]);
   const [hoveredDeal, setHoveredDeal] = useState(null);
   const [tooltipCoords, setTooltipCoords] = useState(null);
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
@@ -166,12 +218,12 @@ function AllDealsComponent() {
   // the Deal Won/Deal Lost/Pending Deal tick-box dropdown; once From, To, and
   // at least one type are set, it fetches matching deals from the backend
   // (getAll with start/end/dealType) filtered specifically by wonAt/lostDate.
-  const initDealTypes = (searchParams.get("dealType") || "").split(",").filter(Boolean);
+  const initDealTypes = (initParams.get("dealType") || "").split(",").filter(Boolean);
   const [showCustomRange, setShowCustomRange] = useState(
-    !!(searchParams.get("customFrom") || searchParams.get("customTo") || initDealTypes.length)
+    !!(initParams.get("customFrom") || initParams.get("customTo") || initDealTypes.length)
   );
-  const [customFrom, setCustomFrom] = useState(searchParams.get("customFrom") || "");
-  const [customTo, setCustomTo] = useState(searchParams.get("customTo") || "");
+  const [customFrom, setCustomFrom] = useState(initParams.get("customFrom") || "");
+  const [customTo, setCustomTo] = useState(initParams.get("customTo") || "");
   const [dealTypeFilter, setDealTypeFilter] = useState({
     won: initDealTypes.includes("won"),
     lost: initDealTypes.includes("lost"),
@@ -179,15 +231,15 @@ function AllDealsComponent() {
   });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [customRangeDeals, setCustomRangeDeals] = useState([]);
-  const [showFilters, setShowFilters] = useState(searchParams.get("showFilters") === "true");
+  const [showFilters, setShowFilters] = useState(initParams.get("showFilters") === "true");
 
   // General-purpose Start/End Date filter — available to every role (unlike
   // the sales-only Custom Range panel above). Plain createdAt range, no deal
   // type involved; reuses the same backend start/end params the Custom Range
   // search already uses, just without a dealType so the backend takes its
   // plain-createdAt branch.
-  const [dateFilterFrom, setDateFilterFrom] = useState(searchParams.get("startDate") || "");
-  const [dateFilterTo, setDateFilterTo] = useState(searchParams.get("endDate") || "");
+  const [dateFilterFrom, setDateFilterFrom] = useState(initParams.get("startDate") || "");
+  const [dateFilterTo, setDateFilterTo] = useState(initParams.get("endDate") || "");
   const [dateFilterDeals, setDateFilterDeals] = useState([]);
 
   // Reject modal
@@ -202,7 +254,7 @@ function AllDealsComponent() {
   const [rejectTooltipTimeout, setRejectTooltipTimeout] = useState(null);
 
   // Active Linked Work Filters
-  const [activeWorkFilter, setActiveWorkFilter] = useState(searchParams.get("activeWork") || "");
+  const [activeWorkFilter, setActiveWorkFilter] = useState(initParams.get("activeWork") || "");
 
   // Linked Work Modal
   const [linkedWorkModalOpen, setLinkedWorkModalOpen] = useState(false);
@@ -1018,6 +1070,17 @@ function AllDealsComponent() {
       {/* Collapsible Filters */}
       {showFilters && (
         <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 tour-filters">
+          <div className="flex justify-end -mt-1 mb-2">
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              title="Clear all filters and close"
+              aria-label="Clear all filters and close"
+              className="p-1 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full items-center">
           <select
             value={filters.stage}
@@ -1158,7 +1221,7 @@ function AllDealsComponent() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => updateFilter("search", e.target.value, setSearchTerm)}
             placeholder="Search Deal Name..."
             className="w-full border border-gray-300 rounded-md px-4 py-2 bg-white text-sm block h-10 outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
           />
@@ -1472,12 +1535,7 @@ function AllDealsComponent() {
                     <td className="px-6 py-4">
                       <button
                         onClick={(e) => toggleDropdown(deal._id, e)}
-                        disabled={deal.stage === "Closed Won"}
-                        className={`p-2 rounded ${
-                          deal.stage === "Closed Won"
-                            ? "opacity-40 cursor-not-allowed"
-                            : "hover:bg-gray-200"
-                        }`}
+                        className="p-2 rounded hover:bg-gray-200"
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -1652,7 +1710,9 @@ function AllDealsComponent() {
           >
             {(() => {
               const activeDeal = baseDeals.find((d) => d._id === openDropdownId);
-              const activeIsTerminal = activeDeal?.stage === "Rejected" || activeDeal?.stage === "Closed Won";
+              // Closed Won deals remain editable; only Rejected deals are locked.
+              const activeIsTerminal = activeDeal?.stage === "Rejected";
+              const activeIsWon = activeDeal?.stage === "Closed Won";
               // "View All Deals" is read-only for deals the user isn't assigned to.
               const isOwnDeal = !activeDeal?.assignedTo || (activeDeal.assignedTo._id || activeDeal.assignedTo) === currentUserId;
               const editDisabled = activeIsTerminal || (userRole !== "Admin" && !isOwnDeal);
@@ -1667,7 +1727,7 @@ function AllDealsComponent() {
                     <Edit size={16} className="mr-2" /> Edit
                   </button>
 
-                  {userRole === "Admin" && (
+                  {userRole === "Admin" && !activeIsWon && (
                     <button
                       onClick={() => handleTrashClick(activeDeal)}
                       className="flex items-center px-3 py-2 w-full text-left text-red-600 hover:bg-gray-100"

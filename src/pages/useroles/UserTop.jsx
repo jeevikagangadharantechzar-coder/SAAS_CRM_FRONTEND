@@ -10,6 +10,17 @@ import {
 } from "../../components/ui/dialog";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff, X } from "lucide-react";
+import { validateForm, showValidationToast, requiredFields, requiredString } from "../../utils/formValidation";
+
+const userRequiredSchema = requiredFields({
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
+  mobileNumber: requiredString("Phone number"),
+  password: requiredString("Password"),
+  confirmPassword: requiredString("Confirm password"),
+  role: requiredString("Role"),
+  gender: requiredString("Gender"),
+});
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
@@ -200,18 +211,18 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
   };
 
   // ── Validation ────────────────────────────────────────────────────────────
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim())  newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim())   newErrors.lastName  = "Last name is required";
+  const validateUserForm = () => {
+    // Mandatory fields (zod); format checks below only run on filled fields.
+    const { errors: requiredErrors } = validateForm(userRequiredSchema, formData, { toast: false });
+    const newErrors = { ...requiredErrors };
     
     //  Email validation
     if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = "Email is invalid";
     
     //  Phone validation - FIXED
-    if (!formData.mobileNumber) {
-      newErrors.mobileNumber = "Phone number is required";
+    if (newErrors.mobileNumber) {
+      // missing — already reported
     } else if (!validatePhoneNumber(formData.mobileNumber, phoneCountryCode)) {
       newErrors.mobileNumber = `Please enter a valid phone number (${getPhoneNumberLengthMessage(phoneCountryCode)})`;
     } else {
@@ -242,8 +253,8 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
       }
     }
     
-    if (!formData.password) {
-      newErrors.password = "Password is required";
+    if (newErrors.password) {
+      // missing — already reported
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
     } else if (/\s/.test(formData.password)) {
@@ -252,18 +263,17 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
       newErrors.password = "Password must contain uppercase, lowercase and numbers";
     }
     
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Confirm password is required";
+    if (newErrors.confirmPassword) {
+      // missing — already reported
     } else if (/\s/.test(formData.confirmPassword)) {
       newErrors.confirmPassword = "Confirm password cannot contain spaces";
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
     
-    if (!formData.role)   newErrors.role   = "Role is required";
-    if (!formData.gender) newErrors.gender = "Gender is required";
-
     setErrors(newErrors);
+    // One toast naming every problem, e.g. "First name is required".
+    showValidationToast(newErrors);
 
     if (Object.keys(newErrors).length > 0 && formRef.current) {
       setTimeout(() => {
@@ -281,8 +291,7 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    if (!validateForm()) {
-      toast.error("Please fill all required fields correctly");
+    if (!validateUserForm()) {
       setIsSubmitting(false);
       return;
     }

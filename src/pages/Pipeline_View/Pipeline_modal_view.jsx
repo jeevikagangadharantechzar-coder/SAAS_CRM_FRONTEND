@@ -7,7 +7,13 @@ import React, {
 } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const dealEditRequiredSchema = requiredFields({
+  dealName: requiredString("Deal name"),
+  companyName: requiredString("Company name"),
+});
 import "react-toastify/dist/ReactToastify.css";
 import {
   ArrowLeft,
@@ -1627,7 +1633,8 @@ function Pipeline_modal_view() {
         authHeader(),
       );
       toast.success("Invoice email sent");
-      try {
+      // Closed Won deals stay Closed Won when an invoice is (re)sent for them.
+      if (deal?.stage !== "Closed Won") try {
         await axios.patch(
           `${API_URL}/deals/update-deal/${dealId}`,
           { stage: "Invoice Sent" },
@@ -2305,10 +2312,8 @@ function Pipeline_modal_view() {
   );
 
   const saveDetails = async () => {
-    if (!editFormData.dealName.trim())
-      return toast.error("Deal Name is required");
-    if (!editFormData.companyName.trim())
-      return toast.error("Company Name is required");
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(dealEditRequiredSchema, editFormData).success) return;
     if (editFormData.email && !validateEmail(editFormData.email))
       return toast.error("Please enter a valid email address");
     if (
@@ -2457,7 +2462,6 @@ function Pipeline_modal_view() {
         // its own navigation heuristics at all
       }}
     >
-      <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Swipe animation keyframes. The entry animations play once whenever
           the swipe container below remounts (its key is the dealId), and
@@ -4320,7 +4324,9 @@ function Pipeline_modal_view() {
                                 name="stage"
                                 value={editFormData.stage}
                                 onChange={handleEditChange}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition"
+                                // Closed Won deals keep their stage; other details stay editable.
+                                disabled={deal.stage === "Closed Won"}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                               >
                                 {DEAL_STAGES.map((s) => (
                                   <option key={s} value={s}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Smartphone, Monitor, Check, X, ShieldAlert } from "lucide-react";
 
@@ -64,7 +64,6 @@ export default function DeviceRequests() {
 
   return (
     <div className="p-6">
-      <ToastContainer position="top-right" autoClose={3000} theme="light" />
 
       <div className="mb-6">
         <h2 className="text-slate-900 flex items-center gap-2">

@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { X } from "lucide-react";
 import { useSelector } from "react-redux";
+import { validateForm, requiredFields, requiredString } from "../utils/formValidation";
+
+const mfaCodeRequiredSchema = requiredFields({
+  mfaCode: requiredString("Verification code"),
+});
 
 const MfaSetupModal = ({ isOpen, onClose, mfaEndpoint, onComplete }) => {
   const [qrCode, setQrCode] = useState("");
@@ -48,6 +53,12 @@ const MfaSetupModal = ({ isOpen, onClose, mfaEndpoint, onComplete }) => {
 
   const handleEnable = async (e) => {
     e.preventDefault();
+    // Mandatory fields — name the missing one.
+    const required = validateForm(mfaCodeRequiredSchema, { mfaCode }, { toast: false });
+    if (!required.success) {
+      setError(required.errors.mfaCode);
+      return;
+    }
     setIsLoading(true);
     setError("");
     try {
@@ -96,7 +107,7 @@ const MfaSetupModal = ({ isOpen, onClose, mfaEndpoint, onComplete }) => {
             qrCode && (
               <div className="flex flex-col items-center">
                 <img src={qrCode} alt="MFA QR Code" className="w-48 h-48 mb-4 border border-gray-200 rounded p-2" />
-                <form onSubmit={handleEnable} className="w-full">
+                <form onSubmit={handleEnable} noValidate className="w-full">
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Enter 6-digit code

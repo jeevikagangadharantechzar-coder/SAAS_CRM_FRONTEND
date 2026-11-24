@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useWhatsapp } from "../../context/WhatsappContext.jsx";
 import { X, MessageCirclePlus, Send, AlertCircle } from "lucide-react";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const newChatTemplateRequiredSchema = requiredFields({
+  phone: requiredString("Phone number"),
+});
+const newChatRequiredSchema = newChatTemplateRequiredSchema.extend({
+  message: requiredString("Message"),
+});
 
 // Auto-format phone: "9361444764" → "+919361444764"
 const formatPhone = (raw = "") => {
@@ -30,8 +38,10 @@ export default function NewChatModal({ onClose }) {
   const handleSend = async () => {
     setError("");
     setTip("");
-    if (!phone.trim()) return setError("Phone number is required");
-    if (!useTemplate && !message.trim()) return setError("Message is required");
+    // Mandatory fields — name every missing one.
+    const schema = useTemplate ? newChatTemplateRequiredSchema : newChatRequiredSchema;
+    const required = validateForm(schema, { phone, message }, { toast: false });
+    if (!required.success) return setError(Object.values(required.errors).join(" · "));
 
     const formattedPhone = formatPhone(phone);
 

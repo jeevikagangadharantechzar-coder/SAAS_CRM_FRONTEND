@@ -2,6 +2,12 @@ import React, { useEffect, useState } from "react";
 import { LifeBuoy, Paperclip, Send, X, ChevronDown, Calendar } from "lucide-react";
 import { toast } from "react-toastify";
 import { api } from "../../services/api";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const supportTicketRequiredSchema = requiredFields({
+  subject: requiredString("Subject"),
+  message: requiredString("Details"),
+});
 import { useSocket } from "../../context/SocketContext";
 import StatusBadge, { PriorityBadge } from "./statusBadge";
 import Timeline from "./Timeline";
@@ -141,7 +147,8 @@ const UserSupportView = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!subject.trim() || !message.trim()) return;
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(supportTicketRequiredSchema, { subject, message }).success) return;
 
     setSubmitting(true);
     try {
@@ -196,6 +203,7 @@ const UserSupportView = () => {
         {/* Ticket Form */}
         <form
           onSubmit={handleSubmit}
+          noValidate
           className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5"
         >
           <h2 className="text-slate-900">Raise a New Ticket</h2>

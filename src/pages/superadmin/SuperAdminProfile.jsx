@@ -4,6 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { superApi } from "../../services/api";
 import { updateSuperAdminProfile } from "../../store/authSlice";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString, requiredEmail } from "../../utils/formValidation";
+
+const profileRequiredSchema = requiredFields({
+  name: requiredString("Full name"),
+  email: requiredEmail("Email address"),
+});
+const profilePasswordRequiredSchema = requiredFields({
+  currentPassword: requiredString("Current password"),
+  newPassword: requiredString("New password"),
+  confirmPassword: requiredString("Confirm new password"),
+});
 import { User, KeyRound, CheckCircle2, ShieldAlert, ShieldCheck } from "lucide-react";
 
 const SuperAdminProfile = () => {
@@ -41,6 +52,8 @@ const SuperAdminProfile = () => {
   const BASE_URL = import.meta.env.VITE_SI_URI || "http://localhost:5000";
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(profileRequiredSchema, { name, email }).success) return;
     setProfileSaving(true);
     try {
       const res = await superApi.put("/profile", { name, email });
@@ -55,6 +68,8 @@ const SuperAdminProfile = () => {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(profilePasswordRequiredSchema, { currentPassword, newPassword, confirmPassword }).success) return;
     if (newPassword !== confirmPassword) {
       toast.error("New passwords do not match.");
       return;
@@ -126,7 +141,7 @@ const SuperAdminProfile = () => {
               <CardDescription>Update your name and email address.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <form onSubmit={handleUpdateProfile} noValidate className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Full Name
@@ -174,7 +189,7 @@ const SuperAdminProfile = () => {
               <CardDescription>Update your own login password.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <form onSubmit={handleUpdatePassword} noValidate className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Current Password

@@ -3,6 +3,16 @@ import { Send, FileText, Clock, Mail, Paperclip } from 'lucide-react';
 import axios from 'axios';
 import {useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const emailRequiredSchema = requiredFields({
+  subject: requiredString("Subject"),
+  content: requiredString("Email content"),
+});
+const scheduledEmailRequiredSchema = emailRequiredSchema.extend({
+  scheduledDate: requiredString("Schedule date"),
+  scheduledTime: requiredString("Schedule time"),
+});
 
 const CreateEmail = () => {
   
@@ -211,14 +221,8 @@ const CreateEmail = () => {
     try {
       setIsSending(true);
 
-      if (!emailData.subject.trim()) {
-        toast.warn("Please enter email subject");
-        setIsSending(false);
-        return;
-      }
-
-      if (!emailData.content.trim()) {
-        toast.warn("Please enter email content");
+      // Mandatory fields — the toast names every missing one.
+      if (!validateForm(emailRequiredSchema, emailData).success) {
         setIsSending(false);
         return;
       }
@@ -302,10 +306,8 @@ const CreateEmail = () => {
   };
 
   const handleScheduleEmail = async () => {
-    if (!scheduledDate || !scheduledTime) {
-      toast.warn("Please select date and time");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(scheduledEmailRequiredSchema, { ...emailData, scheduledDate, scheduledTime }).success) return;
 
     const selectedDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
     const now = new Date();

@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const passwordUpdateRequiredSchema = requiredFields({
+  currentPassword: requiredString("Current password"),
+  newPassword: requiredString("New password"),
+  confirmPassword: requiredString("Confirm password"),
+});
 import {
   Dialog,
   DialogContent,
@@ -37,6 +44,12 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+    // Mandatory fields — name every missing one.
+    const required = validateForm(passwordUpdateRequiredSchema, formData, { toast: false });
+    if (!required.success) {
+      setError(Object.values(required.errors).join(" · "));
+      return;
+    }
 
     if (formData.newPassword !== formData.confirmPassword) {
       setError("New password and confirm password do not match");
@@ -110,7 +123,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
             <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
               Current Password

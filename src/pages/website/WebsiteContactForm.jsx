@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import axios from "axios";
 import ReCAPTCHA from "react-google-recaptcha";
 import { getNames } from "country-list";
@@ -18,6 +18,15 @@ import {
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import "react-toastify/dist/ReactToastify.css";
+import { validateForm, showValidationToast, requiredFields, requiredString } from "../../utils/formValidation";
+
+const websiteLeadRequiredSchema = requiredFields({
+  leadName: requiredString("Your name"),
+  companyName: requiredString("Company name"),
+  phoneNumber: requiredString("Phone number"),
+  email: requiredString("Email"),
+  clientType: requiredString("Client type"),
+});
 
 const WebsiteContactForm = () => {
   const { tenantSlug } = useParams();
@@ -159,27 +168,24 @@ const WebsiteContactForm = () => {
     setIsSubmitting(true);
 
     // ========== UPDATED: Validate email format ==========
-    const newErrors = {
-      leadName: !formData.leadName.trim(),
-      companyName: !formData.companyName.trim(),
-      phoneNumber: !formData.phoneNumber.trim(),
-      email: !formData.email.trim() || !validateEmail(formData.email),
-      clientType: !formData.clientType,
-    };
+    // Mandatory fields (zod) — the toast names every missing one.
+    const required = validateForm(websiteLeadRequiredSchema, formData, { toast: false });
+    const messages = { ...required.errors };
+    if (!messages.email && !validateEmail(formData.email)) {
+      messages.email = "Please enter a valid email address (e.g., name@company.com)";
+    }
     // ====================================================
 
-    setErrors(newErrors);
+    setErrors({
+      leadName: !!messages.leadName,
+      companyName: !!messages.companyName,
+      phoneNumber: !!messages.phoneNumber,
+      email: !!messages.email,
+      clientType: !!messages.clientType,
+    });
 
-    if (Object.values(newErrors).some(Boolean)) {
-      // ========== NEW: Show specific email error message ==========
-      if (!formData.email.trim()) {
-        toast.error("Email is required");
-      } else if (formData.email.trim() && !validateEmail(formData.email)) {
-        toast.error("Please enter a valid email address (e.g., name@company.com)");
-      } else {
-        toast.error("Please fill all required fields");
-      }
-      // ============================================================
+    if (Object.keys(messages).length) {
+      showValidationToast(messages);
       setIsSubmitting(false);
       return;
     }

@@ -130,7 +130,8 @@
     "textarea": "^0.3.0",
     "tsparticles": "^3.9.1",
     "victory": "^37.3.6",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

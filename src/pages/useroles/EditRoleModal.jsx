@@ -10,6 +10,11 @@ import { toast } from "react-toastify";
 import { Check, X, UserPlus } from "react-feather";
 import { DEFAULT_PERMISSIONS } from "./permissionConfig";
 import PermissionsGrid from "./PermissionsGrid";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const roleRequiredSchema = requiredFields({
+  name: requiredString("Role name"),
+});
 
 export default function EditRoleModal({ role, onClose, onRoleUpdated }) {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -41,6 +46,8 @@ export default function EditRoleModal({ role, onClose, onRoleUpdated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(roleRequiredSchema, roleData).success) return;
     try {
       const token = localStorage.getItem("token");
       await axios.put(
@@ -71,7 +78,7 @@ export default function EditRoleModal({ role, onClose, onRoleUpdated }) {
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-1">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6 p-1">
           <div className="space-y-2">
             <label htmlFor="editRoleName" className="block text-sm font-medium text-gray-700">
               Role Name

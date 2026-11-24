@@ -3,6 +3,16 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const activityRequiredSchema = requiredFields({
+  title: requiredString("Title"),
+  deal: requiredString("Deal"),
+  startDate: requiredString("Start date"),
+  startTime: requiredString("Start time"),
+  endDate: requiredString("End date"),
+  endTime: requiredString("End time"),
+});
 import {
   Dialog,
   DialogContent,
@@ -142,15 +152,8 @@ const ModalCalendar = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (
-      !formData.title ||
-      !formData.deal ||
-      !formData.startDate ||
-      !formData.endDate ||
-      !formData.startTime ||
-      !formData.endTime
-    ) {
-      toast.error("Please fill all required fields!");
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(activityRequiredSchema, formData).success) {
       setIsSubmitting(false);
       return;
     }
@@ -240,7 +243,7 @@ const ModalCalendar = ({
           </DialogTitle>
         </DialogHeader>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           {/* Activity Category */}
           <div>
             <label className="block text-gray-600 mb-2 font-medium">

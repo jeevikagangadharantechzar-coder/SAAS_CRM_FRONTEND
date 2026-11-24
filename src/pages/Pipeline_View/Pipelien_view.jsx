@@ -3,7 +3,7 @@
   import { DndProvider, useDrag, useDrop } from "react-dnd";
   import { HTML5Backend } from "react-dnd-html5-backend";
   import axios from "axios";
-  import { toast, ToastContainer } from "react-toastify";
+  import { toast } from "react-toastify";
   import "react-toastify/dist/ReactToastify.css";
   import {
     Dialog,
@@ -349,8 +349,7 @@ const STAGES = [
 
     // Check if user can edit/delete a deal
     const canEditDeleteDeal = (deal) => {
-      // Closed Won deals are locked from edit/delete for everyone
-      if (deal.stage === "Closed Won") return false;
+      // Closed Won deals can be edited; deleting them is blocked in handleDeleteClick.
       if (userRole === "Admin") return true;
       return deal.assignedTo && deal.assignedTo._id === userId;
     };
@@ -514,7 +513,7 @@ const STAGES = [
 
     // Handle delete confirmation
     const handleDeleteClick = (deal) => {
-      if (!canEditDeleteDeal(deal)) {
+      if (deal.stage === "Closed Won" || !canEditDeleteDeal(deal)) {
         toast.error(
           deal.stage === "Closed Won"
             ? "Closed Won deals cannot be deleted"
@@ -575,11 +574,7 @@ const STAGES = [
     // Handle edit click - navigate to create deal page with deal data
     const handleEditClick = (deal) => {
       if (!canEditDeleteDeal(deal)) {
-        toast.error(
-          deal.stage === "Closed Won"
-            ? "Closed Won deals cannot be edited"
-            : "You don't have permission to edit this deal"
-        );
+        toast.error("You don't have permission to edit this deal");
         return;
       }
       navigate(`/${tenantSlug}/createDeal`, { state: { deal } });
@@ -694,7 +689,6 @@ const STAGES = [
 
     return (
       <div className="min-h-screen w-full bg-gray-50 p-4 md:p-6">
-        <ToastContainer position="top-right" autoClose={3000} />
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -1001,7 +995,8 @@ const STAGES = [
     const [{ isDragging }, dragRef] = useDrag({
       type: ItemTypes.DEAL,
       item: { id: deal._id, from: stageId },
-      canDrag: () => true,
+      // Closed Won deals keep their stage, so their cards can't be dragged.
+      canDrag: () => deal.stage !== "Closed Won",
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     });
 
@@ -1012,13 +1007,12 @@ const STAGES = [
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
 
-    // Closed Won deals are locked from edit/delete for everyone
-    const isTerminal = deal.stage === "Closed Won";
+    // Closed Won deals can be edited but not deleted
+    const isWon = deal.stage === "Closed Won";
 
     // Check if user can edit/delete this deal
     const canEditDelete =
-      !isTerminal &&
-      (userRole === "Admin" || (deal.assignedTo && deal.assignedTo._id === userId));
+      userRole === "Admin" || (deal.assignedTo && deal.assignedTo._id === userId);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -1125,15 +1119,17 @@ const STAGES = [
                   >
                     View
                   </button>
-                  <button
-                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                    onClick={() => {
-                      onDelete(deal);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    Delete
-                  </button>
+                  {!isWon && (
+                    <button
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      onClick={() => {
+                        onDelete(deal);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               )}
             </div>

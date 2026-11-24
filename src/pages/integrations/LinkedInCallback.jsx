@@ -3,6 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { CheckCircle, AlertCircle, RefreshCw, Layers } from "react-feather";
 import { api } from "../../services/api";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const linkedInRequiredSchema = requiredFields({
+  organizationUrn: requiredString("Organization URN"),
+  adAccountUrn: requiredString("Ad Account URN"),
+  leadFormUrn: requiredString("Lead Form URN"),
+});
 
 export default function LinkedInCallback() {
   const [searchParams] = useSearchParams();
@@ -110,10 +117,13 @@ export default function LinkedInCallback() {
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
-    if (!manualFormUrn) {
-      toast.error("Lead Form URN is required");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    const required = validateForm(linkedInRequiredSchema, {
+      organizationUrn: manualOrgUrn,
+      adAccountUrn: manualAdUrn,
+      leadFormUrn: manualFormUrn,
+    });
+    if (!required.success) return;
     try {
       setSaving(true);
       const { data } = await api.post(`/linkedin/connect`, {
@@ -333,7 +343,7 @@ export default function LinkedInCallback() {
         )}
 
         {status === "manual-setup" && (
-          <form onSubmit={handleManualSubmit} className="space-y-4">
+          <form onSubmit={handleManualSubmit} noValidate className="space-y-4">
             <p className="text-gray-600 text-sm">
               We couldn't load your pages automatically. Please enter your LinkedIn URNs manually to connect:
             </p>

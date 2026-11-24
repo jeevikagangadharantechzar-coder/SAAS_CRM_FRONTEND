@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { getNames } from "country-list";
 import DatePicker from "react-datepicker";
@@ -32,6 +32,13 @@ import "react-toastify/dist/ReactToastify.css";
 import useLostDealModal from "../LostDealModal/LossDeal";
 import ReassignmentModal from "../components/ReassignmentModal";
 import DealProductsSection from "./DealProductsSection";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const dealRequiredSchema = requiredFields({
+  dealName: requiredString("Deal name"),
+  dealValue: requiredString("Deal value"),
+  companyName: requiredString("Company name"),
+});
 
 const STANDARD_INDUSTRIES = [
   "IT",
@@ -703,11 +710,12 @@ export default function CreateDeal() {
   const submitDealData = async (formDataToSubmit) => {
     setIsSubmitting(true);
 
+    const required = validateForm(dealRequiredSchema, formDataToSubmit);
     const newErrors = {
-      dealName: formDataToSubmit.dealName.trim() === "",
-      dealValue: formDataToSubmit.dealValue.trim() === "",
+      dealName: !!required.errors.dealName,
+      dealValue: !!required.errors.dealValue,
       phoneNumber: false,
-      companyName: formDataToSubmit.companyName.trim() === "",
+      companyName: !!required.errors.companyName,
       email: false,
       alternativeNumber: false,
       alternativeEmail: false,
@@ -737,7 +745,7 @@ export default function CreateDeal() {
 
     setErrors(newErrors);
     if (Object.values(newErrors).some(Boolean)) {
-      toast.error("Please fill in all required fields and check format");
+      if (required.success) toast.error("Please check the format of the highlighted fields");
       setIsSubmitting(false);
       return false;
     }
@@ -895,6 +903,18 @@ export default function CreateDeal() {
     let succeeded = false;
 
     try {
+      // Mandatory fields first — the toast names every missing one.
+      const required = validateForm(dealRequiredSchema, formData);
+      if (!required.success) {
+        setErrors((prev) => ({
+          ...prev,
+          dealName: !!required.errors.dealName,
+          dealValue: !!required.errors.dealValue,
+          companyName: !!required.errors.companyName,
+        }));
+        return;
+      }
+
       // Phone number validation
       if (
         formData.phoneNumber &&
@@ -931,21 +951,15 @@ export default function CreateDeal() {
         return;
       }
 
-      const newErrors = {
-        dealName: formData.dealName.trim() === "",
-        dealValue: formData.dealValue.trim() === "",
+      setErrors({
+        dealName: false,
+        dealValue: false,
         phoneNumber: false,
-        companyName: formData.companyName.trim() === "",
+        companyName: false,
         email: false,
         alternativeNumber: false,
         alternativeEmail: false,
-      };
-
-      setErrors(newErrors);
-      if (Object.values(newErrors).some(Boolean)) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
+      });
 
       if (formData.stage === "Closed Lost" && !formData.lossReason) {
         const tempDealId =
@@ -1343,17 +1357,6 @@ export default function CreateDeal() {
 
   return (
     <div className="min-h-screen flex items-start justify-center py-10 px-4">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
 
       {renderLostDealModal()}
 
@@ -1516,6 +1519,8 @@ export default function CreateDeal() {
                       <>
                         <select
                           name={field.name}
+                          // Closed Won deals keep their stage; other details stay editable.
+                          disabled={field.name === "stage" && existingDeal?.stage === "Closed Won"}
                           value={
                             field.name === "industry" && isCustomIndustry
                               ? "Other"
@@ -1534,7 +1539,7 @@ export default function CreateDeal() {
                               handleChange(e);
                             }
                           }}
-                          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11 truncate"
+                          className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-400 outline-none transition h-11 truncate disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                         >
                           <option value="">Select {field.label}</option>
                           {field.options.map((opt) =>

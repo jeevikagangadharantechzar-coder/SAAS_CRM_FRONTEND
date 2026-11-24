@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { getNames } from "country-list";
 import {
@@ -29,6 +29,13 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ReassignmentModal from "../components/ReassignmentModal";
 import LeadLossModal from "./LeadLossModal";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const leadRequiredSchema = requiredFields({
+  leadName: requiredString("Lead name"),
+  companyName: requiredString("Company name"),
+  phoneNumber: requiredString("Phone number"),
+});
 
 const STANDARD_INDUSTRIES = [
   "IT",
@@ -662,24 +669,20 @@ export default function CreateLeads() {
     `${API_URL.replace("/api", "")}/${String(path || "").replace(/^\/+/, "")}`;
 
 /* ──Form Validation Function ─────────────────────── */
-  const validateForm = () => {
+  const validateLeadForm = () => {
     const newErrors = {};
     const newFieldErrors = {};
 
-    if (!formData.leadName.trim()) {
-      newErrors.leadName = true;
-      newFieldErrors.leadName = "Lead name is required";
-    }
-
-    if (!formData.companyName.trim()) {
-      newErrors.companyName = true;
-      newFieldErrors.companyName = "Company name is required";
-    }
+    // Mandatory fields (zod) — the toast names every missing one.
+    const { errors: requiredErrors } = validateForm(leadRequiredSchema, formData);
+    Object.entries(requiredErrors).forEach(([key, message]) => {
+      newErrors[key] = true;
+      newFieldErrors[key] = message;
+    });
 
     // Phone validation - FIXED: use phoneCountryCode state
-    if (!formData.phoneNumber) {
-      newErrors.phoneNumber = true;
-      newFieldErrors.phoneNumber = "Phone number is required";
+    if (newFieldErrors.phoneNumber) {
+      // already reported as missing
     } else if (!validatePhoneNumber(formData.phoneNumber, phoneCountryCode)) {
       newErrors.phoneNumber = true;
       newFieldErrors.phoneNumber = `Please enter a valid phone number (${getPhoneNumberLengthMessage(phoneCountryCode)})`;
@@ -746,8 +749,10 @@ export default function CreateLeads() {
     try {
       setFieldErrors({});
 
-      if (!validateForm()) {
-        toast.error("Please fix the errors in the form");
+      if (!validateLeadForm()) {
+        // Missing mandatory fields were already named in a toast; this covers
+        // the remaining format checks (phone, email, follow-up date).
+        if (!toast.isActive("form-validation")) toast.error("Please fix the errors in the form");
         return;
       }
 
@@ -2070,7 +2075,6 @@ export default function CreateLeads() {
         />
       )}
 
-      <ToastContainer position="top-right" autoClose={3000} theme="light" />
     </>
   );
 }

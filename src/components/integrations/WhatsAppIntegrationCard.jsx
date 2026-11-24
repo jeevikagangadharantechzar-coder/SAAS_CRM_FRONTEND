@@ -7,6 +7,13 @@ import {
   MessageSquare, Smartphone, X, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { api } from "../../services/api";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const whatsAppRequiredSchema = requiredFields({
+  phoneNumberId: requiredString("Phone Number ID"),
+  wabaId: requiredString("WABA ID"),
+  accessToken: requiredString("Access Token"),
+});
 
 const WA_SVG = (size = 26, color = "white") => (
   <svg viewBox="0 0 24 24" fill={color} width={size} height={size}>
@@ -350,8 +357,10 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
-    if (!form.phoneNumberId.trim() || !form.wabaId.trim() || !form.accessToken.trim()) {
-      setError("Phone Number ID, WABA ID, and Access Token are required.");
+    // Mandatory fields — name every missing one.
+    const required = validateForm(whatsAppRequiredSchema, form);
+    if (!required.success) {
+      setError(Object.values(required.errors).join(" · "));
       return;
     }
     try {

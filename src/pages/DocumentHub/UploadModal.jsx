@@ -4,6 +4,15 @@ import { X, UploadCloud } from 'lucide-react';
 import { useUploadExternalDocument } from '../../hooks/useDocumentHub';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { validateForm, requiredFields, requiredString, requiredValue } from '../../utils/formValidation';
+
+const uploadRequiredSchema = requiredFields({
+  name: requiredString("Document name"),
+  file: requiredValue("File"),
+});
+const adminUploadRequiredSchema = uploadRequiredSchema.extend({
+  assignedTo: requiredString("Assign reviewer"),
+});
 
 const UploadModal = ({ onClose }) => {
   const [file, setFile] = useState(null);
@@ -27,8 +36,9 @@ const UploadModal = ({ onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!file || !name) return;
-    if (isAdmin && !assignedTo) return;
+    // Mandatory fields — the toast names every missing one.
+    const schema = isAdmin ? adminUploadRequiredSchema : uploadRequiredSchema;
+    if (!validateForm(schema, { name, assignedTo, file }).success) return;
 
     const formData = new FormData();
     formData.append("document", file);
@@ -55,7 +65,7 @@ const UploadModal = ({ onClose }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
           
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Document Name</label>

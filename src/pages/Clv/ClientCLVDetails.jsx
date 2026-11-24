@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const ticketRequiredSchema = requiredFields({
+  subject: requiredString("Subject"),
+  description: requiredString("Description"),
+});
 import PricingSuggestionCard from "./PricingSuggestioncard";
 import {
   ArrowLeft,
@@ -132,10 +138,8 @@ const ClientCLVDetails = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      if (!ticketForm.subject || !ticketForm.description) {
-        toast.error("Subject and description are required");
-        return;
-      }
+      // Mandatory fields — the toast names every missing one.
+      if (!validateForm(ticketRequiredSchema, ticketForm).success) return;
 
       const response = await axios.post(
         `${API_URL}/cltv/tickets`,
@@ -365,7 +369,6 @@ const ClientCLVDetails = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <ToastContainer position="top-right" autoClose={5000} />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -667,7 +670,7 @@ const ClientCLVDetails = () => {
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6">
                 <h3 className="text-slate-700 mb-4">Create Support Ticket</h3>
-                <form onSubmit={handleCreateTicket}>
+                <form onSubmit={handleCreateTicket} noValidate>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>

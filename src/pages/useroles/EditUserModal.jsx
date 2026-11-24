@@ -10,6 +10,16 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "react-phone-number-input/style.css";
 import { X } from "lucide-react";
+import { validateForm, showValidationToast, requiredFields, requiredString } from "../../utils/formValidation";
+
+const editUserRequiredSchema = requiredFields({
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
+  email: requiredString("Email"),
+  mobileNumber: requiredString("Phone number"),
+  role: requiredString("Role"),
+  gender: requiredString("Gender"),
+});
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
@@ -207,12 +217,12 @@ export default function EditUserModal({ user, roles, users = [], onClose, onUser
   };
 
 /* ── Validate Form Function ─────────────────────── */
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+  const validateUserForm = () => {
+    // Mandatory fields (zod); format checks below only run on filled fields.
+    const { errors: requiredErrors } = validateForm(editUserRequiredSchema, formData, { toast: false });
+    const newErrors = { ...requiredErrors };
+    if (newErrors.email) {
+      // missing — already reported
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
     } else if (
@@ -225,7 +235,9 @@ export default function EditUserModal({ user, roles, users = [], onClose, onUser
       newErrors.email = "This email is already in use by another user";
     }
     const phoneValidation = validatePhoneNumber(formData.mobileNumber);
-    if (!phoneValidation.isValid) {
+    if (newErrors.mobileNumber) {
+      // missing — already reported
+    } else if (!phoneValidation.isValid) {
       newErrors.mobileNumber = phoneValidation.error;
     } else {
       const digits = formData.mobileNumber.replace(/\D/g, "");
@@ -236,10 +248,9 @@ export default function EditUserModal({ user, roles, users = [], onClose, onUser
         newErrors.mobileNumber = "This phone number is already in use by another user";
       }
     }
-    if (!formData.role) newErrors.role = "Role is required";
-    if (!formData.gender) newErrors.gender = "Gender is required";
-
     setErrors(newErrors);
+    // One toast naming every problem, e.g. "First name is required".
+    showValidationToast(newErrors);
 
     if (Object.keys(newErrors).length > 0 && formRef.current) {
       setTimeout(() => {
@@ -261,13 +272,7 @@ export default function EditUserModal({ user, roles, users = [], onClose, onUser
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    if (!validateForm()) {
-      setTimeout(() => {
-        toast.error("Please fill all required fields correctly", {
-          autoClose: 5000,
-          onClick: (e) => e.stopPropagation(),
-        });
-      }, 100);
+    if (!validateUserForm()) {
       setIsSubmitting(false);
       return;
     }

@@ -9,10 +9,18 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ToastContainer } from "react-toastify";
+
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { INDIAN_STATES, GST_SLABS } from "../../constants/indianStates";
+import { validateForm, showValidationToast, requiredFields, requiredString } from "../../utils/formValidation";
+
+const invoiceRequiredSchema = requiredFields({
+  assignTo: requiredString("Sales user"),
+  issueDate: requiredString("Issue date"),
+  dueDate: requiredString("Due date"),
+  deal: requiredString("Deal"),
+});
 
 const CURRENCY_SYMBOL_MAP = { "₹": "INR", "$": "USD", "€": "EUR", "£": "GBP" };
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -539,13 +547,10 @@ setSalesUsers(response.data.users);
 
   // Validation
   const validateInputs = () => {
-    const errors = {};
-    const { assignTo, issueDate, dueDate, deal, price, status } = invoiceData;
+    const { price, status } = invoiceData;
+    // Mandatory fields (zod); the checks below cover format and amounts.
+    const errors = { ...validateForm(invoiceRequiredSchema, invoiceData, { toast: false }).errors };
 
-    if (!assignTo) errors.assignTo = "Sales user is required.";
-    if (!issueDate) errors.issueDate = "Issue Date is required.";
-    if (!dueDate) errors.dueDate = "Due Date is required.";
-    if (!deal) errors.deal = "Deal is required.";
     if (price <= 0) errors.price = "Price must be greater than 0.";
 
     if (issueDateObj && dueDateObj && dueDateObj < issueDateObj) {
@@ -598,9 +603,8 @@ setSalesUsers(response.data.users);
 
     setValidationErrors(errors);
 
-    if (Object.keys(errors).length > 0) {
-      toast.error(Object.values(errors).join(" "));
-    }
+    // One toast listing every problem, e.g. "Deal is required".
+    showValidationToast(errors);
 
     // The generic "Please correct the errors in the form" toast gives no clue
     // which field actually failed once the culprit scrolls out of view (the
@@ -1135,7 +1139,7 @@ setSalesUsers(response.data.users);
                         >
                           <option value="">Select a Deal</option>
                           {deals.filter((deal) =>
-  deal.stage !== "Closed Won" && (deal.stage !== "Closed Lost" || deal.lossReason === "")
+  deal.stage !== "Closed Lost" || deal.lossReason === ""
 )
 .map((deal) => (
                             <option key={deal._id} value={deal._id}>
@@ -1859,7 +1863,6 @@ setSalesUsers(response.data.users);
           </div>
         </div>
 
-        <ToastContainer />
       </DialogContent>
     </Dialog>
 

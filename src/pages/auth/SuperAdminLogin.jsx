@@ -4,6 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Eye, EyeOff } from "lucide-react";
 import { setSuperAdminCredentials } from "../../store/authSlice";
+import { validateForm, requiredFields, requiredString, requiredEmail } from "../../utils/formValidation";
+
+const loginRequiredSchema = requiredFields({
+  email: requiredEmail("Email address"),
+  password: requiredString("Password"),
+});
+const mfaRequiredSchema = requiredFields({
+  mfaCode: requiredString("Verification code"),
+});
 
 const BASE_URL = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 
@@ -41,6 +50,13 @@ const SuperAdminLogin = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    // Mandatory fields — name every missing one in the message box.
+    const required = validateForm(loginRequiredSchema, { email, password }, { toast: false });
+    if (!required.success) {
+      setMessage(Object.values(required.errors).join(" · "));
+      setIsError(true);
+      return;
+    }
     setIsLoading(true);
     setMessage("");
 
@@ -81,6 +97,12 @@ const SuperAdminLogin = () => {
 
   const handleMfaVerify = async (e) => {
     e.preventDefault();
+    const required = validateForm(mfaRequiredSchema, { mfaCode }, { toast: false });
+    if (!required.success) {
+      setMessage(required.errors.mfaCode);
+      setIsError(true);
+      return;
+    }
     setIsError(false);
     setMessage("");
     setIsLoading(true);
@@ -164,7 +186,7 @@ const SuperAdminLogin = () => {
           )}
 
           {isMfaRequired ? (
-            <form onSubmit={handleMfaVerify} className="space-y-4 md:space-y-6">
+            <form onSubmit={handleMfaVerify} noValidate className="space-y-4 md:space-y-6">
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-900">
                   MFA Code
@@ -199,7 +221,7 @@ const SuperAdminLogin = () => {
               </button>
             </form>
           ) : (
-            <form className="space-y-6" onSubmit={handleLogin}>
+            <form className="space-y-6" onSubmit={handleLogin} noValidate>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">Admin Email</label>
                 <input

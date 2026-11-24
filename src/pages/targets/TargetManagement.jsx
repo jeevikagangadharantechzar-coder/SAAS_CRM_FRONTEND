@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useSocket } from "../../context/SocketContext";
 import { useTargetSocket } from "../../context/TargetSocketContext";
@@ -20,6 +20,16 @@ import {
 } from "lucide-react";
 
 import TargetPipelineView from "./TargetPipelineView";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const TARGET_COUNT_FIELDS = ["targetLeads", "targetDeals", "targetCalls", "targetMeetings"];
+const editTargetRequiredSchema = requiredFields({
+  title: requiredString("Target name"),
+});
+const createTargetRequiredSchema = requiredFields({
+  title: requiredString("Target name"),
+  salesPerson: requiredString("Sales person"),
+});
 
 const SI_URI = import.meta.env.VITE_SI_URI || "http://localhost:5000";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -1676,6 +1686,9 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(createTargetRequiredSchema, form).success) return;
+    if (TARGET_COUNT_FIELDS.some((k) => Number(form[k]) < 0)) { toast.error("Target counts cannot be negative."); return; }
     if (selectedLeads.size === 0 && selectedDeals.size === 0) {
       toast.error("Please select at least one Lead or Deal to link to this target.");
       return;
@@ -1711,7 +1724,7 @@ function CreateTargetModal({ open, onClose, onSaved, salesUsers, baseUrl, header
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
+          <form onSubmit={handleSubmit} noValidate className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Target Name *</label>
@@ -1898,6 +1911,9 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(editTargetRequiredSchema, form).success) return;
+    if (TARGET_COUNT_FIELDS.some((k) => Number(form[k]) < 0)) { toast.error("Target counts cannot be negative."); return; }
     if (selectedLeads.size === 0 && selectedDeals.size === 0) {
       toast.error("Please select at least one Lead or Deal to link to this target.");
       return;
@@ -1937,7 +1953,7 @@ function EditTargetModal({ open, onClose, onSaved, target, salesUsers, baseUrl, 
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* LEFT — form */}
-          <form onSubmit={handleSubmit} className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
+          <form onSubmit={handleSubmit} noValidate className="w-[460px] shrink-0 p-5 space-y-4 overflow-y-auto border-r border-gray-100">
 
             {/* Target Name */}
             <div>
@@ -2465,7 +2481,6 @@ export default function TargetManagement() {
 
   return (
     <div className="p-6 min-h-screen bg-gray-50">
-      <ToastContainer position="top-right" autoClose={3000} />
 
       <div className="flex items-center justify-between mb-6">
         <div>

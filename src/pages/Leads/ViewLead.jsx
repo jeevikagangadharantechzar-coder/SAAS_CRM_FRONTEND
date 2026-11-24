@@ -12,6 +12,12 @@ import {
   PlusCircle, StickyNote, CheckSquare, Target as TargetIcon, XCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const leadEditRequiredSchema = requiredFields({
+  leadName: requiredString("Lead name"),
+  companyName: requiredString("Company name"),
+});
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import DatePicker from "react-datepicker";
@@ -1315,8 +1321,8 @@ const ViewLead = () => {
   };
 
   const saveDetails = async (lossDataOverride = null) => {
-    if (!editFormData.leadName.trim()) return toast.error("Lead Name is required");
-    if (!editFormData.companyName.trim()) return toast.error("Company Name is required");
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(leadEditRequiredSchema, editFormData).success) return;
     if (editFormData.email && !validateEmail(editFormData.email))
       return toast.error("Please enter a valid email address");
     if (editFormData.alternateEmail && !validateEmail(editFormData.alternateEmail))
@@ -2643,7 +2649,7 @@ const ViewLead = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={saveDetails}
+                        onClick={() => saveDetails()}
                         disabled={isSavingDetails}
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                       >

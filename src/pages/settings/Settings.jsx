@@ -1,8 +1,16 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const zoomRequiredSchema = requiredFields({
+  clientId: requiredString("Client ID"),
+  clientSecret: requiredString("Client Secret"),
+  accountId: requiredString("Account ID"),
+  hostUserId: requiredString("Host User ID"),
+});
 import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText, Shield } from "react-feather";
 import MfaSetupModal from "../../components/MfaSetupModal";
 import { INDIAN_STATES } from "../../constants/indianStates";
@@ -111,11 +119,8 @@ export default function Settings() {
     setZoomForm((f) => ({ ...f, [field]: value }));
 
   const handleZoomSave = async () => {
-    const { clientId, clientSecret, accountId, hostUserId } = zoomForm;
-    if (!clientId.trim() || !clientSecret.trim() || !accountId.trim() || !hostUserId.trim()) {
-      toast.error("Client ID, Client Secret, Account ID, and Host User ID are all required");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(zoomRequiredSchema, zoomForm).success) return;
     try {
       setZoomSaving(true);
       await axios.post(`${API_URL}/zoom-integration`, zoomForm, authHeader());
@@ -474,7 +479,6 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         
         {/* PAGE HEADER */}

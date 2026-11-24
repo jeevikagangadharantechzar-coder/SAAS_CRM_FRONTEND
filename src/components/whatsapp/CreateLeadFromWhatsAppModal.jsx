@@ -2,6 +2,12 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import { X, RefreshCw, UserPlus, Phone, FileText, Globe } from "lucide-react";
 import { api } from "../../services/api";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const waLeadRequiredSchema = requiredFields({
+  leadName: requiredString("Name"),
+  phoneNumber: requiredString("Phone number"),
+});
 
 const SOURCES = [
   "WhatsApp", "Facebook", "Instagram", "LinkedIn",
@@ -33,12 +39,8 @@ export default function CreateLeadFromWhatsAppModal({ isOpen, onClose, contact, 
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const validate = () => {
-    const e = {};
-    if (!form.leadName.trim()) e.leadName = "Name is required";
-    if (!form.phoneNumber.trim()) e.phoneNumber = "Phone number is required";
-    return e;
-  };
+  // Mandatory fields — the toast names every missing one.
+  const validate = () => validateForm(waLeadRequiredSchema, form).errors;
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();

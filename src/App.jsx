@@ -477,7 +477,9 @@ function App() {
                     <Route path="/meetings" element={<div />} />
                   </Route>
             </Routes>
-            <ToastContainer />
+            {/* The only toast container: react-toastify 11 keeps one per container id, so a
+                second page-level container unmounting would silently disable this one. */}
+            <ToastContainer position="top-right" autoClose={3000} />
           </div>
         </BrowserRouter>
       </NotificationProvider>

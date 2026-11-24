@@ -9,6 +9,15 @@ import ForgotPassword from "../password/ForgotPassword";
 import PrivacyPolicyModal from "../../components/legal/PrivacyPolicyModal";
 import TermsModal from "../../components/legal/TermsModal";
 import ExpireModal from "./ExpireModal";
+import { validateForm, requiredFields, requiredString, requiredEmail } from "../../utils/formValidation";
+
+const loginRequiredSchema = requiredFields({
+  email: requiredEmail("Email address"),
+  password: requiredString("Password"),
+});
+const mfaRequiredSchema = requiredFields({
+  mfaCode: requiredString("Verification code"),
+});
 
 // Stable per-browser device id, persisted so re-logging in on the same
 // browser is always recognized as "the same device" and never needs
@@ -268,6 +277,12 @@ const Login = () => {
 
   const handleMfaVerify = async (e) => {
     e.preventDefault();
+    const required = validateForm(mfaRequiredSchema, { mfaCode }, { toast: false });
+    if (!required.success) {
+      setMessage(required.errors.mfaCode);
+      setIsError(true);
+      return;
+    }
     setIsError(false);
     setMessage("");
     setIsLoading(true);
@@ -347,6 +362,13 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    // Mandatory fields — name every missing one in the message box.
+    const required = validateForm(loginRequiredSchema, { email, password }, { toast: false });
+    if (!required.success) {
+      setMessage(Object.values(required.errors).join(" · "));
+      setIsError(true);
+      return;
+    }
     setIsLoading(true);
     setMessage("");
     setDeviceRequestId(null);
@@ -516,7 +538,7 @@ const Login = () => {
           )}
 
           {isMfaRequired ? (
-            <form onSubmit={handleMfaVerify} className="space-y-4 md:space-y-6">
+            <form onSubmit={handleMfaVerify} noValidate className="space-y-4 md:space-y-6">
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-900">
                   MFA Code
@@ -551,7 +573,7 @@ const Login = () => {
               </button>
             </form>
           ) : (
-            <form className="space-y-6" onSubmit={handleLogin}>
+            <form className="space-y-6" onSubmit={handleLogin} noValidate>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">Email Address</label>
                 <input

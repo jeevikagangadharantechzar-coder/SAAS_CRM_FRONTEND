@@ -2,6 +2,11 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { Link2, Trash2, RefreshCw, CheckCircle, AlertCircle, Key, Home } from "react-feather";
 import { api } from "../../services/api";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const indiaMartRequiredSchema = requiredFields({
+  apiKey: requiredString("API Key"),
+});
 
 export default function IndiaMartIntegrationCard() {
   const [integrations, setIntegrations] = useState([]);
@@ -33,10 +38,8 @@ export default function IndiaMartIntegrationCard() {
 
   const handleConnect = async (e) => {
     e.preventDefault();
-    if (!apiKey) {
-      toast.error("API Key is required");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(indiaMartRequiredSchema, { apiKey }).success) return;
 
     try {
       setConnecting(true);
@@ -118,7 +121,7 @@ export default function IndiaMartIntegrationCard() {
       {/* Connection Area */}
       <div className="p-5">
         {showForm ? (
-          <form onSubmit={handleConnect} className="space-y-4 max-w-md bg-gray-50 p-4 rounded-xl border border-gray-100">
+          <form onSubmit={handleConnect} noValidate className="space-y-4 max-w-md bg-gray-50 p-4 rounded-xl border border-gray-100">
             <h3 className="text-slate-700">Connect IndiaMART Account</h3>
             
             <div>

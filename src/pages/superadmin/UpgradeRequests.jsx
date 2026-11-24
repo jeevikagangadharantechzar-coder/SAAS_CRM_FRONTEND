@@ -17,6 +17,11 @@ import {
 import { superApi } from "../../services/api";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const rejectRequiredSchema = requiredFields({
+  rejectReason: requiredString("Rejection reason"),
+});
 import { getSuperAdminSocket } from "../../utils/superAdminSocket";
 
 const FILTER_FIELDS = [
@@ -306,10 +311,8 @@ const UpgradeRequests = () => {
 
   const handleRejectSubmit = async (e) => {
     e.preventDefault();
-    if (!rejectReason.trim()) {
-      toast.error("Please provide a reason for rejection.");
-      return;
-    }
+    // Mandatory fields — the toast names every missing one.
+    if (!validateForm(rejectRequiredSchema, { rejectReason }).success) return;
 
     setProcessingId(rejectingId);
     try {
@@ -937,7 +940,7 @@ const UpgradeRequests = () => {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleRejectSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleRejectSubmit} noValidate className="p-6 space-y-4">
               {rejectingRequestData && (
                 <div className="bg-slate-50 dark:bg-slate-800/80 rounded-lg p-3 text-xs text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-800 space-y-1">
                   <div>

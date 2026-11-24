@@ -5,6 +5,16 @@ import { superApi } from "../../services/api";
 import { useGetAllPlans } from "../../hooks/useSubscriptionPlans";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
+import { validateForm, requiredFields, requiredString } from "../../utils/formValidation";
+
+const tenantRequiredSchema = requiredFields({
+  name: requiredString("Business name"),
+  slug: requiredString("Tenant slug"),
+  currency: requiredString("Preferred currency"),
+  adminFirstName: requiredString("First name"),
+  adminLastName: requiredString("Last name"),
+  adminEmail: requiredString("Administrator email"),
+});
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
@@ -76,8 +86,14 @@ const CreateTenant = () => {
     e.preventDefault();
     const adminName = `${adminFirstName} ${adminLastName}`.trim();
 
-    if (!name.trim() || !slug.trim() || !adminName || !adminEmail.trim()) {
-      setError("All fields are required.");
+    // Mandatory fields — name every missing one.
+    const required = validateForm(
+      tenantRequiredSchema,
+      { name, slug, currency, adminFirstName, adminLastName, adminEmail },
+      { toast: false }
+    );
+    if (!required.success) {
+      setError(Object.values(required.errors).join(" · "));
       return;
     }
 
@@ -191,7 +207,7 @@ const CreateTenant = () => {
       )}
 
       {/* Main Grid Form */}
-      <form onSubmit={handleCreateTenant} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onSubmit={handleCreateTenant} noValidate className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Column (2/3 width) - Info & Setup */}
         <div className="lg:col-span-2 space-y-6">
