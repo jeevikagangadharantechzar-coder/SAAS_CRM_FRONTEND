@@ -103,9 +103,9 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-white dark:bg-gray-800">
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <DialogTitle className="flex items-center text-xl font-bold text-gray-800 dark:text-white">
+          <DialogTitle className="flex items-center text-xl font-bold text-gray-800">
             <ShieldCheck size={24} className="text-blue-500 mr-2" />
             Update Password
           </DialogTitle>
@@ -125,7 +125,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
+            <label className="block text-gray-700 text-sm font-medium mb-2">
               Current Password
             </label>
             <div className="relative">
@@ -136,7 +136,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
                 onChange={handleChange}
                 placeholder="Enter current password"
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white pr-10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
               />
               <button
                 type="button"
@@ -153,7 +153,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
           </div>
 
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
+            <label className="block text-gray-700 text-sm font-medium mb-2">
               New Password
             </label>
             <div className="relative">
@@ -164,7 +164,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
                 onChange={handleChange}
                 placeholder="Enter new password"
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white pr-10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
               />
               <button
                 type="button"
@@ -181,7 +181,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
           </div>
 
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
+            <label className="block text-gray-700 text-sm font-medium mb-2">
               Confirm New Password
             </label>
             <div className="relative">
@@ -192,7 +192,7 @@ const PasswordUpdate = ({ isOpen, onClose }) => {
                 onChange={handleChange}
                 placeholder="Confirm new password"
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white pr-10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
               />
               <button
                 type="button"

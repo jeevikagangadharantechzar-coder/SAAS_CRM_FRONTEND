@@ -13,6 +13,7 @@ const zoomRequiredSchema = requiredFields({
 });
 import { UploadCloud, Save, Image, Globe, Bookmark, Send, Video, CheckCircle, XCircle, Trash2, MapPin, CreditCard, FileText, Shield } from "react-feather";
 import MfaSetupModal from "../../components/MfaSetupModal";
+import { ThemeToggle } from "../../theme";
 import { INDIAN_STATES } from "../../constants/indianStates";
 
 const authHeader = () => ({
@@ -1226,6 +1227,17 @@ export default function Settings() {
             </button>
           </div>
           )}
+
+          {/* Appearance (Light / Dark theme) */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-slate-900">Appearance</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Choose a light or dark theme for the whole CRM, or follow your device setting.
+              </p>
+            </div>
+            <ThemeToggle variant="segmented" />
+          </div>
 
           {/* MFA Settings Card */}
           {!isSalesPerson && (

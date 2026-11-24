@@ -138,8 +138,8 @@ const SuperAdminDashboard = () => {
       {/* Header Panel */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-slate-900 dark:text-white">System Overview</h2>
-          <p className="text-base text-slate-600 dark:text-slate-400">Real-time status of your multi-tenant CRM deployment.</p>
+          <h2 className="text-slate-900">System Overview</h2>
+          <p className="text-base text-slate-600">Real-time status of your multi-tenant CRM deployment.</p>
         </div>
       </div>
 
@@ -153,7 +153,7 @@ const SuperAdminDashboard = () => {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cardData.map((card, i) => (
-          <Card key={i} className="border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 overflow-hidden hover:shadow-md transition-all duration-200 rounded-2xl">
+          <Card key={i} className="border border-slate-100 shadow-sm bg-white overflow-hidden hover:shadow-md transition-all duration-200 rounded-2xl">
             <CardContent className="p-6">
               {loading ? (
                 <div className="space-y-3">
@@ -164,9 +164,9 @@ const SuperAdminDashboard = () => {
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.title}</p>
-                    <h3 className="text-slate-700 dark:text-slate-200 mt-2">{card.value}</h3>
-                    <p className="text-base text-slate-600 dark:text-slate-400 mt-1">{card.description}</p>
+                    <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{card.title}</p>
+                    <h3 className="text-slate-700 mt-2">{card.value}</h3>
+                    <p className="text-base text-slate-600 mt-1">{card.description}</p>
                   </div>
                   <div className={`p-3 rounded-2xl ${card.bg}`}>{card.icon}</div>
                 </div>
@@ -179,16 +179,16 @@ const SuperAdminDashboard = () => {
       {/* Charts Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Registration Trend */}
-        <Card className="lg:col-span-2 border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl">
+        <Card className="lg:col-span-2 border border-slate-100 shadow-sm bg-white rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100">Tenant Registrations</CardTitle>
-            <CardDescription className="dark:text-slate-400">Monthly tenant sign-ups for {currentYear} (from database).</CardDescription>
+            <CardTitle className="text-lg font-bold text-slate-800">Tenant Registrations</CardTitle>
+            <CardDescription className="">Monthly tenant sign-ups for {currentYear} (from database).</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
             {loading ? (
               <Skeleton className="h-64 w-full rounded-lg" />
             ) : tenants.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+              <div className="h-64 flex flex-col items-center justify-center text-slate-400">
                 <Building2 size={40} className="mb-3 opacity-30" />
                 <p className="font-medium">No tenant registration data available</p>
                 <p className="text-xs mt-1">Tenants will appear here once provisioned.</p>
@@ -199,7 +199,7 @@ const SuperAdminDashboard = () => {
                   <BarChart data={registrationTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <XAxis dataKey="month" stroke="#94A3B8" tickLine={false} axisLine={false} fontSize={12} />
                     <YAxis stroke="#94A3B8" tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
-                    <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid #E2E8F0" }} cursor={{fill: 'transparent'}} />
+                    <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid var(--theme-border)" }} cursor={{fill: 'transparent'}} />
                     <Bar dataKey="paid" name="Paid Registered" fill="#10B981" radius={[4, 4, 0, 0]} barSize={16} />
                     <Bar dataKey="trial" name="Trial Registered" fill="#008ecc" radius={[4, 4, 0, 0]} barSize={16} />
                   </BarChart>
@@ -210,16 +210,16 @@ const SuperAdminDashboard = () => {
         </Card>
 
         {/* Tenant Status Distribution */}
-        <Card className="border border-slate-100 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl">
+        <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100">Tenant Distribution</CardTitle>
-            <CardDescription className="dark:text-slate-400">Paid subscriptions vs free trials.</CardDescription>
+            <CardTitle className="text-lg font-bold text-slate-800">Tenant Distribution</CardTitle>
+            <CardDescription className="">Paid subscriptions vs free trials.</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col items-center">
             {loading ? (
               <Skeleton className="h-48 w-48 rounded-full" />
             ) : distributionData.length === 0 ? (
-              <div className="h-48 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+              <div className="h-48 flex flex-col items-center justify-center text-slate-400">
                 <CheckCircle size={40} className="mb-3 opacity-30" />
                 <p className="font-medium text-sm">No tenant data</p>
               </div>
@@ -245,19 +245,19 @@ const SuperAdminDashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{tenants.length}</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase">Total</span>
+                    <span className="text-2xl font-extrabold text-slate-800">{tenants.length}</span>
+                    <span className="text-xs text-slate-400 font-semibold uppercase">Total</span>
                   </div>
                 </div>
 
                 <div className="flex gap-6 mt-4 text-sm font-semibold">
                   <div className="flex items-center space-x-2">
                     <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLORS[0] }} />
-                    <span className="text-slate-600 dark:text-slate-300">Paid ({paidCount})</span>
+                    <span className="text-slate-600">Paid ({paidCount})</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: COLORS[1] }} />
-                    <span className="text-slate-600 dark:text-slate-300">Trials ({trialCount})</span>
+                    <span className="text-slate-600">Trials ({trialCount})</span>
                   </div>
                 </div>
               </>

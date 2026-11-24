@@ -34,21 +34,21 @@ const RecycleBin = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-      <div className="w-[800px] h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="w-[800px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+        <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
           <div>
-            <h2 className="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
+            <h2 className="font-bold text-xl text-slate-800 flex items-center gap-2">
               <Trash size={22} className="text-red-500"/> Recycle Bin
             </h2>
             <p className="text-sm text-slate-500 mt-1">Documents will be permanently purged after 30 days.</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500 transition">
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition">
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-slate-900">
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
           {isLoading ? (
             <div className="text-center text-slate-500 py-12">Loading recycle bin...</div>
           ) : binDocs?.length === 0 ? (
@@ -57,10 +57,10 @@ const RecycleBin = ({ onClose }) => {
                <p>The recycle bin is empty.</p>
             </div>
           ) : (
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
                     <th className="px-4 py-3 font-medium">Document</th>
                     <th className="px-4 py-3 font-medium">Source</th>
                     <th className="px-4 py-3 font-medium">Deleted Date</th>
@@ -68,16 +68,16 @@ const RecycleBin = ({ onClose }) => {
                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-100">
                   {binDocs?.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(doc => {
                      const deletionDate = dayjs(doc.deletedAt);
                      const purgeDate = deletionDate.add(30, 'day');
                      const daysLeft = purgeDate.diff(dayjs(), 'day');
                      
                      return (
-                      <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">{doc.name}</td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                      <tr key={doc.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-700">{doc.name}</td>
+                        <td className="px-4 py-3 text-slate-600">
                           {doc.sourceType} {doc.sourceName && <span className="text-slate-400 text-xs block">{doc.sourceName}</span>}
                         </td>
                         <td className="px-4 py-3 text-slate-500">{deletionDate.format('MMM D, YYYY')}</td>
@@ -106,7 +106,7 @@ const RecycleBin = ({ onClose }) => {
                 </tbody>
               </table>
               {binDocs?.length > itemsPerPage && (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 px-4 py-3 bg-slate-50 border-t border-slate-200">
                   <div className="text-sm text-slate-500">
                     Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, binDocs.length)} of {binDocs.length}
                   </div>
@@ -114,14 +114,14 @@ const RecycleBin = ({ onClose }) => {
                     <button 
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+                      className="p-1 rounded bg-white border border-slate-200 disabled:opacity-50 hover:bg-slate-50 transition"
                     >
                       <ChevronLeft size={16} />
                     </button>
                     <button 
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(binDocs.length / itemsPerPage)))}
                       disabled={currentPage === Math.ceil(binDocs.length / itemsPerPage)}
-                      className="p-1 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+                      className="p-1 rounded bg-white border border-slate-200 disabled:opacity-50 hover:bg-slate-50 transition"
                     >
                       <ChevronRight size={16} />
                     </button>

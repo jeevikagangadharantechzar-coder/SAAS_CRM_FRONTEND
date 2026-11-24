@@ -170,11 +170,11 @@ const SubscriptionPlans = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-slate-900 dark:text-white flex items-center space-x-2">
+          <h2 className="text-slate-900 flex items-center space-x-2">
             <CreditCard className="text-[#008ecc] dark:text-[#33b8ff]" size={24} />
             <span>Subscription plans</span>
           </h2>
-          <p className="text-base text-slate-600 dark:text-slate-400">Manage SaaS pricing tiers</p>
+          <p className="text-base text-slate-600">Manage SaaS pricing tiers</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -189,12 +189,12 @@ const SubscriptionPlans = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
         <div className="p-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-100 rounded-md font-medium text-sm transition-colors border border-slate-200 bg-white cursor-pointer"
             >
               <Filter className="w-4 h-4" />
               <span>Plan Filter</span>
@@ -205,27 +205,27 @@ const SubscriptionPlans = () => {
               <button
                 onClick={() => setShowFieldPicker((v) => !v)}
                 title="Choose which filters to show"
-                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-100 rounded-md font-medium text-sm transition-colors border border-slate-200 bg-white cursor-pointer"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Customize</span>
               </button>
 
               {showFieldPicker && (
-                <div className="absolute left-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+                <div className="absolute left-0 z-20 mt-1 w-56 bg-white rounded-lg shadow-xl border border-slate-200 py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                     Filters to show
                   </div>
                   <button
                     onClick={handleSelectAllFields}
-                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700"
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-[#008ecc] hover:bg-slate-100 cursor-pointer border-b border-slate-100"
                   >
                     <span>{areAllFieldsSelected ? "Deselect All" : "Select All"}</span>
                     <span
                       className={`w-4 h-4 rounded border flex items-center justify-center ${
                         areAllFieldsSelected
                           ? "bg-[#008ecc] border-[#008ecc] text-white"
-                          : "border-slate-300 dark:border-slate-600"
+                          : "border-slate-300"
                       }`}
                     >
                       {areAllFieldsSelected && <Check className="w-3 h-3" />}
@@ -237,14 +237,14 @@ const SubscriptionPlans = () => {
                       <button
                         key={field.key}
                         onClick={() => toggleFilterField(field.key)}
-                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                        className="flex items-center justify-between w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer"
                       >
                         <span>{field.label}</span>
                         <span
                           className={`w-4 h-4 rounded border flex items-center justify-center ${
                             isActive
                               ? "bg-[#008ecc] border-[#008ecc] text-white"
-                              : "border-slate-300 dark:border-slate-600"
+                              : "border-slate-300"
                           }`}
                         >
                           {isActive && <Check className="w-3 h-3" />}
@@ -270,20 +270,20 @@ const SubscriptionPlans = () => {
         {showFilters && (
           <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-200">
             {activeFilterFields.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500">
                 No filters selected. Click <strong>Customize</strong> to add filters.
               </p>
             ) : (
               <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-4">
                 {activeFilterFields.includes("search") && (
                   <div className="relative w-full md:flex-1 md:min-w-[220px]">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                       type="text"
                       placeholder="Search by plan name..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white dark:bg-slate-900 shadow-inner"
+                      className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] focus:border-transparent bg-white shadow-inner"
                     />
                   </div>
                 )}
@@ -293,7 +293,7 @@ const SubscriptionPlans = () => {
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900 cursor-pointer"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white cursor-pointer"
                     >
                       <option value="">All Statuses</option>
                       <option value="active">Active</option>
@@ -308,7 +308,7 @@ const SubscriptionPlans = () => {
                     <select
                       value={planType}
                       onChange={(e) => setPlanType(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900 cursor-pointer"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white cursor-pointer"
                     >
                       <option value="">All Plan Types</option>
                       <option value="free">Free</option>
@@ -324,7 +324,7 @@ const SubscriptionPlans = () => {
                     <select
                       value={billingCycleFilter}
                       onChange={(e) => setBillingCycleFilter(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900 cursor-pointer"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white cursor-pointer"
                     >
                       <option value="">All Billing Cycles</option>
                       <option value="monthly">Monthly</option>
@@ -340,7 +340,7 @@ const SubscriptionPlans = () => {
                     <select
                       value={currencyFilter}
                       onChange={(e) => setCurrencyFilter(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900 cursor-pointer"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white cursor-pointer"
                     >
                       <option value="">All Currencies</option>
                       {currencyOptions.map((c) => (
@@ -357,7 +357,7 @@ const SubscriptionPlans = () => {
                     <select
                       value={recommendedFilter}
                       onChange={(e) => setRecommendedFilter(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white dark:bg-slate-900 cursor-pointer"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008ecc] bg-white cursor-pointer"
                     >
                       <option value="">All Plans</option>
                       <option value="yes">Recommended Only</option>
@@ -407,13 +407,13 @@ const SubscriptionPlans = () => {
             </div>
           ) : (
             /* Empty State */
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 py-16 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-5">
-              <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-800/80 flex items-center justify-center border border-slate-100 dark:border-slate-800 shadow-inner">
-                <CreditCard className="text-slate-400 dark:text-slate-500" size={28} />
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 py-16 px-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-5">
+              <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
+                <CreditCard className="text-slate-400" size={28} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-slate-700 dark:text-slate-300">No subscription plans found</h3>
-                <p className="text-base text-slate-600 dark:text-slate-400">
+                <h3 className="text-slate-700">No subscription plans found</h3>
+                <p className="text-base text-slate-600">
                   Create your first plan to start provisioning SaaS tiers for your tenants.
                 </p>
               </div>

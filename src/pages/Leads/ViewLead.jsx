@@ -106,9 +106,9 @@ const phoneInputStyle = {
 const phoneButtonStyle = {
   borderRadius: "0.5rem 0 0 0.5rem",
   height: "42px",
-  background: "white",
+  background: "var(--theme-surface)",
   border: "none",
-  borderRight: "1px solid #e5e7eb",
+  borderRight: "1px solid var(--theme-border)",
 };
 
 const formatNotesMeta = (record) => {

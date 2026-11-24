@@ -1500,18 +1500,18 @@ export default function CreateDeal() {
                             ...base,
                             minHeight: '44px',
                             borderRadius: '0.5rem',
-                            borderColor: state.isFocused ? '#60a5fa' : '#e5e7eb',
+                            borderColor: state.isFocused ? '#60a5fa' : 'var(--theme-border)',
                             boxShadow: state.isFocused ? '0 0 0 2px #bfdbfe' : 'none',
                             fontSize: '0.875rem',
-                            '&:hover': { borderColor: state.isFocused ? '#60a5fa' : '#d1d5db' }
+                            '&:hover': { borderColor: state.isFocused ? '#60a5fa' : 'var(--theme-border-strong)' }
                           }),
                           menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                           menu: (base) => ({ ...base, fontSize: '0.875rem' }),
                           option: (base, state) => ({
                             ...base,
                             whiteSpace: 'normal',
-                            backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : 'white',
-                            color: state.isSelected ? 'white' : '#1f2937'
+                            backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? 'var(--theme-surface-hover)' : 'var(--theme-surface)',
+                            color: state.isSelected ? 'white' : 'var(--theme-text)'
                           })
                         }}
                       />
@@ -1593,9 +1593,9 @@ export default function CreateDeal() {
                           buttonStyle={{
                             borderRadius: "0.5rem 0 0 0.5rem",
                             height: "42px",
-                            background: "white",
+                            background: "var(--theme-surface)",
                             border: "none",
-                            borderRight: "1px solid #e5e7eb",
+                            borderRight: "1px solid var(--theme-border)",
                           }}
                         />
                       </div>

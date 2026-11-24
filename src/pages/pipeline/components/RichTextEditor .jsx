@@ -1,8 +1,10 @@
 import React, { useRef } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
+import { useTheme } from '../../../theme';
 
 const RichTextEditor = () => {
   const editorRef = useRef(null);
+  const { isDark } = useTheme();
 
   const logContent = () => {
     if (editorRef.current) {
@@ -13,11 +15,14 @@ const RichTextEditor = () => {
   return (
     <div>
       <Editor
+        key={isDark ? 'dark' : 'light'} /* TinyMCE skins are fixed at init: remount on theme change */
         apiKey="gvtu365tvudohscw2casesui8np897anckhy300jvdzau9v9" 
         onInit={(evt, editor) => editorRef.current = editor}
         initialValue="<p></p>"
         init={{
           height: 300,
+          skin: isDark ? 'oxide-dark' : 'oxide',
+          content_css: isDark ? 'dark' : 'default',
           menubar: false,
           plugins: [
             'advlist autolink lists link image charmap print preview anchor',

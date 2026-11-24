@@ -726,7 +726,7 @@ export default function FacebookInbox() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-1" style={{ background: "#F0F2F5" }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-1" style={{ background: "var(--theme-surface-muted)" }}>
               {loadingMsgs ? (
                 <div className="flex items-center justify-center h-full text-gray-400">
                   <RefreshCw size={20} className="animate-spin mr-2" /> Loading...

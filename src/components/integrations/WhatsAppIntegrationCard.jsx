@@ -104,7 +104,7 @@ export default function WhatsAppIntegrationCard() {
             </div>
           ) : integrations.length === 0 ? (
             <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#e7fbe9" }}>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "color-mix(in srgb, #25D366 16%, var(--theme-surface))" }}>
                 <Smartphone size={28} style={{ color: "#25D366" }} />
               </div>
               <p className="text-gray-600 font-medium mb-1">No WhatsApp number connected</p>
@@ -125,7 +125,7 @@ export default function WhatsAppIntegrationCard() {
                 <div key={integration._id}
                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "#e7fbe9" }}>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "color-mix(in srgb, #25D366 16%, var(--theme-surface))" }}>
                       <Smartphone size={18} style={{ color: "#25D366" }} />
                     </div>
                     <div>
@@ -419,7 +419,7 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
               <code className="flex-1 text-xs text-gray-700 break-all">{webhookInfo.webhookUrl}</code>
               <button onClick={() => copyToClipboard(webhookInfo.webhookUrl, "url")}
                       className="shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition"
-                      style={{ background: copied === "url" ? "#25D366" : "#f3f4f6", color: copied === "url" ? "white" : "#374151" }}>
+                      style={{ background: copied === "url" ? "#25D366" : "var(--theme-surface-muted)", color: copied === "url" ? "white" : "var(--theme-text-secondary)" }}>
                 {copied === "url" ? "Copied!" : "Copy"}
               </button>
             </div>
@@ -431,7 +431,7 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
               {webhookInfo.verifyToken && (
                 <button onClick={() => copyToClipboard(webhookInfo.verifyToken, "token")}
                         className="shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition"
-                        style={{ background: copied === "token" ? "#25D366" : "#f3f4f6", color: copied === "token" ? "white" : "#374151" }}>
+                        style={{ background: copied === "token" ? "#25D366" : "var(--theme-surface-muted)", color: copied === "token" ? "white" : "var(--theme-text-secondary)" }}>
                   {copied === "token" ? "Copied!" : "Copy"}
                 </button>
               )}
@@ -472,7 +472,7 @@ export function WhatsAppConnectModal({ onClose, onConnected }) {
                         ? "border-green-400 bg-green-50"
                         : "border-gray-100 hover:border-green-200 bg-gray-50"
                     }`}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "#e7fbe9" }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "color-mix(in srgb, #25D366 16%, var(--theme-surface))" }}>
                 <Smartphone size={16} style={{ color: "#25D366" }} />
               </div>
               <div className="flex-1 min-w-0">

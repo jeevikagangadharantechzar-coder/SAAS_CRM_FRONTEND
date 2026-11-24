@@ -42,7 +42,7 @@ const DocumentTable = ({ documents, onQuickAssign, isAdmin, pagination, currentP
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500">
+            <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
               <th className="px-6 py-4 font-medium">File</th>
               <th className="px-6 py-4 font-medium">Source</th>
               <th className="px-6 py-4 font-medium">Reviewer</th>
@@ -51,26 +51,26 @@ const DocumentTable = ({ documents, onQuickAssign, isAdmin, pagination, currentP
               <th className="px-6 py-4 font-medium text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+          <tbody className="divide-y divide-slate-100 text-sm">
             {documents.map((doc) => (
               <tr 
                 key={doc.id} 
-                className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                className="hover:bg-slate-50 transition-colors cursor-pointer"
                 onClick={() => setSelectedDoc(doc)}
               >
                 <td className="px-6 py-4 flex items-center gap-3">
                   {getFileIcon(doc.type)}
-                  <span className="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
+                  <span className="font-medium text-slate-700 truncate max-w-[200px]">
                     {doc.name}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
-                    <span className="font-medium text-slate-700 dark:text-slate-300">{doc.sourceType}</span>
+                    <span className="font-medium text-slate-700">{doc.sourceType}</span>
                     <span className="text-xs text-slate-500 truncate max-w-[150px]">{doc.sourceName}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                <td className="px-6 py-4 text-slate-600">
                   {(() => {
                     const isUnassignedExternal = doc.sourceType === 'External' && (doc.status === 'Not Assigned' || doc.assignedTo?._id === doc.uploadedBy?._id || doc.assignedTo === doc.uploadedBy);
                     if (isUnassignedExternal) {
@@ -117,7 +117,7 @@ const DocumentTable = ({ documents, onQuickAssign, isAdmin, pagination, currentP
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 text-sm text-slate-600 border-t border-slate-100 dark:border-slate-700">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 text-sm text-slate-600 border-t border-slate-100">
         <div className="flex items-center gap-2">
           <span>Rows:</span>
           <select

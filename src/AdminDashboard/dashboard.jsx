@@ -634,7 +634,7 @@ const DealDistributionChart = ({ data, loading, totalDeals }) => {
                   >
                     {pieData.map((e, i) => <Cell key={i} fill={e.color} stroke="#fff" strokeWidth={2} />)}
                   </Pie>
-                  <Tooltip formatter={(v, n) => [v, n]} contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }} />
+                  <Tooltip formatter={(v, n) => [v, n]} contentStyle={{ borderRadius: "8px", border: "1px solid var(--theme-border)" }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

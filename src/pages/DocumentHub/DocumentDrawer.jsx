@@ -133,12 +133,12 @@ const DocumentDrawer = ({ doc, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-      <div className="w-[600px] h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="w-[600px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
-          <h2 className="font-semibold text-lg text-slate-800 dark:text-white truncate pr-4">{doc.name}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+          <h2 className="font-semibold text-lg text-slate-800 truncate pr-4">{doc.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
             <X size={20} />
           </button>
         </div>
@@ -150,11 +150,11 @@ const DocumentDrawer = ({ doc, onClose }) => {
           <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
             <div>
               <p className="text-slate-500 mb-1">Source</p>
-              <p className="font-medium dark:text-slate-200">{doc.sourceType}: {doc.sourceName}</p>
+              <p className="font-medium">{doc.sourceType}: {doc.sourceName}</p>
             </div>
             <div>
               <p className="text-slate-500 mb-1">Assigned Date</p>
-              <p className="font-medium dark:text-slate-200">{dayjs(doc.uploadedAt).format('MMM D, YYYY h:mm A')}</p>
+              <p className="font-medium">{dayjs(doc.uploadedAt).format('MMM D, YYYY h:mm A')}</p>
             </div>
             {doc.note && (
               <div className="col-span-2 bg-amber-50 border border-amber-200 p-3 rounded-md mt-2">
@@ -199,11 +199,11 @@ const DocumentDrawer = ({ doc, onClose }) => {
           </div>
 
           {/* Preview */}
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-2 h-[500px] flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden relative group">
+          <div className="bg-slate-100 rounded-lg p-2 h-[500px] flex flex-col items-center justify-center border border-slate-200 overflow-hidden relative group">
             {loadingPreview ? (
                <div className="text-slate-500 text-sm animate-pulse">Loading preview...</div>
             ) : textContent !== null ? (
-               <pre className="w-full h-full rounded bg-white dark:bg-slate-900 p-4 overflow-auto text-xs whitespace-pre-wrap dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono text-left block" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto', overflowY: 'auto' }}>
+               <pre className="w-full h-full rounded bg-white p-4 overflow-auto text-xs whitespace-pre-wrap border border-slate-200 font-mono text-left block" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto', overflowY: 'auto' }}>
                  {textContent}
                </pre>
             ) : previewUrl ? (
@@ -236,26 +236,26 @@ const DocumentDrawer = ({ doc, onClose }) => {
           {/* Activity & Replies */}
           {!isInvoice && (
             <div>
-              <h3 className="text-lg font-semibold mb-4 dark:text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <MessageSquare size={18} /> Activity & Replies
               </h3>
               
-              <div className="space-y-4 mb-6 border-l-2 border-slate-200 dark:border-slate-700 ml-3 pl-4">
+              <div className="space-y-4 mb-6 border-l-2 border-slate-200 ml-3 pl-4">
                 {(!doc.activity || doc.activity.length === 0) ? (
                   <p className="text-slate-500 text-sm italic">No activity yet.</p>
                 ) : (
                   doc.activity.map((act, i) => (
                     <div key={i} className="relative">
-                      <div className="absolute -left-[25px] top-1 w-3 h-3 bg-blue-500 rounded-full ring-4 ring-white dark:ring-slate-900" />
-                      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-100 dark:border-slate-700 text-sm">
+                      <div className="absolute -left-[25px] top-1 w-3 h-3 bg-blue-500 rounded-full ring-4 ring-white" />
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-sm">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">
+                          <span className="font-medium text-slate-700">
                             {act.action} by {act.role}
                           </span>
                           <span className="text-xs text-slate-400">{dayjs(act.createdAt).format('MMM D, h:mm A')}</span>
                         </div>
                         {act.note && (
-                          <p className="text-slate-600 dark:text-slate-400 mt-1">{act.note}</p>
+                          <p className="text-slate-600 mt-1">{act.note}</p>
                         )}
                       </div>
                     </div>
@@ -269,7 +269,7 @@ const DocumentDrawer = ({ doc, onClose }) => {
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Type a reply..." 
-                  className="flex-1 px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:border-blue-500"
+                  className="flex-1 px-4 py-2 rounded-md border border-slate-300 bg-white text-sm outline-none focus:border-blue-500"
                 />
                 <button type="submit" disabled={!replyText.trim() || addActivity.isPending} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
                   Reply
@@ -281,7 +281,7 @@ const DocumentDrawer = ({ doc, onClose }) => {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-between bg-slate-50 dark:bg-slate-900">
+        <div className="p-4 border-t border-slate-200 flex justify-between bg-slate-50">
           {!isInvoice ? (
             <button 
               onClick={handleDelete}

@@ -56,11 +56,11 @@ const UploadModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200">
         
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-          <h2 className="font-semibold text-lg dark:text-white">Upload External Document</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 transition">
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+          <h2 className="font-semibold text-lg">Upload External Document</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition">
             <X size={20} />
           </button>
         </div>
@@ -68,25 +68,25 @@ const UploadModal = ({ onClose }) => {
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
           
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Document Name</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Document Name</label>
             <input 
               type="text" 
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Property_Report.pdf"
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md bg-transparent outline-none focus:border-blue-500 dark:text-white"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md bg-transparent outline-none focus:border-blue-500"
             />
           </div>
 
           {isAdmin && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Assign Reviewer</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Assign Reviewer</label>
               <select 
                 required
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md bg-transparent outline-none focus:border-blue-500 dark:text-white"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md bg-transparent outline-none focus:border-blue-500"
               >
                 <option value="" disabled>Select User</option>
                 {Array.isArray(usersData) && usersData.map(user => (
@@ -99,8 +99,8 @@ const UploadModal = ({ onClose }) => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">File</label>
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+            <label className="block text-sm font-medium text-slate-700 mb-1">File</label>
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition">
               <UploadCloud className="text-slate-400 mb-2" size={32} />
               <input 
                 type="file" 
@@ -112,7 +112,7 @@ const UploadModal = ({ onClose }) => {
           </div>
 
           <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-300 rounded-md text-slate-600 hover:bg-slate-50">
               Cancel
             </button>
             <button type="submit" disabled={uploadMutation.isPending} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">

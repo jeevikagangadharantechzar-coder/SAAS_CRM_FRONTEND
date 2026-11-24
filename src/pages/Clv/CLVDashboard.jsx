@@ -36,6 +36,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
+import useChartTheme from "../../theme/useChartTheme";
 import "react-toastify/dist/ReactToastify.css";
 
 ChartJS.register(
@@ -73,6 +74,7 @@ const debounce = (func, wait) => {
 };
 
 const CLVDashboard = () => {
+  const { colors: chartColors } = useChartTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -426,9 +428,9 @@ const CLVDashboard = () => {
         display: false,
       },
       tooltip: {
-        backgroundColor: "rgba(0,0,0,0.8)",
-        titleColor: "#fff",
-        bodyColor: "#fff",
+        backgroundColor: chartColors.tooltipBg,
+        titleColor: chartColors.tooltipText,
+        bodyColor: chartColors.tooltipText,
         padding: 10,
         cornerRadius: 4,
         callbacks: {
@@ -449,7 +451,7 @@ const CLVDashboard = () => {
           },
         },
         grid: {
-          color: "rgba(0,0,0,0.05)",
+          color: chartColors.grid,
         },
       },
       x: {

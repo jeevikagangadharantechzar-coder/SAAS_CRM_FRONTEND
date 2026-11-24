@@ -409,15 +409,15 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
             boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
           },
           success: {
-            style: { background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" },
-            iconTheme: { primary: "#22c55e", secondary: "#f0fdf4" },
+            style: { background: "color-mix(in srgb, #22c55e 14%, var(--theme-surface))", color: "var(--theme-text)", border: "1px solid color-mix(in srgb, #22c55e 35%, var(--theme-surface))" },
+            iconTheme: { primary: "#22c55e", secondary: "#ffffff" },
           },
           error: {
-            style: { background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" },
-            iconTheme: { primary: "#ef4444", secondary: "#fef2f2" },
+            style: { background: "color-mix(in srgb, #ef4444 14%, var(--theme-surface))", color: "var(--theme-text)", border: "1px solid color-mix(in srgb, #ef4444 35%, var(--theme-surface))" },
+            iconTheme: { primary: "#ef4444", secondary: "#ffffff" },
           },
           loading: {
-            style: { background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe" },
+            style: { background: "color-mix(in srgb, #3b82f6 14%, var(--theme-surface))", color: "var(--theme-text)", border: "1px solid color-mix(in srgb, #3b82f6 35%, var(--theme-surface))" },
           },
         }}
       />
@@ -593,9 +593,9 @@ export default function AddUserModal({ onUserCreated, disabled, users = [] }) {
                   buttonStyle={{
                     borderRadius: "0.5rem 0 0 0.5rem",
                     height: "42px",
-                    background: "white",
+                    background: "var(--theme-surface)",
                     border: "none",
-                    borderRight: "1px solid #e5e7eb",
+                    borderRight: "1px solid var(--theme-border)",
                   }}
                   containerStyle={{ width: "100%" }}
                 />

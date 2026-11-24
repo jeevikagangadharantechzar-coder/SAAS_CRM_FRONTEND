@@ -48,24 +48,7 @@
   animation: float 3s ease-in-out infinite;
 }
 
-/* Custom scrollbar for messages */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
+/* Scrollbars are themed centrally in src/theme/base.css */
 /* Mobile responsive fixes */
 @media (max-width: 768px) {
   .flex-col-mobile { flex-direction: column !important; }

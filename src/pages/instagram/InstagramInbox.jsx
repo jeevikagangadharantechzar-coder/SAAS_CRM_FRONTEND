@@ -857,7 +857,7 @@ export default function InstagramInbox() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1"
-                 style={{ background: "#FAFAFA" }}>
+                 style={{ background: "var(--theme-surface-muted)" }}>
               {loadingMsgs ? (
                 <div className="flex items-center justify-center h-full text-gray-400">
                   <RefreshCw size={20} className="animate-spin mr-2" /> Loading...
@@ -887,14 +887,14 @@ export default function InstagramInbox() {
                         <div
                           className={`max-w-xs md:max-w-sm lg:max-w-md px-3 py-2 rounded-2xl shadow-sm ${isOut ? "rounded-tr-sm" : "rounded-tl-sm"}`}
                           style={{
-                            background: isOut ? "#FDE" : "#FFFFFF",
-                            border:     isOut ? "1px solid #E1306C22" : "1px solid #eee",
+                            background: isOut ? "color-mix(in srgb, #E1306C 16%, var(--theme-surface))" : "var(--theme-surface)",
+                            border:     isOut ? "1px solid #E1306C22" : "1px solid var(--theme-border)",
                             minWidth:   80,
                           }}
                         >
                           <MsgBubble msg={msg} />
                           <div className="flex items-center justify-end gap-1 mt-0.5">
-                            <span className="text-xs" style={{ color: "#9aa3a3" }}>{fmtMsgTime(msg.createdAt)}</span>
+                            <span className="text-xs" style={{ color: "var(--theme-text-muted)" }}>{fmtMsgTime(msg.createdAt)}</span>
                             {isOut && <StatusIcon status={msg.status} />}
                           </div>
                         </div>

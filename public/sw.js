@@ -3,7 +3,7 @@ self.addEventListener("push", (event) => {
   const title = data.title || "CRM Alert";
   const options = {
     body: data.body,
-    icon: "/logo192.png", // or your favicon
+    icon: "/logo192.png", 
     badge: "/logo192.png",
   };
   event.waitUntil(self.registration.showNotification(title, options));

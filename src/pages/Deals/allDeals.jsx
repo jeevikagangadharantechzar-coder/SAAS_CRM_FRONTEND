@@ -1921,8 +1921,8 @@ export const AllDeals = () => {
       styles={{
         popover: (base) => ({
           ...base,
-          backgroundColor: "#fff",
-          color: "#1f1f1f",
+          backgroundColor: "var(--theme-surface)",
+          color: "var(--theme-text)",
         }),
         maskArea: (base) => ({ ...base, rx: 8 }),
         badge: (base) => ({

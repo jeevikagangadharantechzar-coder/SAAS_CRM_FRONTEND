@@ -123,16 +123,16 @@ const LeadDocument = ({ searchTerm = "", assignments = [], recycleAssignments = 
   return (
     <div className="flex flex-col h-full animate-in fade-in">
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex-1">
-        <table className="min-w-full text-sm text-slate-700 dark:text-slate-200">
-          <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm flex-1">
+        <table className="min-w-full text-sm text-slate-700">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-6 py-3 text-left font-medium">Lead Name</th>
               <th className="px-6 py-3 text-left font-medium">Assignee</th>
               <th className="px-6 py-3 text-left font-medium">Documents Linked</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
                 <td colSpan={3} className="px-6 py-12 text-center text-slate-500">Loading leads...</td>
@@ -143,7 +143,7 @@ const LeadDocument = ({ searchTerm = "", assignments = [], recycleAssignments = 
                 return (
                   <tr 
                     key={lead._id} 
-                    className="hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                    className="hover:bg-blue-50 cursor-pointer transition-colors"
                     onClick={() => setSelectedLead(lead)}
                   >
                     <td className="px-6 py-4 font-medium">{lead.leadName}</td>
