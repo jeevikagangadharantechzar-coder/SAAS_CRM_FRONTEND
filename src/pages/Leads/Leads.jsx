@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { isSalesLike, hasRolePermission } from "../../utils/roles";
 import ReactDOM from "react-dom";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
@@ -34,12 +34,14 @@ import {
   Flag,
   Target,
   BarChart,
-  Users
+  Users,
+  Columns3
 } from "lucide-react";
 
 import LeadsPipelineView from "./LeadsPipelineView";
 import LinkedWorkModal from "../components/LinkedWorkModal";
 import LeadLossModal from "./LeadLossModal";
+import LeadColumnsModal from "./LeadColumnsModal";
 
 import { initSocket, getSocket } from "../../utils/socket";
 import {
@@ -67,6 +69,66 @@ const guessAudioMime = (filename = "") => {
   const ext = filename.split(".").pop()?.toLowerCase();
   return AUDIO_EXT_MIME_MAP[ext] || "application/octet-stream";
 };
+
+/* ── Leads TABLE columns the Admin can show/hide/reorder (Columns button,
+   top right). Checkbox, Lead Name and Actions are always shown and are not
+   listed here. Keys + default order/visibility mirror the backend's
+   utils/leadTableColumns.js — keep both in sync. The saved layout comes from
+   GET /leads/table-columns and applies to every user. ── */
+const DEFAULT_LEAD_TABLE_COLUMNS = [
+  { key: "phoneNumber",          visible: true  },
+  { key: "companyName",          visible: true  },
+  { key: "country",              visible: true  },
+  { key: "source",               visible: true  },
+  { key: "status",               visible: true  },
+  { key: "assignTo",             visible: true  },
+  { key: "createdAt",            visible: true  },
+  { key: "followUpDate",         visible: true  },
+  { key: "history",              visible: true  },
+  { key: "email",                visible: false },
+  { key: "alternatePhoneNumber", visible: false },
+  { key: "alternateEmail",       visible: false },
+  { key: "clientType",           visible: false },
+  { key: "industry",             visible: false },
+  { key: "requirement",          visible: false },
+  { key: "NumberOfEmployees",    visible: false },
+  { key: "address",              visible: false },
+  { key: "city",                 visible: false },
+  { key: "state",                visible: false },
+  { key: "pincode",              visible: false },
+];
+
+// i18n = translation key (existing table headings); label = plain fallback.
+const LEAD_TABLE_COLUMN_LABELS = {
+  phoneNumber:          { i18n: "leads.table.contact",  label: "Contact" },
+  companyName:          { i18n: "leads.table.company",  label: "Company" },
+  country:              { i18n: "leads.table.country",  label: "Country" },
+  source:               { i18n: "leads.table.source",   label: "Source" },
+  status:               { i18n: "leads.table.status",   label: "Status" },
+  assignTo:             { label: "Assignee" },
+  createdAt:            { i18n: "leads.table.created",  label: "Created" },
+  followUpDate:         { i18n: "leads.table.followUp", label: "Follow-up" },
+  history:              { i18n: "leads.table.history",  label: "History" },
+  email:                { label: "Email" },
+  alternatePhoneNumber: { label: "Alternate Phone" },
+  alternateEmail:       { label: "Alternate Email" },
+  clientType:           { label: "Client Type" },
+  industry:             { label: "Industry" },
+  requirement:          { label: "Requirement" },
+  NumberOfEmployees:    { label: "No. of Employees" },
+  address:              { label: "Address" },
+  city:                 { label: "City" },
+  state:                { label: "State" },
+  pincode:              { label: "Pincode" },
+};
+
+// Plain-text columns: rendered as the raw value or "-".
+const LEAD_TEXT_COLUMNS = new Set([
+  "companyName", "country", "source", "email", "alternateEmail", "clientType",
+  "industry", "NumberOfEmployees", "city", "state", "pincode", "alternatePhoneNumber",
+]);
+// Long free-text columns: truncated with the full text on hover.
+const LEAD_LONG_TEXT_COLUMNS = new Set(["requirement", "address"]);
 
 /* ── Import/Export column definitions — shared between Export, Template,
    and Import so a downloaded template always re-uploads successfully. ── */
@@ -458,6 +520,61 @@ const updateFilter = (key, value, setter) => {
     return () => socket.off("lead_rejected", handler);
   }, [userRole]);
 
+  /* ── Table column layout (Admin picks, everyone sees) ── */
+  const [tableColumns, setTableColumns] = useState(DEFAULT_LEAD_TABLE_COLUMNS);
+  const [showColumnsModal, setShowColumnsModal] = useState(false);
+  const [savingColumns, setSavingColumns] = useState(false);
+
+  const getColumnLabel = useCallback((key) => {
+    const def = LEAD_TABLE_COLUMN_LABELS[key];
+    if (!def) return key;
+    return def.i18n ? t(def.i18n, { defaultValue: def.label }) : def.label;
+  }, [t]);
+
+  // Only keys this frontend knows how to render (ignores anything newer).
+  const visibleTableColumns = useMemo(
+    () => tableColumns.filter((c) => c.visible && LEAD_TABLE_COLUMN_LABELS[c.key]),
+    [tableColumns]
+  );
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    axios
+      .get(`${API_URL}/leads/table-columns`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(({ data }) => {
+        if (Array.isArray(data?.columns)) setTableColumns(data.columns);
+      })
+      .catch((err) => console.error("Failed to load lead table columns:", err));
+  }, []);
+
+  // Admin saved a new layout — every open Leads page switches straight away.
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const handler = ({ columns }) => {
+      if (Array.isArray(columns)) setTableColumns(columns);
+    };
+    socket.on("lead_columns_updated", handler);
+    return () => socket.off("lead_columns_updated", handler);
+  }, [userRole]);
+
+  const saveTableColumns = async (body) => {
+    setSavingColumns(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.put(`${API_URL}/leads/table-columns`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (Array.isArray(data?.columns)) setTableColumns(data.columns);
+      setShowColumnsModal(false);
+      toast.success(body.reset ? "Columns reset to default" : "Table columns updated for all users");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save table columns");
+    } finally {
+      setSavingColumns(false);
+    }
+  };
+
   // When Admin converts one of the sales person's leads to a deal, reflect that
   // live: Sales sees it flip to "Converted" (it's still their lead), any other
   // non-Admin/non-Sales role loses visibility the same way getAllLead does.
@@ -844,6 +961,46 @@ const updateFilter = (key, value, setter) => {
     }
   };
 
+  /* ── Sticky horizontal scrollbar ──
+     The table's own scrollbar sits at the very bottom of the table, so with
+     many rows the user had to scroll all the way down to reach it. Instead
+     its own bar is hidden and a copy is pinned to the bottom of the screen
+     (sticky) while the table is in view; both stay in sync. */
+  const stickyScrollRef = useRef(null);
+  const tableBoxRef = useRef(null);
+  const tableResizeObserverRef = useRef(null);
+  const [tableScrollWidth, setTableScrollWidth] = useState(0);
+  const [tableHasOverflow, setTableHasOverflow] = useState(false);
+
+  const syncScrollLeft = (from, to) => {
+    if (from && to && Math.abs(to.scrollLeft - from.scrollLeft) > 1) to.scrollLeft = from.scrollLeft;
+  };
+
+  // Callback ref: the table box mounts/unmounts with table ↔ pipeline view.
+  const setTableBoxRef = useCallback((node) => {
+    tableResizeObserverRef.current?.disconnect();
+    tableResizeObserverRef.current = null;
+    tableBoxRef.current = node;
+    if (!node) return;
+    const measure = () => {
+      setTableScrollWidth(node.scrollWidth);
+      setTableHasOverflow(node.scrollWidth > node.clientWidth + 1);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    if (node.firstElementChild) observer.observe(node.firstElementChild); // the <table>: columns/rows change its width
+    tableResizeObserverRef.current = observer;
+  }, []);
+
+  useEffect(() => () => tableResizeObserverRef.current?.disconnect(), []);
+
+  // When the sticky bar (re)appears, start it at the table's current position.
+  useEffect(() => {
+    if (tableHasOverflow) syncScrollLeft(tableBoxRef.current, stickyScrollRef.current);
+  }, [tableHasOverflow]);
+
   // Checkbox selection helpers — selection is scoped to the current page's rows
   const isAllOnPageSelected =
     leads.length > 0 && leads.every((l) => selectedLeadIds.includes(l._id));
@@ -1167,6 +1324,153 @@ const updateFilter = (key, value, setter) => {
       }`;
   };
 
+  // One <td> per configurable column (see DEFAULT_LEAD_TABLE_COLUMNS). The
+  // locked columns (checkbox, Lead Name, Actions) are rendered inline in the
+  // table body and never go through here.
+  const renderLeadCell = (key, lead, { isDisabled, isActiveDisabled }) => {
+    if (LEAD_TEXT_COLUMNS.has(key)) {
+      const value = lead[key];
+      return (
+        <td key={key} className="px-4 py-3 text-sm text-gray-700">
+          {value !== undefined && value !== null && value !== "" ? String(value) : "-"}
+        </td>
+      );
+    }
+
+    if (LEAD_LONG_TEXT_COLUMNS.has(key)) {
+      const value = lead[key];
+      return (
+        <td key={key} className="px-4 py-3 text-sm text-gray-700">
+          {value ? (
+            <span className="block max-w-[220px] truncate" title={value}>{value}</span>
+          ) : "-"}
+        </td>
+      );
+    }
+
+    switch (key) {
+      case "phoneNumber":
+        return (
+          <td key={key} className="px-4 py-3 text-sm text-gray-700">
+            {lead.phoneNumber ? (
+              <a
+                href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
+                className="text-blue-600 hover:underline font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
+              </a>
+            ) : (
+              "-"
+            )}
+          </td>
+        );
+
+      case "status":
+        return (
+          <td key={key} className="px-4 py-3">
+            {lead.status === "Rejected" ? (
+              <span
+                className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
+                onMouseEnter={(e) => lead.rejectionReason && handleRejectionHover(lead, e)}
+                onMouseLeave={handleRejectionLeave}
+              >
+                Rejected
+              </span>
+            ) : lead.status === "Converted" ? (
+              <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
+                Converted
+              </span>
+            ) : (
+              <select
+                value={lead.status}
+                disabled={isDisabled}
+                onChange={(e) =>
+                  handleStatusChange(lead._id, e.target.value)
+                }
+                className={`${getStatusSelectClass(lead.status)} ${isDisabled ? "cursor-not-allowed opacity-70" : ""}`}
+              >
+                <option value="New">New</option>
+                <option value="Hot">Hot</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+                <option value="Junk">Junk</option>
+              </select>
+            )}
+          </td>
+        );
+
+      case "assignTo":
+        return (
+          <td key={key} className="px-4 py-3 text-sm text-gray-700">
+            {lead.assignTo && typeof lead.assignTo === "object"
+              ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim() || "-"
+              : "-"}
+          </td>
+        );
+
+      case "createdAt":
+        return <td key={key} className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>;
+
+      case "followUpDate":
+        return (
+          <td key={key} className="px-4 py-3 text-sm text-gray-700">
+            <div className="relative flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => !isActiveDisabled && openFollowUpPicker(lead._id)}
+                className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isActiveDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
+                title={isActiveDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
+                disabled={followUpSavingId === lead._id || isActiveDisabled}
+              >
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <span className="text-sm">
+                  {followUpSavingId === lead._id
+                    ? t("leads.table.saving")
+                    : formatDate(lead.followUpDate)}
+                </span>
+              </button>
+
+              {isFollowUpMissed(lead) && (
+                <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
+                  Missed
+                </span>
+              )}
+
+              {editingFollowUpId === lead._id && (
+                <input
+                  ref={(el) => (dateInputRefs.current[lead._id] = el)}
+                  type="date"
+                  defaultValue={toDateInputValue(lead.followUpDate)}
+                  className="absolute left-0 top-0 w-0 h-0 opacity-0"
+                  onChange={(e) => updateFollowUpDateInline(lead._id, e.target.value)}
+                  onBlur={() => setEditingFollowUpId(null)}
+                />
+              )}
+            </div>
+          </td>
+        );
+
+      case "history":
+        return (
+          <td key={key} className="px-4 py-3 text-center">
+            <button
+              type="button"
+              onClick={() => openHistoryModal(lead)}
+              className={`inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors ${isFollowUpMissed(lead) ? "text-red-500 hover:text-red-600" : "text-gray-500 hover:text-blue-600"
+                }`}
+              title={isFollowUpMissed(lead) ? "Missed follow-up — view history" : "View follow-up history"}
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </td>
+        );
+
+      default:
+        return <td key={key} className="px-4 py-3 text-sm text-gray-700">-</td>;
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = () => setMenuOpen(null);
     document.addEventListener("click", handleClickOutside);
@@ -1256,6 +1560,16 @@ const updateFilter = (key, value, setter) => {
               onClick={() => navigate(`/${tenantSlug}/createleads`)}
             >
               <Plus className="w-4 h-4" /> {t("leads.buttons.createLead")}
+            </button>
+          )}
+
+          {userRole === "Admin" && viewMode === "table" && (
+            <button
+              onClick={() => setShowColumnsModal(true)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+              title="Choose which columns every user sees in the leads table"
+            >
+              <Columns3 className="w-4 h-4" /> Columns
             </button>
           )}
 
@@ -1585,7 +1899,12 @@ const updateFilter = (key, value, setter) => {
               </div>
             </div>
           )}
-          <div className="overflow-x-auto">
+          {/* Own scrollbar hidden — the sticky bar below the table replaces it. */}
+          <div
+            ref={setTableBoxRef}
+            onScroll={(e) => syncScrollLeft(e.currentTarget, stickyScrollRef.current)}
+            className="overflow-x-auto hide-scrollbar"
+          >
           <table className="min-w-max w-full table-auto divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr className="whitespace-nowrap">
@@ -1598,19 +1917,14 @@ const updateFilter = (key, value, setter) => {
                   />
                 </th>
                 <th className={`px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky z-20 bg-gray-50 shadow-[1px_0_0_0_#e5e7eb] max-w-[140px] sm:max-w-none left-10`}>{t("leads.table.lead")}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.contact")}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.company")}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.country")}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.source")}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.status")}</th>
-                {userRole === "Admin" && (
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
-                )}
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.created")}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("leads.table.followUp")}</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-                  {t("leads.table.history")}
-                </th>
+                {visibleTableColumns.map((col) => (
+                  <th
+                    key={col.key}
+                    className={`px-4 py-3 ${col.key === "history" ? "text-center" : "text-left"} text-xs font-semibold text-gray-600 uppercase`}
+                  >
+                    {getColumnLabel(col.key)}
+                  </th>
+                ))}
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tour-lead-actions">{t("leads.table.actions")}</th>
               </tr>
             </thead>
@@ -1749,110 +2063,7 @@ const updateFilter = (key, value, setter) => {
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {lead.phoneNumber ? (
-                          <a
-                            href={`tel:${lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}`}
-                            className="text-blue-600 hover:underline font-medium"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {lead.phoneNumber.startsWith("+") ? lead.phoneNumber : `+${lead.phoneNumber}`}
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{lead.companyName || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{lead.country || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{lead.source || "-"}</td>
-
-                      <td className="px-4 py-3">
-                        {lead.status === "Rejected" ? (
-                          <span
-                            className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 cursor-default pointer-events-auto inline-block"
-                            onMouseEnter={(e) => lead.rejectionReason && handleRejectionHover(lead, e)}
-                            onMouseLeave={handleRejectionLeave}
-                          >
-                            Rejected
-                          </span>
-                        ) : lead.status === "Converted" ? (
-                          <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
-                            Converted
-                          </span>
-                        ) : (
-                          <select
-                            value={lead.status}
-                            disabled={isDisabled}
-                            onChange={(e) =>
-                              handleStatusChange(lead._id, e.target.value)
-                            }
-                            className={`${getStatusSelectClass(lead.status)} ${isDisabled ? "cursor-not-allowed opacity-70" : ""}`}
-                          >
-                            <option value="New">New</option>
-                            <option value="Hot">Hot</option>
-                            <option value="Warm">Warm</option>
-                            <option value="Cold">Cold</option>
-                            <option value="Junk">Junk</option>
-                          </select>
-                        )}
-                      </td>
-
-                      {userRole === "Admin" && (
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {lead.assignTo ? `${lead.assignTo.firstName || ""} ${lead.assignTo.lastName || ""}`.trim() : "-"}
-                        </td>
-                      )}
-
-
-                      <td className="px-4 py-3 text-sm text-gray-700">{formatDate(lead.createdAt)}</td>
-
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        <div className="relative flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => !isActiveDisabled && openFollowUpPicker(lead._id)}
-                            className={`inline-flex items-center gap-2 px-2 py-1 rounded-md transition ${isActiveDisabled ? "cursor-not-allowed" : "hover:bg-gray-100"}`}
-                            title={isActiveDisabled ? "Disabled pending admin reassignment" : "Click to update follow-up date"}
-                            disabled={followUpSavingId === lead._id || isActiveDisabled}
-                          >
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {followUpSavingId === lead._id
-                                ? t("leads.table.saving")
-                                : formatDate(lead.followUpDate)}
-                            </span>
-                          </button>
-
-                          {isFollowUpMissed(lead) && (
-                            <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600 border border-red-200 whitespace-nowrap">
-                              Missed
-                            </span>
-                          )}
-
-                          {editingFollowUpId === lead._id && (
-                            <input
-                              ref={(el) => (dateInputRefs.current[lead._id] = el)}
-                              type="date"
-                              defaultValue={toDateInputValue(lead.followUpDate)}
-                              className="absolute left-0 top-0 w-0 h-0 opacity-0"
-                              onChange={(e) => updateFollowUpDateInline(lead._id, e.target.value)}
-                              onBlur={() => setEditingFollowUpId(null)}
-                            />
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => openHistoryModal(lead)}
-                          className={`inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors ${isFollowUpMissed(lead) ? "text-red-500 hover:text-red-600" : "text-gray-500 hover:text-blue-600"
-                            }`}
-                          title={isFollowUpMissed(lead) ? "Missed follow-up — view history" : "View follow-up history"}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
+                      {visibleTableColumns.map((col) => renderLeadCell(col.key, lead, { isDisabled, isActiveDisabled }))}
 
                       <td className="px-4 py-3 text-right relative">
                         <div className="relative inline-block text-left">
@@ -1922,7 +2133,7 @@ const updateFilter = (key, value, setter) => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={13} className="px-4 py-12 text-center text-gray-500 text-sm">
+                  <td colSpan={visibleTableColumns.length + 3} className="px-4 py-12 text-center text-gray-500 text-sm">
                     {t("leads.table.noLeads")}
                   </td>
                 </tr>
@@ -1930,6 +2141,21 @@ const updateFilter = (key, value, setter) => {
             </tbody>
           </table>
           </div>
+
+          {/* Sticky horizontal scrollbar — stays at the bottom of the screen
+              while the table is in view, so users needn't scroll to the end
+              of the list to scroll sideways. Hidden when nothing overflows. */}
+          {tableHasOverflow && (
+            <div
+              ref={stickyScrollRef}
+              onScroll={(e) => syncScrollLeft(e.currentTarget, tableBoxRef.current)}
+              className="sticky bottom-0 z-30 overflow-x-auto overflow-y-hidden bg-white border-t border-gray-100"
+              style={{ height: 12 }}
+              aria-hidden="true"
+            >
+              <div style={{ width: tableScrollWidth, height: 1 }} />
+            </div>
+          )}
 
         <div className="flex items-center justify-end gap-6 border-t border-gray-200 bg-white px-4 py-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
@@ -1997,6 +2223,20 @@ const updateFilter = (key, value, setter) => {
           <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{hoveredRejectedLead.rejectionReason}</p>
         </div>,
         document.body
+      )}
+
+      {/* Table Columns picker (Admin only) — applies to every user */}
+      {userRole === "Admin" && (
+        <LeadColumnsModal
+          open={showColumnsModal}
+          onOpenChange={setShowColumnsModal}
+          columns={tableColumns.filter((c) => LEAD_TABLE_COLUMN_LABELS[c.key])}
+          getLabel={getColumnLabel}
+          lockedLabels={["Select (checkbox)", t("leads.table.lead", { defaultValue: "Lead" }), t("leads.table.actions", { defaultValue: "Actions" })]}
+          onSave={(columns) => saveTableColumns({ columns })}
+          onReset={() => saveTableColumns({ reset: true })}
+          saving={savingColumns}
+        />
       )}
 
       {/* Export Modal */}
