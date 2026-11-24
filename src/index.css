@@ -273,6 +273,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+/* Hides an element's own scrollbar but keeps it scrollable (used by the
+   Leads table, which shows a sticky copy of its scrollbar instead). */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .ProseMirror {
   min-height: 400px;   /* fixed minimum height */
   height: 400px;       /* fixed height */
