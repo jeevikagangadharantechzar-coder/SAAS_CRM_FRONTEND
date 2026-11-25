@@ -1899,11 +1899,13 @@ const updateFilter = (key, value, setter) => {
               </div>
             </div>
           )}
-          {/* Own scrollbar hidden — the sticky bar below the table replaces it. */}
+          {/* Own scrollbar hidden — the sticky bar below the table replaces it.
+              Hidden with Tailwind arbitrary classes (Firefox + Chrome/Edge/Safari)
+              right here, not a global CSS class, so theme/CSS rewrites can't drop it. */}
           <div
             ref={setTableBoxRef}
             onScroll={(e) => syncScrollLeft(e.currentTarget, stickyScrollRef.current)}
-            className="overflow-x-auto hide-scrollbar"
+            className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
           <table className="min-w-max w-full table-auto divide-y divide-gray-200">
             <thead className="bg-gray-50">
